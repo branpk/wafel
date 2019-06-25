@@ -1,0 +1,6 @@
+env
+.vscode
+build
+__pycache__
+lib/sm64plus
+test_files
