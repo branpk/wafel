@@ -73,110 +73,159 @@
 #   sys.exit(app.exec_())
 
 
-import os
-import ctypes
-import json
-import time
+# import os
+# import ctypes
+# import json
+# import time
 
-from butter.util import dcast
-
-
-# Cell = allocated memory block
-# State = frame index + assigned cell containing up-to-date data
-
-# Maintain a list of free cells, and a list of states
-# Allocate one cell as the base cell, and one cell as the temp cell
-# Create a power-on state and assign the base cell to it
-# Keep track of the loaded state, which is the one associated with the base cell
-
-# To modify a state, modify its cell and then delete all later states
-
-# To load a state:
-#   Check that it's not already loaded
-#   Use the temp cell to swap the data in the base cell and the state's cell
-#   Swap the base cell and the state's cell
-
-# To update a state:
-#   Load it if it's not already
-#   Update the base cell
-#   Increment the state's frame index
-
-# To allocate a state:
-#   If a cell is free, use that
-#   Otherwise use an algorithm to pick a state - never the power on state
-#   Create a new state object that is a copy of the selected one
-#   Invalidate the selected state object (in case anyone has a reference to it)
-
-# To request a frame:
-#   Find the latest state earlier than it
-#   Allocate a new state
-#   If the new state is not sufficient, copy from the latest state
-#   Update the state to the desired frame
-#
-#   Performance:
-#     Copy latest -> new if new is too late or too early
-#     Swap with base (3 copies) if new is not allocated from the base cell
-#     So faster to allocate from base cell, but want to maintain a healthy
-#       distribution of states across time
+# from butter.util import dcast
 
 
+# # Cell = allocated memory block
+# # State = frame index + assigned cell containing up-to-date data
 
-from ctypes import *
+# # Maintain a list of free cells, and a list of states
+# # Allocate one cell as the base cell, and one cell as the temp cell
+# # Create a power-on state and assign the base cell to it
+# # Keep track of the loaded state, which is the one associated with the base cell
 
-from butter.state import State, StateManager
+# # To modify a state, modify its cell and then delete all later states
+
+# # To load a state:
+# #   Check that it's not already loaded
+# #   Use the temp cell to swap the data in the base cell and the state's cell
+# #   Swap the base cell and the state's cell
+
+# # To update a state:
+# #   Load it if it's not already
+# #   Update the base cell
+# #   Increment the state's frame index
+
+# # To allocate a state:
+# #   If a cell is free, use that
+# #   Otherwise use an algorithm to pick a state - never the power on state
+# #   Create a new state object that is a copy of the selected one
+# #   Invalidate the selected state object (in case anyone has a reference to it)
+
+# # To request a frame:
+# #   Find the latest state earlier than it
+# #   Allocate a new state
+# #   If the new state is not sufficient, copy from the latest state
+# #   Update the state to the desired frame
+# #
+# #   Performance:
+# #     Copy latest -> new if new is too late or too early
+# #     Swap with base (3 copies) if new is not allocated from the base cell
+# #     So faster to allocate from base cell, but want to maintain a healthy
+# #       distribution of states across time
 
 
-def read_byte(f):
-  return (f.read(1) or [0])[0]
+
+# from ctypes import *
+
+# from butter.state import State, StateManager
+
+
+# def read_byte(f):
+#   return (f.read(1) or [0])[0]
+
+
+# def run():
+#   lib = cdll.LoadLibrary('lib/sm64plus/us/sm64plus')
+#   with open('lib/sm64plus/us/sm64plus.json', 'r') as f:
+#     spec = json.load(f)
+
+#   lib.sm64_state_new.argtypes = []
+#   lib.sm64_state_new.restype = c_void_p
+
+#   lib.sm64_state_delete.argtypes = [c_void_p]
+#   lib.sm64_state_delete.restype = None
+
+#   lib.sm64_state_update.argtypes = [c_void_p]
+#   lib.sm64_state_update.restype = None
+
+#   lib.sm64_state_raw_copy.argtypes = [c_void_p, c_void_p]
+#   lib.sm64_state_raw_copy.restype = None
+
+#   with open('test_files/120_u.m64', 'rb') as m64:
+#     m64.seek(0x400)
+
+#     state_manager = StateManager(lib, spec, 10)
+#     st = state_manager.new_state(0)
+#     state_manager._load_state(st)
+
+#     globals = spec['types']['struct']['SM64State']['fields']
+
+#     start = time.time()
+
+#     for _ in range(150000):
+#       controller = st.addr + globals['gControllerPads']['offset']
+#       os_cont_pad = spec['types']['typedef']['OSContPad']['fields']
+#       controller_button = cast(controller + os_cont_pad['button']['offset'], POINTER(c_uint16))
+#       controller_stick_x = cast(controller + os_cont_pad['stick_x']['offset'], POINTER(c_int8))
+#       controller_stick_y = cast(controller + os_cont_pad['stick_y']['offset'], POINTER(c_int8))
+
+#       global_timer = cast(st.addr + globals['gGlobalTimer']['offset'], POINTER(c_uint32))
+#       level_num = cast(st.addr + globals['gCurrLevelNum']['offset'], POINTER(c_int16))
+#       num_stars = cast(st.addr + globals['gDisplayedStars']['offset'], POINTER(c_int16))
+
+#       controller_button[0] = read_byte(m64) << 8 | read_byte(m64)
+#       controller_stick_x[0] = read_byte(m64)
+#       controller_stick_y[0] = read_byte(m64)
+#       st.touch()
+
+#       st.advance()
+
+#       if global_timer[0] % 5000 == 0:
+#         print(num_stars[0])
+
+#     print(st.frame / (time.time() - start))
+
+
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+
+import butter.graphics as graphics
+
+
+class Window(QWidget):
+
+  def __init__(self, parent=None):
+    super().__init__(parent)
+
+    self.setWindowTitle('SM64')
+
+    layout = QHBoxLayout()
+    layout.setContentsMargins(0, 0, 0, 0)
+
+    self.game_view = GameView()
+    layout.addWidget(self.game_view)
+
+    self.setLayout(layout)
+
+    self.draw_timer = QTimer()
+    self.draw_timer.timeout.connect(lambda: self.game_view.update())
+    self.draw_timer.start()
+
+
+class GameView(QOpenGLWidget):
+
+  def __init__(self, parent=None):
+    super().__init__(parent)
+
+    self.setMinimumSize(640, 480)
+
+  def initializeGL(self):
+    graphics.load_gl()
+
+  def paintGL(self):
+    self.makeCurrent()
+    graphics.render()
 
 
 def run():
-  lib = cdll.LoadLibrary('lib/sm64plus/us/sm64plus')
-  with open('lib/sm64plus/us/sm64plus.json', 'r') as f:
-    spec = json.load(f)
-
-  lib.sm64_state_new.argtypes = []
-  lib.sm64_state_new.restype = c_void_p
-
-  lib.sm64_state_delete.argtypes = [c_void_p]
-  lib.sm64_state_delete.restype = None
-
-  lib.sm64_state_update.argtypes = [c_void_p]
-  lib.sm64_state_update.restype = None
-
-  lib.sm64_state_raw_copy.argtypes = [c_void_p, c_void_p]
-  lib.sm64_state_raw_copy.restype = None
-
-  with open('test_files/120_u.m64', 'rb') as m64:
-    m64.seek(0x400)
-
-    state_manager = StateManager(lib, spec, 10)
-    st = state_manager.new_state(0)
-    state_manager._load_state(st)
-
-    globals = spec['types']['struct']['SM64State']['fields']
-
-    start = time.time()
-
-    for _ in range(150000):
-      controller = st.addr + globals['gControllerPads']['offset']
-      os_cont_pad = spec['types']['typedef']['OSContPad']['fields']
-      controller_button = cast(controller + os_cont_pad['button']['offset'], POINTER(c_uint16))
-      controller_stick_x = cast(controller + os_cont_pad['stick_x']['offset'], POINTER(c_int8))
-      controller_stick_y = cast(controller + os_cont_pad['stick_y']['offset'], POINTER(c_int8))
-
-      global_timer = cast(st.addr + globals['gGlobalTimer']['offset'], POINTER(c_uint32))
-      level_num = cast(st.addr + globals['gCurrLevelNum']['offset'], POINTER(c_int16))
-      num_stars = cast(st.addr + globals['gDisplayedStars']['offset'], POINTER(c_int16))
-
-      controller_button[0] = read_byte(m64) << 8 | read_byte(m64)
-      controller_stick_x[0] = read_byte(m64)
-      controller_stick_y[0] = read_byte(m64)
-      st.touch()
-
-      st.advance()
-
-      if global_timer[0] % 5000 == 0:
-        print(num_stars[0])
-
-    print(st.frame / (time.time() - start))
+  app = QApplication([])
+  window = Window()
+  window.show()
+  app.exec_()
