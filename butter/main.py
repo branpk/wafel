@@ -182,11 +182,20 @@
 #     print(st.frame / (time.time() - start))
 
 
+from typing import cast
+from ctypes import *
+import json
+
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 import butter.graphics as graphics
+from butter.state import StateManager, State
+
+
+def read_byte(f):
+  return (f.read(1) or [0])[0]
 
 
 class Window(QWidget):
@@ -216,12 +225,47 @@ class GameView(QOpenGLWidget):
 
     self.setMinimumSize(640, 480)
 
+    self.m64 = open('test_files/120_u.m64', 'rb')
+    self.m64.seek(0x400)
+
+    lib = cdll.LoadLibrary('lib/sm64plus/us/sm64plus')
+    with open('lib/sm64plus/us/sm64plus.json', 'r') as f:
+      self.spec = json.load(f)
+    self.state_manager = StateManager(lib, self.spec, 10)
+    self.state = self.state_manager.new_state(0)
+
   def initializeGL(self):
     graphics.load_gl()
 
   def paintGL(self):
     self.makeCurrent()
-    graphics.render()
+
+    st = self.state
+
+    for _ in range(8):
+      globals = self.spec['types']['struct']['SM64State']['fields']
+
+      controller = st.addr + globals['gControllerPads']['offset']
+      os_cont_pad = self.spec['types']['typedef']['OSContPad']['fields']
+      controller_button = cast(controller + os_cont_pad['button']['offset'], POINTER(c_uint16))
+      controller_stick_x = cast(controller + os_cont_pad['stick_x']['offset'], POINTER(c_int8))
+      controller_stick_y = cast(controller + os_cont_pad['stick_y']['offset'], POINTER(c_int8))
+
+      global_timer = cast(st.addr + globals['gGlobalTimer']['offset'], POINTER(c_uint32))
+      level_num = cast(st.addr + globals['gCurrLevelNum']['offset'], POINTER(c_int16))
+      num_stars = cast(st.addr + globals['gDisplayedStars']['offset'], POINTER(c_int16))
+
+      controller_button[0] = read_byte(self.m64) << 8 | read_byte(self.m64)
+      controller_stick_x[0] = read_byte(self.m64)
+      controller_stick_y[0] = read_byte(self.m64)
+      st.touch()
+
+      st.advance()
+
+      if global_timer[0] % 5000 == 0:
+        print(num_stars[0])
+
+    graphics.render(st)
 
 
 def run():
