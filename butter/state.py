@@ -1,4 +1,6 @@
 import ctypes
+import random
+from typing import List
 
 from butter.util import dcast
 
@@ -47,7 +49,7 @@ class StateManager:
     self._loaded_state = self._power_on_state
 
 
-  def __del__(self):
+  def __del__(self) -> None:
     for cell in self._all_cells:
       self._lib.sm64_state_delete(cell)
 
@@ -100,12 +102,9 @@ class StateManager:
       new_state = State(self, self._loaded_state._frame, new_cell)
 
     else:
-      # Delete the currently loaded state, unless it's the power-on state
-      # TODO: Better selection algorithm (use target frame hint)
-      if self._loaded_state in self._allocated_states:
-        old_state = self._loaded_state
-      else:
-        old_state = self._allocated_states[0]
+      # Select a state to delete
+      # TODO: Better selection algorithm
+      old_state = random.choice(self._allocated_states)
 
       old_state._valid = False
       self._allocated_states.remove(old_state)
@@ -134,3 +133,7 @@ class StateManager:
       new_state.advance()
 
     return new_state
+
+
+  def get_loaded_frames(self) -> List[int]:
+    return [state._frame for state in self._allocated_states]

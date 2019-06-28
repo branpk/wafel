@@ -205,17 +205,42 @@ class Window(QWidget):
 
     self.setWindowTitle('SM64')
 
-    layout = QHBoxLayout()
+    layout = QVBoxLayout()
     layout.setContentsMargins(0, 0, 0, 0)
 
     self.game_view = GameView()
     layout.addWidget(self.game_view)
+
+    self.slider = FrameSlider(150000, self.game_view.state_manager)
+    def slider_value_changed(value):
+      self.game_view.set_frame(value)
+    self.slider.valueChanged.connect(slider_value_changed)
+    layout.addWidget(self.slider)
 
     self.setLayout(layout)
 
     self.draw_timer = QTimer()
     self.draw_timer.timeout.connect(lambda: self.game_view.update())
     self.draw_timer.start()
+
+
+class FrameSlider(QSlider):
+
+  def __init__(self, length: int, state_manager: StateManager, parent=None):
+    super().__init__(Qt.Horizontal, parent=parent)
+    self.length = length
+    self.state_manager = state_manager
+
+    self.setMinimum(0)
+    self.setMaximum(self.length)
+
+  def paintEvent(self, event):
+    super().paintEvent(event)
+
+    painter = QPainter(self)
+    for frame in self.state_manager.get_loaded_frames():
+      x = (self.contentsRect().width() - 11) / self.length * frame + 5
+      painter.fillRect(x, 0, 1, 20, Qt.red)
 
 
 class GameView(QOpenGLWidget):
@@ -231,8 +256,12 @@ class GameView(QOpenGLWidget):
     lib = cdll.LoadLibrary('lib/sm64plus/us/sm64plus')
     with open('lib/sm64plus/us/sm64plus.json', 'r') as f:
       self.spec = json.load(f)
-    self.state_manager = StateManager(lib, self.spec, 10)
-    self.state = self.state_manager.new_state(0)
+    self.state_manager = StateManager(lib, self.spec, 200)
+
+    self.frame = 0
+
+  def set_frame(self, frame):
+    self.frame = frame
 
   def initializeGL(self):
     graphics.load_gl()
@@ -240,30 +269,30 @@ class GameView(QOpenGLWidget):
   def paintGL(self):
     self.makeCurrent()
 
-    st = self.state
+    st = self.state_manager.new_state(self.frame)
 
-    for _ in range(8):
-      globals = self.spec['types']['struct']['SM64State']['fields']
+    # for _ in range(8):
+    #   globals = self.spec['types']['struct']['SM64State']['fields']
 
-      controller = st.addr + globals['gControllerPads']['offset']
-      os_cont_pad = self.spec['types']['typedef']['OSContPad']['fields']
-      controller_button = cast(controller + os_cont_pad['button']['offset'], POINTER(c_uint16))
-      controller_stick_x = cast(controller + os_cont_pad['stick_x']['offset'], POINTER(c_int8))
-      controller_stick_y = cast(controller + os_cont_pad['stick_y']['offset'], POINTER(c_int8))
+    #   controller = st.addr + globals['gControllerPads']['offset']
+    #   os_cont_pad = self.spec['types']['typedef']['OSContPad']['fields']
+    #   controller_button = cast(controller + os_cont_pad['button']['offset'], POINTER(c_uint16))
+    #   controller_stick_x = cast(controller + os_cont_pad['stick_x']['offset'], POINTER(c_int8))
+    #   controller_stick_y = cast(controller + os_cont_pad['stick_y']['offset'], POINTER(c_int8))
 
-      global_timer = cast(st.addr + globals['gGlobalTimer']['offset'], POINTER(c_uint32))
-      level_num = cast(st.addr + globals['gCurrLevelNum']['offset'], POINTER(c_int16))
-      num_stars = cast(st.addr + globals['gDisplayedStars']['offset'], POINTER(c_int16))
+    #   global_timer = cast(st.addr + globals['gGlobalTimer']['offset'], POINTER(c_uint32))
+    #   level_num = cast(st.addr + globals['gCurrLevelNum']['offset'], POINTER(c_int16))
+    #   num_stars = cast(st.addr + globals['gDisplayedStars']['offset'], POINTER(c_int16))
 
-      controller_button[0] = read_byte(self.m64) << 8 | read_byte(self.m64)
-      controller_stick_x[0] = read_byte(self.m64)
-      controller_stick_y[0] = read_byte(self.m64)
-      st.touch()
+    #   controller_button[0] = read_byte(self.m64) << 8 | read_byte(self.m64)
+    #   controller_stick_x[0] = read_byte(self.m64)
+    #   controller_stick_y[0] = read_byte(self.m64)
+    #   st.touch()
 
-      st.advance()
+    #   st.advance()
 
-      if global_timer[0] % 5000 == 0:
-        print(num_stars[0])
+    #   if global_timer[0] % 5000 == 0:
+    #     print(num_stars[0])
 
     graphics.render(st)
 
