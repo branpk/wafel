@@ -191,10 +191,11 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 import butter.graphics as graphics
-from butter.state import StateManager, State
+from butter.state import StateManager, State, InputSequence
 
 
-def read_byte(f):
+from typing import BinaryIO
+def read_byte(f: BinaryIO):
   return (f.read(1) or [0])[0]
 
 
@@ -250,13 +251,13 @@ class GameView(QOpenGLWidget):
 
     self.setMinimumSize(640, 480)
 
-    self.m64 = open('test_files/120_u.m64', 'rb')
-    self.m64.seek(0x400)
+    with open('test_files/120_u.m64', 'rb') as m64:
+      inputs = InputSequence.from_m64(m64)
 
     lib = cdll.LoadLibrary('lib/sm64plus/us/sm64plus')
     with open('lib/sm64plus/us/sm64plus.json', 'r') as f:
       self.spec = json.load(f)
-    self.state_manager = StateManager(lib, self.spec, 200)
+    self.state_manager = StateManager(lib, self.spec, inputs, 200)
 
     self.frame = 0
 
@@ -270,30 +271,6 @@ class GameView(QOpenGLWidget):
     self.makeCurrent()
 
     st = self.state_manager.new_state(self.frame)
-
-    # for _ in range(8):
-    #   globals = self.spec['types']['struct']['SM64State']['fields']
-
-    #   controller = st.addr + globals['gControllerPads']['offset']
-    #   os_cont_pad = self.spec['types']['typedef']['OSContPad']['fields']
-    #   controller_button = cast(controller + os_cont_pad['button']['offset'], POINTER(c_uint16))
-    #   controller_stick_x = cast(controller + os_cont_pad['stick_x']['offset'], POINTER(c_int8))
-    #   controller_stick_y = cast(controller + os_cont_pad['stick_y']['offset'], POINTER(c_int8))
-
-    #   global_timer = cast(st.addr + globals['gGlobalTimer']['offset'], POINTER(c_uint32))
-    #   level_num = cast(st.addr + globals['gCurrLevelNum']['offset'], POINTER(c_int16))
-    #   num_stars = cast(st.addr + globals['gDisplayedStars']['offset'], POINTER(c_int16))
-
-    #   controller_button[0] = read_byte(self.m64) << 8 | read_byte(self.m64)
-    #   controller_stick_x[0] = read_byte(self.m64)
-    #   controller_stick_y[0] = read_byte(self.m64)
-    #   st.touch()
-
-    #   st.advance()
-
-    #   if global_timer[0] % 5000 == 0:
-    #     print(num_stars[0])
-
     graphics.render(st)
 
 
