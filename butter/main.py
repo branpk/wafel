@@ -191,7 +191,8 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 import butter.graphics as graphics
-from butter.game_state import GameStateManager, GameState, InputSequence
+from butter.game_state_manager import GameStateManager
+from butter.input_sequence import InputSequence
 
 
 from typing import BinaryIO
