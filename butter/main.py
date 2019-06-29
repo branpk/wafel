@@ -191,7 +191,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 import butter.graphics as graphics
-from butter.state import StateManager, State, InputSequence
+from butter.game_state import GameStateManager, GameState, InputSequence
 
 
 from typing import BinaryIO
@@ -227,7 +227,7 @@ class Window(QWidget):
 
 class FrameSlider(QSlider):
 
-  def __init__(self, length: int, state_manager: StateManager, parent=None):
+  def __init__(self, length: int, state_manager: GameStateManager, parent=None):
     super().__init__(Qt.Horizontal, parent=parent)
     self.length = length
     self.state_manager = state_manager
@@ -257,7 +257,7 @@ class GameView(QOpenGLWidget):
     lib = cdll.LoadLibrary('lib/sm64plus/us/sm64plus')
     with open('lib/sm64plus/us/sm64plus.json', 'r') as f:
       self.spec = json.load(f)
-    self.state_manager = StateManager(lib, self.spec, inputs, 200)
+    self.state_manager = GameStateManager(lib, self.spec, inputs, 200)
 
     self.frame = 0
 
@@ -270,7 +270,7 @@ class GameView(QOpenGLWidget):
   def paintGL(self):
     self.makeCurrent()
 
-    st = self.state_manager.new_state(self.frame)
+    st = self.state_manager.request_frame(self.frame)
     graphics.render(st)
 
 
