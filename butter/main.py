@@ -275,7 +275,8 @@ class GameView(QOpenGLWidget):
 
     # TODO: Move to a timer probably
     self.state_manager.balance_distribution(1/60)
-    st = self.state_manager.request_frame(self.frame)
+    st = self.state_manager.request_frame(self.frame, 'visualizer' + str(id(self)))
+    assert st is not None
     graphics.render(st)
 
 

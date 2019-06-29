@@ -1,6 +1,6 @@
 import ctypes
 import random
-from typing import List, Optional
+from typing import List, Optional, Dict
 import weakref
 import time
 
@@ -37,6 +37,8 @@ class GameStateManager:
     self.loaded_states: List[weakref.ref[GameState]] = []
 
     self.power_on_cell = self.cells[1]
+
+    self.hotspots: Dict[str, int] = {}
 
   def any_states_loaded(self) -> bool:
     self.loaded_states = [st for st in self.loaded_states if st() is not None]
@@ -80,7 +82,9 @@ class GameStateManager:
     usable_cells = [cell for cell in self.cells if cell.frame <= frame]
     return max(usable_cells, key=lambda cell: cell.frame)
 
-  def request_frame(self, frame: int) -> Optional[GameState]:
+  def request_frame(self, frame: int, name: str) -> Optional[GameState]:
+    self.hotspots[name] = frame
+
     # Load a state as close to the desired frame as possible
     self.copy_cell(self.base_cell, self.find_latest_cell_before(frame))
 
@@ -93,22 +97,33 @@ class GameStateManager:
     return state
 
   def balance_cells(self) -> None:
-    bucket_size = len(self.inputs) // len(self.cells) # TODO: Make this depend on distance to hotspots
     max_advances = 50
+    bucket_size = len(self.inputs) // len(self.cells) * 4
 
     buckets: dict[int, List[Cell]] = {
-      frame: [] for frame in range(0, len(self.inputs) // bucket_size + 1)
+      frame: [] for frame in range(0, len(self.inputs), bucket_size)
     }
+    for hotspot in self.hotspots.values():
+      for i in range(-60, 61, 5):
+        buckets[max(hotspot + i, 0)] = []
 
     free_cells = [cell for cell in self.cells if self.can_modify_cell(cell)]
     for cell in free_cells:
-      buckets[cell.frame // bucket_size].append(cell)
+      bucket = max(b for b in buckets if b <= cell.frame)
+      buckets[bucket].append(cell)
 
-    min_bucket = min(buckets.items(), key=lambda e: len(e[1]))[0]
-    max_bucket = max(buckets.items(), key=lambda e: len(e[1]))[0]
+    shuffled_buckets = list(buckets.items())
+    random.shuffle(shuffled_buckets)
+    min_bucket = min(shuffled_buckets, key=lambda e: len(e[1]))[0]
+    max_bucket = max(shuffled_buckets, key=lambda e: len(e[1]))[0]
 
     cell = random.choice(buckets[max_bucket])
-    target_frame = min_bucket * bucket_size + random.randrange(bucket_size)
+
+    min_bucket_next = min(
+      [bucket for bucket in buckets if bucket > min_bucket],
+      default=len(self.inputs),
+    )
+    target_frame = random.randrange(min_bucket, max(min_bucket_next, min_bucket + 1))
 
     self.copy_cell(cell, self.base_cell)
     self.copy_cell(self.base_cell, self.find_latest_cell_before(target_frame))
