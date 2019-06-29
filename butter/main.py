@@ -243,6 +243,8 @@ class FrameSlider(QSlider):
       x = (self.contentsRect().width() - 11) / self.length * frame + 5
       painter.fillRect(x, 0, 1, 20, Qt.red)
 
+    self.update()
+
 
 class GameView(QOpenGLWidget):
 
@@ -270,6 +272,8 @@ class GameView(QOpenGLWidget):
   def paintGL(self):
     self.makeCurrent()
 
+    # TODO: Move to a timer probably
+    self.state_manager.balance_distribution(1/60)
     st = self.state_manager.request_frame(self.frame)
     graphics.render(st)
 

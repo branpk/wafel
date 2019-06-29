@@ -2,6 +2,7 @@ import ctypes
 import random
 from typing import List, IO, Optional
 import weakref
+import time
 
 from butter.util import dcast
 
@@ -85,6 +86,9 @@ class InputSequence:
   def __init__(self):
     self._items: List[List[SequenceItem]] = []
 
+  def __len__(self) -> int:
+    return len(self._items)
+
   def __getitem__(self, frame: int) -> List[SequenceItem]:
     while frame >= len(self._items):
       self._items.append([])
@@ -157,23 +161,57 @@ class GameStateManager:
       self.copy_cell(cell1, cell2)
       self.copy_cell(cell2, self.temp_cell)
 
-  def request_frame(self, frame: int) -> Optional[GameState]:
-    # Move contents of base_cell to a random location
-    # TODO: Can probably remove if we use a background distribution algorithm
-    free_cells = [cell for cell in self.cells if self.can_modify_cell(cell)]
-    assert len(free_cells) > 0
-    self.swap_cell_contents(self.base_cell, random.choice(free_cells))
-
-    # Load a state as close to the desired frame as possible
+  def find_latest_cell_before(self, frame: int) -> Cell:
     usable_cells = [cell for cell in self.cells if cell.frame <= frame]
-    self.copy_cell(self.base_cell, max(usable_cells, key=lambda cell: cell.frame))
+    return max(usable_cells, key=lambda cell: cell.frame)
 
+  def request_frame(self, frame: int) -> Optional[GameState]:
+    # Load a state as close to the desired frame as possible
+    self.copy_cell(self.base_cell, self.find_latest_cell_before(frame))
+
+    # TODO: Max number of frame advances, return None otherwise
     while self.base_cell.frame < frame:
       self.advance_base_cell()
 
     state = GameState(self.spec, self.base_cell)
     self.loaded_states.append(weakref.ref(state))
     return state
+
+  def balance_cells(self) -> None:
+    bucket_size = len(self.inputs) // len(self.cells) # TODO: Make this depend on distance to hotspots
+    max_advances = 50
+
+    buckets: dict[int, List[Cell]] = {
+      frame: [] for frame in range(0, len(self.inputs) // bucket_size + 1)
+    }
+
+    free_cells = [cell for cell in self.cells if self.can_modify_cell(cell)]
+    for cell in free_cells:
+      buckets[cell.frame // bucket_size].append(cell)
+
+    min_bucket = min(buckets.items(), key=lambda e: len(e[1]))[0]
+    max_bucket = max(buckets.items(), key=lambda e: len(e[1]))[0]
+
+    cell = random.choice(buckets[max_bucket])
+    target_frame = min_bucket * bucket_size + random.randrange(bucket_size)
+
+    self.copy_cell(cell, self.base_cell)
+    self.copy_cell(self.base_cell, self.find_latest_cell_before(target_frame))
+
+    target_frame = min(target_frame, self.base_cell.frame + max_advances)
+    while self.base_cell.frame < target_frame:
+      self.advance_base_cell()
+
+    # The base cell gets overwritten often, so swap it back to avoid immediately
+    # undoing our work
+    self.swap_cell_contents(self.base_cell, cell)
+
+  def balance_distribution(self, max_run_time: float) -> None:
+    # TODO: Could save and restore the base cell to allow loaded states to exist
+    # through calls to this method
+    start_time = time.monotonic()
+    while time.monotonic() - start_time < max_run_time:
+      self.balance_cells()
 
   def get_loaded_frames(self) -> List[int]:
     return [cell.frame for cell in self.cells]
