@@ -1,15 +1,16 @@
 import ctypes
 import random
-from typing import List, Optional, Dict
+from typing import *
 import weakref
 import time
 
 from butter.util import dcast
 from butter.game_state import GameState
 from butter.input_sequence import InputSequence
+from butter.reactive import Reactive, ReactiveValue
 
 
-class Cell:
+class _Cell:
   """A block of memory containing an SM64State struct."""
 
   def __init__(self, frame: int, addr: int) -> None:
@@ -17,7 +18,9 @@ class Cell:
     self.addr = addr
 
 
-class GameStateManager:
+# TODO: Cell invalidation on input change
+
+class _CellManager:
   def __init__(
     self,
     lib: ctypes.CDLL,
@@ -46,13 +49,13 @@ class GameStateManager:
     # Keep one cell fixed at frame 0
     self.power_on_cell = self.cells[1]
 
-    self.hotspots: Dict[str, int] = {}
+    self.hotspots: Set[Reactive[int]] = set()
 
   def any_states_loaded(self) -> bool:
     self.loaded_states = [st for st in self.loaded_states if st() is not None]
     return len(self.loaded_states) > 0
 
-  def can_modify_cell(self, cell: Cell) -> bool:
+  def can_modify_cell(self, cell: _Cell) -> bool:
     if cell is self.base_cell:
       return not self.any_states_loaded()
     elif cell is self.power_on_cell:
@@ -60,11 +63,11 @@ class GameStateManager:
     else:
       return True
 
-  def new_cell(self) -> Cell:
+  def new_cell(self) -> _Cell:
     addr = dcast(int, self.lib.sm64_state_new())
-    return Cell(0, addr)
+    return _Cell(0, addr)
 
-  def copy_cell(self, dst: Cell, src: Cell, unsafe: bool = False) -> None:
+  def copy_cell(self, dst: _Cell, src: _Cell, unsafe: bool = False) -> None:
     if not unsafe:
       assert self.can_modify_cell(dst)
     if src is not dst:
@@ -80,13 +83,13 @@ class GameStateManager:
     self.lib.sm64_state_update(self.base_cell.addr)
     self.base_cell.frame += 1
 
-  def swap_cell_contents(self, cell1: Cell, cell2: Cell) -> None:
+  def swap_cell_contents(self, cell1: _Cell, cell2: _Cell) -> None:
     if cell1 is not cell2:
       self.copy_cell(self.temp_cell, cell1)
       self.copy_cell(cell1, cell2)
       self.copy_cell(cell2, self.temp_cell)
 
-  def find_latest_cell_before(self, frame: int) -> Cell:
+  def find_latest_cell_before(self, frame: int) -> _Cell:
     usable_cells = [cell for cell in self.cells if cell.frame <= frame]
     return max(usable_cells, key=lambda cell: cell.frame)
 
@@ -102,14 +105,14 @@ class GameStateManager:
     self.loaded_states.append(weakref.ref(state))
     return state
 
-  def set_hotspot(self, name: str, frame: int) -> None:
-    self.hotspots[name] = frame
+  def add_hotspot(self, frame: Reactive[int]) -> None:
+    self.hotspots.add(frame)
 
-  def remove_hotspot(self, name: str) -> None:
-    if name in self.hotspots:
-      del self.hotspots[name]
+  def remove_hotspot(self, frame: Reactive[int]) -> None:
+    if frame in self.hotspots:
+      self.hotspots.remove(frame)
 
-  def get_cell_buckets(self) -> Dict[int, List[Cell]]:
+  def get_cell_buckets(self) -> Dict[int, List[_Cell]]:
     """Divide the frame timeline into buckets, where each bucket ideally
     contains the same number of cells."""
 
@@ -117,14 +120,14 @@ class GameStateManager:
     # We increase the size to give us extra cells to work with
     default_bucket_size = len(self.inputs) // len(self.cells) * 4
 
-    buckets: Dict[int, List[Cell]] = {
+    buckets: Dict[int, List[_Cell]] = {
       frame: [] for frame in range(0, len(self.inputs), default_bucket_size)
     }
 
     # Increase the number of buckets near hotspots
-    for hotspot in self.hotspots.values():
+    for hotspot in self.hotspots:
       for i in range(-60, 61, 5):
-        buckets[max(hotspot + i, 0)] = []
+        buckets[max(hotspot.value + i, 0)] = []
 
     # Divide the modifiable cells into the buckets
     free_cells = [cell for cell in self.cells if self.can_modify_cell(cell)]
@@ -134,7 +137,7 @@ class GameStateManager:
 
     return buckets
 
-  def move_cell_to_frame(self, cell: Cell, target_frame: int, max_advances: int) -> None:
+  def move_cell_to_frame(self, cell: _Cell, target_frame: int, max_advances: int) -> None:
     # Save the base cell's contents to the selected cell, and load the base
     # cell with a good starting point
     self.copy_cell(cell, self.base_cell)
@@ -179,3 +182,70 @@ class GameStateManager:
 
   def get_loaded_frames(self) -> List[int]:
     return [cell.frame for cell in self.cells]
+
+
+# TODO: Watch for input changes
+# TODO: Make GameStateTimeline itself reactive (adding/removing frames etc)
+# TODO: Handling case where request_frame returns None (once implemented)
+
+class _ReactiveGameState(Reactive[GameState]):
+  def __init__(self, timeline: 'Timeline', frame: Reactive[int]) -> None:
+    self.timeline = timeline
+    self.frame = frame
+
+  @property
+  def value(self) -> GameState:
+    return self.timeline._get_state_now(self.frame.value)
+
+  def on_change(self, callback: Callable[[GameState], None]) -> None:
+    def on_frame_change(frame: int) -> None:
+      callback(self.timeline._get_state_now(frame))
+    self.frame.on_change(on_frame_change)
+
+    self.timeline._on_state_change(self.frame, callback)
+
+
+class Timeline:
+  def __init__(
+    self,
+    lib: ctypes.CDLL,
+    spec: dict,
+    inputs: InputSequence,
+  ) -> None:
+    self._cell_manager = _CellManager(lib, spec, inputs, capacity=200)
+    self._callbacks: List[Tuple[Reactive[int], Callable[[GameState], None]]] = []
+
+  def _get_state_now(self, frame: int) -> GameState:
+    state = self._cell_manager.request_frame(frame)
+    assert state is not None
+    return state
+
+  def _on_state_change(self, frame: Reactive[int], callback: Callable[[GameState], None]) -> None:
+    self._callbacks.append((frame, callback))
+
+  def _invalidate_state(self, frame: int) -> None:
+    # TODO: Invalidate cells
+    callbacks = [(f, cb) for f, cb in self._callbacks if f.value >= frame]
+    for callback_frame, callback in callbacks:
+      callback(self._get_state_now(callback_frame.value))
+
+  def frame(self, frame: Union[int, Reactive[int]]) -> Reactive[GameState]:
+    if isinstance(frame, int):
+      frame = ReactiveValue(frame)
+    return _ReactiveGameState(self, frame)
+
+  def add_hotspot(self, frame: Reactive[int]) -> None:
+    """Mark a certain frame as a "hotspot", which is a hint to try to ensure
+    that scrolling near the frame is smooth.
+    """
+    self._cell_manager.add_hotspot(frame)
+
+  def delete_hotspot(self, frame: Reactive[int]) -> None:
+    self._cell_manager.remove_hotspot(frame)
+
+  def balance_distribution(self, max_run_time: float) -> None:
+    """Perform maintenance to maintain a nice distribution of loaded frames."""
+    self._cell_manager.balance_distribution(max_run_time)
+
+  def get_loaded_frames(self) -> List[int]:
+    return self._cell_manager.get_loaded_frames()

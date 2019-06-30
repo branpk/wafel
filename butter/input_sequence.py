@@ -4,6 +4,9 @@ from typing import List, IO, Optional
 from butter.game_state import GameState
 
 
+# TODO: Make InputSequence reactive
+
+
 class SequenceItem:
   def apply(self, state: GameState) -> None:
     raise NotImplementedError()

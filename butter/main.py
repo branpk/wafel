@@ -191,8 +191,9 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 import butter.graphics as graphics
-from butter.game_state_manager import GameStateManager
+from butter.timeline import Timeline
 from butter.input_sequence import InputSequence
+from butter.reactive import Reactive, ReactiveValue
 
 
 from typing import BinaryIO
@@ -213,7 +214,7 @@ class Window(QWidget):
     self.game_view = GameView()
     layout.addWidget(self.game_view)
 
-    self.slider = FrameSlider(150000, self.game_view.state_manager)
+    self.slider = FrameSlider(150000, self.game_view.timeline)
     def slider_value_changed(value):
       self.game_view.set_frame(value)
     self.slider.valueChanged.connect(slider_value_changed)
@@ -228,10 +229,10 @@ class Window(QWidget):
 
 class FrameSlider(QSlider):
 
-  def __init__(self, length: int, state_manager: GameStateManager, parent=None):
+  def __init__(self, length: int, timeline: Timeline, parent=None):
     super().__init__(Qt.Horizontal, parent=parent)
     self.length = length
-    self.state_manager = state_manager
+    self.timeline = timeline
 
     self.setMinimum(0)
     self.setMaximum(self.length)
@@ -240,7 +241,7 @@ class FrameSlider(QSlider):
     super().paintEvent(event)
 
     painter = QPainter(self)
-    for frame in self.state_manager.get_loaded_frames():
+    for frame in self.timeline.get_loaded_frames():
       x = (self.contentsRect().width() - 11) / self.length * frame + 5
       painter.fillRect(x, 0, 1, 20, Qt.red)
 
@@ -260,12 +261,14 @@ class GameView(QOpenGLWidget):
     lib = cdll.LoadLibrary('lib/sm64plus/us/sm64plus')
     with open('lib/sm64plus/us/sm64plus.json', 'r') as f:
       self.spec = json.load(f)
-    self.state_manager = GameStateManager(lib, self.spec, inputs, 200)
+    self.timeline = Timeline(lib, self.spec, inputs)
 
-    self.frame = 0
+    self.frame = ReactiveValue(0)
+    self.timeline.add_hotspot(self.frame)
+    self.state = self.timeline.frame(self.frame)
 
   def set_frame(self, frame):
-    self.frame = frame
+    self.frame.value = frame
 
   def initializeGL(self):
     graphics.load_gl()
@@ -274,12 +277,9 @@ class GameView(QOpenGLWidget):
     self.makeCurrent()
 
     # TODO: Move to a timer probably
-    self.state_manager.balance_distribution(1/60)
+    self.timeline.balance_distribution(1/120)
 
-    self.state_manager.set_hotspot('visualizer' + str(id(self)), self.frame)
-    st = self.state_manager.request_frame(self.frame)
-    assert st is not None
-    graphics.render(st)
+    graphics.render(self.state.value)
 
 
 def run():
