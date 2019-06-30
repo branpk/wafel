@@ -10,6 +10,9 @@ from butter.input_sequence import InputSequence
 from butter.reactive import Reactive, ReactiveValue
 
 
+# TODO: Could do a quick warm up pass on first load and input change
+
+
 class _Cell:
   """A block of memory containing an SM64State struct."""
 
@@ -233,6 +236,9 @@ class Timeline:
     if isinstance(frame, int):
       frame = ReactiveValue(frame)
     return _ReactiveGameState(self, frame)
+
+  def __len__(self) -> int:
+    return len(self._cell_manager.inputs) + 1
 
   def add_hotspot(self, frame: Reactive[int]) -> None:
     """Mark a certain frame as a "hotspot", which is a hint to try to ensure
