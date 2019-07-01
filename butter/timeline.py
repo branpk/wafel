@@ -188,7 +188,7 @@ class _CellManager:
 
 
 # TODO: Watch for input changes
-# TODO: Make GameStateTimeline itself reactive (adding/removing frames etc)
+# TODO: GameStateTimeline events (adding/removing frames, any state changed (for frame sheet caching), etc)
 # TODO: Handling case where request_frame returns None (once implemented)
 
 class _ReactiveGameState(Reactive[GameState]):

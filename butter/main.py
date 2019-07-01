@@ -19,7 +19,7 @@ class Model:
     with open('lib/sm64plus/us/sm64plus.json', 'r') as f:
       self.spec: dict = json.load(f)
 
-    with open('test_files/1key_j.m64', 'rb') as m64:
+    with open('test_files/120_u.m64', 'rb') as m64:
       self.inputs = InputSequence.from_m64(m64)
 
     self.timeline = Timeline(self.lib, self.spec, self.inputs)
@@ -63,6 +63,7 @@ class FrameSheetView(QTableView):
     self.setModel(self.model.frame_sheet)
     self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
     self.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+    self.setSelectionMode(QAbstractItemView.SingleSelection)
 
     self.setMinimumWidth(640)
     self.setMinimumHeight(480)
@@ -72,7 +73,13 @@ class FrameSheetView(QTableView):
     set_selection(self.model.selected_frame.value)
     # self.model.selected_frame.on_change(set_selection)
 
-    # TODO: Hotspot for scolling
+    self.focus_frame = ReactiveValue(0)
+    def set_focus_frame():
+      self.focus_frame.value = self.rowAt(self.contentsRect().y())
+    self.verticalScrollBar().valueChanged.connect(set_focus_frame)
+    set_focus_frame()
+
+    self.model.timeline.add_hotspot(self.focus_frame)
 
   def selectionChanged(self, selected, deselected):
     frame = min((index.row() for index in selected.indexes()), default=0)
