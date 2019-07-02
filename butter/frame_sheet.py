@@ -1,6 +1,3 @@
-import sys
-
-# import PyQt5.Qt
 from PyQt5.QtCore import *
 
 from butter.timeline import Timeline
