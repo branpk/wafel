@@ -101,8 +101,18 @@ class _CellManager:
     self.copy_cell(self.base_cell, self.find_latest_cell_before(frame))
 
     # TODO: Max number of frame advances, return None otherwise
+    free_cells = [cell for cell in self.cells if self.can_modify_cell(cell)]
+
     while self.base_cell.frame < frame:
       self.advance_base_cell()
+
+      # Leave behind some breadcrumbs. This allows smoother backward scrolling
+      # if the user scrolls to a late frame before the cell distribution has
+      # caught up.
+      remaining = frame - self.base_cell.frame
+      if remaining % 1000 == 0 or (remaining < 60 and remaining % 10 == 0):
+        selected = random.choice(free_cells)
+        self.copy_cell(selected, self.base_cell)
 
     state = GameState(self.spec, self.base_cell.frame, self.base_cell.addr)
     self.loaded_states.append(weakref.ref(state))
