@@ -11,12 +11,12 @@ class VariableParam(Enum):
 
 
 class VariableSemantics(Enum):
+  RAW = auto()
   POSITION = auto()
   VELOCITY = auto()
   ANGLE = auto()
   FLAG = auto()
   MARIO_ACTION = auto()
-  RAW = auto()
 
 
 class Variable:
@@ -28,7 +28,7 @@ class Variable:
     read_only: bool,
     data_type: dict,
   ) -> None:
-    self.name = name,
+    self.name = name
     self.params = params
     self.semantics = semantics
     self.read_only = read_only
@@ -61,8 +61,8 @@ class StateDataVariable(Variable):
     spec: dict,
     name: str,
     semantics: VariableSemantics,
-    read_only: bool,
     expression: str,
+    read_only: bool = False,
   ) -> None:
     # TODO: Expressions
     field = spec['types']['struct']['SM64State']['fields'][expression]
@@ -88,3 +88,15 @@ class StateDataVariable(Variable):
     assert isinstance(value, int)
     addr = C.cast(state.addr + self.offset, C.POINTER(self.ctype))
     addr[0] = value
+
+
+class Variables:
+  def __init__(self, variables: List[Variable]) -> None:
+    # TODO: Formatting settings
+    self.variables = variables
+
+
+def create_variables(spec: dict) -> Variables:
+  return Variables([
+    StateDataVariable(spec, 'global timer', VariableSemantics.RAW, 'gGlobalTimer'),
+  ])

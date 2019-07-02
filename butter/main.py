@@ -11,6 +11,7 @@ from butter.timeline import Timeline
 from butter.input_sequence import InputSequence
 from butter.reactive import ReactiveValue
 from butter.frame_sheet import FrameSheet
+from butter.variable import create_variables
 
 
 class Model:
@@ -26,7 +27,10 @@ class Model:
     self.selected_frame = ReactiveValue(0)
     self.timeline.add_hotspot(self.selected_frame)
 
-    self.frame_sheet = FrameSheet(self.timeline)
+    self.variables = create_variables(self.spec)
+
+    # TODO: Frame sheet var list
+    self.frame_sheet = FrameSheet(self.timeline, self.variables.variables)
 
 
 class Window(QWidget):
