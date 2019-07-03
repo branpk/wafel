@@ -70,6 +70,9 @@ class InputSequence:
   def __len__(self) -> int:
     return len(self._items)
 
+  def get_input(self, frame: int) -> Input:
+    return [item for item in self[frame] if isinstance(item, Input)][0]
+
   def __getitem__(self, frame: int) -> List[SequenceItem]:
     while frame >= len(self._items):
       self._items.append([])

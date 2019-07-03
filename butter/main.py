@@ -30,7 +30,7 @@ class Model:
     self.variables = create_variables(self.spec)
 
     # TODO: Frame sheet var list
-    self.frame_sheet = FrameSheet(self.timeline, self.variables.variables)
+    self.frame_sheet = FrameSheet(self.timeline, self.inputs, self.variables.variables)
 
 
 class Window(QWidget):
@@ -42,9 +42,9 @@ class Window(QWidget):
     self.model = Model()
 
     layout = QHBoxLayout()
+    layout.setContentsMargins(0, 0, 0, 0)
 
     visualizer_layout = QVBoxLayout()
-    visualizer_layout.setContentsMargins(0, 0, 0, 0)
     visualizer_layout.addWidget(GameView(self.model))
     visualizer_layout.addWidget(FrameSlider(self.model))
     layout.addLayout(visualizer_layout)
