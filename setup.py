@@ -5,7 +5,7 @@ ext_modules = [
   Extension(
     '_ext_modules.graphics',
     glob('ext_modules/graphics/**/*.c', recursive=True) + ['lib/gl/glad.c'],
-    include_dirs=['lib/gl', 'lib/sm64plus/us'],
+    include_dirs=['lib/gl', 'lib/libsm64/us'],
   ),
 ]
 

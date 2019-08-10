@@ -2,7 +2,7 @@
 
 #include <Python.h>
 #include <glad.h>
-#include <sm64plus.h>
+#include <libsm64.h>
 
 
 static PyObject *load_gl(PyObject *self, PyObject *args) {

@@ -16,8 +16,8 @@ from butter.variable import create_variables
 
 class Model:
   def __init__(self):
-    self.lib = cdll.LoadLibrary('lib/sm64plus/us/sm64plus')
-    with open('lib/sm64plus/us/sm64plus.json', 'r') as f:
+    self.lib = cdll.LoadLibrary('lib/libsm64/us/sm64')
+    with open('lib/libsm64/us/libsm64.json', 'r') as f:
       self.spec: dict = json.load(f)
 
     with open('test_files/120_u.m64', 'rb') as m64:

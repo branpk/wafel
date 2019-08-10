@@ -2,5 +2,5 @@ env
 .vscode
 build
 __pycache__
-lib/sm64plus
+lib/libsm64
 test_files
