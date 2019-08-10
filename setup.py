@@ -4,8 +4,8 @@ from setuptools import setup, Extension
 ext_modules = [
   Extension(
     '_ext_modules.graphics',
-    glob('ext_modules/graphics/**/*.c', recursive=True) + ['lib/gl/glad.c'],
-    include_dirs=['lib/gl', 'lib/libsm64/us'],
+    glob('ext_modules/graphics/**/*.cpp', recursive=True) + ['lib/gl/glad.c'],
+    include_dirs=['lib/gl', 'lib/glm', 'lib/libsm64/us'],
   ),
 ]
 
