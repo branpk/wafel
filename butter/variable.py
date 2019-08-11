@@ -4,7 +4,6 @@ from enum import Enum, auto
 
 class VariableParam(Enum):
   STATE = auto()
-  INPUT = auto()
 
 
 class VariableSemantics(Enum):
@@ -81,3 +80,10 @@ class Variable:
 
   def set(self, value: Any, *args: Any) -> None:
     raise NotImplementedError
+
+
+class Variables:
+  def __init__(self, variables: List[Variable]) -> None:
+    # TODO: Formatting settings
+    self.variables = variables
+    self.by_name = {var.name: var for var in self.variables}

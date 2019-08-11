@@ -35,8 +35,6 @@ class FrameSheet(QAbstractTableModel):
   def get_variable_arg(self, frame: int, param: VariableParam) -> Any:
     if param == VariableParam.STATE:
       return self._timeline.frame(frame).value
-    elif param == VariableParam.INPUT:
-      return self._edits.get_input(frame)
     else:
       raise NotImplementedError
 

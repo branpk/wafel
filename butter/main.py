@@ -20,14 +20,14 @@ class Model:
     with open('lib/libsm64/us/libsm64.json', 'r') as f:
       self.spec: dict = json.load(f)
 
+    self.variables = create_variables(self.spec)
+
     with open('test_files/120_u.m64', 'rb') as m64:
-      self.edits = Edits.from_m64(m64)
+      self.edits = Edits.from_m64(m64, self.variables)
 
     self.timeline = Timeline(self.lib, self.spec, self.edits)
     self.selected_frame = ReactiveValue(0)
     self.timeline.add_hotspot(self.selected_frame)
-
-    self.variables = create_variables(self.spec)
 
     # TODO: Frame sheet var list
     self.frame_sheet = FrameSheet(self.timeline, self.edits, self.variables.variables)

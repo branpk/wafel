@@ -1,7 +1,6 @@
 import ctypes as C
 
 from butter.game_state import GameState
-from butter.edit import Input
 from butter.variable import *
 
 
@@ -19,38 +18,11 @@ PRIMITIVE_CTYPES = {
 }
 
 
-class InputButtonVariable(Variable):
-  def __init__(
-    self,
-    spec: dict,
-    button_name: str,
-    flag_name: str,
-  ) -> None:
-    self.flag = spec['constants'][flag_name]['value']
-    super().__init__(
-      button_name,
-      [VariableParam.INPUT],
-      VariableSemantics.FLAG,
-      False,
-      VariableDataType.BOOL,
-    )
-
-  def get(self, input: Input) -> bool:
-    return (input.buttons & self.flag) != 0
-
-  def set(self, value: object, input: Input) -> None:
-    assert isinstance(value, bool)
-    if value:
-      input.buttons |= self.flag
-    else:
-      input.buttons &= ~self.flag
-
-
 class StateDataVariable(Variable):
   def __init__(
     self,
-    spec: dict,
     name: str,
+    spec: dict,
     semantics: VariableSemantics,
     expression: str,
     read_only: bool = False,
@@ -78,20 +50,93 @@ class StateDataVariable(Variable):
     assert not self.read_only
     assert isinstance(value, int)
     addr = C.cast(state.addr + self.offset, C.POINTER(self.ctype))
+    # TODO: Check overflow behavior
     addr[0] = value
 
 
-class Variables:
-  def __init__(self, variables: List[Variable]) -> None:
-    # TODO: Formatting settings
-    self.variables = variables
+class FlagVariable(Variable):
+  def __init__(
+    self,
+    name: str,
+    spec: dict,
+    flags: Variable,
+    flag: str,
+    read_only: bool = False
+  ) -> None:
+    super().__init__(
+      name,
+      flags.params,
+      VariableSemantics.FLAG,
+      read_only or flags.read_only,
+      VariableDataType.BOOL,
+    )
+    self.flags = flags
+    self.flag = spec['constants'][flag]['value'] # TODO: Expressions
+
+  def get(self, *args: Any) -> bool:
+    return (self.flags.get(*args) & self.flag) != 0
+
+  def set(self, value: bool, *args: Any) -> None:
+    flags = self.flags.get(*args)
+    if value:
+      flags |= self.flag
+    else:
+      flags &= ~self.flag
+    self.flags.set(flags, *args)
+
+
+# TODO: Once expressions are implemented, make these into StateDataVariables
+
+class InputButtonsVariable(Variable):
+  def __init__(self, spec: dict):
+    super().__init__(
+      "input buttons",
+      [VariableParam.STATE],
+      VariableSemantics.RAW,
+      False,
+      VariableDataType.U16,
+    )
+    globals = spec['types']['struct']['SM64State']['fields']
+    controller = globals['gControllerPads']['offset']
+    os_cont_pad = spec['types']['typedef']['OSContPad']['fields']
+    self.offset = controller + os_cont_pad['button']['offset']
+
+  def get(self, state: GameState) -> int:
+    return C.cast(state.addr + self.offset, C.POINTER(C.c_uint16))[0]
+
+  def set(self, value: int, state: GameState) -> None:
+    C.cast(state.addr + self.offset, C.POINTER(C.c_uint16))[0] = value
+
+class InputStickVariable(Variable):
+  def __init__(self, name: str, spec: dict):
+    super().__init__(
+      name.replace('_', ' '),
+      [VariableParam.STATE],
+      VariableSemantics.RAW,
+      False,
+      VariableDataType.S8,
+    )
+    globals = spec['types']['struct']['SM64State']['fields']
+    controller = globals['gControllerPads']['offset']
+    os_cont_pad = spec['types']['typedef']['OSContPad']['fields']
+    self.offset = controller + os_cont_pad[name]['offset']
+
+  def get(self, state: GameState) -> int:
+    return C.cast(state.addr + self.offset, C.POINTER(C.c_int8))[0]
+
+  def set(self, value: int, state: GameState) -> None:
+    C.cast(state.addr + self.offset, C.POINTER(C.c_int8))[0] = value
 
 
 def create_variables(spec: dict) -> Variables:
+  input_buttons = InputButtonsVariable(spec)
   return Variables([
-    InputButtonVariable(spec, 'A', 'A_BUTTON'),
-    InputButtonVariable(spec, 'B', 'B_BUTTON'),
-    InputButtonVariable(spec, 'Z', 'Z_TRIG'),
-    InputButtonVariable(spec, 'S', 'START_BUTTON'),
-    StateDataVariable(spec, 'global timer', VariableSemantics.RAW, 'gGlobalTimer'),
+    input_buttons,
+    InputStickVariable('stick_x', spec),
+    InputStickVariable('stick_y', spec),
+    FlagVariable('A', spec, input_buttons, 'A_BUTTON'),
+    FlagVariable('B', spec, input_buttons, 'B_BUTTON'),
+    FlagVariable('Z', spec, input_buttons, 'Z_TRIG'),
+    FlagVariable('S', spec, input_buttons, 'START_BUTTON'),
+    StateDataVariable('global timer', spec, VariableSemantics.RAW, 'gGlobalTimer'),
   ])

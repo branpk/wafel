@@ -2,38 +2,13 @@ import ctypes
 from typing import IO, Any, Optional, List
 
 from butter.game_state import GameState
-from butter.variable import Variable, VariableParam
+from butter.variable import Variable, VariableParam, Variables
 from butter.reactive import Reactive, ReactiveValue
-
-
-# TODO: Make InputSequence reactive
 
 
 class Edit:
   def apply(self, state: GameState) -> None:
     raise NotImplementedError()
-
-
-# TODO: Treat Inputs as variable edits instead
-class Input(Edit):
-  def __init__(self, stick_x: int, stick_y: int, buttons: int):
-    self.stick_x = stick_x
-    self.stick_y = stick_y
-    self.buttons = buttons
-
-  def apply(self, state: GameState) -> None:
-    # TODO: Better system for this (make input variables for STATE instead of INPUT?)
-    globals = state.spec['types']['struct']['SM64State']['fields']
-
-    controller = state.addr + globals['gControllerPads']['offset']
-    os_cont_pad = state.spec['types']['typedef']['OSContPad']['fields']
-    controller_button = ctypes.cast(controller + os_cont_pad['button']['offset'], ctypes.POINTER(ctypes.c_uint16))
-    controller_stick_x = ctypes.cast(controller + os_cont_pad['stick_x']['offset'], ctypes.POINTER(ctypes.c_int8))
-    controller_stick_y = ctypes.cast(controller + os_cont_pad['stick_y']['offset'], ctypes.POINTER(ctypes.c_int8))
-
-    controller_button[0] = self.buttons
-    controller_stick_x[0] = self.stick_x
-    controller_stick_y[0] = self.stick_y
 
 
 class VariableEdit(Edit):
@@ -61,7 +36,7 @@ def read_big_short(f: IO[bytes]) -> Optional[int]:
 
 class Edits:
   @staticmethod
-  def from_m64(m64: IO[bytes]) -> 'Edits':
+  def from_m64(m64: IO[bytes], variables: Variables) -> 'Edits':
     edits = Edits()
 
     m64.seek(0x400)
@@ -73,7 +48,9 @@ class Edits:
       if buttons is None or stick_x is None or stick_y is None:
         break
       else:
-        edits.set_input(frame, Input(stick_x, stick_y, buttons))
+        edits.add(frame, VariableEdit(variables.by_name['input buttons'], buttons))
+        edits.add(frame, VariableEdit(variables.by_name['stick x'], stick_x))
+        edits.add(frame, VariableEdit(variables.by_name['stick y'], stick_y))
       frame += 1
 
     return edits
@@ -82,14 +59,8 @@ class Edits:
     self._items: List[List[Edit]] = []
     self.latest_edited_frame = ReactiveValue(-1)
 
-  # TODO: Handle inputs better
-  def get_input(self, frame: int) -> Input:
-    return [item for item in self._get_edits(frame) if isinstance(item, Input)][-1]
-
-  def set_input(self, frame: int, input: Input) -> None:
-    self.add(frame, input)
-
   def add(self, frame: int, edit: Edit) -> None:
+    # TODO: Remove overwritten edits
     self._get_edits(frame).append(edit)
     self.latest_edited_frame.change_value(frame)
 
@@ -99,5 +70,5 @@ class Edits:
     return self._items[frame]
 
   def apply(self, state: GameState) -> None:
-    for item in self._get_edits(state.frame):
-      item.apply(state)
+    for edit in self._get_edits(state.frame):
+      edit.apply(state)
