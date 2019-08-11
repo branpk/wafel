@@ -137,7 +137,7 @@ class GameView(QOpenGLWidget):
 
   def paintGL(self):
     self.makeCurrent()
-    graphics.render(self.state.value)
+    graphics.render(graphics.RenderInfo(self.state.value))
 
 
 def run():

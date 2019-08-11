@@ -13,7 +13,16 @@ namespace sm64 {
 
 #include "renderer.hpp"
 
-using namespace sm64;
+using sm64::s8;
+using sm64::s16;
+using sm64::s32;
+using sm64::s64;
+using sm64::u8;
+using sm64::u16;
+using sm64::u32;
+using sm64::u64;
+using sm64::f32;
+using sm64::f64;
 
 
 static Renderer *renderer;
@@ -31,9 +40,51 @@ static PyObject *load_gl(PyObject *self, PyObject *args) {
 }
 
 
-static PyObject *render(PyObject *self, PyObject *args) {
-  PyObject *state_object;
-  if (!PyArg_ParseTuple(args, "O", &state_object)) {
+static void *segmented_to_virtual(sm64::SM64State *st, void *addr) {
+  void *result = ((void *)0);
+  s32 i = 0;
+  for (; (i < 32); (i++)) {
+    if (((st->sSegmentTable[i].srcStart <= addr) && (addr < st->sSegmentTable[i].srcEnd))) {
+      if ((result != ((void *)0))) {
+        fprintf(stderr, "Warning: segmented_to_virtual: Found two segments containing address\n");
+        exit(1);
+      }
+      (result = ((((u8 *)addr) - ((u8 *)st->sSegmentTable[i].srcStart)) + (u8 *)st->sSegmentTable[i].dstStart));
+    }
+  }
+  if ((result == ((void *)0))) {
+    (result = addr);
+  }
+  return result;
+}
+
+
+static u32 get_object_list_from_behavior(u32 *behavior) {
+  u32 objectList;
+
+  // If the first behavior command is "begin", then get the object list header
+  // from there
+  if ((behavior[0] >> 24) == 0) {
+    objectList = (behavior[0] >> 16) & 0xFFFF;
+  } else {
+    objectList = sm64::OBJ_LIST_DEFAULT;
+  }
+
+  return objectList;
+}
+
+static u32 get_object_list(sm64::Object *object) {
+  return get_object_list_from_behavior((u32 *)object->behavior);
+}
+
+
+struct RenderInfo {
+  sm64::SM64State *current_state;
+};
+
+
+static sm64::SM64State *read_game_state(PyObject *state_object) {
+  if (state_object == NULL) {
     return NULL;
   }
 
@@ -47,11 +98,37 @@ static PyObject *render(PyObject *self, PyObject *args) {
     return NULL;
   }
 
+  Py_DECREF(addr_object);
+  Py_DECREF(state_object);
+  return (sm64::SM64State *)addr;
+}
+
+
+static bool read_render_info(RenderInfo *info, PyObject *args) {
+  PyObject *info_object;
+  if (!PyArg_ParseTuple(args, "O", &info_object)) {
+    return false;
+  }
+
+  info->current_state = read_game_state(PyObject_GetAttrString(info_object, "current_state"));
+  if (info->current_state == NULL) {
+    return false;
+  }
+}
+
+
+static PyObject *render(PyObject *self, PyObject *args) {
+  RenderInfo render_info;
+  RenderInfo *info = &render_info;
+
+  read_render_info(info, args);
+
+
   renderer->clear();
   renderer->set_viewport({{0, 0}, {640, 480}});
 
 
-  struct SM64State *st = (struct SM64State *)addr;
+  sm64::SM64State *st = info->current_state;
 
   f32 *camera_pos = st->D_8033B328.unk0[1];
   f32 camera_pitch = st->D_8033B328.unk4C * 3.14159f / 0x8000;
@@ -90,10 +167,12 @@ static PyObject *render(PyObject *self, PyObject *args) {
   }
 
   for (s32 i = 0; i < 240; i++) {
-    struct Object *obj = &st->gObjectPool[i];
-    renderer->add_object(
-      vec3(obj->oPosX, obj->oPosY, obj->oPosZ),
-      obj->hitboxHeight);
+    struct sm64::Object *obj = &st->gObjectPool[i];
+    if (obj->activeFlags & ACTIVE_FLAG_ACTIVE) {
+      renderer->add_object(
+        vec3(obj->oPosX, obj->oPosY, obj->oPosZ),
+        obj->hitboxHeight);
+    }
   }
 
   renderer->render();
