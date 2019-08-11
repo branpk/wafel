@@ -47,7 +47,8 @@ class ReactiveValue(Reactive[T]):
   """A variable that can be get/set.
 
   The value only calls its on_change callbacks when the value actually changes,
-  so best practice is to only use immutable values.
+  so best practice is to only use immutable values. To force the value to
+  "change" even if the value is the same, use change_value.
   """
 
   def __init__(self, value: T) -> None:
@@ -61,9 +62,12 @@ class ReactiveValue(Reactive[T]):
   @value.setter
   def value(self, value: T) -> None:
     if self._value != value:
-      self._value = value
-      for callback in list(self._callbacks):
-        callback(self._value)
+      self.change_value(value)
+
+  def change_value(self, value: T) -> None:
+    self._value = value
+    for callback in list(self._callbacks):
+      callback(self._value)
 
   def on_change(self, callback: Callable[[T], None]) -> None:
     self._callbacks.append(callback)

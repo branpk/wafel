@@ -8,10 +8,10 @@ from PyQt5.QtGui import *
 
 import butter.graphics as graphics
 from butter.timeline import Timeline
-from butter.input_sequence import InputSequence
+from butter.edit import Edits
 from butter.reactive import ReactiveValue
 from butter.frame_sheet import FrameSheet
-from butter.variable import create_variables
+from butter.variables import create_variables
 
 
 class Model:
@@ -21,16 +21,16 @@ class Model:
       self.spec: dict = json.load(f)
 
     with open('test_files/120_u.m64', 'rb') as m64:
-      self.inputs = InputSequence.from_m64(m64)
+      self.edits = Edits.from_m64(m64)
 
-    self.timeline = Timeline(self.lib, self.spec, self.inputs)
+    self.timeline = Timeline(self.lib, self.spec, self.edits)
     self.selected_frame = ReactiveValue(0)
     self.timeline.add_hotspot(self.selected_frame)
 
     self.variables = create_variables(self.spec)
 
     # TODO: Frame sheet var list
-    self.frame_sheet = FrameSheet(self.timeline, self.inputs, self.variables.variables)
+    self.frame_sheet = FrameSheet(self.timeline, self.edits, self.variables.variables)
 
 
 class Window(QWidget):

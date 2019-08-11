@@ -6,7 +6,7 @@ import time
 
 from butter.util import dcast
 from butter.game_state import GameState
-from butter.input_sequence import InputSequence
+from butter.edit import Edits
 from butter.reactive import Reactive, ReactiveValue
 
 
@@ -28,12 +28,12 @@ class _CellManager:
     self,
     lib: ctypes.CDLL,
     spec: dict,
-    inputs: InputSequence,
+    edits: Edits,
     capacity: int,
   ) -> None:
     self.lib = lib
     self.spec = spec
-    self.inputs = inputs
+    self.edits = edits
     self.capacity = capacity
 
     self.cells = [self.new_cell() for _ in range(capacity)]
@@ -55,8 +55,19 @@ class _CellManager:
     self.hotspots: Set[Reactive[int]] = set()
 
   def any_states_loaded(self) -> bool:
+    if False:
+      print('Loaded states:', self.loaded_states)
     self.loaded_states = [st for st in self.loaded_states if st() is not None]
     return len(self.loaded_states) > 0
+
+  def track_loaded_state(self, state: GameState) -> None:
+    if False:
+      import traceback
+      print()
+      traceback.print_stack()
+      print('State loaded:', state)
+      print()
+    self.loaded_states.append(weakref.ref(state))
 
   def can_modify_cell(self, cell: _Cell) -> bool:
     if cell is self.base_cell:
@@ -68,7 +79,9 @@ class _CellManager:
 
   def new_cell(self) -> _Cell:
     addr = dcast(int, self.lib.sm64_state_new())
-    return _Cell(0, addr)
+    # Frame "-1" is a power-on state before any edits have been applied.
+    # Frame 0 is after edits are applied but before the first frame advance.
+    return _Cell(-1, addr)
 
   def copy_cell(self, dst: _Cell, src: _Cell, unsafe: bool = False) -> None:
     if not unsafe:
@@ -80,17 +93,29 @@ class _CellManager:
   def advance_base_cell(self) -> None:
     assert self.can_modify_cell(self.base_cell)
 
-    temp_state = GameState(self.spec, self.base_cell.frame, self.base_cell.addr)
-    self.inputs.apply(temp_state)
-
-    self.lib.sm64_state_update(self.base_cell.addr)
+    if self.base_cell.frame != -1:
+      self.lib.sm64_state_update(self.base_cell.addr)
     self.base_cell.frame += 1
+
+    self.apply_edits_to_base_cell()
+
+  def apply_edits_to_base_cell(self) -> None:
+    temp_state = GameState(self.spec, self.base_cell.frame, self.base_cell.addr)
+    self.edits.apply(temp_state)
 
   def swap_cell_contents(self, cell1: _Cell, cell2: _Cell) -> None:
     if cell1 is not cell2:
       self.copy_cell(self.temp_cell, cell1)
       self.copy_cell(cell1, cell2)
       self.copy_cell(cell2, self.temp_cell)
+
+  def invalidate_frame(self, frame: int) -> None:
+    valid_cells = [cell for cell in self.cells if cell.frame < frame]
+    invalid_cells = [cell for cell in self.cells if cell.frame >= frame]
+
+    for invalid_cell in invalid_cells:
+      valid_cell = random.choice(valid_cells)
+      self.copy_cell(invalid_cell, valid_cell)
 
   def find_latest_cell_before(self, frame: int) -> _Cell:
     usable_cells = [cell for cell in self.cells if cell.frame <= frame]
@@ -115,7 +140,7 @@ class _CellManager:
         self.copy_cell(selected, self.base_cell)
 
     state = GameState(self.spec, self.base_cell.frame, self.base_cell.addr)
-    self.loaded_states.append(weakref.ref(state))
+    self.track_loaded_state(state)
     return state
 
   def add_hotspot(self, frame: Reactive[int]) -> None:
@@ -125,16 +150,20 @@ class _CellManager:
     if frame in self.hotspots:
       self.hotspots.remove(frame)
 
+  def get_timeline_length(self) -> int:
+    # TODO: Compute this correctly
+    return len(self.edits._items)
+
   def get_cell_buckets(self) -> Dict[int, List[_Cell]]:
     """Divide the frame timeline into buckets, where each bucket ideally
     contains the same number of cells."""
 
-    # len(self.inputs) // len(self.cells) would provide a uniform distribution.
+    # self.get_timeline_length() // len(self.cells) would provide a uniform distribution.
     # We increase the size to give us extra cells to work with
-    default_bucket_size = len(self.inputs) // len(self.cells) * 4
+    default_bucket_size = self.get_timeline_length() // len(self.cells) * 4
 
     buckets: Dict[int, List[_Cell]] = {
-      frame: [] for frame in range(0, len(self.inputs), default_bucket_size)
+      frame: [] for frame in range(-1, self.get_timeline_length(), default_bucket_size)
     }
 
     # Increase the number of buckets near hotspots
@@ -180,7 +209,7 @@ class _CellManager:
     cell = random.choice(buckets[max_bucket])
     min_bucket_next = min(
       [bucket for bucket in buckets if bucket > min_bucket],
-      default=len(self.inputs),
+      default=self.get_timeline_length(),
     )
     target_frame = random.randrange(min_bucket, max(min_bucket_next, min_bucket + 1))
 
@@ -223,10 +252,12 @@ class Timeline:
     self,
     lib: ctypes.CDLL,
     spec: dict,
-    inputs: InputSequence,
+    edits: Edits,
   ) -> None:
-    self._cell_manager = _CellManager(lib, spec, inputs, capacity=200)
+    self._cell_manager = _CellManager(lib, spec, edits, capacity=200)
     self._callbacks: List[Tuple[Reactive[int], Callable[[GameState], None]]] = []
+
+    edits.latest_edited_frame.on_change(self._invalidate_frame)
 
   def _get_state_now(self, frame: int) -> GameState:
     state = self._cell_manager.request_frame(frame)
@@ -236,8 +267,9 @@ class Timeline:
   def _on_state_change(self, frame: Reactive[int], callback: Callable[[GameState], None]) -> None:
     self._callbacks.append((frame, callback))
 
-  def _invalidate_state(self, frame: int) -> None:
-    # TODO: Invalidate cells
+  def _invalidate_frame(self, frame: int) -> None:
+    self._cell_manager.invalidate_frame(frame)
+
     callbacks = [(f, cb) for f, cb in self._callbacks if f.value >= frame]
     for callback_frame, callback in callbacks:
       callback(self._get_state_now(callback_frame.value))
@@ -248,7 +280,8 @@ class Timeline:
     return _ReactiveGameState(self, frame)
 
   def __len__(self) -> int:
-    return len(self._cell_manager.inputs) + 1
+    # TODO: Handle length better
+    return len(self._cell_manager.edits._items) + 1
 
   def add_hotspot(self, frame: Reactive[int]) -> None:
     """Mark a certain frame as a "hotspot", which is a hint to try to ensure

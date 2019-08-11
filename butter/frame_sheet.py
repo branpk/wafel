@@ -4,14 +4,16 @@ from PyQt5.QtCore import *
 
 from butter.timeline import Timeline
 from butter.variable import Variable, VariableParam, VariableDataType
-from butter.input_sequence import InputSequence
+from butter.edit import Edits, VariableEdit
+from butter.game_state import GameState
+from butter.util import *
 
 
 class FrameSheet(QAbstractTableModel):
-  def __init__(self, timeline: Timeline, inputs: InputSequence, variables: List[Variable]) -> None:
+  def __init__(self, timeline: Timeline, edits: Edits, variables: List[Variable]) -> None:
     super().__init__()
     self._timeline = timeline
-    self._inputs = inputs
+    self._edits = edits
     self._variables = variables # TODO: Reactive variable list
 
   def rowCount(self, parent=None) -> int:
@@ -34,7 +36,7 @@ class FrameSheet(QAbstractTableModel):
     if param == VariableParam.STATE:
       return self._timeline.frame(frame).value
     elif param == VariableParam.INPUT:
-      return self._inputs.get_input(frame)
+      return self._edits.get_input(frame)
     else:
       raise NotImplementedError
 
@@ -55,13 +57,13 @@ class FrameSheet(QAbstractTableModel):
   def setData(self, index, value, role=Qt.EditRole):
     if role == Qt.EditRole:
       variable = self._variables[index.column()]
-      args = self.get_variable_args(index.row(), variable)
       # TODO: Formatting
       if variable.data_type == VariableDataType.BOOL:
-        variable.set(bool(value), *args)
+        value = bool(value)
       else:
-        variable.set(int(value), *args)
+        value = int(value)
 
-      del args
+      self._edits.add(index.row(), VariableEdit(variable, value))
+
       self.dataChanged.emit(index, index)
       return True
