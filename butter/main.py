@@ -1,12 +1,14 @@
-from typing import cast
+from typing import *
 from ctypes import *
 import json
+import math
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 import butter.graphics as graphics
+from butter.graphics import CameraMode, RenderInfo, RotateCamera
 from butter.timeline import Timeline
 from butter.edit import Edits
 from butter.reactive import ReactiveValue
@@ -130,14 +132,67 @@ class GameView(QOpenGLWidget):
     self.setMinimumSize(640, 480)
 
     self.state = self.model.timeline.frame(self.model.selected_frame)
-    self.state.on_change(lambda _: self.update())
+    # self.state.on_change(lambda _: self.update())
+
+    self.camera = RotateCamera(
+      [0.0, 0.0, 0.0],
+      0,
+      0,
+      math.radians(45),
+    )
+    self.zoom = 0
+    self.update_camera()
+
+    self.mouse_down = False
+    self.last_mouse_pos = None
+
+    self.draw_timer = QTimer()
+    self.draw_timer.timeout.connect(self.update)
+    self.draw_timer.start()
 
   def initializeGL(self):
     graphics.load_gl()
 
+  def drag_mouse(self, delta: Tuple[int, int]) -> None:
+    if self.camera.mode == CameraMode.ROTATE:
+      self.camera.yaw -= delta[0] / 200
+      self.camera.pitch -= delta[1] / 200
+      self.update_camera()
+
   def paintGL(self):
+    if self.mouse_down:
+      mouse_pos = QCursor.pos()
+      if self.last_mouse_pos is not None:
+        delta = (mouse_pos.x() - self.last_mouse_pos.x(), mouse_pos.y() - self.last_mouse_pos.y())
+        self.drag_mouse(delta)
+      self.last_mouse_pos = mouse_pos
+    else:
+      self.last_mouse_pos = None
+
     self.makeCurrent()
-    graphics.render(graphics.RenderInfo(self.state.value))
+    graphics.render(RenderInfo(
+      self.camera,
+      self.state.value,
+    ))
+
+  def update_camera(self) -> None:
+    if self.camera.mode == CameraMode.ROTATE:
+      target = [0, 0, 0] # TODO: Mario pos
+      face_dir = self.camera.face_dir()
+      offset_dist = 1500 * math.pow(0.5, self.zoom)
+      self.camera.pos = [target[i] - offset_dist * face_dir[i] for i in range(3)]
+
+  def wheelEvent(self, event):
+    self.zoom += event.angleDelta().y() / 500
+    self.update_camera()
+
+  def mousePressEvent(self, event):
+    if event.button() == Qt.LeftButton:
+      self.mouse_down = True
+
+  def mouseReleaseEvent(self, event):
+    if event.button() == Qt.LeftButton:
+      self.mouse_down = False
 
 
 def run():

@@ -11,12 +11,26 @@ struct Viewport {
   ivec2 size;
 };
 
-struct Camera {
+
+enum class CameraMode {
+  ROTATE = 0,
+  BIRDS_EYE = 1,
+};
+
+struct RotateCamera {
   vec3 pos;
   float pitch;
   float yaw;
   float fov_y;
 };
+
+struct Camera {
+  CameraMode mode;
+  union {
+    RotateCamera rotate_camera;
+  };
+};
+
 
 struct Surface {
   vec3 vertices[3];

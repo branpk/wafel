@@ -1,4 +1,4 @@
-from butter.graphics.render_info import RenderInfo
+from butter.graphics.render_info import *
 
 
 def load_gl() -> None: ...

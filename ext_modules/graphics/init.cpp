@@ -79,8 +79,84 @@ static u32 get_object_list(sm64::Object *object) {
 
 
 struct RenderInfo {
+  Camera camera;
   sm64::SM64State *current_state;
 };
+
+
+static bool read_float(float *result, PyObject *float_object) {
+  if (float_object == NULL) {
+    return false;
+  }
+
+  *result = (float)PyFloat_AsDouble(float_object);
+  if (PyErr_Occurred()) {
+    return false;
+  }
+
+  Py_DECREF(float_object);
+  return true;
+}
+
+
+static bool read_vec3(vec3 *result, PyObject *vec_object) {
+  if (vec_object == NULL) {
+    return false;
+  }
+
+  for (int i = 0; i < 3; i++) {
+    PyObject *index = PyLong_FromLong(i);
+    if (index == NULL) {
+      return false;
+    }
+
+    if (!read_float(&(*result)[i], PyObject_GetItem(vec_object, index))) {
+      return false;
+    }
+
+    Py_DECREF(index);
+  }
+
+  Py_DECREF(vec_object);
+  return true;
+}
+
+static bool read_camera(Camera *camera, PyObject *camera_object) {
+  if (camera_object == NULL) {
+    return false;
+  }
+
+  PyObject *mode_object = PyObject_GetAttrString(camera_object, "mode");
+  if (mode_object == NULL) {
+    return false;
+  }
+  PyObject *mode_int_object = PyObject_GetAttrString(mode_object, "value");
+  if (mode_int_object == NULL) {
+    return false;
+  }
+  camera->mode = (CameraMode)PyLong_AsLong(mode_int_object);
+  if (PyErr_Occurred()) {
+    return false;
+  }
+  Py_DECREF(mode_int_object);
+  Py_DECREF(mode_object);
+
+  switch (camera->mode) {
+    case CameraMode::ROTATE: {
+      if (!read_vec3(&camera->rotate_camera.pos, PyObject_GetAttrString(camera_object, "pos")) ||
+        !read_float(&camera->rotate_camera.pitch, PyObject_GetAttrString(camera_object, "pitch")) ||
+        !read_float(&camera->rotate_camera.yaw, PyObject_GetAttrString(camera_object, "yaw")) ||
+        !read_float(&camera->rotate_camera.fov_y, PyObject_GetAttrString(camera_object, "fov_y")))
+      {
+        return false;
+      }
+      break;
+    }
+  }
+
+  Py_DECREF(camera_object);
+  return true;
+}
 
 
 static sm64::SM64State *read_game_state(PyObject *state_object) {
@@ -110,10 +186,16 @@ static bool read_render_info(RenderInfo *info, PyObject *args) {
     return false;
   }
 
+  if (!read_camera(&info->camera, PyObject_GetAttrString(info_object, "camera"))) {
+    return false;
+  }
+
   info->current_state = read_game_state(PyObject_GetAttrString(info_object, "current_state"));
   if (info->current_state == NULL) {
     return false;
   }
+
+  return true;
 }
 
 
@@ -121,7 +203,9 @@ static PyObject *render(PyObject *self, PyObject *args) {
   RenderInfo render_info;
   RenderInfo *info = &render_info;
 
-  read_render_info(info, args);
+  if (!read_render_info(info, args)) {
+    return NULL;
+  }
 
 
   renderer->clear();
@@ -135,12 +219,13 @@ static PyObject *render(PyObject *self, PyObject *args) {
   f32 camera_yaw = st->D_8033B328.unk4E * 3.14159f / 0x8000;
   f32 camera_fov_y = /*D_8033B234*/ 45 * 3.14159f / 180;
 
-  renderer->set_camera({
-    vec3(camera_pos[0], camera_pos[1], camera_pos[2]),
-    camera_pitch,
-    camera_yaw,
-    camera_fov_y,
-  });
+  // TODO: Remove target calculation
+  RotateCamera &cam = info->camera.rotate_camera;
+  vec3 target(st->gMarioState->pos[0], st->gMarioState->pos[1], st->gMarioState->pos[2]);
+  cam.pos += target;
+
+  renderer->set_camera(info->camera);
+
 
   for (s32 i = 0; i < st->gSurfacesAllocated; i++) {
     struct sm64::Surface *surface = &st->sSurfacePool[i];

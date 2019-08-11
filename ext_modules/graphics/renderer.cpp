@@ -55,16 +55,27 @@ void Renderer::render() {
 
   glViewport(viewport.pos.x, viewport.pos.y, viewport.size.x, viewport.size.y);
 
-  float near = 10;
-  float top = near * tanf(camera.fov_y / 2);
-  float right = top * viewport.size.x / viewport.size.y;
-  mat4 proj_matrix = glm::frustum<float>(-right, right, -top, top, near, 20000);
 
-  mat4 view_matrix(1.0f);
-  view_matrix = glm::rotate(view_matrix, glm::pi<float>(), vec3(0, 1, 0));
-  view_matrix = glm::rotate(view_matrix, camera.pitch, vec3(1, 0, 0));
-  view_matrix = glm::rotate(view_matrix, -camera.yaw, vec3(0, 1, 0));
-  view_matrix = glm::translate(view_matrix, -camera.pos);
+  mat4 proj_matrix, view_matrix;
+
+
+  switch (camera.mode) {
+    case CameraMode::ROTATE: {
+      RotateCamera &cam = camera.rotate_camera;
+
+      float near = 10;
+      float top = near * tanf(cam.fov_y / 2);
+      float right = top * viewport.size.x / viewport.size.y;
+      proj_matrix = glm::frustum<float>(-right, right, -top, top, near, 20000);
+
+      view_matrix = mat4(1.0f);
+      view_matrix = glm::rotate(view_matrix, glm::pi<float>(), vec3(0, 1, 0));
+      view_matrix = glm::rotate(view_matrix, cam.pitch, vec3(1, 0, 0));
+      view_matrix = glm::rotate(view_matrix, -cam.yaw, vec3(0, 1, 0));
+      view_matrix = glm::translate(view_matrix, -cam.pos);
+      break;
+    }
+  }
 
 
   glEnable(GL_DEPTH_TEST);
