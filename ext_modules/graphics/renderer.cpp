@@ -14,11 +14,16 @@ using namespace std;
 Renderer::Renderer() {
   p_surface.program = new Program("assets/shaders/surface.vert", "assets/shaders/surface.frag");
   p_surface.vertex_array = new VertexArray(p_surface.program);
+
+  p_object.program = new Program("assets/shaders/transform.vert", "assets/shaders/uniform_color.frag");
+  p_object.vertex_array = new VertexArray(p_object.program);
 }
 
 void Renderer::clear() {
   p_surface.buffers.pos.clear();
   p_surface.buffers.color.clear();
+
+  p_object.buffers.pos.clear();
 }
 
 void Renderer::set_viewport(const Viewport &viewport) {
@@ -40,11 +45,8 @@ void Renderer::add_surface(const Surface &surface) {
 }
 
 void Renderer::add_object(vec3 pos, float height) {
-  // glColor3f(1, 0, 0);
-  // glBegin(GL_LINES);
-  // glVertex3f(pos.x, pos.y, pos.z);
-  // glVertex3f(pos.x, pos.y + height, pos.z);
-  // glEnd();
+  p_object.buffers.pos.push_back(pos);
+  p_object.buffers.pos.push_back(pos + vec3(0, height, 0));
 }
 
 void Renderer::render() {
@@ -79,4 +81,13 @@ void Renderer::render() {
   p_surface.vertex_array->set("inColor", p_surface.buffers.color);
 
   glDrawArrays(GL_TRIANGLES, 0, p_surface.buffers.pos.size());
+
+
+  p_object.program->use();
+  p_object.program->set_uniform("uProjMatrix", proj_matrix);
+  p_object.program->set_uniform("uViewMatrix", view_matrix);
+  p_object.program->set_uniform("uColor", vec4(1, 0, 0, 1));
+  p_object.vertex_array->bind();
+  p_object.vertex_array->set("inPos", p_object.buffers.pos);
+  glDrawArrays(GL_LINES, 0, p_object.buffers.pos.size());
 }

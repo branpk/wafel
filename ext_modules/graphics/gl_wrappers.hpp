@@ -17,6 +17,7 @@ public:
   GLint uniform(const string &name);
   GLint attribute(const string &name);
 
+  void set_uniform(const string &name, const vec4 &value);
   void set_uniform(const string &name, const mat4 &value);
 };
 

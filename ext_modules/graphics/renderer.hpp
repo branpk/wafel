@@ -47,6 +47,14 @@ private:
       vector<vec3> color;
     } buffers;
   } p_surface;
+
+  struct {
+    Program *program;
+    VertexArray *vertex_array;
+    struct {
+      vector<vec3> pos;
+    } buffers;
+  } p_object;
 };
 
 

@@ -91,6 +91,11 @@ GLint Program::attribute(const string &name) {
   return glGetAttribLocation(this->name, name.c_str());
 }
 
+void Program::set_uniform(const string &name, const vec4 &value) {
+  use();
+  glUniform4f(uniform(name), value.x, value.y, value.z, value.w);
+}
+
 void Program::set_uniform(const string &name, const mat4 &value) {
   use();
   glUniformMatrix4fv(uniform(name), 1, GL_FALSE, &value[0][0]);

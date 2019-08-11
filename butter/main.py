@@ -141,6 +141,10 @@ class GameView(QOpenGLWidget):
 
 
 def run():
+  fmt = QSurfaceFormat()
+  fmt.setSamples(4)
+  QSurfaceFormat.setDefaultFormat(fmt)
+
   app = QApplication([])
   window = Window()
   window.adjustSize()
