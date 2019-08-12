@@ -57,7 +57,7 @@ class FrameSheet(QAbstractTableModel):
       variable = self._variables[index.column()]
       # TODO: Formatting
       if variable.data_type == VariableDataType.BOOL:
-        value = bool(value)
+        value = bool(int(value))
       else:
         value = int(value)
 

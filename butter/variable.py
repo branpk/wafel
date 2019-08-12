@@ -44,6 +44,7 @@ class VariableDataType(Enum):
       'f64': VariableDataType.F64,
     }[type_['name']]
 
+  @property
   def pytype(self) -> Type:
     return {
       VariableDataType.BOOL: bool,

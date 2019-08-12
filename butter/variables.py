@@ -2,6 +2,8 @@ import ctypes as C
 
 from butter.game_state import GameState
 from butter.variable import *
+from butter.variable_expr import VariableExpr
+from butter.util import *
 
 
 PRIMITIVE_CTYPES = {
@@ -18,7 +20,7 @@ PRIMITIVE_CTYPES = {
 }
 
 
-class StateDataVariable(Variable):
+class _DataVariable(Variable):
   def __init__(
     self,
     name: str,
@@ -27,34 +29,35 @@ class StateDataVariable(Variable):
     expression: str,
     read_only: bool = False,
   ) -> None:
-    # TODO: Expressions
-    field = spec['types']['struct']['SM64State']['fields'][expression]
-    self.offset = field['offset']
+    self.expr = VariableExpr.parse(spec, expression)
 
-    assert field['type']['kind'] == 'primitive'
-    self.ctype = PRIMITIVE_CTYPES[field['type']['name']]
+    type_ = concrete_type(spec, self.expr.type)
+    assert type_['kind'] == 'primitive'
+    self.ctype = PRIMITIVE_CTYPES[type_['name']]
 
     super().__init__(
       name,
-      [VariableParam.STATE],
+      self.expr.params,
       semantics,
       read_only,
-      VariableDataType.from_spec(field['type']),
+      VariableDataType.from_spec(type_),
     )
 
-  def get(self, state: GameState) -> object:
-    addr = C.cast(state.addr + self.offset, C.POINTER(self.ctype))
-    return int(addr[0])
+    self.pytype = self.data_type.pytype
 
-  def set(self, value: object, state: GameState) -> None:
+  def get(self, *args: Any) -> Any:
+    addr = C.cast(self.expr.get_addr(*args), C.POINTER(self.ctype))
+    return self.pytype(addr[0])
+
+  def set(self, value: Any, *args: Any) -> None:
     assert not self.read_only
-    assert isinstance(value, int)
-    addr = C.cast(state.addr + self.offset, C.POINTER(self.ctype))
+    assert isinstance(value, self.pytype)
+    addr = C.cast(self.expr.get_addr(*args), C.POINTER(self.ctype))
     # TODO: Check overflow behavior
     addr[0] = value
 
 
-class FlagVariable(Variable):
+class _FlagVariable(Variable):
   def __init__(
     self,
     name: str,
@@ -85,58 +88,19 @@ class FlagVariable(Variable):
     self.flags.set(flags, *args)
 
 
-# TODO: Once expressions are implemented, make these into StateDataVariables
-
-class InputButtonsVariable(Variable):
-  def __init__(self, spec: dict):
-    super().__init__(
-      "input buttons",
-      [VariableParam.STATE],
-      VariableSemantics.RAW,
-      False,
-      VariableDataType.U16,
-    )
-    globals = spec['types']['struct']['SM64State']['fields']
-    controller = globals['gControllerPads']['offset']
-    os_cont_pad = spec['types']['typedef']['OSContPad']['fields']
-    self.offset = controller + os_cont_pad['button']['offset']
-
-  def get(self, state: GameState) -> int:
-    return C.cast(state.addr + self.offset, C.POINTER(C.c_uint16))[0]
-
-  def set(self, value: int, state: GameState) -> None:
-    C.cast(state.addr + self.offset, C.POINTER(C.c_uint16))[0] = value
-
-class InputStickVariable(Variable):
-  def __init__(self, name: str, spec: dict):
-    super().__init__(
-      name.replace('_', ' '),
-      [VariableParam.STATE],
-      VariableSemantics.RAW,
-      False,
-      VariableDataType.S8,
-    )
-    globals = spec['types']['struct']['SM64State']['fields']
-    controller = globals['gControllerPads']['offset']
-    os_cont_pad = spec['types']['typedef']['OSContPad']['fields']
-    self.offset = controller + os_cont_pad[name]['offset']
-
-  def get(self, state: GameState) -> int:
-    return C.cast(state.addr + self.offset, C.POINTER(C.c_int8))[0]
-
-  def set(self, value: int, state: GameState) -> None:
-    C.cast(state.addr + self.offset, C.POINTER(C.c_int8))[0] = value
-
-
 def create_variables(spec: dict) -> Variables:
-  input_buttons = InputButtonsVariable(spec)
+  input_buttons = _DataVariable('buttons', spec, VariableSemantics.RAW, 'state.gControllerPads[0].button')
   return Variables([
     input_buttons,
-    InputStickVariable('stick_x', spec),
-    InputStickVariable('stick_y', spec),
-    FlagVariable('A', spec, input_buttons, 'A_BUTTON'),
-    FlagVariable('B', spec, input_buttons, 'B_BUTTON'),
-    FlagVariable('Z', spec, input_buttons, 'Z_TRIG'),
-    FlagVariable('S', spec, input_buttons, 'START_BUTTON'),
-    StateDataVariable('global timer', spec, VariableSemantics.RAW, 'gGlobalTimer'),
+    _DataVariable('stick x', spec, VariableSemantics.RAW, 'state.gControllerPads[0].stick_x'),
+    _DataVariable('stick y', spec, VariableSemantics.RAW, 'state.gControllerPads[0].stick_y'),
+    _FlagVariable('A', spec, input_buttons, 'A_BUTTON'),
+    _FlagVariable('B', spec, input_buttons, 'B_BUTTON'),
+    _FlagVariable('Z', spec, input_buttons, 'Z_TRIG'),
+    _FlagVariable('S', spec, input_buttons, 'START_BUTTON'),
+    _DataVariable('global timer', spec, VariableSemantics.RAW, 'state.gGlobalTimer'),
+    # TODO: Combine position into single variable
+    _DataVariable('mario x', spec, VariableSemantics.RAW, 'state.gMarioState[].pos[0]'),
+    _DataVariable('mario y', spec, VariableSemantics.RAW, 'state.gMarioState[].pos[1]'),
+    _DataVariable('mario z', spec, VariableSemantics.RAW, 'state.gMarioState[].pos[2]'),
   ])
