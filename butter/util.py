@@ -7,6 +7,7 @@ def dcast(type_: Type[T], value: Any) -> T:
     raise TypeError('Could not cast ' + str(value) + ' to ' + str(type_))
   return value
 
+
 def concrete_type(spec: dict, type_: dict) -> dict:
   while type_['kind'] == 'symbol':
     type_ = spec['types'][type_['namespace']][type_['name']]
