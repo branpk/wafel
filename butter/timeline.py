@@ -230,37 +230,18 @@ class _CellManager:
 # TODO: GameStateTimeline events (adding/removing frames, any state changed (for frame sheet caching), etc)
 # TODO: Handling case where request_frame returns None (once implemented)
 
-class _ReactiveGameStateNoLock(Reactive[None]):
-  def __init__(self, timeline: 'Timeline', frame: Reactive[int]) -> None:
-    self.timeline = timeline
-    self.frame = frame
-
-  @property
-  def value(self) -> None:
-    return None
-
-  def on_change(self, callback: Callable[[None], None]) -> None:
-    self.frame.on_change(lambda _: callback(None))
-    self.timeline._on_state_change(self.frame, lambda: callback(None))
-
-
 class _ReactiveGameState(Reactive[GameState]):
   def __init__(self, timeline: 'Timeline', frame: Reactive[int]) -> None:
     self.timeline = timeline
     self.frame = frame
-    self.no_lock = _ReactiveGameStateNoLock(timeline, frame)
 
   @property
   def value(self) -> GameState:
     return self.timeline._get_state_now(self.frame.value)
 
-  def on_change(self, callback: Callable[[GameState], None]) -> None:
-    self.no_lock.on_change(lambda _: callback(self.timeline._get_state_now(self.frame.value)))
-
-  # TODO: Can probably generalize this and move to Reactive
-  @property
-  def no_ref(self) -> Reactive[None]:
-    return self.no_lock
+  def _on_change(self, callback: Callable[[], None]) -> None:
+    self.frame.on_change(callback)
+    self.timeline._on_state_change(self.frame, callback)
 
 
 class Timeline:

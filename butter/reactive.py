@@ -1,4 +1,5 @@
-from typing import Generic, TypeVar, Callable, Tuple, Any, List
+from typing import *
+from inspect import signature
 
 
 T = TypeVar('T')
@@ -18,8 +19,16 @@ class Reactive(Generic[T]):
     """Get the value at the current point in time."""
     raise NotImplementedError
 
-  def on_change(self, callback: Callable[[T], None]) -> None:
+  def on_change(self, callback: Union[Callable[[], None], Callable[[T], None]]) -> None:
     """Call the callback whenever this value or any dependency is assigned to."""
+    num_params = len(signature(callback).parameters)
+    assert num_params <= 1
+    if num_params == 0:
+      self._on_change(callback)
+    else:
+      self._on_change(lambda: callback(self.value))
+
+  def _on_change(self, callback: Callable[[], None]) -> None:
     raise NotImplementedError
 
   def map(self, func: Callable[[T], S]) -> 'Reactive[S]':
@@ -35,7 +44,7 @@ class ReactiveValue(Reactive[T]):
 
   def __init__(self, value: T) -> None:
     self._value = value
-    self._callbacks: List[Callable[[T], None]] = []
+    self._callbacks: List[Callable[[], None]] = []
 
   @property
   def value(self) -> T:
@@ -45,9 +54,9 @@ class ReactiveValue(Reactive[T]):
   def value(self, value: T) -> None:
     self._value = value
     for callback in list(self._callbacks):
-      callback(self._value)
+      callback()
 
-  def on_change(self, callback: Callable[[T], None]) -> None:
+  def _on_change(self, callback: Callable[[], None]) -> None:
     self._callbacks.append(callback)
 
 
@@ -60,10 +69,8 @@ class _ReactiveMap(Reactive[S]):
   def value(self) -> S:
     return self._func(self._source.value)
 
-  def on_change(self, callback: Callable[[S], None]) -> None:
-    def source_callback(source: T) -> None:
-      callback(self._func(source))
-    self._source.on_change(source_callback)
+  def _on_change(self, callback: Callable[[], None]) -> None:
+    self._source.on_change(callback)
 
 
 class _ReactiveTuple(Reactive[Tuple[Any, ...]]):
@@ -74,13 +81,6 @@ class _ReactiveTuple(Reactive[Tuple[Any, ...]]):
   def value(self) -> Tuple[Any, ...]:
     return tuple(s.value for s in self._sources)
 
-  def on_change(self, callback: Callable[[Tuple[Any, ...]], None]) -> None:
-    def make_source_callback(index: int) -> Callable[[Any], None]:
-      def source_callback(source: Any) -> None:
-        prefix = tuple(s.value for s in self._sources[:index])
-        suffix = tuple(s.value for s in self._sources[index+1:])
-        callback(prefix + (source,) + suffix)
-      return source_callback
-
-    for i, source in enumerate(self._sources):
-      source.on_change(make_source_callback(i))
+  def _on_change(self, callback: Callable[[], None]) -> None:
+    for source in self._sources:
+      source.on_change(callback)

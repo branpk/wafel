@@ -160,7 +160,7 @@ class GameView(QOpenGLWidget):
       return camera
     self.camera = Reactive.tuple(self.state, self.zoom, self.total_drag).mapn(compute_camera)
 
-    Reactive.tuple(self.state.no_ref, self.camera).on_change(lambda _: self.update())
+    Reactive.tuple(self.state, self.camera).on_change(lambda: self.update())
 
   def initializeGL(self):
     graphics.load_gl()
