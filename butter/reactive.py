@@ -19,37 +19,19 @@ class Reactive(Generic[T]):
     raise NotImplementedError
 
   def on_change(self, callback: Callable[[T], None]) -> None:
-    """Register a callback to be called whenever this value changes.
-
-    It is not guaranteed that .value will actually change when this happens. It
-    depends on the type of Reactive.
-    """
+    """Call the callback whenever this value or any dependency is assigned to."""
     raise NotImplementedError
 
   def map(self, func: Callable[[T], S]) -> 'Reactive[S]':
-    """Map a function onto a Reactive.
-
-    This does not "narrow" the value. E.g. if the source value is (1, 2, 3),
-    the function is lambda p: p[0], and the source value changes to (1, 4, 3),
-    the final value will call its on_change callbacks.
-    """
     return _ReactiveMap(self, func)
 
   def mapn(self: 'Reactive[tuple]', func: Callable[..., S]) -> 'Reactive[S]':
-    """Treat the tuple as containing the arguments to the map function.
-
-    This allows Reactive.tuple(a, b).mapn(lambda x, y: x + y) for example.
-    """
+    """This allows Reactive.tuple(a, b).mapn(lambda x, y: x + y)."""
     return self.map(lambda args: func(*args))
 
 
 class ReactiveValue(Reactive[T]):
-  """A variable that can be get/set.
-
-  The value only calls its on_change callbacks when the value actually changes,
-  so best practice is to only use immutable values. To force the value to
-  "change" even if the value is the same, use change_value.
-  """
+  """A variable that can be get/set."""
 
   def __init__(self, value: T) -> None:
     self._value = value
@@ -61,10 +43,6 @@ class ReactiveValue(Reactive[T]):
 
   @value.setter
   def value(self, value: T) -> None:
-    if self._value != value:
-      self.change_value(value)
-
-  def change_value(self, value: T) -> None:
     self._value = value
     for callback in list(self._callbacks):
       callback(self._value)

@@ -62,7 +62,7 @@ class Edits:
   def add(self, frame: int, edit: Edit) -> None:
     # TODO: Remove overwritten edits
     self._get_edits(frame).append(edit)
-    self.latest_edited_frame.change_value(frame)
+    self.latest_edited_frame.value = frame
 
   def _get_edits(self, frame: int) -> List[Edit]:
     while frame >= len(self._items):

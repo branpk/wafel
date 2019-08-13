@@ -173,8 +173,7 @@ class GameView(QOpenGLWidget):
     ))
 
   def wheelEvent(self, event):
-    self.zoom += event.angleDelta().y() / 500
-    self.update_camera(self.state.value)
+    self.zoom.value += event.angleDelta().y() / 500
 
   def mousePressEvent(self, event):
     if event.button() == Qt.LeftButton:
