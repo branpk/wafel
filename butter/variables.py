@@ -2,7 +2,7 @@ import ctypes as C
 
 from butter.game_state import GameState
 from butter.variable import *
-from butter.variable_expr import VariableExpr
+from butter.data_path import DataPath
 from butter.util import *
 
 
@@ -26,18 +26,18 @@ class _DataVariable(Variable):
     name: str,
     spec: dict,
     semantics: VariableSemantics,
-    expression: str,
+    path: str,
     read_only: bool = False,
   ) -> None:
-    self.expr = VariableExpr.parse(spec, expression)
+    self.path = DataPath.parse(spec, path)
 
-    type_ = concrete_type(spec, self.expr.type)
+    type_ = concrete_type(spec, self.path.type)
     assert type_['kind'] == 'primitive'
     self.ctype = PRIMITIVE_CTYPES[type_['name']]
 
     super().__init__(
       name,
-      self.expr.params,
+      self.path.params,
       semantics,
       read_only,
       VariableDataType.from_spec(type_),
@@ -46,13 +46,13 @@ class _DataVariable(Variable):
     self.pytype = self.data_type.pytype
 
   def get(self, *args: Any) -> Any:
-    addr = C.cast(self.expr.get_addr(*args), C.POINTER(self.ctype))
+    addr = C.cast(self.path.get_addr(*args), C.POINTER(self.ctype))
     return self.pytype(addr[0])
 
   def set(self, value: Any, *args: Any) -> None:
     assert not self.read_only
     assert isinstance(value, self.pytype)
-    addr = C.cast(self.expr.get_addr(*args), C.POINTER(self.ctype))
+    addr = C.cast(self.path.get_addr(*args), C.POINTER(self.ctype))
     # TODO: Check overflow behavior
     addr[0] = value
 

@@ -15,7 +15,7 @@ from butter.reactive import ReactiveValue
 from butter.frame_sheet import FrameSheet
 from butter.variables import create_variables
 from butter.game_state import GameState
-from butter.variable_expr import VariableExpr
+from butter.data_path import DataPath
 
 
 class Model:
