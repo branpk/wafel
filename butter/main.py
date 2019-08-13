@@ -8,10 +8,10 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 import butter.graphics as graphics
-from butter.graphics import CameraMode, RenderInfo, RotateCamera
+from butter.graphics import CameraMode, RenderInfo, Camera, RotateCamera
 from butter.timeline import Timeline
 from butter.edit import Edits
-from butter.reactive import ReactiveValue
+from butter.reactive import Reactive, ReactiveValue
 from butter.frame_sheet import FrameSheet
 from butter.variables import create_variables
 from butter.game_state import GameState
@@ -35,6 +35,9 @@ class Model:
 
     # TODO: Frame sheet var list
     self.frame_sheet = FrameSheet(self.timeline, self.edits, self.variables.variables)
+
+  def path(self, path: str) -> DataPath:
+    return DataPath.parse(self.spec, path)
 
 
 class Window(QWidget):
@@ -132,69 +135,65 @@ class GameView(QOpenGLWidget):
     self.model = model
 
     self.setMinimumSize(640, 480)
+    self.setMouseTracking(True)
 
     self.state = self.model.timeline.frame(self.model.selected_frame)
-    # self.state.on_change(lambda _: self.update())
 
-    self.camera = RotateCamera(
-      [0.0, 0.0, 0.0],
-      0,
-      0,
-      math.radians(45),
-    )
-    self.zoom = 0.0
-    self.update_camera()
+    self.mouse_down = ReactiveValue(False)
+    self.mouse_pos: ReactiveValue[Optional[Tuple[int, int]]] = ReactiveValue(None)
+    self.zoom = ReactiveValue(0.0)
+    self.total_drag = ReactiveValue((0, 0))
 
-    self.mouse_down = False
-    self.last_mouse_pos = None
+    def compute_camera(state: GameState, zoom: float, total_drag: Tuple[int, int]) -> Camera:
+      camera = RotateCamera(
+        [0.0, 0.0, 0.0],
+        -total_drag[1] / 200,
+        -total_drag[0] / 200,
+        math.radians(45),
+      )
 
-    self.draw_timer = QTimer()
-    self.draw_timer.timeout.connect(self.update)
-    self.draw_timer.start()
+      target = self.model.path('$state.gMarioState[].pos').get(state)
+      face_dir = camera.face_dir()
+      offset_dist = 1500 * math.pow(0.5, zoom)
+      camera.pos = [target[i] - offset_dist * face_dir[i] for i in range(3)]
+
+      return camera
+    self.camera = Reactive.tuple(self.state, self.zoom, self.total_drag).mapn(compute_camera)
+
+    Reactive.tuple(self.state.no_ref, self.camera).on_change(lambda _: self.update())
 
   def initializeGL(self):
     graphics.load_gl()
 
-  def drag_mouse(self, delta: Tuple[int, int]) -> None:
-    if self.camera.mode == CameraMode.ROTATE:
-      self.camera.yaw -= delta[0] / 200
-      self.camera.pitch -= delta[1] / 200
-      self.update_camera()
-
   def paintGL(self):
-    if self.mouse_down:
-      mouse_pos = QCursor.pos()
-      if self.last_mouse_pos is not None:
-        delta = (mouse_pos.x() - self.last_mouse_pos.x(), mouse_pos.y() - self.last_mouse_pos.y())
-        self.drag_mouse(delta)
-      self.last_mouse_pos = mouse_pos
-    else:
-      self.last_mouse_pos = None
-
     self.makeCurrent()
     graphics.render(RenderInfo(
-      self.camera,
+      self.camera.value,
       self.state.value,
     ))
 
-  def update_camera(self) -> None:
-    if self.camera.mode == CameraMode.ROTATE:
-      target = [0, 0, 0] # TODO: Mario pos
-      face_dir = self.camera.face_dir()
-      offset_dist = 1500 * math.pow(0.5, self.zoom)
-      self.camera.pos = [target[i] - offset_dist * face_dir[i] for i in range(3)]
-
   def wheelEvent(self, event):
     self.zoom += event.angleDelta().y() / 500
-    self.update_camera()
+    self.update_camera(self.state.value)
 
   def mousePressEvent(self, event):
     if event.button() == Qt.LeftButton:
-      self.mouse_down = True
+      self.mouse_down.value = True
 
   def mouseReleaseEvent(self, event):
     if event.button() == Qt.LeftButton:
-      self.mouse_down = False
+      self.mouse_down.value = False
+
+  def mouseMoveEvent(self, event):
+    last_mouse_pos = self.mouse_pos.value
+    mouse_pos = (event.pos().x(), event.pos().y())
+
+    if self.mouse_down.value and last_mouse_pos is not None:
+      drag = (mouse_pos[0] - last_mouse_pos[0], mouse_pos[1] - last_mouse_pos[1])
+      total_drag = self.total_drag.value
+      self.total_drag.value = (total_drag[0] + drag[0], total_drag[1] + drag[1])
+
+    self.mouse_pos.value = mouse_pos
 
 
 def run():

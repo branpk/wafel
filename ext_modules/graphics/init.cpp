@@ -214,15 +214,10 @@ static PyObject *render(PyObject *self, PyObject *args) {
 
   sm64::SM64State *st = info->current_state;
 
-  f32 *camera_pos = st->D_8033B328.unk0[1];
-  f32 camera_pitch = st->D_8033B328.unk4C * 3.14159f / 0x8000;
-  f32 camera_yaw = st->D_8033B328.unk4E * 3.14159f / 0x8000;
-  f32 camera_fov_y = /*D_8033B234*/ 45 * 3.14159f / 180;
-
-  // TODO: Remove target calculation
-  RotateCamera &cam = info->camera.rotate_camera;
-  vec3 target(st->gMarioState->pos[0], st->gMarioState->pos[1], st->gMarioState->pos[2]);
-  cam.pos += target;
+  // f32 *camera_pos = st->D_8033B328.unk0[1];
+  // f32 camera_pitch = st->D_8033B328.unk4C * 3.14159f / 0x8000;
+  // f32 camera_yaw = st->D_8033B328.unk4E * 3.14159f / 0x8000;
+  // f32 camera_fov_y = /*D_8033B234*/ 45 * 3.14159f / 180;
 
   renderer->set_camera(info->camera);
 
