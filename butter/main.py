@@ -7,8 +7,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
-import butter.graphics as graphics
-from butter.graphics import CameraMode, RenderInfo, Camera, RotateCamera
+from butter.graphics import *
 from butter.timeline import Timeline
 from butter.edit import Edits
 from butter.reactive import Reactive, ReactiveValue
@@ -52,7 +51,8 @@ class Window(QWidget):
     layout.setContentsMargins(0, 0, 0, 0)
 
     visualizer_layout = QVBoxLayout()
-    visualizer_layout.addWidget(GameView(self.model))
+    visualizer_layout.addWidget(GameView(self.model, CameraMode.ROTATE))
+    visualizer_layout.addWidget(GameView(self.model, CameraMode.BIRDS_EYE))
     visualizer_layout.addWidget(FrameSlider(self.model))
     layout.addLayout(visualizer_layout)
 
@@ -130,7 +130,7 @@ class FrameSlider(QSlider):
 
 class GameView(QOpenGLWidget):
 
-  def __init__(self, model: Model, parent=None):
+  def __init__(self, model: Model, camera_mode: CameraMode, parent=None):
     super().__init__(parent)
     self.model = model
 
@@ -145,29 +145,40 @@ class GameView(QOpenGLWidget):
     self.total_drag = ReactiveValue((0, 0))
 
     def compute_camera(state: GameState, zoom: float, total_drag: Tuple[int, int]) -> Camera:
-      camera = RotateCamera(
-        [0.0, 0.0, 0.0],
-        -total_drag[1] / 200,
-        -total_drag[0] / 200,
-        math.radians(45),
-      )
+      if camera_mode == CameraMode.ROTATE:
+        camera = RotateCamera(
+          pos = [0.0, 0.0, 0.0],
+          pitch = -total_drag[1] / 200,
+          yaw = -total_drag[0] / 200,
+          fov_y = math.radians(45),
+        )
 
-      target = self.model.path('$state.gMarioState[].pos').get(state)
-      face_dir = camera.face_dir()
-      offset_dist = 1500 * math.pow(0.5, zoom)
-      camera.pos = [target[i] - offset_dist * face_dir[i] for i in range(3)]
+        target = self.model.path('$state.gMarioState[].pos').get(state)
+        face_dir = camera.face_dir()
+        offset_dist = 1500 * math.pow(0.5, zoom)
+        camera.pos = [target[i] - offset_dist * face_dir[i] for i in range(3)]
 
-      return camera
+        return camera
+
+      elif camera_mode == CameraMode.BIRDS_EYE:
+        target = self.model.path('$state.gMarioState[].pos').get(state)
+        return BirdsEyeCamera(
+          pos = [target[0], target[1] + 500, target[2]],
+          span_y = 200 / math.pow(2, zoom),
+        )
+
+      else:
+        raise NotImplementedError(camera_mode)
     self.camera = Reactive.tuple(self.state, self.zoom, self.total_drag).mapn(compute_camera)
 
     Reactive.tuple(self.state, self.camera).on_change(lambda: self.update())
 
   def initializeGL(self):
-    graphics.load_gl()
+    self.renderer = Renderer()
 
   def paintGL(self):
     self.makeCurrent()
-    graphics.render(RenderInfo(
+    self.renderer.render(RenderInfo(
       self.camera.value,
       self.state.value,
     ))

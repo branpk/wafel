@@ -4,6 +4,8 @@ import math
 
 from butter.game_state import GameState
 
+import _ext_modules.graphics as ext_graphics
+
 
 class CameraMode(Enum):
   ROTATE = 0
@@ -35,6 +37,16 @@ class RotateCamera(Camera):
       math.cos(self.pitch) * math.cos(self.yaw),
     ]
 
+class BirdsEyeCamera(Camera):
+  def __init__(
+    self,
+    pos: List[float],
+    span_y: float,
+  ) -> None:
+    super().__init__(CameraMode.BIRDS_EYE)
+    self.pos = pos
+    self.span_y = span_y
+
 
 class RenderInfo:
   def __init__(
@@ -45,4 +57,14 @@ class RenderInfo:
     self.camera = camera
     self.current_state = current_state
 
-  # TODO: Make expression evaluation available to ext module to compute offsets
+  # TODO: Make expression evaluation available to ext module to compute offsets?
+
+
+class Renderer:
+  def __init__(self):
+    """Only call in initializeGL."""
+    self._addr = ext_graphics.new_renderer()
+
+  def render(self, info: RenderInfo):
+    """Only call in paintGL after makeCurrent is called."""
+    ext_graphics.render(self._addr, info)

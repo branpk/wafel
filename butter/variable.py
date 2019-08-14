@@ -1,6 +1,8 @@
 from typing import *
 from enum import Enum, auto
 
+from butter.util import *
+
 
 class VariableParam(Enum):
   STATE = auto()
@@ -27,38 +29,32 @@ class VariableDataType(Enum):
   U64 = auto()
   F32 = auto()
   F64 = auto()
+  VEC3F = auto()
 
   @staticmethod
-  def from_spec(type_: dict) -> 'VariableDataType':
-    assert type_['kind'] == 'primitive'
-    return {
-      's8': VariableDataType.S8,
-      'u8': VariableDataType.U8,
-      's16': VariableDataType.S16,
-      'u16': VariableDataType.U16,
-      's32': VariableDataType.S32,
-      'u32': VariableDataType.U32,
-      's64': VariableDataType.S64,
-      'u64': VariableDataType.U64,
-      'f32': VariableDataType.F32,
-      'f64': VariableDataType.F64,
-    }[type_['name']]
-
-  @property
-  def pytype(self) -> Type:
-    return {
-      VariableDataType.BOOL: bool,
-      VariableDataType.S8: int,
-      VariableDataType.U8: int,
-      VariableDataType.S16: int,
-      VariableDataType.U16: int,
-      VariableDataType.S32: int,
-      VariableDataType.U32: int,
-      VariableDataType.S64: int,
-      VariableDataType.U64: int,
-      VariableDataType.F32: float,
-      VariableDataType.F64: float,
-    }[self]
+  def from_spec(spec: dict, type_: dict) -> 'VariableDataType':
+    type_ = concrete_type(spec, type_)
+    if type_['kind'] == 'primitive':
+      return {
+        's8': VariableDataType.S8,
+        'u8': VariableDataType.U8,
+        's16': VariableDataType.S16,
+        'u16': VariableDataType.U16,
+        's32': VariableDataType.S32,
+        'u32': VariableDataType.U32,
+        's64': VariableDataType.S64,
+        'u64': VariableDataType.U64,
+        'f32': VariableDataType.F32,
+        'f64': VariableDataType.F64,
+      }[type_['name']]
+    elif type_['kind'] == 'array':
+      elem_type = VariableDataType.from_spec(spec, type_['base'])
+      if type_['length'] == 3 and elem_type == VariableDataType.F32:
+        return VariableDataType.VEC3F
+      else:
+        raise NotImplementedError(type_)
+    else:
+      raise NotImplementedError(type_['kind'])
 
 
 class Variable:

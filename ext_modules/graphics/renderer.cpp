@@ -28,6 +28,8 @@ void Renderer::clear() {
 
 void Renderer::set_viewport(const Viewport &viewport) {
   this->viewport = viewport;
+  this->viewport.size.x = max(this->viewport.size.x, 1);
+  this->viewport.size.y = max(this->viewport.size.y, 1);
 }
 
 void Renderer::set_camera(const Camera &camera) {
@@ -59,6 +61,7 @@ void Renderer::render() {
   mat4 proj_matrix, view_matrix;
 
 
+
   switch (camera.mode) {
     case CameraMode::ROTATE: {
       RotateCamera &cam = camera.rotate_camera;
@@ -75,6 +78,25 @@ void Renderer::render() {
       view_matrix = glm::translate(view_matrix, -cam.pos);
       break;
     }
+
+    case CameraMode::BIRDS_EYE: {
+      BirdsEyeCamera &cam = camera.birds_eye_camera;
+
+      float top = 1.0f * cam.span_y / 2.0f;
+      float right = top * viewport.size.x / viewport.size.y;
+      float y_scale = 1000.0f;
+      proj_matrix = glm::transpose(mat4(
+            0,          0, 1/right,  0,
+        1/top,          0,       0,  0,
+            0, -1/y_scale,       0, -1,
+            0,          0,       0,  1));
+
+      vec3 pos = camera.rotate_camera.pos;
+
+      view_matrix = mat4(1.0f);
+      view_matrix = glm::translate(view_matrix, -cam.pos);
+      break;
+    }
   }
 
 
@@ -83,10 +105,8 @@ void Renderer::render() {
 
 
   p_surface.program->use();
-
   p_surface.program->set_uniform("uProjMatrix", proj_matrix);
   p_surface.program->set_uniform("uViewMatrix", view_matrix);
-
   p_surface.vertex_array->bind();
   p_surface.vertex_array->set("inPos", p_surface.buffers.pos);
   p_surface.vertex_array->set("inColor", p_surface.buffers.color);

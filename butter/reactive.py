@@ -6,6 +6,9 @@ T = TypeVar('T')
 S = TypeVar('S')
 
 
+# TODO: Add a way to delete callbacks (probably an optional "key" object)
+
+
 class Reactive(Generic[T]):
   """A Reactive[T] is conceptually a time-varying T value."""
 

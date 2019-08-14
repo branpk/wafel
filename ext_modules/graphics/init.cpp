@@ -25,18 +25,20 @@ using sm64::f32;
 using sm64::f64;
 
 
-static Renderer *renderer;
+static PyObject *new_renderer(PyObject *self, PyObject *args) {
+  static bool loaded_gl = false;
 
-
-static PyObject *load_gl(PyObject *self, PyObject *args) {
-  if (!gladLoadGL()) {
-    PyErr_SetString(PyExc_Exception, "Failed to load OpenGL");
-    return NULL;
+  if (!loaded_gl) {
+    if (!gladLoadGL()) {
+      PyErr_SetString(PyExc_Exception, "Failed to load OpenGL");
+      return NULL;
+    }
+    loaded_gl = true;
   }
 
-  renderer = new Renderer;
+  Renderer *renderer = new Renderer;
 
-  Py_RETURN_NONE;
+  return PyLong_FromVoidPtr((void *)renderer);
 }
 
 
@@ -152,6 +154,14 @@ static bool read_camera(Camera *camera, PyObject *camera_object) {
       }
       break;
     }
+    case CameraMode::BIRDS_EYE: {
+      if (!read_vec3(&camera->birds_eye_camera.pos, PyObject_GetAttrString(camera_object, "pos")) ||
+        !read_float(&camera->birds_eye_camera.span_y, PyObject_GetAttrString(camera_object, "span_y")))
+      {
+        return false;
+      }
+      break;
+    }
   }
 
   Py_DECREF(camera_object);
@@ -180,9 +190,14 @@ static sm64::SM64State *read_game_state(PyObject *state_object) {
 }
 
 
-static bool read_render_info(RenderInfo *info, PyObject *args) {
-  PyObject *info_object;
-  if (!PyArg_ParseTuple(args, "O", &info_object)) {
+static bool read_render_args(Renderer **renderer, RenderInfo *info, PyObject *args) {
+  PyObject *renderer_object, *info_object;
+  if (!PyArg_ParseTuple(args, "OO", &renderer_object, &info_object)) {
+    return false;
+  }
+
+  *renderer = (Renderer *)PyLong_AsVoidPtr(renderer_object);
+  if (PyErr_Occurred()) {
     return false;
   }
 
@@ -200,10 +215,11 @@ static bool read_render_info(RenderInfo *info, PyObject *args) {
 
 
 static PyObject *render(PyObject *self, PyObject *args) {
+  Renderer *renderer;
   RenderInfo render_info;
   RenderInfo *info = &render_info;
 
-  if (!read_render_info(info, args)) {
+  if (!read_render_args(&renderer, info, args)) {
     return NULL;
   }
 
@@ -262,7 +278,7 @@ static PyObject *render(PyObject *self, PyObject *args) {
 
 
 static PyMethodDef method_defs[] = {
-  { "load_gl", load_gl, METH_NOARGS, NULL },
+  { "new_renderer", new_renderer, METH_NOARGS, NULL },
   { "render", render, METH_VARARGS, NULL },
   { NULL, NULL, 0, NULL },
 };

@@ -21,8 +21,7 @@ class _DataVariable(Variable):
       self.path.params,
       semantics,
       read_only,
-      # VariableDataType.from_spec(self.path.type), # TODO: Rethink/extend VariableDataType
-      None,
+      VariableDataType.from_spec(spec, self.path.type),
     )
 
   def get(self, *args: Any) -> Any:
@@ -76,6 +75,5 @@ def create_variables(spec: dict) -> Variables:
     _FlagVariable('Z', spec, input_buttons, 'Z_TRIG'),
     _FlagVariable('S', spec, input_buttons, 'START_BUTTON'),
     _DataVariable('global timer', spec, VariableSemantics.RAW, '$state.gGlobalTimer'),
-    # TODO: Combine position into single variable
-    _DataVariable('mario pos', spec, VariableSemantics.RAW, '$state.gMarioState[].pos'),
+    _DataVariable('mario pos', spec, VariableSemantics.POSITION, '$state.gMarioState[].pos'),
   ])

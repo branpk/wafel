@@ -24,10 +24,16 @@ struct RotateCamera {
   float fov_y;
 };
 
+struct BirdsEyeCamera {
+  vec3 pos;
+  float span_y;
+};
+
 struct Camera {
   CameraMode mode;
   union {
     RotateCamera rotate_camera;
+    BirdsEyeCamera birds_eye_camera;
   };
 };
 
