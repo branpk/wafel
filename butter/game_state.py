@@ -1,6 +1,7 @@
 
 class GameState:
-  def __init__(self, spec: dict, frame: int, addr: int) -> None:
+  def __init__(self, spec: dict, base_addr: int, frame: int, addr: int) -> None:
     self.spec = spec
+    self.base_addr = base_addr
     self.frame = frame
     self.addr = addr

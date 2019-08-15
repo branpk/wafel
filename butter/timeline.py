@@ -17,8 +17,22 @@ class _Cell:
   """A block of memory containing an SM64State struct."""
 
   def __init__(self, frame: int, addr: int) -> None:
+    self.state = None
     self.frame = frame
     self.addr = addr
+
+  def mark_loaded(self, state: GameState) -> None:
+    self.state = weakref.ref(state)
+
+  @property
+  def loaded(self) -> bool:
+    if self.state is None:
+      return False
+    elif self.state() is None:
+      self.state = None
+      return False
+    else:
+      return True
 
 
 # TODO: Cell invalidation on input change
@@ -39,8 +53,8 @@ class _CellManager:
     self.cells = [self.new_cell() for _ in range(capacity)]
     self.temp_cell = self.cells.pop()
 
-    # The base cell is the only valid cell, since pointers in the state refer
-    # to its memory. All other cells are used to "back up" the base cell's data
+    # The base cell is the only one that SM64 C code can be run on, since
+    # its pointers refer to its own memory
     self.base_cell = self.cells[0]
     for cell in self.cells:
       self.copy_cell(cell, self.base_cell, unsafe=True)
@@ -54,28 +68,8 @@ class _CellManager:
 
     self.hotspots: Set[Reactive[int]] = set()
 
-  def any_states_loaded(self) -> bool:
-    if False:
-      print('Loaded states:', self.loaded_states)
-    self.loaded_states = [st for st in self.loaded_states if st() is not None]
-    return len(self.loaded_states) > 0
-
-  def track_loaded_state(self, state: GameState) -> None:
-    if False:
-      import traceback
-      print()
-      traceback.print_stack()
-      print('State loaded:', state)
-      print()
-    self.loaded_states.append(weakref.ref(state))
-
   def can_modify_cell(self, cell: _Cell) -> bool:
-    if cell is self.base_cell:
-      return not self.any_states_loaded()
-    elif cell is self.power_on_cell:
-      return False
-    else:
-      return True
+    return cell is not self.power_on_cell and not cell.loaded
 
   def new_cell(self) -> _Cell:
     addr = dcast(int, self.lib.sm64_state_new())
@@ -97,10 +91,7 @@ class _CellManager:
       self.lib.sm64_state_update(self.base_cell.addr)
     self.base_cell.frame += 1
 
-    self.apply_edits_to_base_cell()
-
-  def apply_edits_to_base_cell(self) -> None:
-    temp_state = GameState(self.spec, self.base_cell.frame, self.base_cell.addr)
+    temp_state = self.load_cell(self.base_cell)
     self.edits.apply(temp_state)
 
   def swap_cell_contents(self, cell1: _Cell, cell2: _Cell) -> None:
@@ -121,12 +112,19 @@ class _CellManager:
     usable_cells = [cell for cell in self.cells if cell.frame <= frame]
     return max(usable_cells, key=lambda cell: cell.frame)
 
-  def request_frame(self, frame: int) -> Optional[GameState]:
+  def load_cell(self, cell: _Cell) -> GameState:
+    state = GameState(self.spec, self.base_cell.addr, cell.frame, cell.addr)
+    cell.mark_loaded(state)
+    return state
+
+  def request_frame(self, frame: int, based: bool = False) -> Optional[GameState]:
     # Load a state as close to the desired frame as possible
     self.copy_cell(self.base_cell, self.find_latest_cell_before(frame))
 
-    # TODO: Max number of frame advances, return None otherwise
-    free_cells = [cell for cell in self.cells if self.can_modify_cell(cell)]
+    free_cells = [
+      cell for cell in self.cells
+        if self.can_modify_cell(cell) and cell is not self.base_cell
+    ]
 
     while self.base_cell.frame < frame:
       self.advance_base_cell()
@@ -139,9 +137,13 @@ class _CellManager:
         selected = random.choice(free_cells)
         self.copy_cell(selected, self.base_cell)
 
-    state = GameState(self.spec, self.base_cell.frame, self.base_cell.addr)
-    self.track_loaded_state(state)
-    return state
+    if based:
+      selected = self.base_cell
+    else:
+      selected = random.choice(free_cells)
+      self.copy_cell(selected, self.base_cell)
+
+    return self.load_cell(selected)
 
   def add_hotspot(self, frame: Reactive[int]) -> None:
     self.hotspots.add(frame)
@@ -216,8 +218,6 @@ class _CellManager:
     self.move_cell_to_frame(cell, target_frame, max_advances=50)
 
   def balance_distribution(self, max_run_time: float) -> None:
-    # TODO: Could save and restore the base cell to allow loaded states to exist
-    # through calls to this method
     start_time = time.monotonic()
     while time.monotonic() - start_time < max_run_time:
       self.balance_cells()

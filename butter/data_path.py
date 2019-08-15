@@ -75,6 +75,13 @@ class DataPath:
     self.type = type_
     self.concrete_type = concrete_type(spec, self.type)
 
+    if self.concrete_type['kind'] == 'pointer' and VariableParam.STATE not in self.params:
+      self.params = [VariableParam.STATE] + self.params
+
+  def _get_state(self, *args: Any) -> GameState:
+    index = self.params.index(VariableParam.STATE)
+    return args[index]
+
   def get_addr(self, *args: Any) -> int:
     raise NotImplementedError
 
@@ -89,7 +96,8 @@ class DataPath:
 
     elif self.concrete_type['kind'] == 'pointer':
       addr = C.cast(self.get_addr(*args), C.POINTER(C.c_void_p))
-      return int(addr[0])
+      state = self._get_state(*args)
+      return int(addr[0]) - state.base_addr + state.addr
 
     elif self.concrete_type['kind'] == 'array':
       assert self.concrete_type['length'] is not None
@@ -111,6 +119,7 @@ class DataPath:
       addr[0] = value
 
     elif self.concrete_type['kind'] == 'pointer':
+      raise NotImplementedError('pointer')
       assert isinstance(value, int)
       addr = C.cast(self.get_addr(*args), C.POINTER(C.c_void_p))
       addr[0] = value

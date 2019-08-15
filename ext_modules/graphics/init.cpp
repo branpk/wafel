@@ -97,9 +97,20 @@ static u32 get_object_list(sm64::Object *object) {
 }
 
 
+struct GameState {
+  sm64::SM64State *base;
+  sm64::SM64State *data;
+
+  template<typename T>
+  T *from_base(T *addr) {
+    return (T *)((char *)addr - (char *)base + (char *)data);
+  }
+};
+
+
 struct RenderInfo {
   Camera camera;
-  sm64::SM64State *current_state;
+  GameState current_state;
 };
 
 
@@ -186,24 +197,32 @@ static bool read_camera(Camera *camera, PyObject *camera_object) {
 }
 
 
-static sm64::SM64State *read_game_state(PyObject *state_object) {
+static bool read_game_state(GameState *state, PyObject *state_object) {
   if (state_object == NULL) {
-    return NULL;
+    return false;
   }
 
   PyObject *addr_object = PyObject_GetAttrString(state_object, "addr");
   if (addr_object == NULL) {
-    return NULL;
+    return false;
+  }
+  state->data = (sm64::SM64State *)PyLong_AsVoidPtr(addr_object);
+  if (PyErr_Occurred()) {
+    return false;
   }
 
-  long addr = PyLong_AsLong(addr_object);
+  PyObject *base_addr_object = PyObject_GetAttrString(state_object, "base_addr");
+  if (base_addr_object == NULL) {
+    return false;
+  }
+  state->base = (sm64::SM64State *)PyLong_AsVoidPtr(base_addr_object);
   if (PyErr_Occurred()) {
-    return NULL;
+    return false;
   }
 
   Py_DECREF(addr_object);
   Py_DECREF(state_object);
-  return (sm64::SM64State *)addr;
+  return true;
 }
 
 
@@ -222,8 +241,7 @@ static bool read_render_args(Renderer **renderer, RenderInfo *info, PyObject *ar
     return false;
   }
 
-  info->current_state = read_game_state(PyObject_GetAttrString(info_object, "current_state"));
-  if (info->current_state == NULL) {
+  if (!read_game_state(&info->current_state, PyObject_GetAttrString(info_object, "current_state"))) {
     return false;
   }
 
@@ -245,7 +263,7 @@ static PyObject *render(PyObject *self, PyObject *args) {
   renderer->set_viewport({{0, 0}, {640, 480}});
 
 
-  sm64::SM64State *st = info->current_state;
+  GameState st = info->current_state;
 
   // f32 *camera_pos = st->D_8033B328.unk0[1];
   // f32 camera_pitch = st->D_8033B328.unk4C * 3.14159f / 0x8000;
@@ -255,8 +273,8 @@ static PyObject *render(PyObject *self, PyObject *args) {
   renderer->set_camera(info->camera);
 
 
-  for (s32 i = 0; i < st->gSurfacesAllocated; i++) {
-    struct sm64::Surface *surface = &st->sSurfacePool[i];
+  for (s32 i = 0; i < st.data->gSurfacesAllocated; i++) {
+    struct sm64::Surface *surface = &st.from_base(st.data->sSurfacePool)[i];
 
     vec3 color;
     if (surface->normal.y > 0.01f) {
@@ -280,7 +298,7 @@ static PyObject *render(PyObject *self, PyObject *args) {
   }
 
   for (s32 i = 0; i < 240; i++) {
-    struct sm64::Object *obj = &st->gObjectPool[i];
+    struct sm64::Object *obj = &st.data->gObjectPool[i];
     if (obj->activeFlags & ACTIVE_FLAG_ACTIVE) {
       renderer->add_object(
         vec3(obj->oPosX, obj->oPosY, obj->oPosZ),
