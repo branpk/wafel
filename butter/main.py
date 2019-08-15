@@ -61,8 +61,8 @@ class Window(QWidget):
     self.setLayout(layout)
 
     self.balance_timer = QTimer()
-    self.balance_timer.setInterval(1000 // 30)
-    self.balance_timer.timeout.connect(lambda: self.model.timeline.balance_distribution(1/60))
+    self.balance_timer.setInterval(1000 // 60)
+    self.balance_timer.timeout.connect(lambda: self.model.timeline.balance_distribution(1/120))
     self.balance_timer.start()
 
 
@@ -180,6 +180,9 @@ class GameView(QOpenGLWidget):
     self.renderer = Renderer()
 
   def paintGL(self):
+    # for i in range(1000):
+    #   self.state.value
+    #   pass
     self.makeCurrent()
     self.renderer.render(RenderInfo(
       self.camera.value,
