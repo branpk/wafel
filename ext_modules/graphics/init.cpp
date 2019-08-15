@@ -42,6 +42,23 @@ static PyObject *new_renderer(PyObject *self, PyObject *args) {
 }
 
 
+static PyObject *delete_renderer(PyObject *self, PyObject *args) {
+  PyObject *renderer_object;
+  if (!PyArg_ParseTuple(args, "O", &renderer_object)) {
+    return NULL;
+  }
+
+  Renderer *renderer = (Renderer *)PyLong_AsVoidPtr(renderer_object);
+  if (PyErr_Occurred()) {
+    return NULL;
+  }
+
+  delete renderer;
+
+  Py_RETURN_NONE;
+}
+
+
 static void *segmented_to_virtual(sm64::SM64State *st, void *addr) {
   void *result = ((void *)0);
   s32 i = 0;
@@ -279,6 +296,7 @@ static PyObject *render(PyObject *self, PyObject *args) {
 
 static PyMethodDef method_defs[] = {
   { "new_renderer", new_renderer, METH_NOARGS, NULL },
+  { "delete_renderer", delete_renderer, METH_VARARGS, NULL },
   { "render", render, METH_VARARGS, NULL },
   { NULL, NULL, 0, NULL },
 };

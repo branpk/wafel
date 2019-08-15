@@ -171,7 +171,10 @@ class GameView(QOpenGLWidget):
         raise NotImplementedError(camera_mode)
     self.camera = Reactive.tuple(self.state, self.zoom, self.total_drag).mapn(compute_camera)
 
-    Reactive.tuple(self.state, self.camera).on_change(lambda: self.update())
+    # Reactive.tuple(self.state, self.camera).on_change(lambda: self.update())
+    self.draw_timer = QTimer()
+    self.draw_timer.timeout.connect(self.update)
+    self.draw_timer.start()
 
   def initializeGL(self):
     self.renderer = Renderer()
