@@ -35,8 +35,6 @@ class _Cell:
       return True
 
 
-# TODO: Cell invalidation on input change
-
 class _CellManager:
   def __init__(
     self,
@@ -119,7 +117,11 @@ class _CellManager:
 
   def request_frame(self, frame: int, based: bool = False) -> Optional[GameState]:
     # Load a state as close to the desired frame as possible
-    self.copy_cell(self.base_cell, self.find_latest_cell_before(frame))
+    latest_cell = self.find_latest_cell_before(frame)
+    if self.can_modify_cell(latest_cell):
+      self.swap_cell_contents(self.base_cell, latest_cell)
+    else:
+      self.copy_cell(self.base_cell, latest_cell)
 
     free_cells = [
       cell for cell in self.cells
@@ -141,7 +143,7 @@ class _CellManager:
       selected = self.base_cell
     else:
       selected = random.choice(free_cells)
-      self.copy_cell(selected, self.base_cell)
+      self.swap_cell_contents(selected, self.base_cell)
 
     return self.load_cell(selected)
 
