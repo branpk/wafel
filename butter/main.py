@@ -80,9 +80,11 @@ class FrameSheetView(QTableView):
     self.setMinimumHeight(480)
 
     def set_selection(frame):
-      self.selectionModel().select(self.model.frame_sheet.index(frame, 0), QItemSelectionModel.ClearAndSelect)
+      index = self.model.frame_sheet.index(frame, 0)
+      self.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
+      self.scrollTo(index)
     set_selection(self.model.selected_frame.value)
-    # self.model.selected_frame.on_change(set_selection)
+    self.model.selected_frame.on_change(set_selection)
 
     self.focus_frame = ReactiveValue(0)
     def set_focus_frame():
@@ -97,8 +99,6 @@ class FrameSheetView(QTableView):
     self.model.selected_frame.value = frame
 
 
-# TODO: Either make frame slider not controllable, or make frame sheet change
-# selection to match
 class FrameSlider(QSlider):
 
   def __init__(self, model: Model, parent=None):
