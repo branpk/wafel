@@ -118,6 +118,12 @@ class _CellManager:
   def request_frame(self, frame: int, based: bool = False) -> Optional[GameState]:
     # Load a state as close to the desired frame as possible
     latest_cell = self.find_latest_cell_before(frame)
+
+    # Avoid copies in common case
+    if latest_cell.frame == frame and self.can_modify_cell(latest_cell) and \
+        based == (latest_cell is self.base_cell):
+      return self.load_cell(latest_cell)
+
     if self.can_modify_cell(latest_cell):
       self.swap_cell_contents(self.base_cell, latest_cell)
     else:

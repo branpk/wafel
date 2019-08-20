@@ -30,7 +30,11 @@ class FrameSheet(QAbstractTableModel):
         return str(section)
 
   def flags(self, index):
-    return Qt.ItemIsSelectable | Qt.ItemIsEditable | Qt.ItemIsEnabled
+    variable = self._variables[index.column()]
+    if variable.data_type == VariableDataType.BOOL:
+      return Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled
+    else:
+      return Qt.ItemIsSelectable | Qt.ItemIsEditable | Qt.ItemIsEnabled
 
   def get_variable_arg(self, frame: int, param: VariableParam) -> Any:
     if param == VariableParam.STATE:
@@ -47,21 +51,29 @@ class FrameSheet(QAbstractTableModel):
       args = self.get_variable_args(index.row(), variable)
       value = variable.get(*args)
       # TODO: Formatting
-      if variable.data_type == VariableDataType.BOOL:
-        return '1' if value else ''
-      else:
+      if variable.data_type != VariableDataType.BOOL:
         return str(value)
+    elif role == Qt.CheckStateRole:
+      variable = self._variables[index.column()]
+      args = self.get_variable_args(index.row(), variable)
+      value = variable.get(*args)
+      if variable.data_type == VariableDataType.BOOL:
+        return Qt.Checked if value else Qt.Unchecked
 
   def setData(self, index, value, role=Qt.EditRole):
     if role == Qt.EditRole:
       variable = self._variables[index.column()]
       # TODO: Formatting
-      if variable.data_type == VariableDataType.BOOL:
-        value = bool(int(value))
-      else:
+      if variable.data_type != VariableDataType.BOOL:
         value = int(value)
-
-      self._edits.add(index.row(), VariableEdit(variable, value))
-
-      self.dataChanged.emit(index, index)
+        self._edits.add(index.row(), VariableEdit(variable, value))
+        self.dataChanged.emit(index, index)
+        return True
+    elif role == Qt.CheckStateRole:
+      variable = self._variables[index.column()]
+      if variable.data_type == VariableDataType.BOOL:
+        value = value == Qt.Checked
+        self._edits.add(index.row(), VariableEdit(variable, value))
+        self.dataChanged.emit(index, index)
       return True
+    return False
