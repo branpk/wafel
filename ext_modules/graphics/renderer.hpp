@@ -53,6 +53,7 @@ public:
   void set_camera(const Camera &camera);
   void add_surface(const Surface &surface);
   void add_object(vec3 pos, float height);
+  void add_object_path(const vector<vec3> &path);
   void render();
 
 private:
@@ -75,6 +76,12 @@ private:
       vector<vec3> pos;
     } buffers;
   } p_object;
+
+  struct {
+    Program *program;
+    VertexArray *vertex_array;
+    vector<vector<vec3>> paths;
+  } p_object_path;
 };
 
 

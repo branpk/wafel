@@ -139,6 +139,13 @@ class GameView(QOpenGLWidget):
 
     self.state = self.model.timeline.frame(self.model.selected_frame)
 
+    def plus(i):
+      return lambda f: f + i
+    self.path_states = [
+      self.model.timeline.frame(self.model.selected_frame.map(plus(i)))
+        for i in range(30)
+    ]
+
     self.mouse_down = ReactiveValue(False)
     self.mouse_pos: ReactiveValue[Optional[Tuple[int, int]]] = ReactiveValue(None)
     self.zoom = ReactiveValue(0.0)
@@ -171,7 +178,6 @@ class GameView(QOpenGLWidget):
         raise NotImplementedError(camera_mode)
     self.camera = Reactive.tuple(self.state, self.zoom, self.total_drag).mapn(compute_camera)
 
-    # Reactive.tuple(self.state, self.camera).on_change(lambda: self.update())
     self.draw_timer = QTimer()
     self.draw_timer.timeout.connect(self.update)
     self.draw_timer.start()
@@ -180,13 +186,11 @@ class GameView(QOpenGLWidget):
     self.renderer = Renderer()
 
   def paintGL(self):
-    # for i in range(1000):
-    #   self.state.value
-    #   pass
     self.makeCurrent()
     self.renderer.render(RenderInfo(
       self.camera.value,
       self.state.value,
+      [st.value for st in self.path_states],
     ))
 
   def wheelEvent(self, event):

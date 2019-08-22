@@ -53,9 +53,11 @@ class RenderInfo:
     self,
     camera: Camera,
     current_state: GameState,
+    path_states: List[GameState],
   ) -> None:
     self.camera = camera
     self.current_state = current_state
+    self.path_states = path_states
 
   # TODO: Make expression evaluation available to ext module to compute offsets?
 

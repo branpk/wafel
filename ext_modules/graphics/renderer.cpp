@@ -17,6 +17,9 @@ Renderer::Renderer() {
 
   p_object.program = new Program("assets/shaders/transform.vert", "assets/shaders/uniform_color.frag");
   p_object.vertex_array = new VertexArray(p_object.program);
+
+  p_object_path.program = new Program("assets/shaders/transform.vert", "assets/shaders/uniform_color.frag");
+  p_object_path.vertex_array = new VertexArray(p_object_path.program);
 }
 
 void Renderer::clear() {
@@ -24,6 +27,8 @@ void Renderer::clear() {
   p_surface.buffers.color.clear();
 
   p_object.buffers.pos.clear();
+
+  p_object_path.paths.clear();
 }
 
 void Renderer::set_viewport(const Viewport &viewport) {
@@ -49,6 +54,10 @@ void Renderer::add_surface(const Surface &surface) {
 void Renderer::add_object(vec3 pos, float height) {
   p_object.buffers.pos.push_back(pos);
   p_object.buffers.pos.push_back(pos + vec3(0, height, 0));
+}
+
+void Renderer::add_object_path(const vector<vec3> &path) {
+  p_object_path.paths.push_back(path);
 }
 
 void Renderer::render() {
@@ -100,6 +109,10 @@ void Renderer::render() {
   }
 
 
+  glEnable(GL_CULL_FACE);
+  glCullFace(GL_BACK);
+  glFrontFace(GL_CCW);
+
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
 
@@ -121,4 +134,15 @@ void Renderer::render() {
   p_object.vertex_array->bind();
   p_object.vertex_array->set("inPos", p_object.buffers.pos);
   glDrawArrays(GL_LINES, 0, p_object.buffers.pos.size());
+
+
+  p_object_path.program->use();
+  p_object_path.program->set_uniform("uProjMatrix", proj_matrix);
+  p_object_path.program->set_uniform("uViewMatrix", view_matrix);
+  p_object_path.program->set_uniform("uColor", vec4(0, 1, 0, 1));
+  p_object_path.vertex_array->bind();
+  for (vector<vec3> &path : p_object_path.paths) {
+    p_object_path.vertex_array->set("inPos", path);
+    glDrawArrays(GL_LINE_STRIP, 0, path.size());
+  }
 }

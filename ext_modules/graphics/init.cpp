@@ -98,6 +98,7 @@ static u32 get_object_list(sm64::Object *object) {
 
 
 struct GameState {
+  int frame;
   sm64::SM64State *base;
   sm64::SM64State *data;
 
@@ -111,7 +112,23 @@ struct GameState {
 struct RenderInfo {
   Camera camera;
   GameState current_state;
+  vector<GameState> path_states;
 };
+
+
+static int read_int(int *result, PyObject *int_object) {
+  if (int_object == NULL) {
+    return false;
+  }
+
+  *result = (int)PyLong_AsLong(int_object);
+  if (PyErr_Occurred()) {
+    return false;
+  }
+
+  Py_DECREF(int_object);
+  return true;
+}
 
 
 static bool read_float(float *result, PyObject *float_object) {
@@ -202,6 +219,10 @@ static bool read_game_state(GameState *state, PyObject *state_object) {
     return false;
   }
 
+  if (!read_int(&state->frame, PyObject_GetAttrString(state_object, "frame"))) {
+    return false;
+  }
+
   PyObject *addr_object = PyObject_GetAttrString(state_object, "addr");
   if (addr_object == NULL) {
     return false;
@@ -226,6 +247,32 @@ static bool read_game_state(GameState *state, PyObject *state_object) {
 }
 
 
+static bool read_game_state_list(vector<GameState> *states, PyObject *states_object) {
+  if (states_object == NULL) {
+    return false;
+  }
+
+  *states = vector<GameState>(30);
+
+  size_t length = PyObject_Length(states_object);
+  for (size_t i = 0; i < length; i++) {
+    PyObject *index = PyLong_FromLong(i);
+    if (index == NULL) {
+      return false;
+    }
+
+    if (!read_game_state(&(*states)[i], PyObject_GetItem(states_object, index))) {
+      return false;
+    }
+
+    Py_DECREF(index);
+  }
+
+  Py_DECREF(states_object);
+  return true;
+}
+
+
 static bool read_render_args(Renderer **renderer, RenderInfo *info, PyObject *args) {
   PyObject *renderer_object, *info_object;
   if (!PyArg_ParseTuple(args, "OO", &renderer_object, &info_object)) {
@@ -242,6 +289,10 @@ static bool read_render_args(Renderer **renderer, RenderInfo *info, PyObject *ar
   }
 
   if (!read_game_state(&info->current_state, PyObject_GetAttrString(info_object, "current_state"))) {
+    return false;
+  }
+
+  if (!read_game_state_list(&info->path_states, PyObject_GetAttrString(info_object, "path_states"))) {
     return false;
   }
 
@@ -298,13 +349,20 @@ static PyObject *render(PyObject *self, PyObject *args) {
   }
 
   for (s32 i = 0; i < 240; i++) {
-    struct sm64::Object *obj = &st.data->gObjectPool[i];
+    sm64::Object *obj = &st.data->gObjectPool[i];
     if (obj->activeFlags & ACTIVE_FLAG_ACTIVE) {
       renderer->add_object(
         vec3(obj->oPosX, obj->oPosY, obj->oPosZ),
         obj->hitboxHeight);
     }
   }
+
+  vector<vec3> mario_path;
+  for (GameState path_st : info->path_states) {
+    sm64::MarioState *m = path_st.from_base(path_st.data->gMarioState);
+    mario_path.push_back(vec3(m->pos[0], m->pos[1], m->pos[2]));
+  }
+  renderer->add_object_path(mario_path);
 
   renderer->render();
 
