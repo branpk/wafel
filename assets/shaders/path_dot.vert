@@ -11,7 +11,7 @@ out vec3 vColor;
 
 void main() {
   vec4 center = uProjMatrix * uViewMatrix * vec4(inCenter, 1);
-  vec2 screen_offset = 0.01 * inOffset;
+  vec2 screen_offset = 0.008 * inOffset;
   gl_Position = center + center.w * vec4(screen_offset, 0, 0);
 
   vColor = inColor;

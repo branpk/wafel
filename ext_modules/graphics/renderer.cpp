@@ -94,6 +94,7 @@ void Renderer::render_surfaces(const Scene &scene) {
   vertex_array->set("inColor", in_color);
 
   glDrawArrays(GL_TRIANGLES, 0, in_pos.size());
+  delete vertex_array;
 }
 
 void Renderer::render_objects(const Scene &scene) {
@@ -117,6 +118,7 @@ void Renderer::render_objects(const Scene &scene) {
   vertex_array->set("inPos", in_pos);
 
   glDrawArrays(GL_LINES, 0, in_pos.size());
+  delete vertex_array;
 }
 
 void Renderer::render_object_paths(const Scene &scene) {
@@ -142,6 +144,8 @@ void Renderer::render_object_paths(const Scene &scene) {
 
     glDrawArrays(GL_LINE_STRIP, 0, in_pos.size());
   }
+
+  delete vertex_array;
 
   vector<PathDot> path_dots;
   for (const ObjectPath &path : scene.object_paths) {
@@ -193,4 +197,5 @@ void Renderer::render_path_dots(const vector<PathDot> &dots) {
   vertex_array->set("inColor", in_color);
 
   glDrawArrays(GL_TRIANGLES, 0, in_center.size());
+  delete vertex_array;
 }

@@ -252,9 +252,9 @@ static bool read_game_state_list(vector<GameState> *states, PyObject *states_obj
     return false;
   }
 
-  *states = vector<GameState>(30);
-
   size_t length = PyObject_Length(states_object);
+  *states = vector<GameState>(length);
+
   for (size_t i = 0; i < length; i++) {
     PyObject *index = PyLong_FromLong(i);
     if (index == NULL) {
