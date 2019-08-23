@@ -143,7 +143,21 @@ void VertexArray::bind() {
   glBindVertexArray(name);
 }
 
+void VertexArray::set(const string &attribute, const vector<vec2> &data) {
+  GLuint buffer = vecf_buffer(attribute, 2);
+  glBindBuffer(GL_ARRAY_BUFFER, buffer);
+  // TODO: glBufferSubData
+  glBufferData(GL_ARRAY_BUFFER, VEC_SIZE(data), data.data(), GL_STATIC_DRAW);
+}
+
 void VertexArray::set(const string &attribute, const vector<vec3> &data) {
+  GLuint buffer = vecf_buffer(attribute, 3);
+  glBindBuffer(GL_ARRAY_BUFFER, buffer);
+  // TODO: glBufferSubData
+  glBufferData(GL_ARRAY_BUFFER, VEC_SIZE(data), data.data(), GL_STATIC_DRAW);
+}
+
+GLuint VertexArray::vecf_buffer(const string &attribute, int dimension) {
   GLuint &buffer = buffers[attribute];
   if (buffer == 0) {
     glGenBuffers(1, &buffer);
@@ -152,10 +166,8 @@ void VertexArray::set(const string &attribute, const vector<vec3> &data) {
     bind();
     GLint location = program->attribute(attribute);
     glEnableVertexAttribArray(location);
-    glVertexAttribPointer(location, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glVertexAttribPointer(location, dimension, GL_FLOAT, GL_FALSE, 0, 0);
   }
 
-  glBindBuffer(GL_ARRAY_BUFFER, buffer);
-  // TODO: glBufferSubData
-  glBufferData(GL_ARRAY_BUFFER, VEC_SIZE(data), data.data(), GL_STATIC_DRAW);
+  return buffer;
 }

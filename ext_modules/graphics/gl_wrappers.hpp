@@ -48,6 +48,7 @@ public:
 
   void bind();
 
+  void set(const string &attribute, const vector<vec2> &data);
   void set(const string &attribute, const vector<vec3> &data);
 
 private:
@@ -55,6 +56,8 @@ private:
   map<string, GLuint> buffers;
 
   VertexArray(const VertexArray &) = delete;
+
+  GLuint vecf_buffer(const string &attribute, int dimension);
 };
 
 

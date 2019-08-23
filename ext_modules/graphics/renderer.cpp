@@ -72,7 +72,10 @@ void Renderer::render_surfaces(const Scene &scene) {
   Program *program = res.program(
     "assets/shaders/surface.vert",
     "assets/shaders/surface.frag");
-  VertexArray *vertex_array = new VertexArray(program);
+
+  program->use();
+  program->set_uniform("uProjMatrix", proj_matrix);
+  program->set_uniform("uViewMatrix", view_matrix);
 
   vector<vec3> in_pos;
   vector<vec3> in_color;
@@ -82,15 +85,10 @@ void Renderer::render_surfaces(const Scene &scene) {
     in_pos.push_back(surface.vertices[1]);
     in_pos.push_back(surface.vertices[2]);
 
-    in_color.push_back(surface.color);
-    in_color.push_back(surface.color);
-    in_color.push_back(surface.color);
+    in_color.insert(in_color.end(), 3, surface.color);
   }
 
-  program->use();
-  program->set_uniform("uProjMatrix", proj_matrix);
-  program->set_uniform("uViewMatrix", view_matrix);
-
+  VertexArray *vertex_array = new VertexArray(program);
   vertex_array->bind();
   vertex_array->set("inPos", in_pos);
   vertex_array->set("inColor", in_color);
@@ -102,7 +100,11 @@ void Renderer::render_objects(const Scene &scene) {
   Program *program = res.program(
     "assets/shaders/transform.vert",
     "assets/shaders/uniform_color.frag");
-  VertexArray *vertex_array = new VertexArray(program);
+
+  program->use();
+  program->set_uniform("uProjMatrix", proj_matrix);
+  program->set_uniform("uViewMatrix", view_matrix);
+  program->set_uniform("uColor", vec4(1, 0, 0, 1));
 
   vector<vec3> in_pos;
   for (const Object &object : scene.objects) {
@@ -110,11 +112,7 @@ void Renderer::render_objects(const Scene &scene) {
     in_pos.push_back(object.pos + vec3(0, object.hitboxHeight, 0));
   }
 
-  program->use();
-  program->set_uniform("uProjMatrix", proj_matrix);
-  program->set_uniform("uViewMatrix", view_matrix);
-  program->set_uniform("uColor", vec4(1, 0, 0, 1));
-
+  VertexArray *vertex_array = new VertexArray(program);
   vertex_array->bind();
   vertex_array->set("inPos", in_pos);
 
@@ -125,19 +123,74 @@ void Renderer::render_object_paths(const Scene &scene) {
   Program *program = res.program(
     "assets/shaders/transform.vert",
     "assets/shaders/uniform_color.frag");
-  VertexArray *vertex_array = new VertexArray(program);
 
   program->use();
   program->set_uniform("uProjMatrix", proj_matrix);
   program->set_uniform("uViewMatrix", view_matrix);
-  program->set_uniform("uColor", vec4(0, 1, 0, 1));
+  program->set_uniform("uColor", vec4(0.5f, 0, 0, 1));
+
+  VertexArray *vertex_array = new VertexArray(program);
 
   for (const ObjectPath &path : scene.object_paths) {
-    vector<vec3> in_pos = path.pos;
+    vector<vec3> in_pos;
+    for (vec3 it : path.pos) {
+      in_pos.push_back(it + vec3(0, 0.01f, 0));
+    }
 
     vertex_array->bind();
     vertex_array->set("inPos", in_pos);
 
     glDrawArrays(GL_LINE_STRIP, 0, in_pos.size());
   }
+
+  vector<PathDot> path_dots;
+  for (const ObjectPath &path : scene.object_paths) {
+    for (vec3 pos : path.pos) {
+      path_dots.push_back({
+        pos + vec3(0, 0.01f, 0),
+        vec3(1, 0, 0),
+      });
+    }
+  }
+  render_path_dots(path_dots);
+}
+
+void Renderer::render_path_dots(const vector<PathDot> &dots) {
+  // TODO: Could do triangle fans with indexing
+
+  Program *program = res.program(
+    "assets/shaders/path_dot.vert",
+    "assets/shaders/color.frag");
+
+  program->use();
+  program->set_uniform("uProjMatrix", proj_matrix);
+  program->set_uniform("uViewMatrix", view_matrix);
+
+  vector<vec3> in_center;
+  vector<vec2> in_offset;
+  vector<vec3> in_color;
+
+  for (const PathDot &dot : dots) {
+    const int num_edges = 12;
+
+    in_center.insert(in_center.end(), 3 * num_edges, dot.pos);
+    in_color.insert(in_color.end(), 3 * num_edges, dot.color);
+
+    for (int i = 0; i < num_edges; i++) {
+      float a0 = (float)i / (float)num_edges * 2 * glm::pi<float>();
+      float a1 = (float)(i + 1) / (float)num_edges * 2 * glm::pi<float>();
+
+      in_offset.push_back(vec2(0, 0));
+      in_offset.push_back(vec2(cosf(a0), sinf(a0)));
+      in_offset.push_back(vec2(cosf(a1), sinf(a1)));
+    }
+  }
+
+  VertexArray *vertex_array = new VertexArray(program);
+  vertex_array->bind();
+  vertex_array->set("inCenter", in_center);
+  vertex_array->set("inOffset", in_offset);
+  vertex_array->set("inColor", in_color);
+
+  glDrawArrays(GL_TRIANGLES, 0, in_center.size());
 }

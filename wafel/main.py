@@ -139,6 +139,8 @@ class GameView(QOpenGLWidget):
 
     self.state = self.model.timeline.frame(self.model.selected_frame)
 
+    # TODO: Instead of loading all these states at once, just extract render
+    # info from each one-by-one (to allow longer paths without running out of cells)
     def plus(i):
       return lambda f: f + i
     self.path_states = [

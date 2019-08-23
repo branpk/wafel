@@ -61,6 +61,12 @@ struct Scene {
 };
 
 
+struct PathDot {
+  vec3 pos;
+  vec3 color;
+};
+
+
 class Renderer {
 public:
   void render(const Viewport &viewport, const Scene &scene);
@@ -73,6 +79,7 @@ private:
   void render_surfaces(const Scene &scene);
   void render_objects(const Scene &scene);
   void render_object_paths(const Scene &scene);
+  void render_path_dots(const vector<PathDot> &dots);
 };
 
 
