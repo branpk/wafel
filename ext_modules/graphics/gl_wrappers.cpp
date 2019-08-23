@@ -78,7 +78,7 @@ Program::~Program() {
 }
 
 void Program::use() {
-  glUseProgram(this->name);
+  glUseProgram(name);
 }
 
 GLint Program::uniform(const string &name) {
@@ -99,6 +99,29 @@ void Program::set_uniform(const string &name, const vec4 &value) {
 void Program::set_uniform(const string &name, const mat4 &value) {
   use();
   glUniformMatrix4fv(uniform(name), 1, GL_FALSE, &value[0][0]);
+}
+
+
+ResourceCache::ResourceCache() {
+}
+
+ResourceCache::~ResourceCache() {
+  for (auto &it : programs) {
+    delete it.second;
+  }
+}
+
+Program *ResourceCache::program(
+  const string &vertex_shader_filename, const string &fragment_shader_filename)
+{
+  pair<string, string> key(vertex_shader_filename, fragment_shader_filename);
+
+  auto it = programs.find(key);
+  if (it == programs.end()) {
+    return programs[key] = new Program(vertex_shader_filename, fragment_shader_filename);
+  } else {
+    return it->second;
+  }
 }
 
 
@@ -133,5 +156,6 @@ void VertexArray::set(const string &attribute, const vector<vec3> &data) {
   }
 
   glBindBuffer(GL_ARRAY_BUFFER, buffer);
+  // TODO: glBufferSubData
   glBufferData(GL_ARRAY_BUFFER, VEC_SIZE(data), data.data(), GL_STATIC_DRAW);
 }

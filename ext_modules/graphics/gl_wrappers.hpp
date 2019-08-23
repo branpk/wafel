@@ -19,6 +19,23 @@ public:
 
   void set_uniform(const string &name, const vec4 &value);
   void set_uniform(const string &name, const mat4 &value);
+
+private:
+  Program(const Program &) = delete;
+};
+
+
+class ResourceCache {
+public:
+  ResourceCache();
+  ~ResourceCache();
+
+  Program *program(const string &vertex_shader_filename, const string &fragment_shader_filename);
+
+private:
+  map<pair<string, string>, Program *> programs;
+
+  ResourceCache(const ResourceCache &) = delete;
 };
 
 
@@ -36,19 +53,9 @@ public:
 private:
   Program *program;
   map<string, GLuint> buffers;
+
+  VertexArray(const VertexArray &) = delete;
 };
-
-
-// class VertexArray {
-// public:
-//   VertexArray(Program &program);
-//   ~VertexArray();
-
-
-
-// private:
-//   Program &program;
-// }
 
 
 #endif

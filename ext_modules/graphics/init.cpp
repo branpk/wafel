@@ -310,8 +310,8 @@ static PyObject *render(PyObject *self, PyObject *args) {
   }
 
 
-  renderer->clear();
-  renderer->set_viewport({{0, 0}, {640, 480}});
+  Viewport viewport = {{0, 0}, {640, 480}};
+  Scene scene;
 
 
   GameState st = info->current_state;
@@ -321,7 +321,7 @@ static PyObject *render(PyObject *self, PyObject *args) {
   // f32 camera_yaw = st->D_8033B328.unk4E * 3.14159f / 0x8000;
   // f32 camera_fov_y = /*D_8033B234*/ 45 * 3.14159f / 180;
 
-  renderer->set_camera(info->camera);
+  scene.camera = info->camera;
 
 
   for (s32 i = 0; i < st.data->gSurfacesAllocated; i++) {
@@ -338,7 +338,7 @@ static PyObject *render(PyObject *self, PyObject *args) {
       color = vec3(0.15f, 0.4f, 0.15f);
     }
 
-    renderer->add_surface({
+    scene.surfaces.push_back({
       {
         vec3(surface->vertex1[0], surface->vertex1[1], surface->vertex1[2]),
         vec3(surface->vertex2[0], surface->vertex2[1], surface->vertex2[2]),
@@ -351,9 +351,10 @@ static PyObject *render(PyObject *self, PyObject *args) {
   for (s32 i = 0; i < 240; i++) {
     sm64::Object *obj = &st.data->gObjectPool[i];
     if (obj->activeFlags & ACTIVE_FLAG_ACTIVE) {
-      renderer->add_object(
+      scene.objects.push_back({
         vec3(obj->oPosX, obj->oPosY, obj->oPosZ),
-        obj->hitboxHeight);
+        obj->hitboxHeight,
+      });
     }
   }
 
@@ -362,9 +363,11 @@ static PyObject *render(PyObject *self, PyObject *args) {
     sm64::MarioState *m = path_st.from_base(path_st.data->gMarioState);
     mario_path.push_back(vec3(m->pos[0], m->pos[1], m->pos[2]));
   }
-  renderer->add_object_path(mario_path);
+  scene.object_paths.push_back({
+    mario_path,
+  });
 
-  renderer->render();
+  renderer->render(viewport, scene);
 
   Py_RETURN_NONE;
 }

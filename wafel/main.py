@@ -184,6 +184,8 @@ class GameView(QOpenGLWidget):
 
   def initializeGL(self):
     self.renderer = Renderer()
+    # TODO: For some reason the opengl context is destroyed or non-current
+    # in destructor call, causing errors
 
   def paintGL(self):
     self.makeCurrent()

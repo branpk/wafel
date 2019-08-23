@@ -43,45 +43,36 @@ struct Surface {
   vec3 color;
 };
 
+struct Object {
+  vec3 pos;
+  float hitboxHeight;
+};
+
+struct ObjectPath {
+  vector<vec3> pos;
+};
+
+
+struct Scene {
+  Camera camera;
+  vector<Surface> surfaces;
+  vector<Object> objects;
+  vector<ObjectPath> object_paths;
+};
+
 
 class Renderer {
 public:
-  Renderer();
-
-  void clear();
-  void set_viewport(const Viewport &viewport);
-  void set_camera(const Camera &camera);
-  void add_surface(const Surface &surface);
-  void add_object(vec3 pos, float height);
-  void add_object_path(const vector<vec3> &path);
-  void render();
+  void render(const Viewport &viewport, const Scene &scene);
 
 private:
-  Viewport viewport;
-  Camera camera;
+  ResourceCache res;
+  mat4 proj_matrix, view_matrix;
 
-  struct {
-    Program *program;
-    VertexArray *vertex_array;
-    struct {
-      vector<vec3> pos;
-      vector<vec3> color;
-    } buffers;
-  } p_surface;
-
-  struct {
-    Program *program;
-    VertexArray *vertex_array;
-    struct {
-      vector<vec3> pos;
-    } buffers;
-  } p_object;
-
-  struct {
-    Program *program;
-    VertexArray *vertex_array;
-    vector<vector<vec3>> paths;
-  } p_object_path;
+  void build_transforms(const Viewport &viewport, const Scene &scene);
+  void render_surfaces(const Scene &scene);
+  void render_objects(const Scene &scene);
+  void render_object_paths(const Scene &scene);
 };
 
 
