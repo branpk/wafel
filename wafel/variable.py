@@ -1,7 +1,7 @@
 from typing import *
 from enum import Enum, auto
 
-from butter.util import *
+from wafel.util import *
 
 
 class VariableParam(Enum):

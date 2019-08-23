@@ -11,6 +11,6 @@ if sys.maxsize < 2**31 - 1 or sys.maxsize > 2**32:
   sys.stderr.flush()
   sys.exit(1)
 
-from butter.main import run
+from wafel.main import run
 
 run()

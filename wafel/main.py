@@ -7,14 +7,14 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
-from butter.graphics import *
-from butter.timeline import Timeline
-from butter.edit import Edits
-from butter.reactive import Reactive, ReactiveValue
-from butter.frame_sheet import FrameSheet
-from butter.variables import create_variables
-from butter.game_state import GameState
-from butter.data_path import DataPath
+from wafel.graphics import *
+from wafel.timeline import Timeline
+from wafel.edit import Edits
+from wafel.reactive import Reactive, ReactiveValue
+from wafel.frame_sheet import FrameSheet
+from wafel.variables import create_variables
+from wafel.game_state import GameState
+from wafel.data_path import DataPath
 
 
 class Model:
@@ -43,7 +43,7 @@ class Window(QWidget):
   def __init__(self, parent=None):
     super().__init__(parent)
 
-    self.setWindowTitle('SM64')
+    self.setWindowTitle('Wafel')
 
     self.model = Model()
 

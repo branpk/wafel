@@ -4,10 +4,10 @@ from typing import *
 import weakref
 import time
 
-from butter.util import dcast
-from butter.game_state import GameState
-from butter.edit import Edits
-from butter.reactive import Reactive, ReactiveValue
+from wafel.util import dcast
+from wafel.game_state import GameState
+from wafel.edit import Edits
+from wafel.reactive import Reactive, ReactiveValue
 
 
 # TODO: Could do a quick warm up pass on first load and input change

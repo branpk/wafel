@@ -1,9 +1,9 @@
 import ctypes
 from typing import IO, Any, Optional, List
 
-from butter.game_state import GameState
-from butter.variable import Variable, VariableParam, Variables
-from butter.reactive import Reactive, ReactiveValue
+from wafel.game_state import GameState
+from wafel.variable import Variable, VariableParam, Variables
+from wafel.reactive import Reactive, ReactiveValue
 
 
 class Edit:

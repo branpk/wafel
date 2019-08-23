@@ -1,9 +1,9 @@
 import ctypes as C
 
-from butter.game_state import GameState
-from butter.variable import *
-from butter.data_path import DataPath
-from butter.util import *
+from wafel.game_state import GameState
+from wafel.variable import *
+from wafel.data_path import DataPath
+from wafel.util import *
 
 
 class _DataVariable(Variable):

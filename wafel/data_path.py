@@ -3,9 +3,9 @@ from itertools import takewhile
 
 import ctypes as C
 
-from butter.variable import VariableParam
-from butter.game_state import GameState
-from butter.util import *
+from wafel.variable import VariableParam
+from wafel.game_state import GameState
+from wafel.util import *
 
 
 PRIMITIVE_CTYPES = {

@@ -2,11 +2,11 @@ from typing import *
 
 from PyQt5.QtCore import *
 
-from butter.timeline import Timeline
-from butter.variable import Variable, VariableParam, VariableDataType
-from butter.edit import Edits, VariableEdit
-from butter.game_state import GameState
-from butter.util import *
+from wafel.timeline import Timeline
+from wafel.variable import Variable, VariableParam, VariableDataType
+from wafel.edit import Edits, VariableEdit
+from wafel.game_state import GameState
+from wafel.util import *
 
 
 class FrameSheet(QAbstractTableModel):
