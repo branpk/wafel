@@ -1,6 +1,8 @@
 env
 .vscode
 build
+dist
 __pycache__
+*.egg-info
+*.pyd
 lib/libsm64
-test_files

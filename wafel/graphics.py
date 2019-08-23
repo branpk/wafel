@@ -4,7 +4,7 @@ import math
 
 from wafel.game_state import GameState
 
-import _ext_modules.graphics as ext_graphics
+import ext_modules.graphics as ext_graphics
 
 
 class CameraMode(Enum):
