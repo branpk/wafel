@@ -46,6 +46,8 @@ struct Surface {
 struct Object {
   vec3 pos;
   float hitboxHeight;
+  float hitboxRadius;
+  // TODO: Move ObjectPath here
 };
 
 struct ObjectPath {

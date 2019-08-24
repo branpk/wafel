@@ -359,6 +359,7 @@ static PyObject *render(PyObject *self, PyObject *args) {
       scene.objects.push_back({
         vec3(obj->oPosX, obj->oPosY, obj->oPosZ),
         obj->hitboxHeight,
+        obj->hitboxRadius,
       });
     }
   }
@@ -376,6 +377,21 @@ static PyObject *render(PyObject *self, PyObject *args) {
     mario_path,
     current_index,
   });
+
+  // for (s32 i = 0; i < 240; i++) {
+  //   sm64::Object *obj = &st.data->gObjectPool[current_index];
+  //   if (obj->activeFlags & ACTIVE_FLAG_ACTIVE) {
+  //     vector<vec3> path;
+  //     for (GameState path_st : info->path_states) {
+  //       obj = &path_st.data->gObjectPool[i];
+  //       path.push_back(vec3(obj->oPosX, obj->oPosY, obj->oPosZ));
+  //     }
+  //     scene.object_paths.push_back({
+  //       path,
+  //       current_index,
+  //     });
+  //   }
+  // }
 
   renderer->render(viewport, scene);
 
