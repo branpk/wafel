@@ -142,10 +142,10 @@ class GameView(QOpenGLWidget):
     # TODO: Instead of loading all these states at once, just extract render
     # info from each one-by-one (to allow longer paths without running out of cells)
     def plus(i):
-      return lambda f: f + i
+      return lambda f: max(f + i, 0)
     self.path_states = [
       self.model.timeline.frame(self.model.selected_frame.map(plus(i)))
-        for i in range(30)
+        for i in range(-5, 31)
     ]
 
     self.mouse_down = ReactiveValue(False)

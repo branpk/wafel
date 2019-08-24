@@ -50,6 +50,7 @@ struct Object {
 
 struct ObjectPath {
   vector<vec3> pos;
+  size_t root_index;
 };
 
 
@@ -63,7 +64,7 @@ struct Scene {
 
 struct PathDot {
   vec3 pos;
-  vec3 color;
+  vec4 color;
 };
 
 
@@ -79,6 +80,7 @@ private:
   void render_surfaces(const Scene &scene);
   void render_objects(const Scene &scene);
   void render_object_paths(const Scene &scene);
+  void render_object_path_lines(const Scene &scene);
   void render_path_dots(const vector<PathDot> &dots);
 };
 

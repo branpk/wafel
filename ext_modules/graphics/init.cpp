@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <algorithm>
 
 #include "util.hpp"
 
@@ -105,6 +106,10 @@ struct GameState {
   template<typename T>
   T *from_base(T *addr) {
     return (T *)((char *)addr - (char *)base + (char *)data);
+  }
+
+  bool operator==(const GameState &other) const {
+    return frame == other.frame;
   }
 };
 
@@ -358,6 +363,10 @@ static PyObject *render(PyObject *self, PyObject *args) {
     }
   }
 
+  size_t current_index = std::distance(
+    info->path_states.begin(),
+    std::find(info->path_states.begin(), info->path_states.end(), info->current_state));
+
   vector<vec3> mario_path;
   for (GameState path_st : info->path_states) {
     sm64::MarioState *m = path_st.from_base(path_st.data->gMarioState);
@@ -365,6 +374,7 @@ static PyObject *render(PyObject *self, PyObject *args) {
   }
   scene.object_paths.push_back({
     mario_path,
+    current_index,
   });
 
   renderer->render(viewport, scene);

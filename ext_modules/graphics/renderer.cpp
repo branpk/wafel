@@ -23,6 +23,9 @@ void Renderer::render(const Viewport &viewport, const Scene &scene) {
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
 
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
   build_transforms(viewport, scene);
   render_surfaces(scene);
   render_objects(scene);
@@ -99,64 +102,92 @@ void Renderer::render_surfaces(const Scene &scene) {
 
 void Renderer::render_objects(const Scene &scene) {
   Program *program = res.program(
-    "assets/shaders/transform.vert",
-    "assets/shaders/uniform_color.frag");
+    "assets/shaders/color.vert",
+    "assets/shaders/color.frag");
 
   program->use();
   program->set_uniform("uProjMatrix", proj_matrix);
   program->set_uniform("uViewMatrix", view_matrix);
-  program->set_uniform("uColor", vec4(1, 0, 0, 1));
 
   vector<vec3> in_pos;
+  vector<vec4> in_color;
+
   for (const Object &object : scene.objects) {
     in_pos.push_back(object.pos);
     in_pos.push_back(object.pos + vec3(0, object.hitboxHeight, 0));
+    in_color.insert(in_color.end(), 2, vec4(1, 0, 0, 1));
   }
 
   VertexArray *vertex_array = new VertexArray(program);
   vertex_array->bind();
   vertex_array->set("inPos", in_pos);
+  vertex_array->set("inColor", in_color);
 
   glDrawArrays(GL_LINES, 0, in_pos.size());
   delete vertex_array;
 }
 
+float get_path_alpha(const ObjectPath &path, size_t index) {
+  int rel_index = (int)index - (int)path.root_index;
+
+  float t;
+  if (rel_index > 0) {
+    t = (float)rel_index / (float)(path.pos.size() - path.root_index - 1);
+  } else if (rel_index < 0) {
+    t = -(float)rel_index / (float)path.root_index;
+  } else {
+    t = 0;
+  }
+
+  return 1 - t;
+}
+
 void Renderer::render_object_paths(const Scene &scene) {
+  render_object_path_lines(scene);
+
+  vector<PathDot> path_dots;
+  for (const ObjectPath &path : scene.object_paths) {
+    size_t index = 0;
+    for (vec3 pos : path.pos) {
+      path_dots.push_back({
+        pos,
+        vec4(1, 0, 0, get_path_alpha(path, index)),
+      });
+      index += 1;
+    }
+  }
+  render_path_dots(path_dots);
+}
+
+void Renderer::render_object_path_lines(const Scene &scene) {
   Program *program = res.program(
-    "assets/shaders/transform.vert",
-    "assets/shaders/uniform_color.frag");
+    "assets/shaders/color.vert",
+    "assets/shaders/color.frag");
 
   program->use();
   program->set_uniform("uProjMatrix", proj_matrix);
   program->set_uniform("uViewMatrix", view_matrix);
-  program->set_uniform("uColor", vec4(0.5f, 0, 0, 1));
 
   VertexArray *vertex_array = new VertexArray(program);
+  vertex_array->bind();
 
   for (const ObjectPath &path : scene.object_paths) {
     vector<vec3> in_pos;
+    vector<vec4> in_color;
+
+    size_t index = 0;
     for (vec3 it : path.pos) {
       in_pos.push_back(it + vec3(0, 0.01f, 0));
+      in_color.push_back(vec4(0.5f, 0, 0, get_path_alpha(path, index)));
+      index += 1;
     }
 
-    vertex_array->bind();
     vertex_array->set("inPos", in_pos);
-
+    vertex_array->set("inColor", in_color);
     glDrawArrays(GL_LINE_STRIP, 0, in_pos.size());
   }
 
   delete vertex_array;
-
-  vector<PathDot> path_dots;
-  for (const ObjectPath &path : scene.object_paths) {
-    for (vec3 pos : path.pos) {
-      path_dots.push_back({
-        pos + vec3(0, 0.01f, 0),
-        vec3(1, 0, 0),
-      });
-    }
-  }
-  render_path_dots(path_dots);
 }
 
 void Renderer::render_path_dots(const vector<PathDot> &dots) {
@@ -172,12 +203,12 @@ void Renderer::render_path_dots(const vector<PathDot> &dots) {
 
   vector<vec3> in_center;
   vector<vec2> in_offset;
-  vector<vec3> in_color;
+  vector<vec4> in_color;
 
   for (const PathDot &dot : dots) {
     const int num_edges = 12;
 
-    in_center.insert(in_center.end(), 3 * num_edges, dot.pos);
+    in_center.insert(in_center.end(), 3 * num_edges, dot.pos + vec3(0, 0.01f, 0));
     in_color.insert(in_color.end(), 3 * num_edges, dot.color);
 
     for (int i = 0; i < num_edges; i++) {
