@@ -26,6 +26,9 @@ using sm64::f32;
 using sm64::f64;
 
 
+#define VEC3F_TO_VEC3(v) (vec3((v)[0], (v)[1], (v)[2]))
+
+
 static PyObject *new_renderer(PyObject *self, PyObject *args) {
   static bool loaded_gl = false;
 
@@ -368,10 +371,27 @@ static PyObject *render(PyObject *self, PyObject *args) {
     info->path_states.begin(),
     std::find(info->path_states.begin(), info->path_states.end(), info->current_state));
 
-  vector<vec3> mario_path;
+  vector<ObjectPathNode> mario_path;
   for (GameState path_st : info->path_states) {
     sm64::MarioState *m = path_st.from_base(path_st.data->gMarioState);
-    mario_path.push_back(vec3(m->pos[0], m->pos[1], m->pos[2]));
+
+    if (!mario_path.empty()) {
+      sm64::QStepsInfo *qsteps = &path_st.data->gQStepsInfo;
+      if (qsteps->numSteps > 4) {
+        printf("%d\n", qsteps->numSteps);
+      }
+      for (int i = 0; i < qsteps->numSteps; i++) {
+        mario_path.back().quarter_steps.push_back({
+          VEC3F_TO_VEC3(qsteps->steps[i].intendedPos),
+          VEC3F_TO_VEC3(qsteps->steps[i].resultPos),
+        });
+      }
+    }
+
+    mario_path.push_back({
+      vec3(m->pos[0], m->pos[1], m->pos[2]),
+      vector<QuarterStep>(),
+    });
   }
   scene.object_paths.push_back({
     mario_path,

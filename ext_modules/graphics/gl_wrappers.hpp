@@ -48,6 +48,7 @@ public:
 
   void bind();
 
+  void set(const string &attribute, const vector<float> &data);
   void set(const string &attribute, const vector<vec2> &data);
   void set(const string &attribute, const vector<vec3> &data);
   void set(const string &attribute, const vector<vec4> &data);

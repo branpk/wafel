@@ -50,8 +50,18 @@ struct Object {
   // TODO: Move ObjectPath here
 };
 
+struct QuarterStep {
+  vec3 intended_pos;
+  vec3 result_pos;
+};
+
+struct ObjectPathNode {
+  vec3 pos;
+  vector<QuarterStep> quarter_steps;
+};
+
 struct ObjectPath {
-  vector<vec3> pos;
+  vector<ObjectPathNode> nodes;
   size_t root_index;
 };
 
@@ -67,6 +77,7 @@ struct Scene {
 struct PathDot {
   vec3 pos;
   vec4 color;
+  float radius;
 };
 
 

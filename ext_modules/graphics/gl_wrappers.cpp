@@ -145,6 +145,12 @@ void VertexArray::bind() {
 
 // TODO: glBufferSubData
 
+void VertexArray::set(const string &attribute, const vector<float> &data) {
+  GLuint buffer = vecf_buffer(attribute, 1);
+  glBindBuffer(GL_ARRAY_BUFFER, buffer);
+  glBufferData(GL_ARRAY_BUFFER, VEC_SIZE(data), data.data(), GL_STATIC_DRAW);
+}
+
 void VertexArray::set(const string &attribute, const vector<vec2> &data) {
   GLuint buffer = vecf_buffer(attribute, 2);
   glBindBuffer(GL_ARRAY_BUFFER, buffer);

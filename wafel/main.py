@@ -35,6 +35,8 @@ class Model:
     # TODO: Frame sheet var list
     self.frame_sheet = FrameSheet(self.timeline, self.edits, self.variables.variables)
 
+    self.dbg_reload_graphics = ReactiveValue(())
+
   def path(self, path: str) -> DataPath:
     return DataPath.parse(self.spec, path)
 
@@ -64,6 +66,10 @@ class Window(QWidget):
     self.balance_timer.setInterval(1000 // 60)
     self.balance_timer.timeout.connect(lambda: self.model.timeline.balance_distribution(1/120))
     self.balance_timer.start()
+
+  def keyPressEvent(self, event):
+    if event.key() == Qt.Key_R:
+      self.model.dbg_reload_graphics.value = ()
 
 
 class FrameSheetView(QTableView):
@@ -184,6 +190,10 @@ class GameView(QOpenGLWidget):
     self.draw_timer.timeout.connect(self.update)
     self.draw_timer.start()
 
+    def reload():
+      self.renderer = None
+    self.model.dbg_reload_graphics.on_change(reload)
+
   def initializeGL(self):
     self.renderer = Renderer()
     # TODO: For some reason the opengl context is destroyed or non-current
@@ -191,6 +201,10 @@ class GameView(QOpenGLWidget):
 
   def paintGL(self):
     self.makeCurrent()
+
+    if self.renderer is None:
+      self.renderer = Renderer()
+
     self.renderer.render(RenderInfo(
       self.camera.value,
       self.state.value,

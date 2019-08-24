@@ -147,7 +147,7 @@ float get_path_alpha(const ObjectPath &path, size_t index) {
 
   float t;
   if (rel_index > 0) {
-    t = (float)rel_index / (float)(path.pos.size() - path.root_index - 1);
+    t = (float)rel_index / (float)(path.nodes.size() - path.root_index - 1);
   } else if (rel_index < 0) {
     t = -(float)rel_index / (float)path.root_index;
   } else {
@@ -162,15 +162,36 @@ void Renderer::render_object_paths(const Scene &scene) {
 
   vector<PathDot> path_dots;
   for (const ObjectPath &path : scene.object_paths) {
-    size_t index = 0;
-    for (vec3 pos : path.pos) {
+    for (size_t i = 0; i < path.nodes.size(); i++) {
+      const ObjectPathNode &node = path.nodes[i];
+
+      float alpha = get_path_alpha(path, i);
       path_dots.push_back({
-        pos,
-        vec4(1, 0, 0, get_path_alpha(path, index)),
+        node.pos,
+        vec4(1, 0, 0, alpha),
+        0.01f,
       });
-      index += 1;
+
+      for (const QuarterStep &qstep : node.quarter_steps) {
+        if (qstep.intended_pos != qstep.result_pos) {
+          path_dots.push_back({
+            qstep.intended_pos,
+            vec4(0.8f, 0.5f, 0.8f, alpha),
+            0.008f,
+          });
+        }
+
+        if (i == path.nodes.size() - 1 || qstep.result_pos != path.nodes[i + 1].pos) {
+          path_dots.push_back({
+            qstep.result_pos,
+            vec4(1, 0.5f, 0.0f, alpha),
+            0.008f,
+          });
+        }
+      }
     }
   }
+
   render_path_dots(path_dots);
 }
 
@@ -191,9 +212,18 @@ void Renderer::render_object_path_lines(const Scene &scene) {
     vector<vec4> in_color;
 
     size_t index = 0;
-    for (vec3 it : path.pos) {
-      in_pos.push_back(it + vec3(0, 0.01f, 0));
-      in_color.push_back(vec4(0.5f, 0, 0, get_path_alpha(path, index)));
+    for (const ObjectPathNode &node : path.nodes) {
+      vec4 color = vec4(0.5f, 0, 0, get_path_alpha(path, index));
+
+      in_pos.push_back(node.pos + vec3(0, 0.01f, 0));
+      in_color.push_back(color);
+
+      for (const QuarterStep &qstep : node.quarter_steps) {
+        in_pos.push_back(qstep.intended_pos + vec3(0, 0.01f, 0));
+        in_pos.push_back(qstep.result_pos + vec3(0, 0.01f, 0));
+        in_color.insert(in_color.end(), 2, color);
+      }
+
       index += 1;
     }
 
@@ -219,12 +249,14 @@ void Renderer::render_path_dots(const vector<PathDot> &dots) {
   vector<vec3> in_center;
   vector<vec2> in_offset;
   vector<vec4> in_color;
+  vector<float> in_radius;
 
   for (const PathDot &dot : dots) {
     const int num_edges = 12;
 
     in_center.insert(in_center.end(), 3 * num_edges, dot.pos + vec3(0, 0.01f, 0));
     in_color.insert(in_color.end(), 3 * num_edges, dot.color);
+    in_radius.insert(in_radius.end(), 3 * num_edges, dot.radius);
 
     for (int i = 0; i < num_edges; i++) {
       float a0 = (float)i / (float)num_edges * 2 * glm::pi<float>();
@@ -241,6 +273,7 @@ void Renderer::render_path_dots(const vector<PathDot> &dots) {
   vertex_array->set("inCenter", in_center);
   vertex_array->set("inOffset", in_offset);
   vertex_array->set("inColor", in_color);
+  vertex_array->set("inRadius", in_radius);
 
   glDrawArrays(GL_TRIANGLES, 0, in_center.size());
   delete vertex_array;
