@@ -1,7 +1,7 @@
 #version 330
 
 in vec3 vBaryCoords;
-in vec3 vColor;
+in vec4 vColor;
 
 out vec4 outColor;
 
@@ -20,5 +20,5 @@ void main() {
     clamp(-innerBary.z, 0, 1)));
   t *= -(3*b - 1)/(b - 1) * 0.7;
 
-  outColor = vec4(mix(vColor * 0.5, vColor * 0.8, t), 1);
+  outColor = vec4(mix(vColor.rgb * 0.5, vColor.rgb * 0.8, t), vColor.a);
 }

@@ -16,9 +16,9 @@ void Renderer::render(const Viewport &viewport, const Scene &scene) {
 
   glViewport(viewport.pos.x, viewport.pos.y, viewport.size.x, viewport.size.y);
 
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
-  glFrontFace(GL_CCW);
+  // glEnable(GL_CULL_FACE);
+  // glCullFace(GL_BACK);
+  // glFrontFace(GL_CCW);
 
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
@@ -30,6 +30,7 @@ void Renderer::render(const Viewport &viewport, const Scene &scene) {
   render_surfaces(scene);
   render_objects(scene);
   render_object_paths(scene);
+  render_wall_hitboxes(scene);
 }
 
 void Renderer::build_transforms(const Viewport &viewport, const Scene &scene) {
@@ -81,14 +82,21 @@ void Renderer::render_surfaces(const Scene &scene) {
   program->set_uniform("uViewMatrix", view_matrix);
 
   vector<vec3> in_pos;
-  vector<vec3> in_color;
+  vector<vec4> in_color;
 
   for (const Surface &surface : scene.surfaces) {
     in_pos.push_back(surface.vertices[0]);
     in_pos.push_back(surface.vertices[1]);
     in_pos.push_back(surface.vertices[2]);
 
-    in_color.insert(in_color.end(), 3, surface.color);
+    vec3 color;
+    switch (surface.type) {
+    case SurfaceType::FLOOR: color = vec3(0.5f, 0.5f, 1.0f); break;
+    case SurfaceType::CEILING: color = vec3(1.0f, 0.5f, 0.5f); break;
+    case SurfaceType::WALL_X_PROJ: color = vec3(0.3f, 0.8f, 0.3f); break;
+    case SurfaceType::WALL_Z_PROJ: color = vec3(0.15f, 0.4f, 0.15f); break;
+    }
+    in_color.insert(in_color.end(), 3, vec4(color, 1));
   }
 
   VertexArray *vertex_array = new VertexArray(program);
@@ -97,6 +105,123 @@ void Renderer::render_surfaces(const Scene &scene) {
   vertex_array->set("inColor", in_color);
 
   glDrawArrays(GL_TRIANGLES, 0, in_pos.size());
+  delete vertex_array;
+}
+
+void Renderer::render_wall_hitboxes(const Scene &scene) {
+  render_wall_hitbox_tris(scene);
+  render_wall_hitbox_lines(scene);
+}
+
+void Renderer::render_wall_hitbox_tris(const Scene &scene) {
+  Program *program = res.program(
+    "assets/shaders/color.vert",
+    "assets/shaders/color.frag");
+
+  program->use();
+  program->set_uniform("uProjMatrix", proj_matrix);
+  program->set_uniform("uViewMatrix", view_matrix);
+
+  vector<vec3> in_pos;
+  vector<vec4> in_color;
+
+  for (const Surface &surface : scene.surfaces) {
+    if (surface.type == SurfaceType::WALL_X_PROJ ||
+      surface.type == SurfaceType::WALL_Z_PROJ)
+    {
+      vec3 proj_dir =
+        surface.type == SurfaceType::WALL_X_PROJ
+          ? vec3(1, 0, 0)
+          : vec3(0, 0, 1);
+      float proj50_dist = 50.0f / glm::dot(surface.normal, proj_dir);
+
+      vec3 ext50_vertices[3] = {
+        surface.vertices[0] + proj50_dist * proj_dir,
+        surface.vertices[1] + proj50_dist * proj_dir,
+        surface.vertices[2] + proj50_dist * proj_dir,
+      };
+
+      in_pos.push_back(ext50_vertices[0]);
+      in_pos.push_back(ext50_vertices[1]);
+      in_pos.push_back(ext50_vertices[2]);
+
+      for (int i0 = 0; i0 < 3; i0++) {
+        int i1 = (i0 + 1) % 3;
+        in_pos.push_back(surface.vertices[i0]);
+        in_pos.push_back(surface.vertices[i1]);
+        in_pos.push_back(ext50_vertices[i0]);
+        in_pos.push_back(ext50_vertices[i0]);
+        in_pos.push_back(surface.vertices[i1]);
+        in_pos.push_back(ext50_vertices[i1]);
+      }
+
+      vec4 color =
+        surface.type == SurfaceType::WALL_X_PROJ
+          ? vec4(0.3f, 0.8f, 0.3f, 0.4f)
+          : vec4(0.15f, 0.4f, 0.15f, 0.4f);
+      in_color.insert(in_color.end(), in_pos.size() - in_color.size(), color);
+    }
+  }
+
+  VertexArray *vertex_array = new VertexArray(program);
+  vertex_array->bind();
+  vertex_array->set("inPos", in_pos);
+  vertex_array->set("inColor", in_color);
+
+  glDepthMask(GL_FALSE);
+  glDrawArrays(GL_TRIANGLES, 0, in_pos.size());
+  glDepthMask(GL_TRUE);
+  delete vertex_array;
+}
+
+void Renderer::render_wall_hitbox_lines(const Scene &scene) {
+  Program *program = res.program(
+    "assets/shaders/color.vert",
+    "assets/shaders/color.frag");
+
+  program->use();
+  program->set_uniform("uProjMatrix", proj_matrix);
+  program->set_uniform("uViewMatrix", view_matrix);
+
+  vector<vec3> in_pos;
+  vector<vec4> in_color;
+
+  for (const Surface &surface : scene.surfaces) {
+    if (surface.type == SurfaceType::WALL_X_PROJ ||
+      surface.type == SurfaceType::WALL_Z_PROJ)
+    {
+      vec3 proj_dir =
+        surface.type == SurfaceType::WALL_X_PROJ
+          ? vec3(1, 0, 0)
+          : vec3(0, 0, 1);
+      float proj50_dist = 50.0f / glm::dot(surface.normal, proj_dir);
+
+      vec3 ext50_vertices[3] = {
+        surface.vertices[0] + proj50_dist * proj_dir,
+        surface.vertices[1] + proj50_dist * proj_dir,
+        surface.vertices[2] + proj50_dist * proj_dir,
+      };
+
+      for (int i0 = 0; i0 < 3; i0++) {
+        int i1 = (i0 + 1) % 3;
+        in_pos.push_back(surface.vertices[i0]);
+        in_pos.push_back(ext50_vertices[i0]);
+        // in_pos.push_back(surface.vertices[i0]);
+        // in_pos.push_back(surface.vertices[i1]);
+        in_pos.push_back(ext50_vertices[i0]);
+        in_pos.push_back(ext50_vertices[i1]);
+      }
+
+      in_color.insert(in_color.end(), in_pos.size() - in_color.size(), vec4(0, 0, 0, 0.5f));
+    }
+  }
+
+  VertexArray *vertex_array = new VertexArray(program);
+  vertex_array->bind();
+  vertex_array->set("inPos", in_pos);
+  vertex_array->set("inColor", in_color);
+
+  glDrawArrays(GL_LINES, 0, in_pos.size());
   delete vertex_array;
 }
 

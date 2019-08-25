@@ -335,24 +335,25 @@ static PyObject *render(PyObject *self, PyObject *args) {
   for (s32 i = 0; i < st.data->gSurfacesAllocated; i++) {
     struct sm64::Surface *surface = &st.from_base(st.data->sSurfacePool)[i];
 
-    vec3 color;
-    if (surface->normal.y > 0.01f) {
-      color = vec3(0.5f, 0.5f, 1.0f);
-    } else if (surface->normal.y < -0.01f) {
-      color = vec3(1.0f, 0.5f, 0.5f);
-    } else if (surface->normal.x < -0.707f || surface->normal.x > 0.707f) {
-      color = vec3(0.3f, 0.8f, 0.3f);
+    SurfaceType type;
+    if (surface->normal.y > 0.01) {
+      type = SurfaceType::FLOOR;
+    } else if (surface->normal.y < -0.01) {
+      type = SurfaceType::CEILING;
+    } else if (surface->normal.x < -0.707 || surface->normal.x > 0.707) {
+      type = SurfaceType::WALL_X_PROJ;
     } else {
-      color = vec3(0.15f, 0.4f, 0.15f);
+      type = SurfaceType::WALL_Z_PROJ;
     }
 
     scene.surfaces.push_back({
+      type,
       {
         vec3(surface->vertex1[0], surface->vertex1[1], surface->vertex1[2]),
         vec3(surface->vertex2[0], surface->vertex2[1], surface->vertex2[2]),
         vec3(surface->vertex3[0], surface->vertex3[1], surface->vertex3[2]),
       },
-      color,
+      vec3(surface->normal.x, surface->normal.y, surface->normal.z),
     });
   }
 
@@ -375,7 +376,7 @@ static PyObject *render(PyObject *self, PyObject *args) {
   for (GameState path_st : info->path_states) {
     sm64::MarioState *m = path_st.from_base(path_st.data->gMarioState);
 
-    if (!mario_path.empty()) {
+    if (!mario_path.empty() && mario_path.size() == current_index + 1) {
       sm64::QStepsInfo *qsteps = &path_st.data->gQStepsInfo;
       if (qsteps->numSteps > 4) {
         printf("%d\n", qsteps->numSteps);

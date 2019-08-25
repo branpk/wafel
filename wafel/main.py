@@ -70,6 +70,10 @@ class Window(QWidget):
   def keyPressEvent(self, event):
     if event.key() == Qt.Key_R:
       self.model.dbg_reload_graphics.value = ()
+    elif event.key() == Qt.Key_1:
+      self.model.selected_frame.value = 21064
+    elif event.key() == Qt.Key_2:
+      self.model.selected_frame.value = 107775
 
 
 class FrameSheetView(QTableView):

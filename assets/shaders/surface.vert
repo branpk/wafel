@@ -4,10 +4,10 @@ uniform mat4 uProjMatrix;
 uniform mat4 uViewMatrix;
 
 in vec3 inPos;
-in vec3 inColor;
+in vec4 inColor;
 
 out vec3 vBaryCoords;
-out vec3 vColor;
+out vec4 vColor;
 
 void main() {
   gl_Position = uProjMatrix * uViewMatrix * vec4(inPos, 1);

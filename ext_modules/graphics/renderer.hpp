@@ -38,9 +38,17 @@ struct Camera {
 };
 
 
+enum class SurfaceType {
+  FLOOR,
+  CEILING,
+  WALL_X_PROJ,
+  WALL_Z_PROJ,
+};
+
 struct Surface {
+  SurfaceType type;
   vec3 vertices[3];
-  vec3 color;
+  vec3 normal;
 };
 
 struct Object {
@@ -91,6 +99,9 @@ private:
 
   void build_transforms(const Viewport &viewport, const Scene &scene);
   void render_surfaces(const Scene &scene);
+  void render_wall_hitboxes(const Scene &scene);
+  void render_wall_hitbox_tris(const Scene &scene);
+  void render_wall_hitbox_lines(const Scene &scene);
   void render_objects(const Scene &scene);
   void render_object_paths(const Scene &scene);
   void render_object_path_lines(const Scene &scene);
