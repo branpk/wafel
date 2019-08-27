@@ -75,5 +75,7 @@ def create_variables(spec: dict) -> Variables:
     _FlagVariable('Z', spec, input_buttons, 'Z_TRIG'),
     _FlagVariable('S', spec, input_buttons, 'START_BUTTON'),
     _DataVariable('global timer', spec, VariableSemantics.RAW, '$state.gGlobalTimer'),
-    _DataVariable('mario pos', spec, VariableSemantics.POSITION, '$state.gMarioState[].pos'),
+    _DataVariable('mario x', spec, VariableSemantics.POSITION, '$state.gMarioState[].pos[0]'),
+    _DataVariable('mario y', spec, VariableSemantics.POSITION, '$state.gMarioState[].pos[1]'),
+    _DataVariable('mario z', spec, VariableSemantics.POSITION, '$state.gMarioState[].pos[2]'),
   ])

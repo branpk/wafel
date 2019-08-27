@@ -94,6 +94,7 @@ public:
   void render(const Viewport &viewport, const Scene &scene);
 
 private:
+public: // FIXME
   ResourceCache res;
   mat4 proj_matrix, view_matrix;
 

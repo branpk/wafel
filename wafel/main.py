@@ -2,6 +2,7 @@ from typing import *
 from ctypes import *
 import json
 import math
+import sys
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -54,7 +55,7 @@ class Window(QWidget):
 
     visualizer_layout = QVBoxLayout()
     visualizer_layout.addWidget(GameView(self.model, CameraMode.ROTATE))
-    visualizer_layout.addWidget(GameView(self.model, CameraMode.BIRDS_EYE))
+    # visualizer_layout.addWidget(GameView(self.model, CameraMode.BIRDS_EYE))
     visualizer_layout.addWidget(FrameSlider(self.model))
     layout.addLayout(visualizer_layout)
 

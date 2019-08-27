@@ -97,6 +97,7 @@ class DataPath:
     elif self.concrete_type['kind'] == 'pointer':
       addr = C.cast(self.get_addr(*args), C.POINTER(C.c_void_p))
       state = self._get_state(*args)
+      # TODO: Handle null and (static) pointers outside the state
       return int(addr[0]) - state.base_addr + state.addr
 
     elif self.concrete_type['kind'] == 'array':

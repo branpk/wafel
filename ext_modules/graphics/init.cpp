@@ -108,7 +108,13 @@ struct GameState {
 
   template<typename T>
   T *from_base(T *addr) {
-    return (T *)((char *)addr - (char *)base + (char *)data);
+    char *addr1 = (char *)addr;
+    char *base1 = (char *)base;
+    char *data1 = (char *)data;
+    if (addr1 < base1 || addr1 >= (char *)(base + 1)) {
+      return addr;
+    }
+    return (T *)(addr1 - base1 + data1);
   }
 
   bool operator==(const GameState &other) const {
@@ -308,6 +314,9 @@ static bool read_render_args(Renderer **renderer, RenderInfo *info, PyObject *ar
 }
 
 
+float remove_x = 0;
+
+
 static PyObject *render(PyObject *self, PyObject *args) {
   Renderer *renderer;
   RenderInfo render_info;
@@ -416,7 +425,283 @@ static PyObject *render(PyObject *self, PyObject *args) {
 
   renderer->render(viewport, scene);
 
+
+  glUseProgram(0);
+
+  // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glViewport(viewport.pos.x, viewport.pos.y, viewport.size.x, viewport.size.y);
+
+  glEnable(GL_DEPTH_TEST);
+  glDepthFunc(GL_LEQUAL);
+
+  f32 *camera_pos = st.data->D_8033B328.unk0[1];
+  f32 camera_pitch = st.data->D_8033B328.unk4C * 3.14159f / 0x8000;
+  f32 camera_yaw = st.data->D_8033B328.unk4E * 3.14159f / 0x8000;
+  f32 camera_fov_y = /*D_8033B234*/ 45 * 3.14159f / 180;
+
+  scene.camera.rotate_camera = {
+    VEC3F_TO_VEC3(camera_pos),
+    camera_pitch,
+    camera_yaw,
+    camera_fov_y,
+  };
+
+  renderer->build_transforms(viewport, scene);
+  mat4 game_view_matrix = renderer->view_matrix;
+
+  scene.camera = info->camera;
+  renderer->build_transforms(viewport, scene);
+
+  glMatrixMode(GL_PROJECTION);
+  glLoadMatrixf(&renderer->proj_matrix[0][0]);
+
+  glMatrixMode(GL_MODELVIEW);
+  glLoadMatrixf(&renderer->view_matrix[0][0]);
+  // glLoadIdentity();
+  // glTranslatef(0, 0, -100);
+  // float scale = 0.1f;
+  // glScalef(scale, scale, scale);
+
+  // glRotatef(remove_x, 0, 1, 0);
+  // remove_x += 1;
+
+  void interpret_display_list(GameState st, u32 *dl, string indent="");
+  mat4 matrix_fixed_to_float(u16 *mtx);
+
+  bool found = false;
+
+  // printf("%p %p, %p %p\n", st.base, st.base + 1, st.data, st.data + 1);
+
+  vec3 pos;
+
+  for (int i = 0; i < 8; i++) {
+    sm64::GraphNodeToggleZBuffer_sub *node = st.from_base(st.data->gDisplayLists.unk14[i]);
+    while (node != nullptr) {
+      sm64::Object *object = st.from_base(node->object);
+      sm64::Object *mario_object = st.from_base(st.data->gMarioObject);
+
+      if (mario_object != nullptr && object == mario_object) {
+        u16 *transform = (u16 *)st.from_base(node->unk0);
+        // printf("%p -> %p\n", node->unk4, st.from_base(node->unk4));
+        u32 *display_list = (u32 *)st.from_base(node->unk4);
+
+        // printf("%d %p %08X %08X\n", i, display_list, display_list[0], display_list[1]);
+
+        mat4 matrix = matrix_fixed_to_float(transform);
+        matrix = glm::inverse(game_view_matrix) * matrix;
+
+        // matrix = glm::inverse(renderer->view_matrix) * matrix;
+        // if (!found) {
+        //   pos = vec3(matrix[3].x, matrix[3].y, matrix[3].z);
+        //   // vec3 cam_pos = VEC3F_TO_VEC3(st.data->D_8033B328.unk0[1]);
+        //   // printf("%f %f %f\n", pos.x, pos.y, pos.z);
+        //   // printf("%f %f %f\n", cam_pos.x, cam_pos.y, cam_pos.z);
+        //   // printf("\n");
+        // }
+        // matrix[3] = vec4(vec3(matrix[3].x, matrix[3].y, matrix[3].z) - pos, 1);
+        // matrix[3] = vec4(0, 0, 0, 1);
+        // for (int r = 0; r < 4; r++) {
+        //   for (int c = 0; c < 4; c++) {
+        //     printf("%f ", matrix[c][r]);
+        //   }
+        //   printf("\n");
+        // }
+        // printf("\n");
+        // for (int r = 0; r < 4; r++) {
+        //   for (int c = 0; c < 4; c++) {
+        //     printf("%f ", renderer->view_matrix[c][r]);
+        //   }
+        //   printf("\n");
+        // }
+        // printf("pos = %f %f %f \n", mario_path[current_index].pos.x, mario_path[current_index].pos.y, mario_path[current_index].pos.z);
+        // vec3 cam_pos = VEC3F_TO_VEC3(st.data->D_8033B328.unk0[1]);
+        // printf("cam pos = %f %f %f\n", cam_pos.x, cam_pos.y, cam_pos.z);
+        // // printf("\n");
+        // printf("\n\n");
+
+        glPushMatrix();
+        glMultMatrixf(&matrix[0][0]);
+
+        interpret_display_list(st, display_list);
+
+        glPopMatrix();
+
+        found = true;
+      }
+
+      node = st.from_base(node->unk8);
+    }
+  }
+
+  // printf("\n");
+
+  // if (found) {
+  //   exit(0);
+  // }
+
+  // static bool done = false;
+  // if (!done) {
+  //   if (st.data->gMarioObject != NULL) {
+  //     sm64::Object *object = st.from_base(st.data->gMarioObject);
+  //     if (object != nullptr) {
+  //       printf("%p %p\n", object->displayListStart, object->displayListEnd);
+  //       // done = true;
+  //       // u32 *dl = (u32 *)object->displayListStart;
+  //       // while (dl < (u32 *)object->displayListEnd) {
+  //       //   printf("0x%08X\n", dl);
+  //       // }
+  //     }
+  //   }
+  // }
+
   Py_RETURN_NONE;
+}
+
+
+vector<vec3> loaded_vertices(32);
+
+
+mat4 matrix_fixed_to_float(u16 *mtx) {
+  mat4 result;
+  for (size_t i = 0; i < 16; i++) {
+    s32 val32 = (s32)((mtx[i] << 16) + mtx[16 + i]);
+    result[i / 4][i % 4] = (f32)val32 / 0x10000;
+  }
+  return result;
+}
+
+
+void interpret_display_list(GameState st, u32 *dl, string indent) {
+  // printf("%s-----\n", indent.c_str());
+
+  while (true) {
+    u32 w0 = dl[0];
+    u32 w1 = dl[1];
+    u8 cmd = w0 >> 24;
+
+    // printf("%s%08X %08X\n", indent.c_str(), w0, w1);
+
+    switch (cmd) {
+    case 0x01: { // gSPMatrix
+      fprintf(stderr, "gSPMatrix\n");
+      exit(1);
+
+      // u8 p = (w0 >> 16) & 0xFF;
+      // u16 *fixed_point = st.from_base((u16 *)w1);
+      // mat4 matrix = matrix_fixed_to_float(fixed_point);
+
+      // glMatrixMode((p & 0x01) ? GL_PROJECTION : GL_MODELVIEW);
+
+      // if (p & 0x04) {
+      //   glPushMatrix();
+      // } else {
+      //   // no push
+      // }
+
+      // if (p & 0x02) {
+      //   // load
+      //   fprintf(stderr, "gSPMatrix load\n");
+      //   exit(1);
+      // } else {
+      //   glMultMatrixf(&matrix[0][0]);
+      // }
+
+      break;
+    }
+
+    case 0x03: // gSPViewport, gSPLight
+      break;
+
+    case 0x04: { // gSPVertex
+      u32 n = ((w0 >> 20) & 0xF) + 1;
+      u32 v0 = (w0 >> 16) & 0xF;
+      sm64::Vtx *v = st.from_base((sm64::Vtx *)w1);
+
+      loaded_vertices.clear();
+      for (u32 i = 0; i < n; i++) {
+        loaded_vertices[v0 + i] = vec3(v[i].v.ob[0], v[i].v.ob[1], v[i].v.ob[2]);
+      }
+
+      break;
+    }
+
+    case 0x06: { // gSPDisplayList, gSPBranchList
+      u32 *new_dl = st.from_base((u32 *)w1);
+      if (w0 == 0x06000000) {
+        interpret_display_list(st, new_dl, indent + "  ");
+      } else if (w0 == 0x06010000) {
+        dl = new_dl - 2;
+      } else {
+        fprintf(stderr, "gSPDisplayList: 0x%08X\n", w0);
+        exit(1);
+      }
+      break;
+    }
+
+    case 0xB6: // gSPClearGeometryMode
+      break;
+
+    case 0xB7: // gSPSetGeometryMode
+      break;
+
+    case 0xB8: // gSPEndDisplayList
+      return;
+
+    case 0xB9: // gDPSetAlphaCompare, gDPSetDepthSource, gDPSetRenderMode
+      break;
+
+    case 0xBB: // gSPTexture
+      break;
+
+    case 0xBF: { // gSP1Triangle
+      u32 v0 = ((w1 >> 16) & 0xFF) / 10;
+      u32 v1 = ((w1 >> 8) & 0xFF) / 10;
+      u32 v2 = ((w1 >> 0) & 0xFF) / 10;
+
+      glBegin(GL_LINE_LOOP);
+      glVertex3f(loaded_vertices[v0].x, loaded_vertices[v0].y, loaded_vertices[v0].z);
+      glVertex3f(loaded_vertices[v1].x, loaded_vertices[v1].y, loaded_vertices[v1].z);
+      glVertex3f(loaded_vertices[v2].x, loaded_vertices[v2].y, loaded_vertices[v2].z);
+      glEnd();
+
+      break;
+    }
+
+    case 0xE6: // gDPLoadSync
+      break;
+
+    case 0xE7: // gDPPipeSync
+      break;
+
+    case 0xE8: // gDPTileSync
+      break;
+
+    case 0xF2: // gDPSetTileSize
+      break;
+
+    case 0xF3: // gDPLoadBlock
+      break;
+
+    case 0xF5: // gDPSetTile
+      break;
+
+    case 0xFB: // gDPSetEnvColor
+      break;
+
+    case 0xFC: // gDPSetCombineMode
+      break;
+
+    case 0xFD: // gDPSetTextureImage
+      break;
+
+    default:
+      // fprintf(stderr, "0x%02X\n", cmd);
+      // exit(1);
+      break;
+    }
+
+    dl += 2;
+  }
 }
 
 
