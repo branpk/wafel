@@ -9,7 +9,7 @@ from wafel.util import *
 class _DataVariable(Variable):
   def __init__(
     self,
-    name: str,
+    display_name: str,
     spec: dict,
     semantics: VariableSemantics,
     path: str,
@@ -17,7 +17,7 @@ class _DataVariable(Variable):
   ) -> None:
     self.path = DataPath.parse(spec, path)
     super().__init__(
-      name,
+      display_name,
       self.path.params,
       semantics,
       read_only,
@@ -35,14 +35,14 @@ class _DataVariable(Variable):
 class _FlagVariable(Variable):
   def __init__(
     self,
-    name: str,
+    display_name: str,
     spec: dict,
     flags: Variable,
     flag: str,
     read_only: bool = False
   ) -> None:
     super().__init__(
-      name,
+      display_name,
       flags.params,
       VariableSemantics.FLAG,
       read_only or flags.read_only,
@@ -64,9 +64,9 @@ class _FlagVariable(Variable):
     self.flags.set(flags, *args)
 
 
-def create_variables(spec: dict) -> Variables:
+def create_variables(spec: dict) -> List[Variable]:
   input_buttons = _DataVariable('buttons', spec, VariableSemantics.RAW, '$state.gControllerPads[0].button')
-  return Variables([
+  return [
     input_buttons,
     _DataVariable('stick x', spec, VariableSemantics.RAW, '$state.gControllerPads[0].stick_x'),
     _DataVariable('stick y', spec, VariableSemantics.RAW, '$state.gControllerPads[0].stick_y'),
@@ -78,4 +78,4 @@ def create_variables(spec: dict) -> Variables:
     _DataVariable('mario x', spec, VariableSemantics.POSITION, '$state.gMarioState[].pos[0]'),
     _DataVariable('mario y', spec, VariableSemantics.POSITION, '$state.gMarioState[].pos[1]'),
     _DataVariable('mario z', spec, VariableSemantics.POSITION, '$state.gMarioState[].pos[2]'),
-  ])
+  ]

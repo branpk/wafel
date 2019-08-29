@@ -1,16 +1,16 @@
 from typing import *
+import traceback
 
 from PyQt5.QtCore import *
 
 from wafel.timeline import Timeline
-from wafel.variable import Variable, VariableParam, VariableDataType
+from wafel.variable import VariableParam, VariableInstance, CheckboxFormatter
 from wafel.edit import Edits, VariableEdit
-from wafel.game_state import GameState
 from wafel.util import *
 
 
 class FrameSheet(QAbstractTableModel):
-  def __init__(self, timeline: Timeline, edits: Edits, variables: List[Variable]) -> None:
+  def __init__(self, timeline: Timeline, edits: Edits, variables: List[VariableInstance]) -> None:
     super().__init__()
     self._timeline = timeline
     self._edits = edits
@@ -25,55 +25,50 @@ class FrameSheet(QAbstractTableModel):
   def headerData(self, section, orientation, role=Qt.DisplayRole):
     if role == Qt.DisplayRole:
       if orientation == Qt.Horizontal:
-        return self._variables[section].name
+        return self._variables[section].display_name
       else:
         return str(section)
 
   def flags(self, index):
-    variable = self._variables[index.column()]
-    if variable.data_type == VariableDataType.BOOL:
+    var = self._variables[index.column()]
+    if isinstance(var.formatter, CheckboxFormatter):
       return Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled
     else:
       return Qt.ItemIsSelectable | Qt.ItemIsEditable | Qt.ItemIsEnabled
 
-  def get_variable_arg(self, frame: int, param: VariableParam) -> Any:
-    if param == VariableParam.STATE:
-      return self._timeline.frame(frame).value
-    else:
-      raise NotImplementedError
-
-  def get_variable_args(self, frame: int, variable: Variable) -> List[Any]:
-    return [self.get_variable_arg(frame, param) for param in variable.params]
-
   def data(self, index, role=Qt.DisplayRole):
+    var = self._variables[index.column()]
+    state = self._timeline.frame(index.row()).value
+    value = var.formatter.output(var.variable.get(state))
+
     if role == Qt.DisplayRole or role == Qt.EditRole:
-      variable = self._variables[index.column()]
-      args = self.get_variable_args(index.row(), variable)
-      value = variable.get(*args)
-      # TODO: Formatting
-      if variable.data_type != VariableDataType.BOOL:
-        return str(value)
+      if not isinstance(var.formatter, CheckboxFormatter):
+        return value
+
     elif role == Qt.CheckStateRole:
-      variable = self._variables[index.column()]
-      args = self.get_variable_args(index.row(), variable)
-      value = variable.get(*args)
-      if variable.data_type == VariableDataType.BOOL:
+      if isinstance(var.formatter, CheckboxFormatter):
         return Qt.Checked if value else Qt.Unchecked
 
   def setData(self, index, value, role=Qt.EditRole):
+    var = self._variables[index.column()]
+    rep = None
+
     if role == Qt.EditRole:
-      variable = self._variables[index.column()]
-      # TODO: Formatting
-      if variable.data_type != VariableDataType.BOOL:
-        value = int(value)
-        self._edits.add(index.row(), VariableEdit(variable, value))
-        self.dataChanged.emit(index, index)
-        return True
+      if not isinstance(var.formatter, CheckboxFormatter):
+        rep = value
+
     elif role == Qt.CheckStateRole:
-      variable = self._variables[index.column()]
-      if variable.data_type == VariableDataType.BOOL:
-        value = value == Qt.Checked
-        self._edits.add(index.row(), VariableEdit(variable, value))
-        self.dataChanged.emit(index, index)
+      if isinstance(var.formatter, CheckboxFormatter):
+        rep = value == Qt.Checked
+
+    if rep is not None:
+      try:
+        value = var.formatter.input(rep)
+      except Exception:
+        sys.stderr.write(traceback.format_exc())
+        sys.stderr.flush()
+      self._edits.add(index.row(), VariableEdit(var.variable, value))
+      self.dataChanged.emit(index, index)
       return True
+
     return False

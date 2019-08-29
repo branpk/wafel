@@ -16,6 +16,7 @@ from wafel.frame_sheet import FrameSheet
 from wafel.variables import create_variables
 from wafel.game_state import GameState
 from wafel.data_path import DataPath
+from wafel.variable import *
 
 
 class Model:
@@ -34,7 +35,11 @@ class Model:
     self.timeline.add_hotspot(self.selected_frame)
 
     # TODO: Frame sheet var list
-    self.frame_sheet = FrameSheet(self.timeline, self.edits, self.variables.variables)
+    frame_sheet_variables = [
+      VariableInstance(variable, Formatter.default(variable))
+        for variable in self.variables
+    ]
+    self.frame_sheet = FrameSheet(self.timeline, self.edits, frame_sheet_variables)
 
     self.dbg_reload_graphics = ReactiveValue(())
 
@@ -87,8 +92,8 @@ class FrameSheetView(QTableView):
     self.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
     self.setSelectionMode(QAbstractItemView.SingleSelection)
 
-    self.setMinimumWidth(640)
-    self.setMinimumHeight(480)
+    self.setMinimumWidth(900)
+    self.setMinimumHeight(800)
 
     def set_selection(frame):
       index = self.model.frame_sheet.index(frame, 0)
