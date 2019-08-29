@@ -94,8 +94,8 @@ public:
   void render(const Viewport &viewport, const Scene &scene);
 
 private:
-public: // FIXME
   ResourceCache res;
+  Viewport viewport;
   mat4 proj_matrix, view_matrix;
 
   void build_transforms(const Viewport &viewport, const Scene &scene);

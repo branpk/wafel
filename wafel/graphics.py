@@ -12,6 +12,14 @@ class CameraMode(Enum):
   BIRDS_EYE = 1
 
 
+class Viewport:
+  def __init__(self, x: int, y: int, width: int, height: int):
+    self.x = x
+    self.y = y
+    self.width = width
+    self.height = height
+
+
 class Camera:
   def __init__(self, mode: CameraMode) -> None:
     self.mode = mode
@@ -51,10 +59,12 @@ class BirdsEyeCamera(Camera):
 class RenderInfo:
   def __init__(
     self,
+    viewport: Viewport,
     camera: Camera,
     current_state: GameState,
     path_states: List[GameState],
   ) -> None:
+    self.viewport = viewport
     self.camera = camera
     self.current_state = current_state
     self.path_states = path_states

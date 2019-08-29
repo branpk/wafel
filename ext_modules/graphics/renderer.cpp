@@ -12,6 +12,8 @@ using namespace std;
 
 
 void Renderer::render(const Viewport &viewport, const Scene &scene) {
+  this->viewport = viewport;
+
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   glViewport(viewport.pos.x, viewport.pos.y, viewport.size.x, viewport.size.y);
@@ -374,14 +376,15 @@ void Renderer::render_path_dots(const vector<PathDot> &dots) {
   vector<vec3> in_center;
   vector<vec2> in_offset;
   vector<vec4> in_color;
-  vector<float> in_radius;
+  vector<vec2> in_radius;
 
   for (const PathDot &dot : dots) {
     const int num_edges = 12;
 
     in_center.insert(in_center.end(), 3 * num_edges, dot.pos + vec3(0, 0.01f, 0));
     in_color.insert(in_color.end(), 3 * num_edges, dot.color);
-    in_radius.insert(in_radius.end(), 3 * num_edges, dot.radius);
+    float x_radius = dot.radius * viewport.size.y / viewport.size.x;
+    in_radius.insert(in_radius.end(), 3 * num_edges, vec2(x_radius, dot.radius));
 
     for (int i = 0; i < num_edges; i++) {
       float a0 = (float)i / (float)num_edges * 2 * glm::pi<float>();

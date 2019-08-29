@@ -55,7 +55,7 @@ class Window(QWidget):
 
     visualizer_layout = QVBoxLayout()
     visualizer_layout.addWidget(GameView(self.model, CameraMode.ROTATE))
-    # visualizer_layout.addWidget(GameView(self.model, CameraMode.BIRDS_EYE))
+    visualizer_layout.addWidget(GameView(self.model, CameraMode.BIRDS_EYE))
     visualizer_layout.addWidget(FrameSlider(self.model))
     layout.addLayout(visualizer_layout)
 
@@ -211,6 +211,7 @@ class GameView(QOpenGLWidget):
       self.renderer = Renderer()
 
     self.renderer.render(RenderInfo(
+      Viewport(0, 0, self.size().width(), self.size().height()),
       self.camera.value,
       self.state.value,
       [st.value for st in self.path_states],
@@ -247,5 +248,6 @@ def run():
   app = QApplication([])
   window = Window()
   window.adjustSize()
-  window.show()
+  window.move(app.desktop().screen().rect().center() - window.rect().center())
+  window.showMaximized()
   app.exec_()

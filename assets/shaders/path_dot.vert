@@ -6,7 +6,7 @@ uniform mat4 uViewMatrix;
 in vec3 inCenter;
 in vec2 inOffset;
 in vec4 inColor;
-in float inRadius;
+in vec2 inRadius;
 
 out vec4 vColor;
 
