@@ -171,6 +171,8 @@ class _CellManager:
     # self.get_timeline_length() // len(self.cells) would provide a uniform distribution.
     # We increase the size to give us extra cells to work with
     default_bucket_size = self.get_timeline_length() // len(self.cells) * 4
+    if default_bucket_size == 0:
+      default_bucket_size = 1
 
     buckets: Dict[int, List[_Cell]] = {
       frame: [] for frame in range(-1, self.get_timeline_length(), default_bucket_size)

@@ -3,6 +3,7 @@ from ctypes import *
 import json
 import math
 import sys
+import traceback
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -10,7 +11,7 @@ from PyQt5.QtGui import *
 
 from wafel.graphics import *
 from wafel.timeline import Timeline
-from wafel.edit import Edits
+from wafel.edit import Edits, VariableEdit
 from wafel.reactive import Reactive, ReactiveValue
 from wafel.frame_sheet import FrameSheet
 from wafel.variables import create_variables
@@ -34,12 +35,7 @@ class Model:
     self.selected_frame = ReactiveValue(0)
     self.timeline.add_hotspot(self.selected_frame)
 
-    # TODO: Frame sheet var list
-    frame_sheet_variables = [
-      VariableInstance(variable, Formatter.default(variable))
-        for variable in self.variables
-    ]
-    self.frame_sheet = FrameSheet(self.timeline, self.edits, frame_sheet_variables)
+    self.frame_sheets: List[FrameSheet] = []
 
     self.dbg_reload_graphics = ReactiveValue(())
 
@@ -55,6 +51,12 @@ class Window(QWidget):
 
     self.model = Model()
 
+    frame_sheet_variables = [
+      VariableInstance(variable, Formatter.default(variable))
+        for variable in self.model.variables
+    ]
+    self.model.frame_sheets.append(FrameSheet(self.model.timeline, self.model.edits, frame_sheet_variables))
+
     layout = QHBoxLayout()
     layout.setContentsMargins(0, 0, 0, 0)
 
@@ -64,7 +66,10 @@ class Window(QWidget):
     visualizer_layout.addWidget(FrameSlider(self.model))
     layout.addLayout(visualizer_layout)
 
-    layout.addWidget(FrameSheetView(self.model))
+    variable_layout = QVBoxLayout()
+    variable_layout.addWidget(FrameSheetView(self.model, self.model.frame_sheets[0]))
+    variable_layout.addWidget(VariableExplorer(self.model))
+    layout.addLayout(variable_layout)
 
     self.setLayout(layout)
 
@@ -83,20 +88,20 @@ class Window(QWidget):
 
 
 class FrameSheetView(QTableView):
-  def __init__(self, model: Model, parent=None):
+  def __init__(self, model: Model, frame_sheet: FrameSheet, parent=None):
     super().__init__(parent)
     self.model = model
 
-    self.setModel(self.model.frame_sheet)
+    self.setModel(frame_sheet)
     self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
     self.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
     self.setSelectionMode(QAbstractItemView.SingleSelection)
 
-    self.setMinimumWidth(900)
-    self.setMinimumHeight(800)
+    # self.setMinimumWidth(640)
+    # self.setMinimumHeight(480)
 
     def set_selection(frame):
-      index = self.model.frame_sheet.index(frame, 0)
+      index = frame_sheet.index(frame, 0)
       self.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
       self.scrollTo(index)
     set_selection(self.model.selected_frame.value)
@@ -115,6 +120,65 @@ class FrameSheetView(QTableView):
     self.model.selected_frame.value = frame
 
 
+class VariableExplorer(QWidget):
+
+  def __init__(self, model: Model, parent=None):
+    super().__init__(parent)
+    self.model = model
+    self.state = self.model.timeline.frame(self.model.selected_frame)
+
+    # self.setMinimumWidth(640)
+    # self.setMinimumHeight(480)
+
+    self.variables = [
+      VariableInstance(var, Formatter.default(var))
+        for var in self.model.variables
+    ]
+
+    layout = QFormLayout()
+    layout.setLabelAlignment(Qt.AlignRight)
+    self.setLayout(layout)
+
+    var_widgets = {}
+
+    def show_var(var, editor):
+      # TODO: Remove str after handling checkboxes
+      value = str(var.formatter.output(var.variable.get(self.state.value)))
+      editor.setText(value)
+      editor.setCursorPosition(0)
+
+    def update():
+      for var in self.variables:
+        editor = var_widgets.get(var)
+
+        if editor is None:
+          editor = QLineEdit()
+          editor.setMaximumWidth(80)
+
+          def edit_func(var, editor):
+            def edit():
+              try:
+                value = var.formatter.input(editor.text())
+              except Exception:
+                sys.stderr.write(traceback.format_exc())
+                sys.stderr.flush()
+                show_var(var, editor)
+                return
+              self.model.edits.add(self.state.value.frame, VariableEdit(var.variable, value))
+            return edit
+
+          editor.editingFinished.connect(edit_func(var, editor))
+
+          layout.addRow(QLabel(var.variable.display_name), editor)
+          var_widgets[var] = editor
+
+        show_var(var, editor)
+
+
+    self.state.on_change(update)
+    update()
+
+
 class FrameSlider(QSlider):
 
   def __init__(self, model: Model, parent=None):
@@ -123,6 +187,7 @@ class FrameSlider(QSlider):
 
     self.setMinimum(0)
     self.setMaximum(len(self.model.timeline))
+    self.setMaximumWidth(800)
 
     # slider value <- selected frame
     self.model.selected_frame.on_change(lambda value: self.setValue(value))
@@ -150,7 +215,8 @@ class GameView(QOpenGLWidget):
     super().__init__(parent)
     self.model = model
 
-    self.setMinimumSize(640, 480)
+    # self.setMinimumSize(480, 320)
+    # self.setMaximumWidth(640)
     self.setMouseTracking(True)
 
     self.state = self.model.timeline.frame(self.model.selected_frame)

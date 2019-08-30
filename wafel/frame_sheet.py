@@ -1,5 +1,6 @@
 from typing import *
 import traceback
+import sys
 
 from PyQt5.QtCore import *
 
@@ -10,11 +11,20 @@ from wafel.util import *
 
 
 class FrameSheet(QAbstractTableModel):
+
+  # TODO: Let depend on model
   def __init__(self, timeline: Timeline, edits: Edits, variables: List[VariableInstance]) -> None:
     super().__init__()
     self._timeline = timeline
     self._edits = edits
     self._variables = variables # TODO: Reactive variable list
+
+    self._edits.latest_edited_frame.on_change(lambda:
+      self.dataChanged.emit(
+        self.index(0, 0),
+        self.index(self.rowCount() - 1, self.columnCount() - 1)
+      )
+    )
 
   def rowCount(self, parent=None) -> int:
     return len(self._timeline)
@@ -67,6 +77,7 @@ class FrameSheet(QAbstractTableModel):
       except Exception:
         sys.stderr.write(traceback.format_exc())
         sys.stderr.flush()
+        return False
       self._edits.add(index.row(), VariableEdit(var.variable, value))
       self.dataChanged.emit(index, index)
       return True
