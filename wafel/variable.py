@@ -6,6 +6,10 @@ from wafel.util import *
 
 class VariableParam(Enum):
   STATE = auto()
+  OBJECT = auto()
+
+
+VariableArgs = Dict[VariableParam, Any]
 
 
 class VariableSemantics(Enum):
@@ -72,10 +76,10 @@ class Variable:
     self.read_only = read_only
     self.data_type = data_type
 
-  def get(self, *args: Any) -> Any:
+  def get(self, args: VariableArgs) -> Any:
     raise NotImplementedError
 
-  def set(self, value: Any, *args: Any) -> None:
+  def set(self, value: Any, args: VariableArgs) -> None:
     raise NotImplementedError
 
   def __repr__(self) -> str:
@@ -165,3 +169,6 @@ class VariableInstance:
   @property
   def display_name(self) -> str:
     return self.variable.display_name
+
+  def get_data(self, args: VariableArgs) -> Any:
+    return self.variable.get(args)

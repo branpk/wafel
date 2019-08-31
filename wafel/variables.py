@@ -24,12 +24,12 @@ class _DataVariable(Variable):
       VariableDataType.from_spec(spec, self.path.type),
     )
 
-  def get(self, *args: Any) -> Any:
-    return self.path.get(*args)
+  def get(self, args: VariableArgs) -> Any:
+    return self.path.get(args)
 
-  def set(self, value: Any, *args: Any) -> None:
+  def set(self, value: Any, args: VariableArgs) -> None:
     assert not self.read_only
-    self.path.set(value, *args)
+    self.path.set(value, args)
 
 
 class _FlagVariable(Variable):
@@ -51,17 +51,17 @@ class _FlagVariable(Variable):
     self.flags = flags
     self.flag = spec['constants'][flag]['value']
 
-  def get(self, *args: Any) -> bool:
-    return (self.flags.get(*args) & self.flag) != 0
+  def get(self, args: VariableArgs) -> bool:
+    return (self.flags.get(args) & self.flag) != 0
 
-  def set(self, value: bool, *args: Any) -> None:
+  def set(self, value: bool, args: VariableArgs) -> None:
     assert not self.read_only
-    flags = self.flags.get(*args)
+    flags = self.flags.get(args)
     if value:
       flags |= self.flag
     else:
       flags &= ~self.flag
-    self.flags.set(flags, *args)
+    self.flags.set(flags, args)
 
 
 def create_variables(spec: dict) -> List[Variable]:
@@ -78,4 +78,10 @@ def create_variables(spec: dict) -> List[Variable]:
     _DataVariable('mario x', spec, VariableSemantics.POSITION, '$state.gMarioState[].pos[0]'),
     _DataVariable('mario y', spec, VariableSemantics.POSITION, '$state.gMarioState[].pos[1]'),
     _DataVariable('mario z', spec, VariableSemantics.POSITION, '$state.gMarioState[].pos[2]'),
+    _DataVariable('mario vel f', spec, VariableSemantics.RAW, '$state.gMarioState[].forwardVel'),
+    _DataVariable('mario vel x', spec, VariableSemantics.RAW, '$state.gMarioState[].vel[0]'),
+    _DataVariable('mario vel y', spec, VariableSemantics.RAW, '$state.gMarioState[].vel[1]'),
+    _DataVariable('mario vel z', spec, VariableSemantics.RAW, '$state.gMarioState[].vel[2]'),
+
+    # _DataVariable('hitbox radius', spec, VariableSemantics.RAW, '$object.hitboxRadius'),
   ]

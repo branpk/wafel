@@ -5,3 +5,7 @@ class GameState:
     self.base_addr = base_addr
     self.frame = frame
     self.addr = addr
+
+class Object:
+  def __init__(self, addr: int) -> None:
+    self.addr = addr

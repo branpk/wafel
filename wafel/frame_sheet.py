@@ -49,7 +49,8 @@ class FrameSheet(QAbstractTableModel):
   def data(self, index, role=Qt.DisplayRole):
     var = self._variables[index.column()]
     state = self._timeline.frame(index.row()).value
-    value = var.formatter.output(var.variable.get(state))
+    args = { VariableParam.STATE: state }
+    value = var.formatter.output(var.get_data(args))
 
     if role == Qt.DisplayRole or role == Qt.EditRole:
       if not isinstance(var.formatter, CheckboxFormatter):

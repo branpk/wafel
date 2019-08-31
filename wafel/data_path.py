@@ -3,8 +3,8 @@ from itertools import takewhile
 
 import ctypes as C
 
-from wafel.variable import VariableParam
-from wafel.game_state import GameState
+from wafel.variable import VariableParam, VariableArgs
+from wafel.game_state import GameState, Object
 from wafel.util import *
 
 
@@ -39,10 +39,15 @@ class DataPath:
   @staticmethod
   def parse(spec: dict, expr: str) -> 'DataPath':
     expr = expr.strip()
-    assert expr.startswith('$state')
-    expr = expr[len('$state'):]
 
-    result = _State(spec)
+    if expr.startswith('$state'):
+      expr = expr[len('$state'):]
+      result = _State(spec)
+    elif expr.startswith('$object'):
+      expr = expr[len('$object'):]
+      result = _Object(spec)
+    else:
+      raise NotImplementedError(expr)
 
     while True:
       expr = expr.strip()
@@ -78,51 +83,47 @@ class DataPath:
     if self.concrete_type['kind'] == 'pointer' and VariableParam.STATE not in self.params:
       self.params = [VariableParam.STATE] + self.params
 
-  def _get_state(self, *args: Any) -> GameState:
-    index = self.params.index(VariableParam.STATE)
-    return args[index]
-
-  def get_addr(self, *args: Any) -> int:
+  def get_addr(self, args: VariableArgs) -> int:
     raise NotImplementedError
 
-  def get(self, *args: Any) -> Any:
+  def get(self, args: VariableArgs) -> Any:
     # TODO: This and set can be made more efficient
 
     if self.concrete_type['kind'] == 'primitive':
       ctype = PRIMITIVE_CTYPES[self.concrete_type['name']]
       pytype = PRIMITIVE_PYTYPES[self.concrete_type['name']]
-      addr = C.cast(self.get_addr(*args), C.POINTER(ctype))
+      addr = C.cast(self.get_addr(args), C.POINTER(ctype))
       return pytype(addr[0])
 
     elif self.concrete_type['kind'] == 'pointer':
-      addr = C.cast(self.get_addr(*args), C.POINTER(C.c_void_p))
-      state = self._get_state(*args)
+      addr = C.cast(self.get_addr(args), C.POINTER(C.c_void_p))
+      state = args[VariableParam.STATE]
       # TODO: Handle null and (static) pointers outside the state
       return int(addr[0]) - state.base_addr + state.addr
 
     elif self.concrete_type['kind'] == 'array':
       assert self.concrete_type['length'] is not None
       return tuple(
-        _Index(self.spec, self, i).get(*args)
+        _Index(self.spec, self, i).get(args)
           for i in range(self.concrete_type['length'])
       )
 
     else:
       raise NotImplementedError(self.concrete_type['kind'])
 
-  def set(self, value: Any, *args: Any) -> Any:
+  def set(self, value: Any, args: VariableArgs) -> Any:
     if self.concrete_type['kind'] == 'primitive':
       ctype = PRIMITIVE_CTYPES[self.concrete_type['name']]
       pytype = PRIMITIVE_PYTYPES[self.concrete_type['name']]
       assert isinstance(value, pytype)
-      addr = C.cast(self.get_addr(*args), C.POINTER(ctype))
+      addr = C.cast(self.get_addr(args), C.POINTER(ctype))
       # TODO: Check overflow behavior
       addr[0] = value
 
     elif self.concrete_type['kind'] == 'pointer':
       raise NotImplementedError('pointer')
       assert isinstance(value, int)
-      addr = C.cast(self.get_addr(*args), C.POINTER(C.c_void_p))
+      addr = C.cast(self.get_addr(args), C.POINTER(C.c_void_p))
       addr[0] = value
 
     elif self.concrete_type['kind'] == 'array':
@@ -130,7 +131,7 @@ class DataPath:
       assert isinstance(value, tuple)
       assert len(value) == self.concrete_type['length']
       for i, elem_value in enumerate(value):
-        _Index(self.spec, self, i).set(elem_value, *args)
+        _Index(self.spec, self, i).set(elem_value, args)
 
     else:
       raise NotImplementedError(self.concrete_type['kind'])
@@ -140,8 +141,16 @@ class _State(DataPath):
   def __init__(self, spec: dict) -> None:
     super().__init__(spec, [VariableParam.STATE], spec['types']['struct']['SM64State'])
 
-  def get_addr(self, state: GameState) -> int:
-    return state.addr
+  def get_addr(self, args: VariableArgs) -> int:
+    return args[VariableParam.STATE].addr
+
+
+class _Object(DataPath):
+  def __init__(self, spec: dict) -> None:
+    super().__init__(spec, [VariableParam.OBJECT], spec['types']['struct']['Object'])
+
+  def get_addr(self, args: VariableArgs) -> int:
+    return args[VariableParam.OBJECT].addr
 
 
 class _Field(DataPath):
@@ -154,8 +163,8 @@ class _Field(DataPath):
     self.struct = struct
     self.offset = field_spec['offset']
 
-  def get_addr(self, *args: Any) -> int:
-    return self.struct.get_addr(*args) + self.offset
+  def get_addr(self, args: VariableArgs) -> int:
+    return self.struct.get_addr(args) + self.offset
 
 
 class _Index(DataPath):
@@ -169,8 +178,8 @@ class _Index(DataPath):
     self.array = array
     self.offset = stride * index
 
-  def get_addr(self, *args: Any) -> int:
-    return self.array.get_addr(*args) + self.offset
+  def get_addr(self, args: VariableArgs) -> int:
+    return self.array.get_addr(args) + self.offset
 
 
 class _Deref(DataPath):
@@ -181,5 +190,5 @@ class _Deref(DataPath):
     super().__init__(spec, pointer.params, pointer_type['base'])
     self.pointer = pointer
 
-  def get_addr(self, *args: Any) -> int:
-    return self.pointer.get(*args)
+  def get_addr(self, args: VariableArgs) -> int:
+    return self.pointer.get(args)

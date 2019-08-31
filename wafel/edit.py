@@ -13,13 +13,13 @@ class Edit:
 
 class VariableEdit(Edit):
   def __init__(self, variable: Variable, value: Any) -> None:
-    # TODO: Extra args (e.g. object id)
+    # TODO: Use variable instance instead
     assert variable.params == [VariableParam.STATE]
     self.variable = variable
     self.value = value
 
   def apply(self, state: GameState) -> None:
-    self.variable.set(self.value, state)
+    self.variable.set(self.value, { VariableParam.STATE: state })
 
 
 def read_byte(f: IO[bytes]) -> Optional[int]:

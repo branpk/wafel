@@ -22,13 +22,13 @@ from wafel.variable import *
 
 class Model:
   def __init__(self):
-    self.lib = cdll.LoadLibrary('lib/libsm64/us/sm64')
-    with open('lib/libsm64/us/libsm64.json', 'r') as f:
+    self.lib = cdll.LoadLibrary('lib/libsm64/jp/sm64')
+    with open('lib/libsm64/jp/libsm64.json', 'r') as f:
       self.spec: dict = json.load(f)
 
     self.variables = create_variables(self.spec)
 
-    with open('test_files/120_u.m64', 'rb') as m64:
+    with open('test_files/1key_j.m64', 'rb') as m64:
       self.edits = Edits.from_m64(m64, self.variables)
 
     self.timeline = Timeline(self.lib, self.spec, self.edits)
@@ -141,9 +141,10 @@ class VariableExplorer(QWidget):
 
     var_widgets = {}
 
-    def show_var(var, editor):
+    def show_var(var: VariableInstance, editor):
       # TODO: Remove str after handling checkboxes
-      value = str(var.formatter.output(var.variable.get(self.state.value)))
+      args = { VariableParam.STATE: self.state.value }
+      value = str(var.formatter.output(var.get_data(args)))
       editor.setText(value)
       editor.setCursorPosition(0)
 
@@ -244,7 +245,9 @@ class GameView(QOpenGLWidget):
           fov_y = math.radians(45),
         )
 
-        target = self.model.path('$state.gMarioState[].pos').get(state)
+        target = self.model.path('$state.gMarioState[].pos').get({
+          VariableParam.STATE: state,
+        })
         face_dir = camera.face_dir()
         offset_dist = 1500 * math.pow(0.5, zoom)
         camera.pos = [target[i] - offset_dist * face_dir[i] for i in range(3)]
@@ -252,7 +255,9 @@ class GameView(QOpenGLWidget):
         return camera
 
       elif camera_mode == CameraMode.BIRDS_EYE:
-        target = self.model.path('$state.gMarioState[].pos').get(state)
+        target = self.model.path('$state.gMarioState[].pos').get({
+          VariableParam.STATE: state,
+        })
         return BirdsEyeCamera(
           pos = [target[0], target[1] + 500, target[2]],
           span_y = 200 / math.pow(2, zoom),
