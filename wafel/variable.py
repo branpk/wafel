@@ -84,24 +84,3 @@ class Variable:
 
   def __repr__(self) -> str:
     return f'Variable({self.display_name})'
-
-
-class VariableInstance:
-
-  # TODO: Associated object etc
-  def __init__(self, variable: Variable) -> None:
-    self.variable = variable
-
-  @property
-  def read_only(self) -> bool:
-    return self.variable.read_only
-
-  @property
-  def display_name(self) -> str:
-    return self.variable.display_name
-
-  def get_data(self, args: VariableArgs) -> Any:
-    return self.variable.get(args)
-
-  def set_data(self, value: Any, args: VariableArgs) -> None:
-    self.variable.set(value, args)

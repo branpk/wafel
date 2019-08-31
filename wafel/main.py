@@ -53,10 +53,7 @@ class Window(QWidget):
 
     self.model = Model()
 
-    frame_sheet_variables = [
-      VariableInstance(variable)
-        for variable in self.model.variables
-    ]
+    frame_sheet_variables = self.model.variables
     self.model.frame_sheets.append(FrameSheet(self.model.timeline, self.model.edits, self.model.formatters, frame_sheet_variables))
 
     layout = QHBoxLayout()
@@ -132,50 +129,45 @@ class VariableExplorer(QWidget):
     # self.setMinimumWidth(640)
     # self.setMinimumHeight(480)
 
-    self.variables = [
-      VariableInstance(var)
-        for var in self.model.variables
-    ]
-
     layout = QFormLayout()
     layout.setLabelAlignment(Qt.AlignRight)
     self.setLayout(layout)
 
     var_widgets = {}
 
-    def show_var(var: VariableInstance, editor):
+    def show_var(variable: Variable, editor):
       # TODO: Remove str after handling checkboxes
       args = { VariableParam.STATE: self.state.value }
-      value = str(self.model.formatters[var].output(var.get_data(args)))
+      value = str(self.model.formatters[variable].output(variable.get(args)))
       editor.setText(value)
       editor.setCursorPosition(0)
 
     def update():
-      for var in self.variables:
-        editor = var_widgets.get(var)
+      for variable in self.model.variables:
+        editor = var_widgets.get(variable)
 
         if editor is None:
           editor = QLineEdit()
           editor.setMaximumWidth(80)
 
-          def edit_func(var: VariableInstance, editor):
+          def edit_func(variable: Variable, editor):
             def edit():
               try:
-                value = self.model.formatters[var].input(editor.text())
+                value = self.model.formatters[variable].input(editor.text())
               except Exception:
                 sys.stderr.write(traceback.format_exc())
                 sys.stderr.flush()
-                show_var(var, editor)
+                show_var(variable, editor)
                 return
-              self.model.edits.add(self.state.value.frame, VariableEdit(var, value))
+              self.model.edits.add(self.state.value.frame, VariableEdit(variable, value))
             return edit
 
-          editor.editingFinished.connect(edit_func(var, editor))
+          editor.editingFinished.connect(edit_func(variable, editor))
 
-          layout.addRow(QLabel(var.variable.display_name), editor)
-          var_widgets[var] = editor
+          layout.addRow(QLabel(variable.display_name), editor)
+          var_widgets[variable] = editor
 
-        show_var(var, editor)
+        show_var(variable, editor)
 
 
     self.state.on_change(update)

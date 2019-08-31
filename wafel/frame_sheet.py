@@ -5,7 +5,7 @@ import sys
 from PyQt5.QtCore import *
 
 from wafel.timeline import Timeline
-from wafel.variable import VariableParam, VariableInstance
+from wafel.variable import VariableParam, Variable
 from wafel.variable_format import Formatters, CheckboxFormatter
 from wafel.edit import Edits, VariableEdit
 from wafel.util import *
@@ -14,7 +14,7 @@ from wafel.util import *
 class FrameSheet(QAbstractTableModel):
 
   # TODO: Let depend on model
-  def __init__(self, timeline: Timeline, edits: Edits, formatters: Formatters, variables: List[VariableInstance]) -> None:
+  def __init__(self, timeline: Timeline, edits: Edits, formatters: Formatters, variables: List[Variable]) -> None:
     super().__init__()
     self._timeline = timeline
     self._edits = edits
@@ -42,18 +42,18 @@ class FrameSheet(QAbstractTableModel):
         return str(section)
 
   def flags(self, index):
-    var = self._variables[index.column()]
-    if isinstance(self._formatters[var], CheckboxFormatter):
+    variable = self._variables[index.column()]
+    if isinstance(self._formatters[variable], CheckboxFormatter):
       return Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled
     else:
       return Qt.ItemIsSelectable | Qt.ItemIsEditable | Qt.ItemIsEnabled
 
   def data(self, index, role=Qt.DisplayRole):
-    var = self._variables[index.column()]
+    variable = self._variables[index.column()]
     state = self._timeline.frame(index.row()).value
     args = { VariableParam.STATE: state }
-    formatter = self._formatters[var]
-    value = formatter.output(var.get_data(args))
+    formatter = self._formatters[variable]
+    value = formatter.output(variable.get(args))
 
     if role == Qt.DisplayRole or role == Qt.EditRole:
       if not isinstance(formatter, CheckboxFormatter):
@@ -64,8 +64,8 @@ class FrameSheet(QAbstractTableModel):
         return Qt.Checked if value else Qt.Unchecked
 
   def setData(self, index, value, role=Qt.EditRole):
-    var = self._variables[index.column()]
-    formatter = self._formatters[var]
+    variable = self._variables[index.column()]
+    formatter = self._formatters[variable]
     rep = None
 
     if role == Qt.EditRole:
@@ -83,7 +83,7 @@ class FrameSheet(QAbstractTableModel):
         sys.stderr.write(traceback.format_exc())
         sys.stderr.flush()
         return False
-      self._edits.add(index.row(), VariableEdit(var, value))
+      self._edits.add(index.row(), VariableEdit(variable, value))
       self.dataChanged.emit(index, index)
       return True
 

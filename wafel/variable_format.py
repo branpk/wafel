@@ -1,6 +1,6 @@
 from typing import *
 
-from wafel.variable import Variable, VariableDataType, VariableInstance
+from wafel.variable import Variable, VariableDataType
 
 
 class VariableFormatter:
@@ -68,5 +68,5 @@ class Formatters:
 
     raise NotImplementedError(variable, variable.data_type)
 
-  def __getitem__(self, variable: VariableInstance) -> VariableFormatter:
-    return self._get_default(variable.variable)
+  def __getitem__(self, variable: Variable) -> VariableFormatter:
+    return self._get_default(variable)
