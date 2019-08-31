@@ -3,7 +3,7 @@ from itertools import takewhile
 
 import ctypes as C
 
-from wafel.variable import VariableParam, VariableArgs
+from wafel.variable_param import VariableParam, VariableArgs
 from wafel.game_state import GameState, Object
 from wafel.util import *
 

@@ -14,7 +14,6 @@ from wafel.timeline import Timeline
 from wafel.edit import Edits, VariableEdit
 from wafel.reactive import Reactive, ReactiveValue
 from wafel.frame_sheet import FrameSheet
-from wafel.variables import create_variables
 from wafel.game_state import GameState
 from wafel.data_path import DataPath
 from wafel.variable import *
@@ -27,7 +26,7 @@ class Model:
     with open('lib/libsm64/jp/libsm64.json', 'r') as f:
       self.spec: dict = json.load(f)
 
-    self.variables = create_variables(self.spec)
+    self.variables = Variable.create_all(self.spec)
     self.formatters = Formatters()
 
     with open('test_files/1key_j.m64', 'rb') as m64:
@@ -53,7 +52,10 @@ class Window(QWidget):
 
     self.model = Model()
 
-    frame_sheet_variables = self.model.variables
+    frame_sheet_variables = [
+      var for var in self.model.variables
+        if set(var.params).issubset({ VariableParam.STATE })
+    ]
     self.model.frame_sheets.append(FrameSheet(self.model.timeline, self.model.edits, self.model.formatters, frame_sheet_variables))
 
     layout = QHBoxLayout()
@@ -129,6 +131,16 @@ class VariableExplorer(QWidget):
     # self.setMinimumWidth(640)
     # self.setMinimumHeight(480)
 
+    self.variables = [
+      var for var in self.model.variables
+        if set(var.params).issubset({ VariableParam.STATE })
+    ]
+    self.variables += [
+      var.at_object(96)
+        for var in self.model.variables
+          if VariableParam.OBJECT in var.params
+    ]
+
     layout = QFormLayout()
     layout.setLabelAlignment(Qt.AlignRight)
     self.setLayout(layout)
@@ -143,7 +155,7 @@ class VariableExplorer(QWidget):
       editor.setCursorPosition(0)
 
     def update():
-      for variable in self.model.variables:
+      for variable in self.variables:
         editor = var_widgets.get(variable)
 
         if editor is None:

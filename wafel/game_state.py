@@ -9,3 +9,5 @@ class GameState:
 class Object:
   def __init__(self, addr: int) -> None:
     self.addr = addr
+
+ObjectId = int
