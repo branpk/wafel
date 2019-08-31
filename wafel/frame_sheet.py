@@ -5,7 +5,8 @@ import sys
 from PyQt5.QtCore import *
 
 from wafel.timeline import Timeline
-from wafel.variable import VariableParam, VariableInstance, CheckboxFormatter
+from wafel.variable import VariableParam, VariableInstance
+from wafel.variable_format import Formatters, CheckboxFormatter
 from wafel.edit import Edits, VariableEdit
 from wafel.util import *
 
@@ -13,10 +14,11 @@ from wafel.util import *
 class FrameSheet(QAbstractTableModel):
 
   # TODO: Let depend on model
-  def __init__(self, timeline: Timeline, edits: Edits, variables: List[VariableInstance]) -> None:
+  def __init__(self, timeline: Timeline, edits: Edits, formatters: Formatters, variables: List[VariableInstance]) -> None:
     super().__init__()
     self._timeline = timeline
     self._edits = edits
+    self._formatters = formatters
     self._variables = variables # TODO: Reactive variable list
 
     self._edits.latest_edited_frame.on_change(lambda:
@@ -41,7 +43,7 @@ class FrameSheet(QAbstractTableModel):
 
   def flags(self, index):
     var = self._variables[index.column()]
-    if isinstance(var.formatter, CheckboxFormatter):
+    if isinstance(self._formatters[var], CheckboxFormatter):
       return Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled
     else:
       return Qt.ItemIsSelectable | Qt.ItemIsEditable | Qt.ItemIsEnabled
@@ -50,36 +52,38 @@ class FrameSheet(QAbstractTableModel):
     var = self._variables[index.column()]
     state = self._timeline.frame(index.row()).value
     args = { VariableParam.STATE: state }
-    value = var.formatter.output(var.get_data(args))
+    formatter = self._formatters[var]
+    value = formatter.output(var.get_data(args))
 
     if role == Qt.DisplayRole or role == Qt.EditRole:
-      if not isinstance(var.formatter, CheckboxFormatter):
+      if not isinstance(formatter, CheckboxFormatter):
         return value
 
     elif role == Qt.CheckStateRole:
-      if isinstance(var.formatter, CheckboxFormatter):
+      if isinstance(formatter, CheckboxFormatter):
         return Qt.Checked if value else Qt.Unchecked
 
   def setData(self, index, value, role=Qt.EditRole):
     var = self._variables[index.column()]
+    formatter = self._formatters[var]
     rep = None
 
     if role == Qt.EditRole:
-      if not isinstance(var.formatter, CheckboxFormatter):
+      if not isinstance(formatter, CheckboxFormatter):
         rep = value
 
     elif role == Qt.CheckStateRole:
-      if isinstance(var.formatter, CheckboxFormatter):
+      if isinstance(formatter, CheckboxFormatter):
         rep = value == Qt.Checked
 
     if rep is not None:
       try:
-        value = var.formatter.input(rep)
+        value = formatter.input(rep)
       except Exception:
         sys.stderr.write(traceback.format_exc())
         sys.stderr.flush()
         return False
-      self._edits.add(index.row(), VariableEdit(var.variable, value))
+      self._edits.add(index.row(), VariableEdit(var, value))
       self.dataChanged.emit(index, index)
       return True
 

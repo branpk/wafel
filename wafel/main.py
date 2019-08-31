@@ -18,6 +18,7 @@ from wafel.variables import create_variables
 from wafel.game_state import GameState
 from wafel.data_path import DataPath
 from wafel.variable import *
+from wafel.variable_format import Formatters, VariableFormatter
 
 
 class Model:
@@ -27,6 +28,7 @@ class Model:
       self.spec: dict = json.load(f)
 
     self.variables = create_variables(self.spec)
+    self.formatters = Formatters()
 
     with open('test_files/1key_j.m64', 'rb') as m64:
       self.edits = Edits.from_m64(m64, self.variables)
@@ -52,10 +54,10 @@ class Window(QWidget):
     self.model = Model()
 
     frame_sheet_variables = [
-      VariableInstance(variable, Formatter.default(variable))
+      VariableInstance(variable)
         for variable in self.model.variables
     ]
-    self.model.frame_sheets.append(FrameSheet(self.model.timeline, self.model.edits, frame_sheet_variables))
+    self.model.frame_sheets.append(FrameSheet(self.model.timeline, self.model.edits, self.model.formatters, frame_sheet_variables))
 
     layout = QHBoxLayout()
     layout.setContentsMargins(0, 0, 0, 0)
@@ -131,7 +133,7 @@ class VariableExplorer(QWidget):
     # self.setMinimumHeight(480)
 
     self.variables = [
-      VariableInstance(var, Formatter.default(var))
+      VariableInstance(var)
         for var in self.model.variables
     ]
 
@@ -144,7 +146,7 @@ class VariableExplorer(QWidget):
     def show_var(var: VariableInstance, editor):
       # TODO: Remove str after handling checkboxes
       args = { VariableParam.STATE: self.state.value }
-      value = str(var.formatter.output(var.get_data(args)))
+      value = str(self.model.formatters[var].output(var.get_data(args)))
       editor.setText(value)
       editor.setCursorPosition(0)
 
@@ -156,16 +158,16 @@ class VariableExplorer(QWidget):
           editor = QLineEdit()
           editor.setMaximumWidth(80)
 
-          def edit_func(var, editor):
+          def edit_func(var: VariableInstance, editor):
             def edit():
               try:
-                value = var.formatter.input(editor.text())
+                value = self.model.formatters[var].input(editor.text())
               except Exception:
                 sys.stderr.write(traceback.format_exc())
                 sys.stderr.flush()
                 show_var(var, editor)
                 return
-              self.model.edits.add(self.state.value.frame, VariableEdit(var.variable, value))
+              self.model.edits.add(self.state.value.frame, VariableEdit(var, value))
             return edit
 
           editor.editingFinished.connect(edit_func(var, editor))

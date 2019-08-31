@@ -2,7 +2,7 @@ import ctypes
 from typing import IO, Any, Optional, List
 
 from wafel.game_state import GameState
-from wafel.variable import Variable, VariableParam
+from wafel.variable import Variable, VariableParam, VariableInstance
 from wafel.reactive import Reactive, ReactiveValue
 
 
@@ -12,14 +12,12 @@ class Edit:
 
 
 class VariableEdit(Edit):
-  def __init__(self, variable: Variable, value: Any) -> None:
-    # TODO: Use variable instance instead
-    assert variable.params == [VariableParam.STATE]
+  def __init__(self, variable: VariableInstance, value: Any) -> None:
     self.variable = variable
     self.value = value
 
   def apply(self, state: GameState) -> None:
-    self.variable.set(self.value, { VariableParam.STATE: state })
+    self.variable.set_data(self.value, { VariableParam.STATE: state })
 
 
 def read_byte(f: IO[bytes]) -> Optional[int]:
@@ -37,8 +35,8 @@ def read_big_short(f: IO[bytes]) -> Optional[int]:
 class Edits:
   @staticmethod
   def from_m64(m64: IO[bytes], variables: List[Variable]) -> 'Edits':
-    def get_var(display_name: str) -> Variable:
-      return [v for v in variables if v.display_name == display_name][0]
+    def get_var(display_name: str) -> VariableInstance:
+      return VariableInstance([v for v in variables if v.display_name == display_name][0])
 
     edits = Edits()
 
