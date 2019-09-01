@@ -2,7 +2,7 @@ import ctypes
 from typing import IO, Any, Optional, List
 
 from wafel.game_state import GameState
-from wafel.variable import Variable, VariableParam
+from wafel.variable import Variable, VariableParam, Variables
 from wafel.reactive import Reactive, ReactiveValue
 
 
@@ -34,10 +34,7 @@ def read_big_short(f: IO[bytes]) -> Optional[int]:
 
 class Edits:
   @staticmethod
-  def from_m64(m64: IO[bytes], variables: List[Variable]) -> 'Edits':
-    def get_var(display_name: str) -> Variable:
-      return [v for v in variables if v.display_name == display_name][0]
-
+  def from_m64(m64: IO[bytes], variables: Variables) -> 'Edits':
     edits = Edits()
 
     m64.seek(0x400)
@@ -49,9 +46,9 @@ class Edits:
       if buttons is None or stick_x is None or stick_y is None:
         break
       else:
-        edits.add(frame, VariableEdit(get_var('buttons'), buttons))
-        edits.add(frame, VariableEdit(get_var('stick x'), stick_x))
-        edits.add(frame, VariableEdit(get_var('stick y'), stick_y))
+        edits.add(frame, VariableEdit(variables['buttons'], buttons))
+        edits.add(frame, VariableEdit(variables['stick x'], stick_x))
+        edits.add(frame, VariableEdit(variables['stick y'], stick_y))
       frame += 1
 
     return edits

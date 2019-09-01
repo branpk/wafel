@@ -123,9 +123,71 @@ class FrameSheetView(QTableView):
     self.model.selected_frame.value = frame
 
 
-class VariableExplorer(QWidget):
+class VerticalTabBar(QTabBar):
+
+  def __init__(self, parent=None):
+    super().__init__(parent)
+
+  def tabSizeHint(self, index):
+    size = super().tabSizeHint(index)
+    size.transpose()
+    return size
+
+  # def wheelEvent(self, event):
+  #   pass
+
+  def paintEvent(self, event):
+    painter = QStylePainter(self)
+    option_tab = QStyleOptionTab()
+
+    for i in range(self.count()):
+      self.initStyleOption(option_tab, i)
+      painter.drawControl(QStyle.CE_TabBarTabShape, option_tab)
+      painter.save()
+
+      size = option_tab.rect.size()
+      size.transpose()
+      rect = QRect(QPoint(), size)
+      rect.moveCenter(option_tab.rect.center())
+      option_tab.rect = rect
+
+      center = self.tabRect(i).center()
+      painter.translate(center)
+      painter.rotate(90)
+      painter.translate(-center)
+      painter.drawControl(QStyle.CE_TabBarTabLabel, option_tab)
+      painter.restore()
+
+
+class VariableExplorer(QTabWidget):
 
   def __init__(self, model: Model, parent=None):
+    super().__init__(parent)
+    self.model = model
+
+    tab_bar = VerticalTabBar(self)
+    self.setTabBar(tab_bar)
+    self.setTabPosition(QTabWidget.West)
+
+    self.setMaximumHeight(300)
+
+    tabs = {
+      'Input': [],
+      'Mario': [],
+    }
+    for variable in self.model.variables:
+      if variable.display_name in ['buttons', 'stick x', 'stick y', 'A', 'B', 'Z', 'S']:
+        tabs['Input'].append(variable)
+      else:
+        tabs['Mario'].append(variable)
+
+    for tab_name, variables in tabs.items():
+      self.addTab(VariableTab(self.model, variables, self), tab_name)
+
+
+class VariableTab(QWidget):
+
+  def __init__(self, model: Model, variables: List[Variable], parent=None):
     super().__init__(parent)
     self.model = model
     self.state = self.model.timeline.frame(self.model.selected_frame)
@@ -134,12 +196,12 @@ class VariableExplorer(QWidget):
     # self.setMinimumHeight(480)
 
     self.variables = [
-      var for var in self.model.variables
+      var for var in variables
         if set(var.params).issubset({ VariableParam.STATE })
     ]
     self.variables += [
       var.at_object(96)
-        for var in self.model.variables
+        for var in variables
           if VariableParam.OBJECT in var.params
     ]
 

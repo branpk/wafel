@@ -1,6 +1,17 @@
 from typing import *
 
-from wafel.game_state import ObjectType
+
+class ObjectType:
+  def __init__(
+    self,
+    name: str,
+    behavior: List[str],
+  ) -> None:
+    self.name = name
+    self.behavior = behavior
+
+  def __repr__(self):
+    return 'ObjectType(' + self.name + ')'
 
 
 OBJECT_TYPES = [

@@ -4,7 +4,7 @@ from enum import Enum, auto
 from wafel.util import *
 from wafel.variable_param import *
 from wafel.data_path import DataPath
-from wafel.game_state import ObjectId, Object
+from wafel.game_state import ObjectId, Object, GameState
 from wafel.game_lib import GameLib
 
 
@@ -53,13 +53,15 @@ class VariableDataType(Enum):
         return VariableDataType.VEC3F
       else:
         raise NotImplementedError(type_)
+    elif type_['kind'] == 'pointer': # TODO: Remove
+      return VariableDataType.U32
     else:
       raise NotImplementedError(type_['kind'])
 
 
 class Variable:
   @staticmethod
-  def create_all(lib: GameLib) -> List['Variable']:
+  def create_all(lib: GameLib) -> 'Variables':
     return _all_variables(lib)
 
   def __init__(
@@ -185,9 +187,20 @@ class _ObjectVariable(Variable):
     self.variable.set(value, self._get_args(args))
 
 
-def _all_variables(lib: GameLib) -> List[Variable]:
+class Variables:
+  def __init__(self, variables: List[Variable]) -> None:
+    self.variables = variables
+
+  def __iter__(self) -> Iterator[Variable]:
+    return iter(self.variables)
+
+  def __getitem__(self, name: str) -> Variable:
+    return [var for var in self.variables if var.display_name == name][0]
+
+
+def _all_variables(lib: GameLib) -> Variables:
   input_buttons = _DataVariable('buttons', lib, VariableSemantics.RAW, '$state.gControllerPads[0].button')
-  return [
+  return Variables([
     input_buttons,
     _DataVariable('stick x', lib, VariableSemantics.RAW, '$state.gControllerPads[0].stick_x'),
     _DataVariable('stick y', lib, VariableSemantics.RAW, '$state.gControllerPads[0].stick_y'),
@@ -205,4 +218,5 @@ def _all_variables(lib: GameLib) -> List[Variable]:
     _DataVariable('mario vel z', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[2]'),
 
     _DataVariable('hitbox radius', lib, VariableSemantics.RAW, '$object.hitboxRadius'),
-  ]
+    _DataVariable('behavior', lib, VariableSemantics.RAW, '$object.behaviorSeg'),
+  ])
