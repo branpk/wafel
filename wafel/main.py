@@ -18,21 +18,23 @@ from wafel.game_state import GameState
 from wafel.data_path import DataPath
 from wafel.variable import *
 from wafel.variable_format import Formatters, VariableFormatter
+from wafel.game_lib import GameLib
 
 
 class Model:
   def __init__(self):
-    self.lib = cdll.LoadLibrary('lib/libsm64/jp/sm64')
+    dll = cdll.LoadLibrary('lib/libsm64/jp/sm64')
     with open('lib/libsm64/jp/libsm64.json', 'r') as f:
-      self.spec: dict = json.load(f)
+      spec: dict = json.load(f)
+    self.lib = GameLib(spec, dll)
 
-    self.variables = Variable.create_all(self.spec)
+    self.variables = Variable.create_all(self.lib)
     self.formatters = Formatters()
 
     with open('test_files/1key_j.m64', 'rb') as m64:
       self.edits = Edits.from_m64(m64, self.variables)
 
-    self.timeline = Timeline(self.lib, self.spec, self.edits)
+    self.timeline = Timeline(self.lib, self.edits)
     self.selected_frame = ReactiveValue(0)
     self.timeline.add_hotspot(self.selected_frame)
 
@@ -41,7 +43,7 @@ class Model:
     self.dbg_reload_graphics = ReactiveValue(())
 
   def path(self, path: str) -> DataPath:
-    return DataPath.parse(self.spec, path)
+    return DataPath.parse(self.lib, path)
 
 
 class Window(QWidget):

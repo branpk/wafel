@@ -1,13 +1,12 @@
-import ctypes
 import random
 from typing import *
 import weakref
 import time
 
-from wafel.util import dcast
 from wafel.game_state import GameState
 from wafel.edit import Edits
 from wafel.reactive import Reactive, ReactiveValue
+from wafel.game_lib import GameLib
 
 
 # TODO: Could do a quick warm up pass on first load and input change
@@ -38,13 +37,11 @@ class _Cell:
 class _CellManager:
   def __init__(
     self,
-    lib: ctypes.CDLL,
-    spec: dict,
+    lib: GameLib,
     edits: Edits,
     capacity: int,
   ) -> None:
     self.lib = lib
-    self.spec = spec
     self.edits = edits
     self.capacity = capacity
 
@@ -70,23 +67,22 @@ class _CellManager:
     return cell is not self.power_on_cell and not cell.loaded
 
   def new_cell(self) -> _Cell:
-    addr = dcast(int, self.lib.sm64_state_new())
     # Frame "-1" is a power-on state before any edits have been applied.
     # Frame 0 is after edits are applied but before the first frame advance.
-    return _Cell(-1, addr)
+    return _Cell(-1, self.lib.state_new())
 
   def copy_cell(self, dst: _Cell, src: _Cell, unsafe: bool = False) -> None:
     if not unsafe:
       assert self.can_modify_cell(dst)
     if src is not dst:
-      self.lib.sm64_state_raw_copy(dst.addr, src.addr)
+      self.lib.state_raw_copy(dst.addr, src.addr)
       dst.frame = src.frame
 
   def advance_base_cell(self) -> None:
     assert self.can_modify_cell(self.base_cell)
 
     if self.base_cell.frame != -1:
-      self.lib.sm64_state_update(self.base_cell.addr)
+      self.lib.state_update(self.base_cell.addr)
     self.base_cell.frame += 1
 
     temp_state = self.load_cell(self.base_cell)
@@ -111,7 +107,7 @@ class _CellManager:
     return max(usable_cells, key=lambda cell: cell.frame)
 
   def load_cell(self, cell: _Cell) -> GameState:
-    state = GameState(self.spec, self.base_cell.addr, cell.frame, cell.addr)
+    state = GameState(self.lib, self.base_cell.addr, cell.frame, cell.addr)
     cell.mark_loaded(state)
     return state
 
@@ -257,11 +253,10 @@ class _ReactiveGameState(Reactive[GameState]):
 class Timeline:
   def __init__(
     self,
-    lib: ctypes.CDLL,
-    spec: dict,
+    lib: GameLib,
     edits: Edits,
   ) -> None:
-    self._cell_manager = _CellManager(lib, spec, edits, capacity=200)
+    self._cell_manager = _CellManager(lib, edits, capacity=200)
     self._callbacks: List[Tuple[Reactive[int], Callable[[], None]]] = []
 
     edits.latest_edited_frame.on_change(self._invalidate_frame)

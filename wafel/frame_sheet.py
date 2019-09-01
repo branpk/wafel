@@ -2,6 +2,7 @@ from typing import *
 import traceback
 import sys
 
+import PyQt5.Qt as Qt
 from PyQt5.QtCore import *
 
 from wafel.timeline import Timeline

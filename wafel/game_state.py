@@ -1,9 +1,11 @@
 from typing import *
 
+from wafel.game_lib import GameLib
+
 
 class GameState:
-  def __init__(self, spec: dict, base_addr: int, frame: int, addr: int) -> None:
-    self.spec = spec
+  def __init__(self, lib: GameLib, base_addr: int, frame: int, addr: int) -> None:
+    self.lib = lib
     self.base_addr = base_addr
     self.frame = frame
     self.addr = addr

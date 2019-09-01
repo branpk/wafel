@@ -5,6 +5,7 @@ from wafel.util import *
 from wafel.variable_param import *
 from wafel.data_path import DataPath
 from wafel.game_state import ObjectId, Object
+from wafel.game_lib import GameLib
 
 
 class VariableSemantics(Enum):
@@ -31,8 +32,8 @@ class VariableDataType(Enum):
   VEC3F = auto()
 
   @staticmethod
-  def from_spec(spec: dict, type_: dict) -> 'VariableDataType':
-    type_ = concrete_type(spec, type_)
+  def from_spec(lib: GameLib, type_: dict) -> 'VariableDataType':
+    type_ = lib.concrete_type(type_)
     if type_['kind'] == 'primitive':
       return {
         's8': VariableDataType.S8,
@@ -47,7 +48,7 @@ class VariableDataType(Enum):
         'f64': VariableDataType.F64,
       }[type_['name']]
     elif type_['kind'] == 'array':
-      elem_type = VariableDataType.from_spec(spec, type_['base'])
+      elem_type = VariableDataType.from_spec(lib, type_['base'])
       if type_['length'] == 3 and elem_type == VariableDataType.F32:
         return VariableDataType.VEC3F
       else:
@@ -58,20 +59,20 @@ class VariableDataType(Enum):
 
 class Variable:
   @staticmethod
-  def create_all(spec: dict) -> List['Variable']:
-    return _all_variables(spec)
+  def create_all(lib: GameLib) -> List['Variable']:
+    return _all_variables(lib)
 
   def __init__(
     self,
     display_name: str,
-    spec: dict,
+    lib: GameLib,
     params: List[VariableParam],
     semantics: VariableSemantics,
     read_only: bool,
     data_type: VariableDataType,
   ) -> None:
     self.display_name = display_name
-    self.spec = spec
+    self.lib = lib
     self.params = params
     self.semantics = semantics
     self.read_only = read_only
@@ -94,19 +95,19 @@ class _DataVariable(Variable):
   def __init__(
     self,
     display_name: str,
-    spec: dict,
+    lib: GameLib,
     semantics: VariableSemantics,
     path: str,
     read_only: bool = False,
   ) -> None:
-    self.path = DataPath.parse(spec, path)
+    self.path = DataPath.parse(lib, path)
     super().__init__(
       display_name,
-      spec,
+      lib,
       self.path.params,
       semantics,
       read_only,
-      VariableDataType.from_spec(spec, self.path.type),
+      VariableDataType.from_spec(lib, self.path.type),
     )
 
   def get(self, args: VariableArgs) -> Any:
@@ -127,14 +128,14 @@ class _FlagVariable(Variable):
   ) -> None:
     super().__init__(
       display_name,
-      flags.spec,
+      flags.lib,
       flags.params,
       VariableSemantics.FLAG,
       read_only or flags.read_only,
       VariableDataType.BOOL,
     )
     self.flags = flags
-    self.flag = self.flags.spec['constants'][flag]['value']
+    self.flag = self.flags.lib.spec['constants'][flag]['value']
 
   def get(self, args: VariableArgs) -> bool:
     return (self.flags.get(args) & self.flag) != 0
@@ -157,7 +158,7 @@ class _ObjectVariable(Variable):
 
     super().__init__(
       variable.display_name,
-      variable.spec,
+      variable.lib,
       params,
       variable.semantics,
       variable.read_only,
@@ -169,7 +170,7 @@ class _ObjectVariable(Variable):
 
   def _get_args(self, args: VariableArgs) -> VariableArgs:
     object_path = '$state.gObjectPool[' + str(self.object_id) + ']'
-    object_addr = DataPath.parse(self.variable.spec, object_path).get_addr(args)
+    object_addr = DataPath.parse(self.variable.lib, object_path).get_addr(args)
 
     new_args = {
       VariableParam.OBJECT: Object(object_addr),
@@ -184,24 +185,24 @@ class _ObjectVariable(Variable):
     self.variable.set(value, self._get_args(args))
 
 
-def _all_variables(spec: dict) -> List[Variable]:
-  input_buttons = _DataVariable('buttons', spec, VariableSemantics.RAW, '$state.gControllerPads[0].button')
+def _all_variables(lib: GameLib) -> List[Variable]:
+  input_buttons = _DataVariable('buttons', lib, VariableSemantics.RAW, '$state.gControllerPads[0].button')
   return [
     input_buttons,
-    _DataVariable('stick x', spec, VariableSemantics.RAW, '$state.gControllerPads[0].stick_x'),
-    _DataVariable('stick y', spec, VariableSemantics.RAW, '$state.gControllerPads[0].stick_y'),
+    _DataVariable('stick x', lib, VariableSemantics.RAW, '$state.gControllerPads[0].stick_x'),
+    _DataVariable('stick y', lib, VariableSemantics.RAW, '$state.gControllerPads[0].stick_y'),
     _FlagVariable('A', input_buttons, 'A_BUTTON'),
     _FlagVariable('B', input_buttons, 'B_BUTTON'),
     _FlagVariable('Z', input_buttons, 'Z_TRIG'),
     _FlagVariable('S', input_buttons, 'START_BUTTON'),
-    _DataVariable('global timer', spec, VariableSemantics.RAW, '$state.gGlobalTimer'),
-    _DataVariable('mario x', spec, VariableSemantics.POSITION, '$state.gMarioState[].pos[0]'),
-    _DataVariable('mario y', spec, VariableSemantics.POSITION, '$state.gMarioState[].pos[1]'),
-    _DataVariable('mario z', spec, VariableSemantics.POSITION, '$state.gMarioState[].pos[2]'),
-    _DataVariable('mario vel f', spec, VariableSemantics.RAW, '$state.gMarioState[].forwardVel'),
-    _DataVariable('mario vel x', spec, VariableSemantics.RAW, '$state.gMarioState[].vel[0]'),
-    _DataVariable('mario vel y', spec, VariableSemantics.RAW, '$state.gMarioState[].vel[1]'),
-    _DataVariable('mario vel z', spec, VariableSemantics.RAW, '$state.gMarioState[].vel[2]'),
+    _DataVariable('global timer', lib, VariableSemantics.RAW, '$state.gGlobalTimer'),
+    _DataVariable('mario x', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[0]'),
+    _DataVariable('mario y', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[1]'),
+    _DataVariable('mario z', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[2]'),
+    _DataVariable('mario vel f', lib, VariableSemantics.RAW, '$state.gMarioState[].forwardVel'),
+    _DataVariable('mario vel x', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[0]'),
+    _DataVariable('mario vel y', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[1]'),
+    _DataVariable('mario vel z', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[2]'),
 
-    _DataVariable('hitbox radius', spec, VariableSemantics.RAW, '$object.hitboxRadius'),
+    _DataVariable('hitbox radius', lib, VariableSemantics.RAW, '$object.hitboxRadius'),
   ]

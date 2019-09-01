@@ -8,11 +8,6 @@ def dcast(type_: Type[T], value: Any) -> T:
   return value
 
 
-def concrete_type(spec: dict, type_: dict) -> dict:
-  while type_['kind'] == 'symbol':
-    type_ = spec['types'][type_['namespace']][type_['name']]
-  return type_
-
 def align_up(value: int, align: int) -> int:
   while value % align != 0:
     value += 1
