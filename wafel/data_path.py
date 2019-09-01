@@ -97,9 +97,15 @@ class DataPath:
 
     elif self.concrete_type['kind'] == 'pointer':
       addr = C.cast(self.get_addr(args), C.POINTER(C.c_void_p))
+      value = int(addr[0] or 0)
+
       state = args[VariableParam.STATE]
-      # TODO: Handle null and (static) pointers outside the state
-      return int(addr[0]) - state.base_addr + state.addr
+      state_size = self.spec['types']['struct']['SM64State']['size']
+
+      if value < state.base_addr or value >= state.base_addr + state_size:
+        return value
+      else:
+        return value - state.base_addr + state.addr
 
     elif self.concrete_type['kind'] == 'array':
       assert self.concrete_type['length'] is not None
