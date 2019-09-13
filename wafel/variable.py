@@ -170,9 +170,13 @@ class _ObjectVariable(Variable):
     self.variable = variable
     self.object_id = object_id
 
+    self.object_pool_path = DataPath.parse(variable.lib, '$state.gObjectPool')
+    self.object_struct_size = self.lib.spec['types']['struct']['Object']['size']
+
   def _get_args(self, args: VariableArgs) -> VariableArgs:
-    object_path = '$state.gObjectPool[' + str(self.object_id) + ']'
-    object_addr = DataPath.parse(self.variable.lib, object_path).get_addr(args)
+    object_pool_index = self.object_id
+    object_addr = self.object_pool_path.get_addr(args) + \
+      object_pool_index * self.object_struct_size
 
     new_args = {
       VariableParam.OBJECT: Object(object_addr),
@@ -200,6 +204,7 @@ class Variables:
 
 def _all_variables(lib: GameLib) -> Variables:
   input_buttons = _DataVariable('buttons', lib, VariableSemantics.RAW, '$state.gControllerPads[0].button')
+  active_flags = _DataVariable('active flags', lib, VariableSemantics.RAW, '$object.activeFlags')
   return Variables([
     input_buttons,
     _DataVariable('stick x', lib, VariableSemantics.RAW, '$state.gControllerPads[0].stick_x'),
@@ -217,6 +222,7 @@ def _all_variables(lib: GameLib) -> Variables:
     _DataVariable('mario vel y', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[1]'),
     _DataVariable('mario vel z', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[2]'),
 
-    _DataVariable('hitbox radius', lib, VariableSemantics.RAW, '$object.hitboxRadius'),
+    # _DataVariable('hitbox radius', lib, VariableSemantics.RAW, '$object.hitboxRadius'),
     _DataVariable('behavior', lib, VariableSemantics.RAW, '$object.behaviorSeg'),
+    _FlagVariable('active', active_flags, 'ACTIVE_FLAG_ACTIVE'),
   ])

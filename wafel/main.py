@@ -173,21 +173,34 @@ class VariableExplorer(QTabWidget):
 
     tabs = {
       'Input': [],
-      'Mario': [],
+      'Misc': [],
     }
     for variable in self.model.variables:
       if variable.display_name in ['buttons', 'stick x', 'stick y', 'A', 'B', 'Z', 'S']:
         tabs['Input'].append(variable)
       else:
-        tabs['Mario'].append(variable)
+        if VariableParam.OBJECT not in variable.params:
+          tabs['Misc'].append(variable)
 
+    tabs['Mario'] = []
+    for variable in self.model.variables:
+      if VariableParam.OBJECT in variable.params:
+        tabs['Mario'].append(variable.at_object(96))
+
+    self.addTab(ObjectsTab(self.model, self), 'Objects')
     for tab_name, variables in tabs.items():
-      self.addTab(VariableTab(self.model, variables, self), tab_name)
+      self.addTab(VariableTab(self.model, variables, lambda: print('closed'), self), tab_name)
 
 
 class VariableTab(QWidget):
 
-  def __init__(self, model: Model, variables: List[Variable], parent=None):
+  def __init__(
+    self,
+    model: Model,
+    variables: List[Variable],
+    close_cb: Optional[Callable[[], None]],
+    parent=None
+  ) -> None:
     super().__init__(parent)
     self.model = model
     self.state = self.model.timeline.frame(self.model.selected_frame)
@@ -195,19 +208,17 @@ class VariableTab(QWidget):
     # self.setMinimumWidth(640)
     # self.setMinimumHeight(480)
 
-    self.variables = [
-      var for var in variables
-        if set(var.params).issubset({ VariableParam.STATE })
-    ]
-    self.variables += [
-      var.at_object(96)
-        for var in variables
-          if VariableParam.OBJECT in var.params
-    ]
+    self.variables = variables
 
     layout = QFormLayout()
     layout.setLabelAlignment(Qt.AlignRight)
     self.setLayout(layout)
+
+    if close_cb is not None:
+      close_button = QPushButton('Close tab')
+      close_button.setMaximumWidth(100)
+      close_button.clicked.connect(close_cb)
+      layout.addRow(close_button)
 
     var_widgets = {}
 
@@ -245,6 +256,46 @@ class VariableTab(QWidget):
 
         show_var(variable, editor)
 
+
+    self.state.on_change(update)
+    update()
+
+
+class ObjectsTab(QListWidget):
+
+  def __init__(self, model: Model, parent=None):
+    super().__init__(parent)
+    self.model = model
+    self.state = self.model.timeline.frame(self.model.selected_frame)
+
+    variables = [
+      {
+        'active': self.model.variables['active'].at_object(i),
+        'behavior': self.model.variables['behavior'].at_object(i),
+      }
+      for i in range(240)
+    ]
+
+    def update():
+      args = {
+        VariableParam.STATE: self.state.value,
+      }
+
+      for i in range(240):
+        active = variables[i]['active'].get(args)
+        if active:
+          behavior = variables[i]['behavior'].get(args)
+          label = self.model.lib.get_object_type(behavior).name
+        else:
+          label = None
+
+        text = str(i) + ': ' + (label or '')
+
+        item = self.item(i)
+        if item is None:
+          self.addItem(text)
+        else:
+          item.setText(text)
 
     self.state.on_change(update)
     update()
