@@ -172,6 +172,7 @@ class VariableExplorer(QTabWidget):
   def __init__(self, model: Model, parent=None):
     super().__init__(parent)
     self.model = model
+    self.state = self.model.timeline.frame(self.model.selected_frame)
 
     tab_bar = VerticalTabBar(self)
     self.setTabBar(tab_bar)
@@ -199,7 +200,7 @@ class VariableExplorer(QTabWidget):
     #     self.open_tabs[2].variables.append(variable.at_object(96))
 
     def update(select: Optional[int] = None) -> None:
-      for i, tab in enumerate(self.open_tabs):
+      for index, tab in enumerate(self.open_tabs):
         if tab.widget is None:
           if tab.name == 'Objects':
             def add_object_tab(object_id: ObjectId) -> None:
@@ -221,12 +222,26 @@ class VariableExplorer(QTabWidget):
               return close_tab
             tab.widget = VariableTab(self.model, [], get_close_tab(tab), self)
 
-          self.insertTab(i, tab.widget, tab.name)
+          self.insertTab(index, tab.widget, tab.name)
+
+        if tab.object_id is not None:
+          active = self.model.variables['active'].at_object(tab.object_id).get({
+            VariableParam.STATE: self.state.value
+          })
+          behavior = self.model.variables['behavior'].at_object(tab.object_id).get({
+            VariableParam.STATE: self.state.value
+          })
+          if active:
+            label = str(tab.object_id) + ': ' + self.model.lib.get_object_type(behavior).name
+          else:
+            label = str(tab.object_id)
+          self.setTabText(index, label)
 
       if select is not None:
         self.setCurrentIndex(select)
 
     update()
+    self.state.on_change(lambda: update())
 
 
 class VariableTab(QWidget):
