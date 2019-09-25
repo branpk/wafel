@@ -8,6 +8,45 @@ from wafel.game_state import ObjectId, Object, GameState
 from wafel.game_lib import GameLib
 
 
+class ObjectSet:
+  @staticmethod
+  def all() -> 'ObjectSet':
+    return ObjectSet(None)
+
+  @staticmethod
+  def of(name: str) -> 'ObjectSet':
+    return ObjectSet([name])
+
+  def __init__(self, names: Optional[List[str]]) -> None:
+    self.names = names
+
+
+class VariableGroup:
+  @staticmethod
+  def hidden() -> 'VariableGroup':
+    return VariableGroup('_hidden')
+
+  @staticmethod
+  def objects(names: Optional[List[str]] = None) -> 'VariableGroup':
+    if names is None:
+      return VariableGroup('_objects', ObjectSet.all())
+    else:
+      return VariableGroup('_objects', ObjectSet(names))
+
+  @staticmethod
+  def object(name: str) -> 'VariableGroup':
+    return VariableGroup('_objects', ObjectSet.of(name))
+
+  def __init__(self, name: str, object_set: Optional[ObjectSet] = None) -> None:
+    self.name = name
+    self.object_set = object_set
+
+  def __eq__(self, other) -> bool:
+    if not isinstance(other, VariableGroup):
+      return False
+    return self.name == other.name and self.object_set == other.object_set
+
+
 class VariableSemantics(Enum):
   RAW = auto()
   POSITION = auto()
@@ -66,6 +105,7 @@ class Variable:
 
   def __init__(
     self,
+    group: VariableGroup,
     display_name: str,
     lib: GameLib,
     params: List[VariableParam],
@@ -73,6 +113,7 @@ class Variable:
     read_only: bool,
     data_type: VariableDataType,
   ) -> None:
+    self.group = group
     self.display_name = display_name
     self.lib = lib
     self.params = params
@@ -96,6 +137,7 @@ class Variable:
 class _DataVariable(Variable):
   def __init__(
     self,
+    group: VariableGroup,
     display_name: str,
     lib: GameLib,
     semantics: VariableSemantics,
@@ -104,6 +146,7 @@ class _DataVariable(Variable):
   ) -> None:
     self.path = DataPath.parse(lib, path)
     super().__init__(
+      group,
       display_name,
       lib,
       self.path.params,
@@ -123,12 +166,14 @@ class _DataVariable(Variable):
 class _FlagVariable(Variable):
   def __init__(
     self,
+    group: VariableGroup,
     display_name: str,
     flags: Variable,
     flag: str,
     read_only: bool = False
   ) -> None:
     super().__init__(
+      group,
       display_name,
       flags.lib,
       flags.params,
@@ -159,6 +204,7 @@ class _ObjectVariable(Variable):
       params.append(VariableParam.STATE)
 
     super().__init__(
+      variable.group,
       variable.display_name,
       variable.lib,
       params,
@@ -203,26 +249,26 @@ class Variables:
 
 
 def _all_variables(lib: GameLib) -> Variables:
-  input_buttons = _DataVariable('buttons', lib, VariableSemantics.RAW, '$state.gControllerPads[0].button')
-  active_flags = _DataVariable('active flags', lib, VariableSemantics.RAW, '$object.activeFlags')
+  input_buttons = _DataVariable(VariableGroup.hidden(), 'buttons', lib, VariableSemantics.RAW, '$state.gControllerPads[0].button')
+  active_flags = _DataVariable(VariableGroup.hidden(), 'active flags', lib, VariableSemantics.RAW, '$object.activeFlags')
   return Variables([
     input_buttons,
-    _DataVariable('stick x', lib, VariableSemantics.RAW, '$state.gControllerPads[0].stick_x'),
-    _DataVariable('stick y', lib, VariableSemantics.RAW, '$state.gControllerPads[0].stick_y'),
-    _FlagVariable('A', input_buttons, 'A_BUTTON'),
-    _FlagVariable('B', input_buttons, 'B_BUTTON'),
-    _FlagVariable('Z', input_buttons, 'Z_TRIG'),
-    _FlagVariable('S', input_buttons, 'START_BUTTON'),
-    _DataVariable('global timer', lib, VariableSemantics.RAW, '$state.gGlobalTimer'),
-    _DataVariable('mario x', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[0]'),
-    _DataVariable('mario y', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[1]'),
-    _DataVariable('mario z', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[2]'),
-    _DataVariable('mario vel f', lib, VariableSemantics.RAW, '$state.gMarioState[].forwardVel'),
-    _DataVariable('mario vel x', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[0]'),
-    _DataVariable('mario vel y', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[1]'),
-    _DataVariable('mario vel z', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[2]'),
+    _DataVariable(VariableGroup('Input'), 'stick x', lib, VariableSemantics.RAW, '$state.gControllerPads[0].stick_x'),
+    _DataVariable(VariableGroup('Input'), 'stick y', lib, VariableSemantics.RAW, '$state.gControllerPads[0].stick_y'),
+    _FlagVariable(VariableGroup('Input'), 'A', input_buttons, 'A_BUTTON'),
+    _FlagVariable(VariableGroup('Input'), 'B', input_buttons, 'B_BUTTON'),
+    _FlagVariable(VariableGroup('Input'), 'Z', input_buttons, 'Z_TRIG'),
+    _FlagVariable(VariableGroup('Input'), 'S', input_buttons, 'START_BUTTON'),
+    _DataVariable(VariableGroup('Misc'), 'global timer', lib, VariableSemantics.RAW, '$state.gGlobalTimer'),
+    _DataVariable(VariableGroup.object('Mario'), 'mario x', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[0]'),
+    _DataVariable(VariableGroup.object('Mario'), 'mario y', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[1]'),
+    _DataVariable(VariableGroup.object('Mario'), 'mario z', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[2]'),
+    _DataVariable(VariableGroup.object('Mario'), 'mario vel f', lib, VariableSemantics.RAW, '$state.gMarioState[].forwardVel'),
+    _DataVariable(VariableGroup.object('Mario'), 'mario vel x', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[0]'),
+    _DataVariable(VariableGroup.object('Mario'), 'mario vel y', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[1]'),
+    _DataVariable(VariableGroup.object('Mario'), 'mario vel z', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[2]'),
 
     # _DataVariable('hitbox radius', lib, VariableSemantics.RAW, '$object.hitboxRadius'),
-    _DataVariable('behavior', lib, VariableSemantics.RAW, '$object.behaviorSeg'),
-    _FlagVariable('active', active_flags, 'ACTIVE_FLAG_ACTIVE'),
+    _DataVariable(VariableGroup.objects(), 'behavior', lib, VariableSemantics.RAW, '$object.behaviorSeg'),
+    _FlagVariable(VariableGroup.objects(), 'active', active_flags, 'ACTIVE_FLAG_ACTIVE'),
   ])
