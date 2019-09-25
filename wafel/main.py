@@ -159,6 +159,14 @@ class VerticalTabBar(QTabBar):
       painter.restore()
 
 
+class ExplorerTab:
+
+  def __init__(self, name: str, object_id: Optional[ObjectId] = None) -> None:
+    self.name = name
+    self.object_id = object_id
+    self.widget: Optional[QWidget] = None
+
+
 class VariableExplorer(QTabWidget):
 
   def __init__(self, model: Model, parent=None):
@@ -171,25 +179,54 @@ class VariableExplorer(QTabWidget):
 
     self.setMaximumHeight(300)
 
-    tabs = {
-      'Input': [],
-      'Misc': [],
-    }
-    for variable in self.model.variables:
-      if variable.display_name in ['buttons', 'stick x', 'stick y', 'A', 'B', 'Z', 'S']:
-        tabs['Input'].append(variable)
-      else:
-        if VariableParam.OBJECT not in variable.params:
-          tabs['Misc'].append(variable)
+    self.open_tabs = [
+      ExplorerTab('Input'),
+      ExplorerTab('Misc'),
+      ExplorerTab('Mario'),
+      ExplorerTab('Objects'),
+    ]
 
-    tabs['Mario'] = []
-    for variable in self.model.variables:
-      if VariableParam.OBJECT in variable.params:
-        tabs['Mario'].append(variable.at_object(96))
+    # self.open_object_ids = ReactiveValue((1, 2, 3))
+    # self.open_object_tabs
 
-    self.addTab(ObjectsTab(self.model, self), 'Objects')
-    for tab_name, variables in tabs.items():
-      self.addTab(VariableTab(self.model, variables, lambda: print('closed'), self), tab_name)
+    # for variable in self.model.variables:
+    #   if variable.display_name in ['buttons', 'stick x', 'stick y', 'A', 'B', 'Z', 'S']:
+    #     self.open_tabs[0].variables.append(variable)
+    #   elif VariableParam.OBJECT not in variable.params:
+    #     self.open_tabs[1].variables.append(variable)
+    # for variable in self.model.variables:
+    #   if VariableParam.OBJECT in variable.params:
+    #     self.open_tabs[2].variables.append(variable.at_object(96))
+
+    def update(select: Optional[int] = None) -> None:
+      for i, tab in enumerate(self.open_tabs):
+        if tab.widget is None:
+          if tab.name == 'Objects':
+            def add_object_tab(object_id: ObjectId) -> None:
+              index = ([i for i, tab in enumerate(self.open_tabs) if tab.object_id == object_id] or [None])[0]
+              if index is not None:
+                self.setCurrentIndex(index)
+                return
+
+              self.open_tabs.append(ExplorerTab(str(object_id), object_id))
+              update(len(self.open_tabs) - 1) # TODO: Can make this reactive (open_object_ids etc)
+
+            tab.widget = ObjectsTab(self.model, add_object_tab, self)
+          else:
+            def get_close_tab(tab: ExplorerTab) -> Callable[[], None]:
+              def close_tab() -> None:
+                index = self.open_tabs.index(tab)
+                del self.open_tabs[index]
+                self.removeTab(index)
+              return close_tab
+            tab.widget = VariableTab(self.model, [], get_close_tab(tab), self)
+
+          self.insertTab(i, tab.widget, tab.name)
+
+      if select is not None:
+        self.setCurrentIndex(select)
+
+    update()
 
 
 class VariableTab(QWidget):
@@ -350,7 +387,7 @@ class FlowLayout(QLayout):
 
 class ObjectsTab(QScrollArea):
 
-  def __init__(self, model: Model, parent=None):
+  def __init__(self, model: Model, open_object_tab: Callable[[ObjectId], None], parent=None):
     super().__init__(parent)
     self.model = model
     self.state = self.model.timeline.frame(self.model.selected_frame)
@@ -360,6 +397,7 @@ class ObjectsTab(QScrollArea):
     for i in range(240):
       button = QPushButton(str(i + 1), self)
       button.setFixedSize(50, 50)
+      button.clicked.connect((lambda id: lambda: open_object_tab(id))(i))
       self.objects_layout.addWidget(button)
 
     objects_widget = QWidget()
