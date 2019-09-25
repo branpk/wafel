@@ -261,12 +261,112 @@ class VariableTab(QWidget):
     update()
 
 
-class ObjectsTab(QListWidget):
+class FlowLayout(QLayout):
+  """From https://doc.qt.io/qt-5/qtwidgets-layouts-flowlayout-example.html"""
+
+  def __init__(self, margin, spacing, parent=None):
+    super().__init__(parent)
+    self.spacing = spacing
+    self.items = []
+
+    self.setContentsMargins(margin, margin, margin, margin)
+
+  def addItem(self, item):
+    self.items.append(item)
+
+  # def horizontalSpacing(self):
+  #   return self.spacing
+
+  # def verticalSpacing(self):
+  #   return self.spacing
+
+  def count(self):
+    return len(self.items)
+
+  def itemAt(self, index):
+    if index not in range(len(self.items)):
+      return None
+    return self.items[index]
+
+  def takeAt(self, index):
+    if index not in range(len(self.items)):
+      return None
+    item = self.items[index]
+    del self.items[index]
+    return item
+
+  def expandingDirections(self):
+    return Qt.Vertical
+
+  def hasHeightForWidth(self):
+    return True
+
+  def heightForWidth(self, width):
+    height = self.do_layout(QRect(0, 0, width, 0), True)
+    return height
+
+  def setGeometry(self, rect):
+    super().setGeometry(rect)
+    self.do_layout(rect, False)
+
+  def sizeHint(self):
+    return self.minimumSize()
+
+  def minimumSize(self):
+    size = QSize(0, 0)
+    for item in self.items:
+      size = size.expandedTo(item.minimumSize())
+
+    margins = self.contentsMargins()
+    size += QSize(margins.left() + margins.right(), margins.top() + margins.bottom())
+    return size
+
+  def do_layout(self, rect, test_only):
+    margins = self.contentsMargins()
+    effective_rect = rect.adjusted(margins.left(), margins.top(), -margins.right(), -margins.bottom())
+
+    x = effective_rect.x()
+    y = effective_rect.y()
+    line_height = 0
+
+    for item in self.items:
+      widget = item.widget()
+
+      next_x = x + item.sizeHint().width() + self.spacing
+      if next_x - self.spacing > effective_rect.right() and line_height > 0:
+        x = effective_rect.x()
+        y = y + line_height + self.spacing
+        next_x = x + item.sizeHint().width() + self.spacing
+        line_height = 0
+
+      if not test_only:
+        item.setGeometry(QRect(QPoint(x, y), item.sizeHint()))
+
+      x = next_x
+      line_height = max(line_height, item.sizeHint().height())
+
+    return y + line_height - rect.y() + margins.bottom()
+
+
+class ObjectsTab(QScrollArea):
 
   def __init__(self, model: Model, parent=None):
     super().__init__(parent)
     self.model = model
     self.state = self.model.timeline.frame(self.model.selected_frame)
+
+    self.objects_layout = FlowLayout(10, 5, self)
+
+    for i in range(240):
+      button = QPushButton(str(i + 1), self)
+      button.setFixedSize(50, 50)
+      self.objects_layout.addWidget(button)
+
+    objects_widget = QWidget()
+    objects_widget.setLayout(self.objects_layout)
+
+    self.setWidget(objects_widget)
+    self.setWidgetResizable(True)
 
     variables = [
       {
@@ -289,13 +389,10 @@ class ObjectsTab(QListWidget):
         else:
           label = None
 
-        text = str(i) + ': ' + (label or '')
+        text = str(i) + '\n' + (label or '')
 
-        item = self.item(i)
-        if item is None:
-          self.addItem(text)
-        else:
-          item.setText(text)
+        item = self.objects_layout.itemAt(i)
+        item.widget().setText(text)
 
     self.state.on_change(update)
     update()
