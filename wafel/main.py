@@ -213,6 +213,8 @@ class VariableExplorer(QTabWidget):
 
     self.state.on_change(self.update_tabs)
 
+    self.setCurrentIndex(0)
+
   def open_tab(self, tab: ExplorerTabKey) -> None:
     if tab in self.open_tabs:
       index = self.open_tabs.index(tab)
@@ -275,17 +277,11 @@ class VariableTab(QWidget):
 
     self.variables = self.state.map(self.get_variables)
 
-    layout = QFormLayout(self)
-    layout.setLabelAlignment(Qt.AlignRight)
+    layout = FlowLayout(10, 5, Qt.Vertical, self)
     self.setLayout(layout)
 
-    if close_tab is not None:
-      close_button = QPushButton('Close tab')
-      close_button.setMaximumWidth(100)
-      close_button.clicked.connect(close_tab)
-      layout.addRow(close_button)
-
-    var_widgets = {}
+    # TODO: Change to id/something
+    # var_editors: Dict[str, QLineEdit] = {}
 
     def show_var(variable: Variable, editor):
       # TODO: Remove str after handling checkboxes
@@ -295,13 +291,19 @@ class VariableTab(QWidget):
       editor.setCursorPosition(0)
 
     def update():
-      nonlocal var_widgets
-      for widget in var_widgets.values():
-        layout.removeRow(widget)
-      var_widgets = {}
+      # TODO: Only recreate on behavior change
+      while layout.count() > 0:
+        item = layout.takeAt(0)
+        item.widget().setParent(None)
+
+      # if close_tab is not None:
+      #   close_button = QPushButton('Close tab')
+      #   close_button.setMaximumWidth(100)
+      #   close_button.clicked.connect(close_tab)
+      #   layout.addWidget(close_button)
 
       for variable in self.variables.value:
-        editor = var_widgets.get(variable)
+        editor = None#var_widgets.get(variable.display_name)
 
         if editor is None:
           editor = QLineEdit()
@@ -321,11 +323,23 @@ class VariableTab(QWidget):
 
           editor.editingFinished.connect(edit_func(variable, editor))
 
-          layout.addRow(QLabel(variable.display_name), editor)
-          var_widgets[variable] = editor
+        label = QLabel(variable.display_name)
+        label.setFixedWidth(80)
+        # label.setFixedHeight(10)
+        label.setAlignment(Qt.AlignRight)
+
+        var_layout = QHBoxLayout()
+        var_layout.setContentsMargins(0, 0, 0, 0)
+        var_layout.addWidget(label)
+        var_layout.addWidget(editor)
+
+        var_widget = QWidget()
+        var_widget.setLayout(var_layout)
+
+        layout.addWidget(var_widget)
+        # var_widgets[variable.display_name] = editor
 
         show_var(variable, editor)
-
 
     self.state.on_change(update)
     update()
@@ -347,21 +361,16 @@ class VariableTab(QWidget):
 class FlowLayout(QLayout):
   """From https://doc.qt.io/qt-5/qtwidgets-layouts-flowlayout-example.html"""
 
-  def __init__(self, margin, spacing, parent=None):
+  def __init__(self, margin, spacing, orientation, parent=None):
     super().__init__(parent)
     self.spacing = spacing
     self.items = []
+    self.orientation = orientation
 
     self.setContentsMargins(margin, margin, margin, margin)
 
   def addItem(self, item):
     self.items.append(item)
-
-  # def horizontalSpacing(self):
-  #   return self.spacing
-
-  # def verticalSpacing(self):
-  #   return self.spacing
 
   def count(self):
     return len(self.items)
@@ -379,10 +388,13 @@ class FlowLayout(QLayout):
     return item
 
   def expandingDirections(self):
-    return Qt.Vertical
+    return {
+      Qt.Vertical: Qt.Horizontal,
+      Q.Horizontal: Qt.Vertical,
+    }[self.orientation]
 
   def hasHeightForWidth(self):
-    return True
+    return self.orientation == Qt.Horizontal
 
   def heightForWidth(self, width):
     height = self.do_layout(QRect(0, 0, width, 0), True)
@@ -410,25 +422,41 @@ class FlowLayout(QLayout):
 
     x = effective_rect.x()
     y = effective_rect.y()
-    line_height = 0
+    line_size = 0
 
-    for item in self.items:
-      widget = item.widget()
-
-      next_x = x + item.sizeHint().width() + self.spacing
-      if next_x - self.spacing > effective_rect.right() and line_height > 0:
-        x = effective_rect.x()
-        y = y + line_height + self.spacing
+    if self.orientation == Qt.Horizontal:
+      for item in self.items:
         next_x = x + item.sizeHint().width() + self.spacing
-        line_height = 0
+        if next_x - self.spacing > effective_rect.right() and line_size > 0:
+          x = effective_rect.x()
+          y = y + line_size + self.spacing
+          next_x = x + item.sizeHint().width() + self.spacing
+          line_size = 0
 
-      if not test_only:
-        item.setGeometry(QRect(QPoint(x, y), item.sizeHint()))
+        if not test_only:
+          item.setGeometry(QRect(QPoint(x, y), item.sizeHint()))
 
-      x = next_x
-      line_height = max(line_height, item.sizeHint().height())
+        x = next_x
+        line_size = max(line_size, item.sizeHint().height())
 
-    return y + line_height - rect.y() + margins.bottom()
+      return y + line_size - rect.y() + margins.bottom()
+
+    else:
+      for item in self.items:
+        next_y = y + item.sizeHint().height() + self.spacing
+        if next_y - self.spacing > effective_rect.bottom() and line_size > 0:
+          y = effective_rect.y()
+          x = x + line_size + self.spacing
+          next_y = y + item.sizeHint().height() + self.spacing
+          line_size = 0
+
+        if not test_only:
+          item.setGeometry(QRect(QPoint(x, y), item.sizeHint()))
+
+        y = next_y
+        line_size = max(line_size, item.sizeHint().width())
+
+      return x + line_size - rect.x() + margins.right()
 
 
 class ObjectsTab(QScrollArea):
@@ -438,7 +466,7 @@ class ObjectsTab(QScrollArea):
     self.model = model
     self.state = self.model.timeline.frame(self.model.selected_frame)
 
-    self.objects_layout = FlowLayout(10, 5, self)
+    self.objects_layout = FlowLayout(10, 5, Qt.Horizontal, self)
 
     for i in range(240):
       button = QPushButton(str(i + 1), self)

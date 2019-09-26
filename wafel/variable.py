@@ -298,6 +298,6 @@ def _all_variables(lib: GameLib) -> Variables:
     _DataVariable(VariableGroup.object('Mario'), 'mario vel z', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[2]'),
 
     _DataVariable(VariableGroup.objects(), 'hitbox radius', lib, VariableSemantics.RAW, '$object.hitboxRadius'),
-    _DataVariable(VariableGroup.objects(), 'behavior', lib, VariableSemantics.RAW, '$object.behaviorSeg'),
+    _DataVariable(VariableGroup.hidden(), 'behavior', lib, VariableSemantics.RAW, '$object.behaviorSeg'),
     _FlagVariable(VariableGroup.objects(), 'active', active_flags, 'ACTIVE_FLAG_ACTIVE'),
   ])
