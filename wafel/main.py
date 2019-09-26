@@ -19,6 +19,7 @@ from wafel.data_path import DataPath
 from wafel.variable import *
 from wafel.variable_format import Formatters, VariableFormatter
 from wafel.game_lib import GameLib
+from wafel.object_type import ObjectType
 
 
 class Model:
@@ -159,12 +160,32 @@ class VerticalTabBar(QTabBar):
       painter.restore()
 
 
-class ExplorerTab:
+class ExplorerTabKey:
 
   def __init__(self, name: str, object_id: Optional[ObjectId] = None) -> None:
     self.name = name
     self.object_id = object_id
-    self.widget: Optional[QWidget] = None
+
+  def __eq__(self, other: object) -> bool:
+    if not isinstance(other, ExplorerTabKey):
+      return False
+    return self.name == other.name and self.object_id == other.object_id
+
+  def __hash__(self) -> int:
+    return hash((self.name, self.object_id))
+
+
+def get_object_type(model: Model, state: GameState, object_id: ObjectId) -> Optional[ObjectType]:
+  active = model.variables['active'].at_object(object_id).get({
+    VariableParam.STATE: state,
+  })
+  if not active:
+    return None
+
+  behavior = model.variables['behavior'].at_object(object_id).get({
+    VariableParam.STATE: state,
+  })
+  return model.lib.get_object_type(behavior)
 
 
 class VariableExplorer(QTabWidget):
@@ -180,68 +201,59 @@ class VariableExplorer(QTabWidget):
 
     self.setMaximumHeight(300)
 
-    self.open_tabs = [
-      ExplorerTab('Input'),
-      ExplorerTab('Misc'),
-      ExplorerTab('Mario'),
-      ExplorerTab('Objects'),
+    self.open_tabs: List[ExplorerTabKey] = []
+
+    fixed_tabs = [
+      ExplorerTabKey('Input'),
+      ExplorerTabKey('Misc'),
+      ExplorerTabKey('Objects'),
     ]
+    for tab in fixed_tabs:
+      self.open_tab(tab)
 
-    # self.open_object_ids = ReactiveValue((1, 2, 3))
-    # self.open_object_tabs
+    self.state.on_change(self.update_tabs)
 
-    # for variable in self.model.variables:
-    #   if variable.display_name in ['buttons', 'stick x', 'stick y', 'A', 'B', 'Z', 'S']:
-    #     self.open_tabs[0].variables.append(variable)
-    #   elif VariableParam.OBJECT not in variable.params:
-    #     self.open_tabs[1].variables.append(variable)
-    # for variable in self.model.variables:
-    #   if VariableParam.OBJECT in variable.params:
-    #     self.open_tabs[2].variables.append(variable.at_object(96))
+  def open_tab(self, tab: ExplorerTabKey) -> None:
+    if tab in self.open_tabs:
+      index = self.open_tabs.index(tab)
+    else:
+      index = len(self.open_tabs)
+      self.addTab(self.create_tab_widget(tab), self.get_tab_name(tab))
+      self.open_tabs.append(tab)
+    self.setCurrentIndex(index)
 
-    def update(select: Optional[int] = None) -> None:
-      for index, tab in enumerate(self.open_tabs):
-        if tab.widget is None:
-          if tab.name == 'Objects':
-            def add_object_tab(object_id: ObjectId) -> None:
-              index = ([i for i, tab in enumerate(self.open_tabs) if tab.object_id == object_id] or [None])[0]
-              if index is not None:
-                self.setCurrentIndex(index)
-                return
+  def close_tab(self, tab: ExplorerTabKey) -> None:
+    if tab in self.open_tabs:
+      index = self.open_tabs.index(tab)
+      self.removeTab(index)
+      del self.open_tabs[index]
 
-              self.open_tabs.append(ExplorerTab(str(object_id), object_id))
-              update(len(self.open_tabs) - 1) # TODO: Can make this reactive (open_object_ids etc)
+  def update_tabs(self) -> None:
+    for index, tab in enumerate(self.open_tabs):
+      self.setTabText(index, self.get_tab_name(tab))
 
-            tab.widget = ObjectsTab(self.model, add_object_tab, self)
-          else:
-            def get_close_tab(tab: ExplorerTab) -> Callable[[], None]:
-              def close_tab() -> None:
-                index = self.open_tabs.index(tab)
-                del self.open_tabs[index]
-                self.removeTab(index)
-              return close_tab
-            tab.widget = VariableTab(self.model, [], get_close_tab(tab), self)
+  def get_tab_name(self, tab: ExplorerTabKey) -> str:
+    if tab.object_id is not None:
+      object_type = get_object_type(self.model, self.state.value, tab.object_id)
+      if object_type is None:
+        return str(tab.object_id)
+      else:
+        return str(tab.object_id) + ': ' + object_type.name
 
-          self.insertTab(index, tab.widget, tab.name)
+    return tab.name
 
-        if tab.object_id is not None:
-          active = self.model.variables['active'].at_object(tab.object_id).get({
-            VariableParam.STATE: self.state.value
-          })
-          behavior = self.model.variables['behavior'].at_object(tab.object_id).get({
-            VariableParam.STATE: self.state.value
-          })
-          if active:
-            label = str(tab.object_id) + ': ' + self.model.lib.get_object_type(behavior).name
-          else:
-            label = str(tab.object_id)
-          self.setTabText(index, label)
+  def create_tab_widget(self, tab: ExplorerTabKey) -> QWidget:
+    if tab.name == 'Objects':
+      def open_object_tab(object_id: ObjectId) -> None:
+        self.open_tab(ExplorerTabKey('_object', object_id))
+      return ObjectsTab(self.model, open_object_tab, self)
 
-      if select is not None:
-        self.setCurrentIndex(select)
+    if tab.object_id is None:
+      close_tab = None
+    else:
+      close_tab = lambda: self.close_tab(tab)
 
-    update()
-    self.state.on_change(lambda: update())
+    return VariableTab(self.model, tab, close_tab, self)
 
 
 class VariableTab(QWidget):
@@ -249,27 +261,28 @@ class VariableTab(QWidget):
   def __init__(
     self,
     model: Model,
-    variables: List[Variable],
-    close_cb: Optional[Callable[[], None]],
+    tab: ExplorerTabKey,
+    close_tab: Optional[Callable[[], None]],
     parent=None
   ) -> None:
     super().__init__(parent)
     self.model = model
     self.state = self.model.timeline.frame(self.model.selected_frame)
+    self.tab = tab
 
     # self.setMinimumWidth(640)
     # self.setMinimumHeight(480)
 
-    self.variables = variables
+    self.variables = self.state.map(self.get_variables)
 
-    layout = QFormLayout()
+    layout = QFormLayout(self)
     layout.setLabelAlignment(Qt.AlignRight)
     self.setLayout(layout)
 
-    if close_cb is not None:
+    if close_tab is not None:
       close_button = QPushButton('Close tab')
       close_button.setMaximumWidth(100)
-      close_button.clicked.connect(close_cb)
+      close_button.clicked.connect(close_tab)
       layout.addRow(close_button)
 
     var_widgets = {}
@@ -282,7 +295,12 @@ class VariableTab(QWidget):
       editor.setCursorPosition(0)
 
     def update():
-      for variable in self.variables:
+      nonlocal var_widgets
+      for widget in var_widgets.values():
+        layout.removeRow(widget)
+      var_widgets = {}
+
+      for variable in self.variables.value:
         editor = var_widgets.get(variable)
 
         if editor is None:
@@ -311,6 +329,19 @@ class VariableTab(QWidget):
 
     self.state.on_change(update)
     update()
+
+  def get_variables(self, state: GameState) -> List[Variable]:
+    if self.tab.object_id is None:
+      return self.model.variables.group(VariableGroup(self.tab.name))
+
+    object_type = get_object_type(self.model, state, self.tab.object_id)
+    if object_type is None:
+      return []
+
+    return [
+      var.at_object(self.tab.object_id)
+        for var in self.model.variables.group(VariableGroup.object(object_type.name))
+    ]
 
 
 class FlowLayout(QLayout):

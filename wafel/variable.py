@@ -6,6 +6,7 @@ from wafel.variable_param import *
 from wafel.data_path import DataPath
 from wafel.game_state import ObjectId, Object, GameState
 from wafel.game_lib import GameLib
+from wafel.object_type import ObjectType
 
 
 class ObjectSet:
@@ -15,10 +16,23 @@ class ObjectSet:
 
   @staticmethod
   def of(name: str) -> 'ObjectSet':
-    return ObjectSet([name])
+    return ObjectSet({name})
 
-  def __init__(self, names: Optional[List[str]]) -> None:
+  def __init__(self, names: Optional[Set[str]]) -> None:
     self.names = names
+
+  def __contains__(self, object_type: ObjectType) -> bool:
+    if self.names is None:
+      return True
+    else:
+      return object_type.name in self.names
+
+  def contains(self, other: 'ObjectSet') -> bool:
+    if self.names is None:
+      return True
+    elif other.names is None:
+      return False
+    return other.names.issubset(self.names)
 
 
 class VariableGroup:
@@ -27,24 +41,36 @@ class VariableGroup:
     return VariableGroup('_hidden')
 
   @staticmethod
-  def objects(names: Optional[List[str]] = None) -> 'VariableGroup':
+  def objects(names: Optional[Set[str]] = None) -> 'VariableGroup':
     if names is None:
-      return VariableGroup('_objects', ObjectSet.all())
+      return VariableGroup('_object', ObjectSet.all())
     else:
-      return VariableGroup('_objects', ObjectSet(names))
+      return VariableGroup('_object', ObjectSet(names))
 
   @staticmethod
   def object(name: str) -> 'VariableGroup':
-    return VariableGroup('_objects', ObjectSet.of(name))
+    return VariableGroup('_object', ObjectSet.of(name))
 
   def __init__(self, name: str, object_set: Optional[ObjectSet] = None) -> None:
     self.name = name
     self.object_set = object_set
+    assert (self.object_set is not None) == (self.name == '_object')
 
   def __eq__(self, other) -> bool:
     if not isinstance(other, VariableGroup):
       return False
     return self.name == other.name and self.object_set == other.object_set
+
+  def contains(self, other: 'VariableGroup') -> bool:
+    if self.name != other.name:
+      return False
+
+    if self.object_set is not None:
+      assert other.object_set is not None
+      return self.object_set.contains(other.object_set)
+    else:
+      assert other.object_set is None
+      return True
 
 
 class VariableSemantics(Enum):
@@ -247,6 +273,9 @@ class Variables:
   def __getitem__(self, name: str) -> Variable:
     return [var for var in self.variables if var.display_name == name][0]
 
+  def group(self, group: VariableGroup) -> List[Variable]:
+    return [var for var in self if var.group.contains(group)]
+
 
 def _all_variables(lib: GameLib) -> Variables:
   input_buttons = _DataVariable(VariableGroup.hidden(), 'buttons', lib, VariableSemantics.RAW, '$state.gControllerPads[0].button')
@@ -268,7 +297,7 @@ def _all_variables(lib: GameLib) -> Variables:
     _DataVariable(VariableGroup.object('Mario'), 'mario vel y', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[1]'),
     _DataVariable(VariableGroup.object('Mario'), 'mario vel z', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[2]'),
 
-    # _DataVariable('hitbox radius', lib, VariableSemantics.RAW, '$object.hitboxRadius'),
+    _DataVariable(VariableGroup.objects(), 'hitbox radius', lib, VariableSemantics.RAW, '$object.hitboxRadius'),
     _DataVariable(VariableGroup.objects(), 'behavior', lib, VariableSemantics.RAW, '$object.behaviorSeg'),
     _FlagVariable(VariableGroup.objects(), 'active', active_flags, 'ACTIVE_FLAG_ACTIVE'),
   ])
