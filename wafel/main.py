@@ -87,15 +87,23 @@ class Window(QWidget):
       self.model.selected_frame.value = 107775
 
 
+class FrameSheetColumn:
+  def __init__(
+    self,
+    variable: Variable,
+    object_type: Optional[ObjectType] = None,
+  ) -> None:
+    self.variable = variable
+    # TODO: Semantics object ids should make object_type unnecessary
+    self.object_type = object_type
+
+
 class FrameSheet(QAbstractTableModel):
 
   def __init__(self, model: Model) -> None:
     super().__init__()
     self.model = model
-    self.variables: List[Variable] = [
-      var for var in self.model.variables
-        if set(var.params).issubset({ VariableParam.STATE })
-    ][:3]
+    self.columns: List[FrameSheetColumn] = []
 
     self.model.edits.latest_edited_frame.on_change(lambda:
       self.dataChanged.emit(
@@ -105,63 +113,97 @@ class FrameSheet(QAbstractTableModel):
     )
 
     self.header_state = self.model.timeline.frame(self.model.selected_frame)
-    self.header_labels: Dict[int, str] = {}
-    self.header_state.on_change(self.refresh_headers)
+    # self.header_labels: Dict[int, str] = {}
+    # self.header_state.on_change(self.refresh_headers)
 
-  def add_variable(self, variable: Variable) -> None:
+  def add_variable(self, variable: Variable, state: GameState) -> None:
     index = self.columnCount()
     self.beginInsertColumns(QModelIndex(), index, index)
-    self.variables.append(variable)
+    self.columns.append(self.column_for_variable(variable, state))
     self.endInsertColumns()
+
+  def column_for_variable(self, variable: Variable, state: GameState) -> FrameSheetColumn:
+    object_id = variable.get_object_id()
+    if object_id is None:
+      return FrameSheetColumn(variable)
+    else:
+      return FrameSheetColumn(variable, get_object_type(self.model, state, object_id))
 
   def remove_variable_index(self, index: int) -> None:
     self.beginRemoveColumns(QModelIndex(), index, index)
-    del self.variables[index]
+    del self.columns[index]
     self.endRemoveColumns()
 
   def rowCount(self, parent=None) -> int:
     return len(self.model.timeline)
 
   def columnCount(self, parent=None) -> int:
-    return len(self.variables)
+    return len(self.columns)
 
   def headerData(self, section, orientation, role=Qt.DisplayRole):
     if role == Qt.DisplayRole:
       if orientation == Qt.Horizontal:
-        label = self.get_header_label(self.variables[section])
-        self.header_labels[section] = label
+        label = self.get_header_label(self.columns[section])
+        # self.header_labels[section] = label
         return label
       else:
         return str(section)
 
-  def get_header_label(self, variable: Variable) -> str:
-    object_id = variable.get_object()
+  def get_header_label(self, column: FrameSheetColumn) -> str:
+    variable = column.variable
+    object_id = variable.get_object_id()
+
     if object_id is None:
       return variable.display_name
 
-    object_type = get_object_type(self.model, self.header_state.value, object_id)
-    if object_type is None:
+    if column.object_type is None:
       return str(object_id) + '\n' + variable.display_name
 
-    return str(object_id) + ': ' + object_type.name + '\n' + variable.display_name
+    return str(object_id) + ' - ' + column.object_type.name + '\n' + variable.display_name
 
-  def refresh_headers(self) -> None:
-    for i in range(self.columnCount()):
-      label = self.get_header_label(self.variables[i])
-      if label != self.header_labels.get(i):
-        self.headerDataChanged.emit(Qt.Horizontal, i, i)
+  # def refresh_headers(self) -> None:
+  #   for i in range(self.columnCount()):
+  #     label = self.get_header_label(self.variables[i])
+  #     if label != self.header_labels.get(i):
+  #       self.headerDataChanged.emit(Qt.Horizontal, i, i)
 
   def flags(self, index):
-    # TODO: Grey out cells when object id for variable isn't current
-    variable = self.variables[index.column()]
+    column = self.columns[index.column()]
+    variable = column.variable
+
+    # object_id = variable.get_object_id()
+    # if column.object_type is not None and object_id is not None:
+    #   if self.visible_rows is not None and index.row() not in self.visible_rows.value:
+    #     return Qt.ItemFlags()
+
+    #   row_object_type = self.cached_object_types.get((index.row(), object_id))
+
+    #   if row_object_type is None:
+    #     def get_type(object_id: ObjectId) -> Callable[[GameState], Optional[ObjectType]]:
+    #       return lambda state: get_object_type(self.model, state, object_id)
+    #     row_object_type = self.model.timeline.frame(index.row()).map(get_type(object_id)).cached()
+    #     self.cached_object_types[(index.row(), object_id)] = row_object_type
+
+    #   if row_object_type.value != column.object_type:
+    #     return Qt.ItemFlags()
+
     if isinstance(self.model.formatters[variable], CheckboxFormatter):
       return Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled
     else:
       return Qt.ItemIsSelectable | Qt.ItemIsEditable | Qt.ItemIsEnabled
 
   def data(self, index, role=Qt.DisplayRole):
-    variable = self.variables[index.column()]
+    column = self.columns[index.column()]
+    variable = column.variable
     state = self.model.timeline.frame(index.row()).value
+
+    object_id = variable.get_object_id()
+    if column.object_type is not None and object_id is not None:
+      row_object_type = get_object_type(self.model, state, object_id)
+
+      if row_object_type != column.object_type:
+        return QVariant()
+
     args = { VariableParam.STATE: state }
     formatter = self.model.formatters[variable]
     value = formatter.output(variable.get(args))
@@ -175,7 +217,17 @@ class FrameSheet(QAbstractTableModel):
         return Qt.Checked if value else Qt.Unchecked
 
   def setData(self, index, value, role=Qt.EditRole):
-    variable = self.variables[index.column()]
+    column = self.columns[index.column()]
+    variable = column.variable
+
+    object_id = variable.get_object_id()
+    if column.object_type is not None and object_id is not None:
+      state = self.model.timeline.frame(index.row()).value
+      row_object_type = get_object_type(self.model, state, object_id)
+      if row_object_type != column.object_type:
+        return False
+      del state
+
     formatter = self.model.formatters[variable]
     rep = None
 
@@ -226,6 +278,18 @@ class FrameSheetView(QTableView):
     set_selection(self.model.selected_frame.value)
     self.model.selected_frame.on_change(set_selection)
 
+    # TODO: Below code doesn't quite work because of initial sizing
+    # self.visible_rows = ReactiveValue(range(0))
+    # def set_visible_rows():
+    #   low = self.rowAt(self.contentsRect().top())
+    #   high = self.rowAt(self.contentsRect().bottom())
+    #   if high < 0:
+    #     high = self.frame_sheet.rowCount() - 1
+    #   self.visible_rows.value = range(low, high + 1)
+    # self.verticalScrollBar().valueChanged.connect(set_visible_rows)
+    # set_visible_rows()
+    # self.frame_sheet.visible_rows = self.visible_rows
+
     self.focus_frame = ReactiveValue(0)
     def set_focus_frame():
       self.focus_frame.value = self.rowAt(self.contentsRect().y())
@@ -238,8 +302,8 @@ class FrameSheetView(QTableView):
     frame = min((index.row() for index in selected.indexes()), default=0)
     self.model.selected_frame.value = frame
 
-  def add_variable(self, variable: Variable) -> None:
-    self.frame_sheet.add_variable(variable)
+  def add_variable(self, variable: Variable, state: GameState) -> None:
+    self.frame_sheet.add_variable(variable, state)
 
 
 class VerticalTabBar(QTabBar):
@@ -446,7 +510,10 @@ class VariableTab(QWidget):
         # label.setFixedHeight(10)
         label.setAlignment(Qt.AlignRight)
         def add_var_to_frame_sheet(var: Variable) -> Callable[[Any], None]:
-          return lambda _: self.model.frame_sheets[0].add_variable(var)
+          return lambda _: self.model.frame_sheets[0].add_variable(
+            var,
+            self.state.value,
+          )
         label.mouseDoubleClickEvent = add_var_to_frame_sheet(variable)
 
         var_layout = QHBoxLayout()

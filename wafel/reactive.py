@@ -41,6 +41,10 @@ class Reactive(Generic[T]):
     """This allows Reactive.tuple(a, b).mapn(lambda x, y: x + y)."""
     return self.map(lambda args: func(*args))
 
+  def cached(self) -> 'Reactive[T]':
+    """Cache the current value so that .value is fast."""
+    return _CachedReactive(self)
+
 
 class ReactiveValue(Reactive[T]):
   """A variable that can be get/set."""
@@ -87,3 +91,20 @@ class _ReactiveTuple(Reactive[Tuple[Any, ...]]):
   def _on_change(self, callback: Callable[[], None]) -> None:
     for source in self._sources:
       source.on_change(callback)
+
+
+class _CachedReactive(Reactive[T]):
+  def __init__(self, source: Reactive[T]) -> None:
+    self._source = source
+    self._value = source.value
+
+    def update(value: T) -> None:
+      self._value = value
+    self._source.on_change(update)
+
+  @property
+  def value(self) -> T:
+    return self._value
+
+  def _on_change(self, callback: Callable[[], None]) -> None:
+    self._source.on_change(callback)
