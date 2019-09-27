@@ -13,13 +13,13 @@ from wafel.graphics import *
 from wafel.timeline import Timeline
 from wafel.edit import Edits, VariableEdit
 from wafel.reactive import Reactive, ReactiveValue
-from wafel.frame_sheet import FrameSheet
 from wafel.game_state import GameState
 from wafel.data_path import DataPath
 from wafel.variable import *
 from wafel.variable_format import Formatters, VariableFormatter
 from wafel.game_lib import GameLib
 from wafel.object_type import ObjectType
+from wafel.variable_format import Formatters, CheckboxFormatter
 
 
 class Model:
@@ -55,11 +55,7 @@ class Window(QWidget):
 
     self.model = Model()
 
-    frame_sheet_variables = [
-      var for var in self.model.variables
-        if set(var.params).issubset({ VariableParam.STATE })
-    ]
-    self.model.frame_sheets.append(FrameSheet(self.model.timeline, self.model.edits, self.model.formatters, frame_sheet_variables))
+    self.model.frame_sheets.append(FrameSheet(self.model))
 
     layout = QHBoxLayout()
     layout.setContentsMargins(0, 0, 0, 0)
@@ -91,10 +87,96 @@ class Window(QWidget):
       self.model.selected_frame.value = 107775
 
 
+class FrameSheet(QAbstractTableModel):
+
+  def __init__(self, model: Model) -> None:
+    super().__init__()
+    self.model = model
+    self.variables: List[Variable] = [
+      var for var in self.model.variables
+        if set(var.params).issubset({ VariableParam.STATE })
+    ][:3]
+
+    self.model.edits.latest_edited_frame.on_change(lambda:
+      self.dataChanged.emit(
+        self.index(0, 0),
+        self.index(self.rowCount() - 1, self.columnCount() - 1)
+      )
+    )
+
+  def add_variable(self, variable: Variable) -> None:
+    index = self.columnCount()
+    self.beginInsertColumns(QModelIndex(), index, index)
+    self.variables.append(variable)
+    self.endInsertColumns()
+
+  def rowCount(self, parent=None) -> int:
+    return len(self.model.timeline)
+
+  def columnCount(self, parent=None) -> int:
+    return len(self.variables)
+
+  def headerData(self, section, orientation, role=Qt.DisplayRole):
+    if role == Qt.DisplayRole:
+      if orientation == Qt.Horizontal:
+        return self.variables[section].display_name
+      else:
+        return str(section)
+
+  def flags(self, index):
+    variable = self.variables[index.column()]
+    if isinstance(self.model.formatters[variable], CheckboxFormatter):
+      return Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled
+    else:
+      return Qt.ItemIsSelectable | Qt.ItemIsEditable | Qt.ItemIsEnabled
+
+  def data(self, index, role=Qt.DisplayRole):
+    variable = self.variables[index.column()]
+    state = self.model.timeline.frame(index.row()).value
+    args = { VariableParam.STATE: state }
+    formatter = self.model.formatters[variable]
+    value = formatter.output(variable.get(args))
+
+    if role == Qt.DisplayRole or role == Qt.EditRole:
+      if not isinstance(formatter, CheckboxFormatter):
+        return value
+
+    elif role == Qt.CheckStateRole:
+      if isinstance(formatter, CheckboxFormatter):
+        return Qt.Checked if value else Qt.Unchecked
+
+  def setData(self, index, value, role=Qt.EditRole):
+    variable = self.variables[index.column()]
+    formatter = self.model.formatters[variable]
+    rep = None
+
+    if role == Qt.EditRole:
+      if not isinstance(formatter, CheckboxFormatter):
+        rep = value
+
+    elif role == Qt.CheckStateRole:
+      if isinstance(formatter, CheckboxFormatter):
+        rep = value == Qt.Checked
+
+    if rep is not None:
+      try:
+        value = formatter.input(rep)
+      except Exception:
+        sys.stderr.write(traceback.format_exc())
+        sys.stderr.flush()
+        return False
+      self.model.edits.add(index.row(), VariableEdit(variable, value))
+      self.dataChanged.emit(index, index)
+      return True
+
+    return False
+
+
 class FrameSheetView(QTableView):
   def __init__(self, model: Model, frame_sheet: FrameSheet, parent=None):
     super().__init__(parent)
     self.model = model
+    self.frame_sheet = frame_sheet
 
     self.setModel(frame_sheet)
     self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
@@ -122,6 +204,9 @@ class FrameSheetView(QTableView):
   def selectionChanged(self, selected, deselected):
     frame = min((index.row() for index in selected.indexes()), default=0)
     self.model.selected_frame.value = frame
+
+  def add_variable(self, variable: Variable) -> None:
+    self.frame_sheet.add_variable(variable)
 
 
 class VerticalTabBar(QTabBar):
@@ -296,11 +381,11 @@ class VariableTab(QWidget):
         item = layout.takeAt(0)
         item.widget().setParent(None)
 
-      # if close_tab is not None:
-      #   close_button = QPushButton('Close tab')
-      #   close_button.setMaximumWidth(100)
-      #   close_button.clicked.connect(close_tab)
-      #   layout.addWidget(close_button)
+      if close_tab is not None:
+        close_button = QPushButton('Close tab')
+        close_button.setMaximumWidth(100)
+        close_button.clicked.connect(close_tab)
+        layout.addWidget(close_button)
 
       for variable in self.variables.value:
         editor = None#var_widgets.get(variable.display_name)
@@ -327,6 +412,9 @@ class VariableTab(QWidget):
         label.setFixedWidth(80)
         # label.setFixedHeight(10)
         label.setAlignment(Qt.AlignRight)
+        def add_var_to_frame_sheet(var: Variable) -> Callable[[Any], None]:
+          return lambda _: self.model.frame_sheets[0].add_variable(var)
+        label.mouseDoubleClickEvent = add_var_to_frame_sheet(variable)
 
         var_layout = QHBoxLayout()
         var_layout.setContentsMargins(0, 0, 0, 0)
@@ -356,6 +444,14 @@ class VariableTab(QWidget):
       var.at_object(self.tab.object_id)
         for var in self.model.variables.group(VariableGroup.object(object_type.name))
     ]
+
+
+# class VarLabel(QLabel):
+#   def __init__(self, variable: Variable, parent=None):
+#     super().__init__(parent)
+#     self.variable = variable
+
+#   def 
 
 
 class FlowLayout(QLayout):

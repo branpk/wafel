@@ -159,6 +159,8 @@ class Variable:
   def __repr__(self) -> str:
     return f'Variable({self.display_name})'
 
+  # TODO: __eq__ and __hash__ (use id + object id)
+
 
 class _DataVariable(Variable):
   def __init__(
