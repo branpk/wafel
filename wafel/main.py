@@ -104,11 +104,20 @@ class FrameSheet(QAbstractTableModel):
       )
     )
 
+    self.header_state = self.model.timeline.frame(self.model.selected_frame)
+    self.header_labels: Dict[int, str] = {}
+    self.header_state.on_change(self.refresh_headers)
+
   def add_variable(self, variable: Variable) -> None:
     index = self.columnCount()
     self.beginInsertColumns(QModelIndex(), index, index)
     self.variables.append(variable)
     self.endInsertColumns()
+
+  def remove_variable_index(self, index: int) -> None:
+    self.beginRemoveColumns(QModelIndex(), index, index)
+    del self.variables[index]
+    self.endRemoveColumns()
 
   def rowCount(self, parent=None) -> int:
     return len(self.model.timeline)
@@ -119,11 +128,31 @@ class FrameSheet(QAbstractTableModel):
   def headerData(self, section, orientation, role=Qt.DisplayRole):
     if role == Qt.DisplayRole:
       if orientation == Qt.Horizontal:
-        return self.variables[section].display_name
+        label = self.get_header_label(self.variables[section])
+        self.header_labels[section] = label
+        return label
       else:
         return str(section)
 
+  def get_header_label(self, variable: Variable) -> str:
+    object_id = variable.get_object()
+    if object_id is None:
+      return variable.display_name
+
+    object_type = get_object_type(self.model, self.header_state.value, object_id)
+    if object_type is None:
+      return str(object_id) + '\n' + variable.display_name
+
+    return str(object_id) + ': ' + object_type.name + '\n' + variable.display_name
+
+  def refresh_headers(self) -> None:
+    for i in range(self.columnCount()):
+      label = self.get_header_label(self.variables[i])
+      if label != self.header_labels.get(i):
+        self.headerDataChanged.emit(Qt.Horizontal, i, i)
+
   def flags(self, index):
+    # TODO: Grey out cells when object id for variable isn't current
     variable = self.variables[index.column()]
     if isinstance(self.model.formatters[variable], CheckboxFormatter):
       return Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled
@@ -182,6 +211,10 @@ class FrameSheetView(QTableView):
     self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
     self.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
     self.setSelectionMode(QAbstractItemView.SingleSelection)
+
+    self.horizontalHeader().setSectionsMovable(True)
+    self.horizontalHeader().setSectionsClickable(True)
+    self.horizontalHeader().sectionDoubleClicked.connect(self.frame_sheet.remove_variable_index)
 
     # self.setMinimumWidth(640)
     # self.setMinimumHeight(480)

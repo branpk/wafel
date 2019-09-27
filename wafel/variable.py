@@ -156,6 +156,9 @@ class Variable:
   def at_object(self, object_id: ObjectId) -> 'Variable':
     return _ObjectVariable(self, object_id)
 
+  def get_object(self) -> Optional[ObjectId]:
+    return None
+
   def __repr__(self) -> str:
     return f'Variable({self.display_name})'
 
@@ -263,6 +266,9 @@ class _ObjectVariable(Variable):
 
   def set(self, value: Any, args: VariableArgs) -> None:
     self.variable.set(value, self._get_args(args))
+
+  def get_object(self) -> Optional[ObjectId]:
+    return self.object_id
 
 
 class Variables:
