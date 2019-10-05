@@ -37,10 +37,11 @@ class Model:
       self.edits = Edits.from_m64(m64, self.variables)
 
     self.timeline = Timeline(self.lib, self.edits)
-    self.selected_frame = 0
+    self.selected_frame = 1000
     # self.timeline.add_hotspot(self.selected_frame)
 
     self.frame_sheets: List[FrameSheet] = [FrameSheet(self)]
+    self.variable_explorer = VariableExplorer(self)
 
     # self.dbg_reload_graphics = ReactiveValue(())
 
@@ -58,6 +59,36 @@ class Model:
 
   def path(self, path: str) -> DataPath:
     return DataPath.parse(self.lib, path)
+
+  def render(self, window_size: Tuple[int, int]) -> None:
+    ig.set_next_window_position(0, 0)
+    ig.set_next_window_size(*window_size)
+    ig.begin(
+      'Main',
+      False,
+      ig.WINDOW_NO_SAVED_SETTINGS | ig.WINDOW_NO_RESIZE | ig.WINDOW_NO_TITLE_BAR,
+    )
+
+    ig.columns(2)
+    ig.next_column()
+
+    frame_sheet = self.frame_sheets[0]
+    ig.set_next_window_content_size(frame_sheet.get_content_width(), 0)
+    ig.begin_child(
+      'Frame Sheet',
+      height=int(window_size[1] * 0.7),
+      flags=ig.WINDOW_HORIZONTAL_SCROLLING_BAR,
+    )
+    frame_sheet.render()
+    ig.end_child()
+
+    ig.begin_child('Variable Explorer', border=True)
+    self.variable_explorer.render()
+    ig.end_child()
+
+    ig.columns(1)
+
+    ig.end()
 
 
 class FrameSheetColumn:
@@ -286,42 +317,119 @@ class FrameSheet:
     ig.end_child()
 
 
-def render_ui(model: Model, window_size: Tuple[int, int]) -> None:
-  ig.set_next_window_position(0, 0)
-  ig.set_next_window_size(*window_size)
-  ig.begin(
-    'Main',
-    False,
-    ig.WINDOW_NO_SAVED_SETTINGS | ig.WINDOW_NO_RESIZE | ig.WINDOW_NO_TITLE_BAR,
-  )
+class ExplorerTabId:
+  def __init__(self, name: str, object_id: Optional[ObjectId] = None) -> None:
+    self.name = name
+    self.object_id = object_id
 
-  ig.columns(2)
-  ig.next_column()
+  def __eq__(self, other: object) -> bool:
+    if not isinstance(other, ExplorerTabId):
+      return False
+    return self.name == other.name and self.object_id == other.object_id
 
-  frame_sheet = model.frame_sheets[0]
-  ig.set_next_window_content_size(frame_sheet.get_content_width(), 0)
-  ig.begin_child(
-    'Frame Sheet',
-    height=int(window_size[1] * 0.7),
-    flags=ig.WINDOW_HORIZONTAL_SCROLLING_BAR,
-  )
-  frame_sheet.render()
-  ig.end_child()
+  def __hash__(self) -> int:
+    return hash((self.name, self.object_id))
 
-  ig.begin_child(
-    'Variable Explorer',
-    flags=ig.WINDOW_HORIZONTAL_SCROLLING_BAR,
-  )
-  ig.end_child()
 
-  ig.columns(1)
+class VariableExplorer:
+  def __init__(self, model: Model) -> None:
+    self.model = model
+    self.open_tabs: List[ExplorerTabId] = []
+    self.rendered = False
 
-  ig.end()
+    fixed_tabs = [
+      ExplorerTabId('Input'),
+      ExplorerTabId('Misc'),
+      ExplorerTabId('Objects'),
+    ]
+    for tab in fixed_tabs:
+      self.open_tab(tab)
+
+    self.current_tab = self.open_tabs[0]
+
+  def open_tab(self, tab: ExplorerTabId) -> None:
+    if tab not in self.open_tabs:
+      self.open_tabs.append(tab)
+    self.current_tab = tab
+
+  def close_tab(self, tab: ExplorerTabId) -> None:
+    if self.current_tab == tab:
+      # TODO
+      pass
+    if tab in self.open_tabs:
+      self.open_tabs.remove(tab)
+
+  def get_tab_label(self, tab: ExplorerTabId) -> str:
+    if tab.object_id is not None:
+      state = self.model.timeline.frame(self.model.selected_frame).value
+      object_type = self.model.get_object_type(state, tab.object_id)
+      if object_type is None:
+        return str(tab.object_id)
+      else:
+        return str(tab.object_id) + ': ' + object_type.name
+
+    return tab.name
+
+  def render_objects_tab(self) -> None:
+    button_size = 50
+    window_left = ig.get_window_position()[0]
+    window_right = window_left + ig.get_window_content_region_max()[0]
+    prev_item_right = window_left
+    style = ig.get_style()
+
+    for slot in range(240):
+      item_right = prev_item_right + style.item_spacing[0] + button_size
+      if item_right > window_right:
+        prev_item_right = window_left
+      elif slot != 0:
+        ig.same_line()
+      prev_item_right = prev_item_right + style.item_spacing[0] + button_size
+
+      object_id = slot
+      object_type = self.model.get_object_type(
+        self.model.timeline.frame(self.model.selected_frame).value,
+        object_id,
+      )
+      if object_type is None:
+        label = str(slot)
+      else:
+        label = str(slot) + '\n' + object_type.name
+
+      if ig.button(label + '##slot-' + str(slot), 50, 50):
+        self.open_tab(ExplorerTabId('_object', object_id))
+
+  def render_tab_contents(self, tab: ExplorerTabId) -> None:
+    if tab.name == 'Objects':
+      self.render_objects_tab()
+
+  def render(self) -> None:
+    ig.columns(2)
+    if not self.rendered:
+      self.rendered = True
+      ig.set_column_width(-1, 120)
+
+    ig.begin_child('Variable Explorer Tabs')
+    for tab in self.open_tabs:
+      _, selected = ig.selectable(
+        self.get_tab_label(tab) + '##' + str(id(tab)),
+        self.current_tab == tab,
+      )
+      if selected:
+        self.current_tab = tab
+    ig.end_child()
+
+    ig.next_column()
+
+    ig.begin_child('Variable Explorer Content')
+    self.render_tab_contents(self.current_tab)
+    ig.end_child()
+
+    ig.columns(1)
 
 
 def render(window, ig_renderer, model: Model) -> None:
   ig.new_frame()
-  render_ui(model, glfw.get_window_size(window))
+  model.render(glfw.get_window_size(window))
   ig.end_frame()
   ig.render()
 
