@@ -130,6 +130,7 @@ class FrameSheet:
     self.model = model
     self.columns: List[FrameSheetColumn] = []
     self.row_height = 30
+    self.frame_column_width = 60
     self.cell_edit: Optional[CellEditInfo] = None
 
   def insert_variable(self, index: int, variable: Variable) -> None:
@@ -205,13 +206,17 @@ class FrameSheet:
     return True
 
   def get_content_width(self) -> int:
-    return sum(column.width for column in self.columns)
+    if len(self.columns) == 0:
+      return 0
+    return self.frame_column_width + sum(column.width for column in self.columns)
 
   def render_headers(self) -> None:
     header_labels = [self.get_header_label(column) for column in self.columns]
     header_lines = max((len(label.split('\n')) for label in header_labels), default=1)
 
-    ig.columns(len(self.columns))
+    ig.columns(len(self.columns) + 1)
+    ig.set_column_width(-1, self.frame_column_width)
+    ig.next_column()
 
     for index, column in list(enumerate(self.columns)):
       initial_cursor_pos = ig.get_cursor_pos()
@@ -221,8 +226,7 @@ class FrameSheet:
       )
 
       # TODO: Width adjusting
-      if len(self.columns) > 1:
-        ig.set_column_width(-1, column.width)
+      ig.set_column_width(-1, column.width)
 
       if ig.begin_drag_drop_source():
         ig.text(header_labels[index])
@@ -304,7 +308,7 @@ class FrameSheet:
           self.cell_edit = CellEditInfo(row, column)
 
   def render_rows(self) -> None:
-    ig.columns(len(self.columns))
+    ig.columns(len(self.columns) + 1)
 
     min_row = int(ig.get_scroll_y()) // self.row_height
     min_row = max(min_row, 0)
@@ -312,6 +316,10 @@ class FrameSheet:
     max_row = min(max_row, self.get_row_count() - 1)
 
     for row in range(min_row, max_row + 1):
+      ig.set_column_width(-1, self.frame_column_width)
+      ig.text(str(row))
+      ig.next_column()
+
       for column in self.columns:
         if row == min_row:
           initial_pos = ig.get_cursor_pos()
@@ -319,8 +327,7 @@ class FrameSheet:
 
         self.render_cell(row, column)
 
-        if len(self.columns) > 1:
-          ig.set_column_width(-1, column.width)
+        ig.set_column_width(-1, column.width)
         ig.next_column()
       ig.separator()
 
