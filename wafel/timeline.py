@@ -283,7 +283,7 @@ class Timeline:
 
   def __len__(self) -> int:
     # TODO: Handle length better
-    return len(self._cell_manager.edits._items) + 1
+    return len(self._cell_manager.edits._items)
 
   def add_hotspot(self, frame: Reactive[int]) -> None:
     """Mark a certain frame as a "hotspot", which is a hint to try to ensure
