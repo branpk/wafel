@@ -52,7 +52,7 @@ class FrameSheet:
   pass
 
 
-class SpreadsheetColumn:
+class Column:
   def __init__(
     self,
     label: str,
@@ -62,33 +62,65 @@ class SpreadsheetColumn:
     self.rendered = False
 
 
-class SpreadsheetView:
-  def __init__(self):
+class FrameSheetView:
+  def __init__(self) -> None:
     self.columns = [
-      SpreadsheetColumn('C' + str(i))
+      Column('C' + str(i))
         for i in range(30)
     ]
-    self.row_size = 20
+    self.row_size = 30
     self.num_rows = 1000000
+
+    self.editing_cell: Optional[Tuple[int, Column]] = None
+    self.edit_focus_state = 0
+    self.edit_value: Optional[str] = None
 
   def width(self) -> int:
     return sum(col.width for col in self.columns)
 
+  def drag_column(self, source: int, target: int) -> None:
+    column = self.columns[source]
+    del self.columns[source]
+    self.columns.insert(target, column)
+
   def render(self) -> None:
     ig.columns(len(self.columns))
-    for column in self.columns:
+
+    for i, column in list(enumerate(self.columns)):
+      cursor_pos = ig.get_cursor_pos()
+      ig.selectable('##' + column.label, height=2 * (ig.get_text_line_height() + 2))
+
+      # TODO: Width adjusting
+      ig.set_column_width(-1, column.width)
+      # if not column.rendered:
+      #   ig.set_column_width(-1, column.width)
+      #   column.rendered = True
+      # else:
+      #   column.width = ig.get_column_width(-1)
+
+      if ig.begin_drag_drop_source():
+        ig.text(column.label)
+        ig.set_drag_drop_payload('sheet-column', str(i).encode('utf-8'))
+        ig.end_drag_drop_source()
+
+      if ig.begin_drag_drop_target():
+        payload = ig.accept_drag_drop_payload('sheet-column')
+        if payload is not None:
+          source = int(payload.decode('utf-8'))
+          self.columns[source].rendered = False
+          self.columns[i].rendered = False
+          self.drag_column(source, i)
+        ig.end_drag_drop_target()
+
+      ig.set_cursor_pos(cursor_pos)
       ig.text(column.label)
-      # TODO: Figure out how to adjust content size to match
-      if not column.rendered:
-        ig.set_column_width(-1, column.width)
-        column.rendered = True
-      else:
-        column.width = ig.get_column_width(-1)
+      ig.text('row 2')
+
       ig.next_column()
     ig.separator()
     ig.columns(1)
 
-    # TODO: Set child content size to make vertical scrollbar always present on right?
+    # TODO: Make scrollbar always visible or remove it altogether
     ig.begin_child('Frame Sheet Rows', flags=ig.WINDOW_ALWAYS_VERTICAL_SCROLLBAR)
     ig.columns(len(self.columns))
 
@@ -103,7 +135,35 @@ class SpreadsheetView:
         if row == min_row:
           ig.set_cursor_pos((x, row * self.row_size))
         padding = 8  # TODO: Compute
-        ig.selectable(str(row) + ' ' + column.label, height=self.row_size - padding)
+
+        if self.editing_cell == (row, column):
+          _, value = ig.input_text(
+            '##' + str(row) + ' ' + column.label,
+            'hey',
+            32,
+          )
+          if value != self.edit_value:
+            print('edited: ' + value)
+            self.edit_value = value
+
+          if self.edit_focus_state == 0:
+            ig.set_keyboard_focus_here(-1)
+            self.edit_focus_state += 1
+          else:
+            if not ig.is_item_active():
+              print('finished: ' + value)
+              self.editing_cell = None
+              self.edit_focus_state = 0
+              self.edit_value = None
+
+        else:
+          if ig.selectable(
+            str(row) + ' ' + column.label, height=self.row_size - padding,
+            flags=ig.SELECTABLE_ALLOW_DOUBLE_CLICK,
+          )[0]:
+            if ig.is_mouse_double_clicked():
+              self.editing_cell = (row, column)
+
         ig.set_column_width(-1, column.width)
         x += column.width
         ig.next_column()
@@ -115,19 +175,37 @@ class SpreadsheetView:
     ig.end_child()
 
 
-spreadsheet = SpreadsheetView()
+frame_sheet = FrameSheetView()
 
 def render_ui(window_dims: Tuple[int, int]) -> None:
   ig.set_next_window_position(0, 0)
   ig.set_next_window_size(*window_dims)
-  ig.set_next_window_content_size(spreadsheet.width(), 0)
   ig.begin(
-    'Frame Sheet',
+    'Main',
     False,
-    ig.WINDOW_NO_SAVED_SETTINGS | ig.WINDOW_NO_RESIZE | ig.WINDOW_NO_TITLE_BAR | \
-      ig.WINDOW_HORIZONTAL_SCROLLING_BAR,
+    ig.WINDOW_NO_SAVED_SETTINGS | ig.WINDOW_NO_RESIZE | ig.WINDOW_NO_TITLE_BAR,
   )
-  spreadsheet.render()
+
+  ig.columns(2)
+  ig.next_column()
+
+  ig.set_next_window_content_size(frame_sheet.width(), 0)
+  ig.begin_child(
+    'Frame Sheet',
+    height=int(window_dims[1] * 0.7),
+    flags=ig.WINDOW_HORIZONTAL_SCROLLING_BAR,
+  )
+  frame_sheet.render()
+  ig.end_child()
+
+  ig.begin_child(
+    'Variable Explorer',
+    flags=ig.WINDOW_HORIZONTAL_SCROLLING_BAR,
+  )
+  ig.end_child()
+
+  ig.columns(1)
+
   ig.end()
 
 
