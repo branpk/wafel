@@ -177,9 +177,9 @@ class FrameSheetView:
 
 frame_sheet = FrameSheetView()
 
-def render_ui(window_dims: Tuple[int, int]) -> None:
+def render_ui(window_size: Tuple[int, int]) -> None:
   ig.set_next_window_position(0, 0)
-  ig.set_next_window_size(*window_dims)
+  ig.set_next_window_size(*window_size)
   ig.begin(
     'Main',
     False,
@@ -192,7 +192,7 @@ def render_ui(window_dims: Tuple[int, int]) -> None:
   ig.set_next_window_content_size(frame_sheet.width(), 0)
   ig.begin_child(
     'Frame Sheet',
-    height=int(window_dims[1] * 0.7),
+    height=int(window_size[1] * 0.7),
     flags=ig.WINDOW_HORIZONTAL_SCROLLING_BAR,
   )
   frame_sheet.render()
@@ -234,6 +234,7 @@ def run():
 
   glfw.window_hint(glfw.VISIBLE, False)
   window = glfw.create_window(800, 600, 'Wafel', None, None)
+  glfw.set_window_size_limits(window, 1, 1, glfw.DONT_CARE, glfw.DONT_CARE)
   glfw.maximize_window(window)
   glfw.show_window(window)
 
