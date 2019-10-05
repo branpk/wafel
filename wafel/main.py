@@ -209,6 +209,21 @@ def render_ui(window_dims: Tuple[int, int]) -> None:
   ig.end()
 
 
+def render(window, ig_renderer):
+  ig.new_frame()
+  render_ui(glfw.get_window_size(window))
+  ig.end_frame()
+  ig.render()
+
+  gl.glClearColor(1.0, 1.0, 1.0, 1.0)
+  gl.glClear(gl.GL_COLOR_BUFFER_BIT)
+
+  draw_data = ig.get_draw_data()
+  ig_renderer.render(draw_data)
+
+  glfw.swap_buffers(window)
+
+
 def run():
   glfw.init()
 
@@ -219,32 +234,23 @@ def run():
 
   glfw.window_hint(glfw.VISIBLE, False)
   window = glfw.create_window(800, 600, 'Wafel', None, None)
-  # glfw.maximize_window(window)
+  glfw.maximize_window(window)
   glfw.show_window(window)
 
   glfw.make_context_current(window)
 
   ig_context = ig.create_context()
   ig_renderer = GlfwRenderer(window)
+  ig_renderer.io.ini_filename = None
 
-  # TODO: Disable imgui.ini
+  def refresh_callback(window):
+    render(window, ig_renderer)
+  glfw.set_window_refresh_callback(window, refresh_callback)
 
   while not glfw.window_should_close(window):
     glfw.poll_events()
     ig_renderer.process_inputs()
-
-    ig.new_frame()
-    render_ui(glfw.get_window_size(window))
-    ig.end_frame()
-    ig.render()
-
-    gl.glClearColor(1.0, 1.0, 1.0, 1.0)
-    gl.glClear(gl.GL_COLOR_BUFFER_BIT)
-
-    draw_data = ig.get_draw_data()
-    ig_renderer.render(draw_data)
-
-    glfw.swap_buffers(window)
+    render(window, ig_renderer)
 
   ig_renderer.shutdown()
   ig.destroy_context(ig_context)
