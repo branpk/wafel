@@ -46,13 +46,13 @@ class Model:
     # self.dbg_reload_graphics = ReactiveValue(())
 
   def get_object_type(self, state: GameState, object_id: ObjectId) -> Optional[ObjectType]:
-    active = self.variables['active'].at_object(object_id).get({
+    active = self.variables['obj-active-flags-active'].at_object(object_id).get({
       VariableParam.STATE: state,
     })
     if not active:
       return None
 
-    behavior = self.variables['behavior'].at_object(object_id).get({
+    behavior = self.variables['obj-behavior-ptr'].at_object(object_id).get({
       VariableParam.STATE: state,
     })
     return self.lib.get_object_type(behavior)
@@ -82,6 +82,13 @@ class Model:
     frame_sheet.render()
     ig.end_child()
 
+    if ig.begin_drag_drop_target():
+      payload = ig.accept_drag_drop_payload('ve-var')
+      if payload is not None:
+        variable = self.variables[VariableId.from_bytes(payload)]
+        frame_sheet.append_variable(variable)
+      ig.end_drag_drop_target()
+
     ig.begin_child('Variable Explorer', border=True)
     self.variable_explorer.render()
     ig.end_child()
@@ -102,6 +109,11 @@ class FrameSheetColumn:
     self.object_type = object_type
     self.width = 100
 
+  def __eq__(self, other) -> bool:
+    return isinstance(other, FrameSheetColumn) and \
+      self.variable == other.variable and \
+      self.object_type == other.object_type
+
 
 class CellEditInfo:
   def __init__(
@@ -120,18 +132,19 @@ class FrameSheet:
     self.row_height = 30
     self.cell_edit: Optional[CellEditInfo] = None
 
-    for _ in range(1):
-      self.append_variable(self.model.variables['global timer'], self.model.timeline.frame(100).value)
-      self.append_variable(self.model.variables['mario x'], self.model.timeline.frame(100).value)
-      self.append_variable(self.model.variables['mario y'], self.model.timeline.frame(100).value)
-
-  def append_variable(self, variable: Variable, state: GameState) -> None:
+  def insert_variable(self, index: int, variable: Variable) -> None:
     object_id = variable.get_object_id()
     if object_id is None:
       column = FrameSheetColumn(variable)
     else:
+      # TODO: This should use the state that the drop began
+      state = self.model.timeline.frame(self.model.selected_frame).value
       column = FrameSheetColumn(variable, self.model.get_object_type(state, object_id))
-    self.columns.append(column)
+    if column not in self.columns:
+      self.columns.insert(index, column)
+
+  def append_variable(self, variable: Variable) -> None:
+    self.insert_variable(len(self.columns), variable)
 
   def move_column(self, source: int, dest: int) -> None:
     column = self.columns[source]
@@ -160,10 +173,8 @@ class FrameSheet:
     object_id = variable.get_object_id()
     if column.object_type is not None and object_id is not None:
       row_object_type = self.model.get_object_type(state, object_id)
-
-      # TODO
-      # if row_object_type != column.object_type:
-      #   return ''
+      if row_object_type != column.object_type:
+        return ''
 
     args = { VariableParam.STATE: state }
     formatter = self.model.formatters[variable]
@@ -210,7 +221,8 @@ class FrameSheet:
       )
 
       # TODO: Width adjusting
-      ig.set_column_width(-1, column.width)
+      if len(self.columns) > 1:
+        ig.set_column_width(-1, column.width)
 
       if ig.begin_drag_drop_source():
         ig.text(header_labels[index])
@@ -222,6 +234,12 @@ class FrameSheet:
         if payload is not None:
           source = int(payload.decode('utf-8'))
           self.move_column(source, index)
+
+        payload = ig.accept_drag_drop_payload('ve-var')
+        if payload is not None:
+          variable = self.model.variables[VariableId.from_bytes(payload)]
+          self.insert_variable(index, variable)
+
         ig.end_drag_drop_target()
 
       ig.set_cursor_pos(initial_cursor_pos)
@@ -237,10 +255,6 @@ class FrameSheet:
 
     cursor_pos = ig.get_cursor_pos()
     cursor_pos = (
-      cursor_pos[0] - 8, # TODO: Compute padding
-      cursor_pos[1] - 4,
-    )
-    cursor_pos = (
       ig.get_window_position()[0] + cursor_pos[0],
       ig.get_window_position()[1] + cursor_pos[1] - ig.get_scroll_y(),
     )
@@ -248,11 +262,15 @@ class FrameSheet:
     if self.cell_edit is not None and \
         self.cell_edit.row == row and \
         self.cell_edit.column is column:
+      input_width = column.width - 2 * ig.get_style().item_spacing[0]
+
+      ig.push_item_width(input_width)
       _, value = ig.input_text(
         '##fs-cell-' + str(row) + '-' + str(id(column)),
         data,
         32,
       )
+      ig.pop_item_width()
 
       if value != data:
         self.cell_edit.error = not self.set_data(row, column, value)
@@ -262,8 +280,8 @@ class FrameSheet:
         dl.add_rect(
           cursor_pos[0],
           cursor_pos[1],
-          cursor_pos[0] + column.width - 1,
-          cursor_pos[1] + self.row_height,
+          cursor_pos[0] + input_width,
+          cursor_pos[1] + ig.get_text_line_height() + 2 * ig.get_style().frame_padding[1],
           0xFF0000FF,
         )
         # TODO: Show error message?
@@ -301,7 +319,8 @@ class FrameSheet:
 
         self.render_cell(row, column)
 
-        ig.set_column_width(-1, column.width)
+        if len(self.columns) > 1:
+          ig.set_column_width(-1, column.width)
         ig.next_column()
       ig.separator()
 
@@ -310,11 +329,16 @@ class FrameSheet:
     ig.columns(1)
 
   def render(self) -> None:
-    self.render_headers()
-    # TODO: Make the vertical scrollbar always visible?
-    ig.begin_child('Frame Sheet Rows', flags=ig.WINDOW_ALWAYS_VERTICAL_SCROLLBAR)
-    self.render_rows()
-    ig.end_child()
+    if len(self.columns) == 0:
+      ig.begin_child('Empty Frame Sheet')
+      ig.text('Drag a variable from below to watch it')
+      ig.end_child()
+    else:
+      self.render_headers()
+      # TODO: Make the vertical scrollbar always visible?
+      ig.begin_child('Frame Sheet Rows', flags=ig.WINDOW_ALWAYS_VERTICAL_SCROLLBAR)
+      self.render_rows()
+      ig.end_child()
 
 
 class ExplorerTabId:
@@ -398,9 +422,42 @@ class VariableExplorer:
       if ig.button(label + '##slot-' + str(slot), 50, 50):
         self.open_tab(ExplorerTabId('_object', object_id))
 
+  def get_variables_for_tab(self, tab: ExplorerTabId) -> List[Variable]:
+    if tab.object_id is None:
+      return self.model.variables.group(VariableGroup(tab.name))
+
+    state = self.model.timeline.frame(self.model.selected_frame).value
+    object_type = self.model.get_object_type(state, tab.object_id)
+    if object_type is None:
+      return []
+
+    return [
+      var.at_object(tab.object_id)
+        for var in self.model.variables.group(VariableGroup.object(object_type.name))
+    ]
+
+  def render_variable_tab(self, tab: ExplorerTabId) -> None:
+    variables = self.get_variables_for_tab(tab)
+    for variable in variables:
+      # TODO: Variable id
+      ig.selectable(variable.display_name, width=80)
+
+      if ig.begin_drag_drop_source():
+        ig.text(variable.display_name)
+        ig.set_drag_drop_payload('ve-var', variable.id.to_bytes())
+        ig.end_drag_drop_source()
+
+      # TODO: Reuse display/edit code with frame sheet
+      ig.same_line()
+      ig.push_item_width(80)
+      ig.input_text('##' + variable.display_name, 'hey', 32, False)
+      ig.pop_item_width()
+
   def render_tab_contents(self, tab: ExplorerTabId) -> None:
     if tab.name == 'Objects':
       self.render_objects_tab()
+    else:
+      self.render_variable_tab(tab)
 
   def render(self) -> None:
     ig.columns(2)

@@ -1,5 +1,6 @@
 from typing import *
 from enum import Enum, auto
+import json
 
 from wafel.util import *
 from wafel.variable_param import *
@@ -124,6 +125,44 @@ class VariableDataType(Enum):
       raise NotImplementedError(type_['kind'])
 
 
+class VariableId:
+  def __init__(
+    self,
+    name: str,
+    object_id: Optional[ObjectId] = None,
+  ) -> None:
+    self.name = name
+    self.object_id = object_id
+
+  def with_name(self, name: str) -> 'VariableId':
+    return VariableId(name, self.object_id)
+
+  def with_object_id(self, object_id: ObjectId) -> 'VariableId':
+    return VariableId(self.name, object_id)
+
+  def _args(self) -> Tuple[Any, ...]:
+    return (self.name, self.object_id)
+
+  def to_bytes(self) -> bytes:
+    return json.dumps(self._args()).encode('utf-8')
+
+  @staticmethod
+  def from_bytes(b: bytes) -> 'VariableId':
+    return VariableId(*json.loads(b.decode('utf-8')))
+
+  def __eq__(self, other) -> bool:
+    return isinstance(other, VariableId) and self._args() == other._args()
+
+  def __hash__(self) -> int:
+    return hash(self._args())
+
+  def __repr__(self) -> str:
+    args = [self.name]
+    if self.object_id is not None:
+      args.append('obj=' + str(self.object_id))
+    return 'Variable(' + ', '.join(args) + ')'
+
+
 class Variable:
   @staticmethod
   def create_all(lib: GameLib) -> 'Variables':
@@ -131,6 +170,7 @@ class Variable:
 
   def __init__(
     self,
+    id: VariableId,
     group: VariableGroup,
     display_name: str,
     lib: GameLib,
@@ -139,6 +179,7 @@ class Variable:
     read_only: bool,
     data_type: VariableDataType,
   ) -> None:
+    self.id = id
     self.group = group
     self.display_name = display_name
     self.lib = lib
@@ -157,17 +198,22 @@ class Variable:
     return _ObjectVariable(self, object_id)
 
   def get_object_id(self) -> Optional[ObjectId]:
-    return None
+    return self.id.object_id
 
   def __repr__(self) -> str:
-    return f'Variable({self.display_name})'
+    return repr(self.id)
 
-  # TODO: __eq__ and __hash__ (use id + object id)
+  def __eq__(self, other: 'Variable') -> bool:
+    return isinstance(other, Variable) and self.id == other.id
+
+  def __hash__(self) -> int:
+    return hash(self.id)
 
 
 class _DataVariable(Variable):
   def __init__(
     self,
+    name: str,
     group: VariableGroup,
     display_name: str,
     lib: GameLib,
@@ -177,6 +223,7 @@ class _DataVariable(Variable):
   ) -> None:
     self.path = DataPath.parse(lib, path)
     super().__init__(
+      VariableId(name),
       group,
       display_name,
       lib,
@@ -197,6 +244,7 @@ class _DataVariable(Variable):
 class _FlagVariable(Variable):
   def __init__(
     self,
+    name: str,
     group: VariableGroup,
     display_name: str,
     flags: Variable,
@@ -204,6 +252,7 @@ class _FlagVariable(Variable):
     read_only: bool = False
   ) -> None:
     super().__init__(
+      flags.id.with_name(name),
       group,
       display_name,
       flags.lib,
@@ -235,6 +284,7 @@ class _ObjectVariable(Variable):
       params.append(VariableParam.STATE)
 
     super().__init__(
+      variable.id.with_object_id(object_id),
       variable.group,
       variable.display_name,
       variable.lib,
@@ -267,9 +317,6 @@ class _ObjectVariable(Variable):
   def set(self, value: Any, args: VariableArgs) -> None:
     self.variable.set(value, self._get_args(args))
 
-  def get_object_id(self) -> Optional[ObjectId]:
-    return self.object_id
-
 
 class Variables:
   def __init__(self, variables: List[Variable]) -> None:
@@ -278,34 +325,43 @@ class Variables:
   def __iter__(self) -> Iterator[Variable]:
     return iter(self.variables)
 
-  def __getitem__(self, name: str) -> Variable:
-    return [var for var in self.variables if var.display_name == name][0]
+  def __getitem__(self, id: Union[str, VariableId]) -> Variable:
+    if isinstance(id, str):
+      id = VariableId(id)
+    if id.object_id is not None:
+      return self[VariableId(id.name)].at_object(id.object_id)
+    else:
+      matches = [var for var in self.variables if var.id == id]
+      if len(matches) == 0:
+        raise KeyError(id)
+      return matches[0]
 
   def group(self, group: VariableGroup) -> List[Variable]:
     return [var for var in self if var.group.contains(group)]
 
 
 def _all_variables(lib: GameLib) -> Variables:
-  input_buttons = _DataVariable(VariableGroup.hidden(), 'buttons', lib, VariableSemantics.RAW, '$state.gControllerPads[0].button')
-  active_flags = _DataVariable(VariableGroup.hidden(), 'active flags', lib, VariableSemantics.RAW, '$object.activeFlags')
+  input_buttons = _DataVariable('input-buttons', VariableGroup.hidden(), 'buttons', lib, VariableSemantics.RAW, '$state.gControllerPads[0].button')
+  active_flags = _DataVariable('obj-active-flags', VariableGroup.hidden(), 'active flags', lib, VariableSemantics.RAW, '$object.activeFlags')
   return Variables([
     input_buttons,
-    _DataVariable(VariableGroup('Input'), 'stick x', lib, VariableSemantics.RAW, '$state.gControllerPads[0].stick_x'),
-    _DataVariable(VariableGroup('Input'), 'stick y', lib, VariableSemantics.RAW, '$state.gControllerPads[0].stick_y'),
-    _FlagVariable(VariableGroup('Input'), 'A', input_buttons, 'A_BUTTON'),
-    _FlagVariable(VariableGroup('Input'), 'B', input_buttons, 'B_BUTTON'),
-    _FlagVariable(VariableGroup('Input'), 'Z', input_buttons, 'Z_TRIG'),
-    _FlagVariable(VariableGroup('Input'), 'S', input_buttons, 'START_BUTTON'),
-    _DataVariable(VariableGroup('Misc'), 'global timer', lib, VariableSemantics.RAW, '$state.gGlobalTimer'),
-    _DataVariable(VariableGroup.object('Mario'), 'mario x', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[0]'),
-    _DataVariable(VariableGroup.object('Mario'), 'mario y', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[1]'),
-    _DataVariable(VariableGroup.object('Mario'), 'mario z', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[2]'),
-    _DataVariable(VariableGroup.object('Mario'), 'mario vel f', lib, VariableSemantics.RAW, '$state.gMarioState[].forwardVel'),
-    _DataVariable(VariableGroup.object('Mario'), 'mario vel x', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[0]'),
-    _DataVariable(VariableGroup.object('Mario'), 'mario vel y', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[1]'),
-    _DataVariable(VariableGroup.object('Mario'), 'mario vel z', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[2]'),
+    active_flags,
+    _DataVariable('input-stick-x', VariableGroup('Input'), 'stick x', lib, VariableSemantics.RAW, '$state.gControllerPads[0].stick_x'),
+    _DataVariable('input-stick-y', VariableGroup('Input'), 'stick y', lib, VariableSemantics.RAW, '$state.gControllerPads[0].stick_y'),
+    _FlagVariable('input-button-a', VariableGroup('Input'), 'A', input_buttons, 'A_BUTTON'),
+    _FlagVariable('input-button-b', VariableGroup('Input'), 'B', input_buttons, 'B_BUTTON'),
+    _FlagVariable('input-button-z', VariableGroup('Input'), 'Z', input_buttons, 'Z_TRIG'),
+    _FlagVariable('input-button-start', VariableGroup('Input'), 'S', input_buttons, 'START_BUTTON'),
+    _DataVariable('global-timer', VariableGroup('Misc'), 'global timer', lib, VariableSemantics.RAW, '$state.gGlobalTimer'),
+    _DataVariable('mario-pos-x', VariableGroup.object('Mario'), 'mario x', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[0]'),
+    _DataVariable('mario-pos-y', VariableGroup.object('Mario'), 'mario y', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[1]'),
+    _DataVariable('mario-pos-z', VariableGroup.object('Mario'), 'mario z', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[2]'),
+    _DataVariable('mario-vel-f', VariableGroup.object('Mario'), 'mario vel f', lib, VariableSemantics.RAW, '$state.gMarioState[].forwardVel'),
+    _DataVariable('mario-vel-x', VariableGroup.object('Mario'), 'mario vel x', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[0]'),
+    _DataVariable('mario-vel-y', VariableGroup.object('Mario'), 'mario vel y', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[1]'),
+    _DataVariable('mario-vel-z', VariableGroup.object('Mario'), 'mario vel z', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[2]'),
 
-    _DataVariable(VariableGroup.objects(), 'hitbox radius', lib, VariableSemantics.RAW, '$object.hitboxRadius'),
-    _DataVariable(VariableGroup.hidden(), 'behavior', lib, VariableSemantics.RAW, '$object.behaviorSeg'),
-    _FlagVariable(VariableGroup.objects(), 'active', active_flags, 'ACTIVE_FLAG_ACTIVE'),
+    _DataVariable('obj-hitbox-radius', VariableGroup.objects(), 'hitbox radius', lib, VariableSemantics.RAW, '$object.hitboxRadius'),
+    _DataVariable('obj-behavior-ptr', VariableGroup.hidden(), 'behavior', lib, VariableSemantics.RAW, '$object.behaviorSeg'),
+    _FlagVariable('obj-active-flags-active', VariableGroup.objects(), 'active', active_flags, 'ACTIVE_FLAG_ACTIVE'),
   ])

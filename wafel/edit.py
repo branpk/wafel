@@ -46,9 +46,9 @@ class Edits:
       if buttons is None or stick_x is None or stick_y is None:
         break
       else:
-        edits.add(frame, VariableEdit(variables['buttons'], buttons))
-        edits.add(frame, VariableEdit(variables['stick x'], stick_x))
-        edits.add(frame, VariableEdit(variables['stick y'], stick_y))
+        edits.add(frame, VariableEdit(variables['input-buttons'], buttons))
+        edits.add(frame, VariableEdit(variables['input-stick-x'], stick_x))
+        edits.add(frame, VariableEdit(variables['input-stick-y'], stick_y))
       frame += 1
 
     return edits
