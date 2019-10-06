@@ -3,7 +3,7 @@ from typing import *
 import sys
 
 from wafel.util import *
-from wafel.object_type import ObjectType, OBJECT_TYPES
+from wafel.core.object_type import ObjectType, OBJECT_TYPES
 
 
 class GameLib:

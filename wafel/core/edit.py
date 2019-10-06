@@ -1,8 +1,8 @@
 import ctypes
 from typing import IO, Any, Optional, List
 
-from wafel.game_state import GameState
-from wafel.variable import Variable, VariableParam, Variables
+from wafel.core.game_state import GameState
+from wafel.core.variable import Variable, VariableParam, Variables
 from wafel.reactive import Reactive, ReactiveValue
 
 

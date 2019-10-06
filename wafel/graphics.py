@@ -2,7 +2,7 @@ from enum import Enum
 from typing import List
 import math
 
-from wafel.game_state import GameState
+from wafel.core import GameState
 
 import ext_modules.graphics as ext_graphics
 

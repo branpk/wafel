@@ -3,8 +3,8 @@ from itertools import takewhile
 
 import ctypes as C
 
-from wafel.game_lib import GameLib
-from wafel.variable_param import VariableParam, VariableArgs
+from wafel.core.game_lib import GameLib
+from wafel.core.variable_param import VariableParam, VariableArgs
 from wafel.util import *
 
 

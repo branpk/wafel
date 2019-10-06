@@ -3,10 +3,10 @@ from typing import *
 import weakref
 import time
 
-from wafel.game_state import GameState
-from wafel.edit import Edits
+from wafel.core.game_state import GameState
+from wafel.core.edit import Edits
+from wafel.core.game_lib import GameLib
 from wafel.reactive import Reactive, ReactiveValue
-from wafel.game_lib import GameLib
 
 
 # TODO: Could do a quick warm up pass on first load and input change

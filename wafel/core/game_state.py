@@ -1,6 +1,6 @@
 from typing import *
 
-from wafel.game_lib import GameLib
+from wafel.core.game_lib import GameLib
 
 
 class GameState:
