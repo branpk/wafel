@@ -37,7 +37,10 @@ class Model:
       self.edits = Edits.from_m64(m64, self.variables)
 
     self.timeline = Timeline(self.lib, self.edits)
-    self.selected_frame = 0
+
+    self._selected_frame = 0
+    self.selected_frame_callbacks: List[Callable[[int], None]] = []
+
     # self.timeline.add_hotspot(self.selected_frame)
 
     self.frame_sheets: List[FrameSheet] = [FrameSheet(self)]
@@ -49,6 +52,19 @@ class Model:
     self.frame_slider = FrameSlider(self)
 
     # self.dbg_reload_graphics = ReactiveValue(())
+
+  @property
+  def selected_frame(self) -> int:
+    return self._selected_frame
+
+  @selected_frame.setter
+  def selected_frame(self, frame: int) -> None:
+    self._selected_frame = frame
+    for callback in list(self.selected_frame_callbacks):
+      callback(frame)
+
+  def on_selected_frame_change(self, callback: Callable[[int], None]) -> None:
+    self.selected_frame_callbacks.append(callback)
 
   def get_object_type(self, state: GameState, object_id: ObjectId) -> Optional[ObjectType]:
     active = self.variables['obj-active-flags-active'].at_object(object_id).get({
@@ -76,7 +92,7 @@ class Model:
 
     ig.columns(2)
 
-    slider_space = 40
+    slider_space = 45
 
     ig.begin_child(
       'Game View 1',
@@ -158,6 +174,11 @@ class FrameSheet:
     self.row_height = 30
     self.frame_column_width = 60
     self.cell_edit: Optional[CellEditInfo] = None
+
+    self.scroll_to_frame: Optional[int] = None
+    def selected_frame_changed(frame: int) -> None:
+      self.scroll_to_frame = frame
+    self.model.on_selected_frame_change(selected_frame_changed)
 
   def insert_variable(self, index: int, variable: Variable) -> None:
     object_id = variable.get_object_id()
@@ -241,7 +262,9 @@ class FrameSheet:
     header_lines = max((len(label.split('\n')) for label in header_labels), default=1)
 
     ig.columns(len(self.columns) + 1)
-    ig.set_column_width(-1, self.frame_column_width)
+    if len(self.columns) > 0:
+      ig.set_column_width(-1, self.frame_column_width)
+    ig.text('')
     ig.next_column()
 
     for index, column in list(enumerate(self.columns)):
@@ -323,36 +346,40 @@ class FrameSheet:
         self.cell_edit = None
 
     else:
-      clicked, selected = ig.selectable(
+      clicked, _ = ig.selectable(
         data + '##fs-cell-' + str(row) + '-' + str(id(column)),
         height=self.row_height - 8, # TODO: Compute padding
         flags=ig.SELECTABLE_ALLOW_DOUBLE_CLICK,
       )
 
-      if clicked or selected:
+      if clicked:
+        self.model.selected_frame = row
         if ig.is_mouse_double_clicked():
           self.cell_edit = CellEditInfo(row, column)
-        else:
-          self.model.selected_frame = row
 
   def render_rows(self) -> None:
     ig.columns(len(self.columns) + 1)
 
-    min_row = int(ig.get_scroll_y()) // self.row_height
+    min_row = int(ig.get_scroll_y()) // self.row_height - 1
     min_row = max(min_row, 0)
     max_row = int(ig.get_scroll_y() + ig.get_window_height()) // self.row_height
     max_row = min(max_row, self.get_row_count() - 1)
 
     for row in range(min_row, max_row + 1):
-      ig.set_column_width(-1, self.frame_column_width)
-      ig.text(str(row))
+      initial_pos = ig.get_cursor_pos()
+      ig.set_cursor_pos((initial_pos[0], row * self.row_height))
+
+      if len(self.columns) > 0:
+        ig.set_column_width(-1, self.frame_column_width)
+      clicked, _ = ig.selectable(
+        str(row) + '##fs-framenum-' + str(row),
+        height=self.row_height - 8, # TODO: Compute padding
+      )
+      if clicked:
+        self.model.selected_frame = row
       ig.next_column()
 
       for column in self.columns:
-        if row == min_row:
-          initial_pos = ig.get_cursor_pos()
-          ig.set_cursor_pos((initial_pos[0], row * self.row_height))
-
         self.render_cell(row, column)
 
         ig.set_column_width(-1, column.width)
@@ -363,17 +390,28 @@ class FrameSheet:
 
     ig.columns(1)
 
+  def update_scolling(self) -> None:
+    if self.scroll_to_frame is None:
+      return
+
+    target_y = self.scroll_to_frame * self.row_height
+    current_min_y = ig.get_scroll_y()
+    current_max_y = ig.get_scroll_y() + ig.get_window_height() - self.row_height
+
+    if target_y > current_max_y:
+      ig.set_scroll_y(target_y - ig.get_window_height() + self.row_height)
+    elif target_y < current_min_y:
+      ig.set_scroll_y(target_y)
+
+    self.scroll_to_frame = None
+
   def render(self) -> None:
-    if len(self.columns) == 0:
-      ig.begin_child('Empty Frame Sheet')
-      ig.text('Drag a variable from below to watch it')
-      ig.end_child()
-    else:
-      self.render_headers()
-      # TODO: Make the vertical scrollbar always visible?
-      ig.begin_child('Frame Sheet Rows', flags=ig.WINDOW_ALWAYS_VERTICAL_SCROLLBAR)
-      self.render_rows()
-      ig.end_child()
+    self.render_headers()
+    # TODO: Make the vertical scrollbar always visible?
+    ig.begin_child('Frame Sheet Rows', flags=ig.WINDOW_ALWAYS_VERTICAL_SCROLLBAR)
+    self.update_scolling()
+    self.render_rows()
+    ig.end_child()
 
 
 class ExplorerTabId:
@@ -644,7 +682,8 @@ class FrameSlider:
     )
     ig.pop_item_width()
 
-    self.model.selected_frame = frame
+    if changed:
+      self.model.selected_frame = frame
 
     dl = ig.get_window_draw_list()
     for frame in self.model.timeline.get_loaded_frames():
@@ -653,6 +692,15 @@ class FrameSlider:
 
 
 def render(window, ig_renderer, model: Model) -> None:
+  ig.get_io().key_repeat_rate = 1/30
+  if not ig.get_io().want_capture_keyboard:
+    if ig.is_key_pressed(ig.get_key_index(ig.KEY_DOWN_ARROW)) or \
+        ig.is_key_pressed(ig.get_key_index(ig.KEY_RIGHT_ARROW)):
+      model.selected_frame += 1
+    if ig.is_key_pressed(ig.get_key_index(ig.KEY_UP_ARROW)) or \
+        ig.is_key_pressed(ig.get_key_index(ig.KEY_LEFT_ARROW)):
+      model.selected_frame -= 1
+
   style = ig.get_style()
   style.window_rounding = 0
 
