@@ -7,6 +7,7 @@ import imgui as ig
 from wafel.core import Variable, ObjectType, VariableParam, VariableEdit, \
   VariableId
 from wafel.model import Model
+from wafel.variable_format import Formatters
 
 
 class FrameSheetColumn:
@@ -37,9 +38,10 @@ class CellEditInfo:
 
 class FrameSheet:
 
-  def __init__(self, model: Model) -> None:
+  def __init__(self, model: Model, formatters: Formatters) -> None:
     super().__init__()
     self.model = model
+    self.formatters = formatters
     self.columns: List[FrameSheetColumn] = []
     self.row_height = 30
     self.frame_column_width = 60
@@ -101,7 +103,7 @@ class FrameSheet:
         return ''
 
     args = { VariableParam.STATE: state }
-    formatter = self.model.formatters[variable]
+    formatter = self.formatters[variable]
     return formatter.output(variable.get(args))
 
 
@@ -116,7 +118,7 @@ class FrameSheet:
         return False
       del state
 
-    formatter = self.model.formatters[variable]
+    formatter = self.formatters[variable]
     assert isinstance(value, str)
 
     try:

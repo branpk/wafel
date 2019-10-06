@@ -17,6 +17,7 @@ from wafel.frame_sheet import FrameSheet
 from wafel.variable_explorer import VariableExplorer
 from wafel.game_view import GameView
 from wafel.frame_slider import *
+from wafel.variable_format import Formatters
 
 
 class View:
@@ -24,7 +25,9 @@ class View:
   def __init__(self, model: Model) -> None:
     self.model = model
 
-    self.frame_sheets: List[FrameSheet] = [FrameSheet(self.model)]
+    self.formatters = Formatters()
+
+    self.frame_sheets: List[FrameSheet] = [FrameSheet(self.model, self.formatters)]
     self.variable_explorer = VariableExplorer(self.model)
     self.game_views: List[GameView] = [
       GameView(self.model, CameraMode.ROTATE),

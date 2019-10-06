@@ -4,7 +4,6 @@ import json
 
 from wafel.core import GameLib, Variable, Edits, Timeline, GameState, ObjectId, \
   ObjectType, VariableParam
-from wafel.variable_format import Formatters
 
 
 class Model:
@@ -15,7 +14,6 @@ class Model:
     self.lib = GameLib(spec, dll)
 
     self.variables = Variable.create_all(self.lib)
-    self.formatters = Formatters()
 
     with open('test_files/1key_j.m64', 'rb') as m64:
       self.edits = Edits.from_m64(m64, self.variables)

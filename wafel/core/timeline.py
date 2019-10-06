@@ -176,7 +176,8 @@ class _CellManager:
     # Increase the number of buckets near hotspots
     for hotspot in self.hotspots.values():
       for i in range(-60, 61, 5):
-        buckets[max(hotspot + i, 0)] = []
+        if hotspot + i in range(self.get_timeline_length()):
+          buckets[max(hotspot + i, 0)] = []
 
     # Divide the modifiable cells into the buckets
     free_cells = [cell for cell in self.cells if self.can_modify_cell(cell)]
