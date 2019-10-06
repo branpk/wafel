@@ -259,7 +259,7 @@ static bool read_viewport(Viewport *viewport, PyObject *viewport_object) {
   if (!read_int(&viewport->pos.x, PyObject_GetAttrString(viewport_object, "x"))) {
     return false;
   }
-  if (!read_int(&viewport->pos.y, PyObject_GetAttrString(viewport_object, "x"))) {
+  if (!read_int(&viewport->pos.y, PyObject_GetAttrString(viewport_object, "y"))) {
     return false;
   }
   if (!read_int(&viewport->size.x, PyObject_GetAttrString(viewport_object, "width"))) {

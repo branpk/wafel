@@ -74,12 +74,10 @@ class RenderInfo:
 
 class Renderer:
   def __init__(self):
-    """Only call in initializeGL."""
     self._addr = ext_graphics.new_renderer()
 
   def __del__(self):
     ext_graphics.delete_renderer(self._addr)
 
   def render(self, info: RenderInfo):
-    """Only call in paintGL after makeCurrent is called."""
     ext_graphics.render(self._addr, info)
