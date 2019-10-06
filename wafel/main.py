@@ -609,6 +609,7 @@ class GameView:
       [
         self.model.timeline.frame(self.model.selected_frame + i).value
           for i in range(-5, 31)
+            if self.model.selected_frame + i in range(len(self.model.timeline))
       ],
     ))
 
