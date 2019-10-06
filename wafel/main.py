@@ -46,6 +46,7 @@ class Model:
       GameView(self, CameraMode.ROTATE),
       GameView(self, CameraMode.BIRDS_EYE),
     ]
+    self.frame_slider = FrameSlider(self)
 
     # self.dbg_reload_graphics = ReactiveValue(())
 
@@ -75,13 +76,25 @@ class Model:
 
     ig.columns(2)
 
-    ig.begin_child('Game View 1', height=int(window_size[1] // 2), border=True)
+    slider_space = 40
+
+    ig.begin_child(
+      'Game View 1',
+      height=int(window_size[1] // 2) - slider_space // 2,
+      border=True,
+    )
     self.game_views[0].render(window_size)
     ig.end_child()
 
-    ig.begin_child('Game View 2', border=True)
+    ig.begin_child(
+      'Game View 2',
+      height=int(window_size[1] // 2) - slider_space // 2,
+      border=True,
+    )
     self.game_views[1].render(window_size)
     ig.end_child()
+
+    self.frame_slider.render()
 
     ig.next_column()
 
@@ -614,6 +627,31 @@ class GameView:
     ))
 
 
+class FrameSlider:
+  def __init__(self, model: Model) -> None:
+    self.model = model
+
+  def render(self) -> None:
+    pos = ig.get_cursor_pos()
+    width = ig.get_column_width(-1) - 2 * ig.get_style().item_spacing[0]
+
+    ig.push_item_width(width)
+    changed, frame = ig.slider_int(
+      '##frame-slider',
+      self.model.selected_frame,
+      0,
+      len(self.model.timeline) - 1,
+    )
+    ig.pop_item_width()
+
+    self.model.selected_frame = frame
+
+    dl = ig.get_window_draw_list()
+    for frame in self.model.timeline.get_loaded_frames():
+      line_pos = pos[0] + frame / len(self.model.timeline) * width
+      dl.add_line(line_pos, pos[1], line_pos, pos[1] + 18, 0xFF0000FF)
+
+
 def render(window, ig_renderer, model: Model) -> None:
   style = ig.get_style()
   style.window_rounding = 0
@@ -666,6 +704,7 @@ def run() -> None:
   while not glfw.window_should_close(window):
     glfw.poll_events()
     ig_renderer.process_inputs()
+    model.timeline.balance_distribution(1/120)
     render(window, ig_renderer, model)
 
   ig_renderer.shutdown()
