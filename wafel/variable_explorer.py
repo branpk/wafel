@@ -54,7 +54,7 @@ class VariableExplorer:
 
   def get_tab_label(self, tab: ExplorerTabId) -> str:
     if tab.object_id is not None:
-      state = self.model.timeline.frame(self.model.selected_frame).value
+      state = self.model.timeline[self.model.selected_frame]
       object_type = self.model.get_object_type(state, tab.object_id)
       if object_type is None:
         return str(tab.object_id)
@@ -81,7 +81,7 @@ class VariableExplorer:
 
       object_id = slot
       object_type = self.model.get_object_type(
-        self.model.timeline.frame(self.model.selected_frame).value,
+        self.model.timeline[self.model.selected_frame],
         object_id,
       )
       if object_type is None:
@@ -97,7 +97,7 @@ class VariableExplorer:
     if tab.object_id is None:
       return self.model.variables.group(VariableGroup(tab.name))
 
-    state = self.model.timeline.frame(self.model.selected_frame).value
+    state = self.model.timeline[self.model.selected_frame]
     object_type = self.model.get_object_type(state, tab.object_id)
     if object_type is None:
       return []

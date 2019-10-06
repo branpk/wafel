@@ -6,7 +6,6 @@ import time
 from wafel.core.game_state import GameState
 from wafel.core.edit import Edits
 from wafel.core.game_lib import GameLib
-from wafel.reactive import Reactive, ReactiveValue
 
 
 # TODO: Could do a quick warm up pass on first load and input change
@@ -61,7 +60,7 @@ class _CellManager:
     # Keep one cell fixed at frame 0
     self.power_on_cell = self.cells[1]
 
-    self.hotspots: Set[Reactive[int]] = set()
+    self.hotspots: Dict[str, int] = {}
 
   def can_modify_cell(self, cell: _Cell) -> bool:
     return cell is not self.power_on_cell and not cell.loaded
@@ -149,12 +148,12 @@ class _CellManager:
 
     return self.load_cell(selected)
 
-  def add_hotspot(self, frame: Reactive[int]) -> None:
-    self.hotspots.add(frame)
+  def set_hotspot(self, name: str, frame: int) -> None:
+    self.hotspots[name] = frame
 
-  def remove_hotspot(self, frame: Reactive[int]) -> None:
-    if frame in self.hotspots:
-      self.hotspots.remove(frame)
+  def delete_hotspot(self, name: str) -> None:
+    if name in self.hotspots:
+      del self.hotspots[name]
 
   def get_timeline_length(self) -> int:
     # TODO: Compute this correctly
@@ -175,9 +174,9 @@ class _CellManager:
     }
 
     # Increase the number of buckets near hotspots
-    for hotspot in self.hotspots:
+    for hotspot in self.hotspots.values():
       for i in range(-60, 61, 5):
-        buckets[max(hotspot.value + i, 0)] = []
+        buckets[max(hotspot + i, 0)] = []
 
     # Divide the modifiable cells into the buckets
     free_cells = [cell for cell in self.cells if self.can_modify_cell(cell)]
@@ -232,24 +231,6 @@ class _CellManager:
     return [cell.frame for cell in self.cells]
 
 
-# TODO: Watch for input changes
-# TODO: GameStateTimeline events (adding/removing frames, any state changed (for frame sheet caching), etc)
-# TODO: Handling case where request_frame returns None (once implemented)
-
-class _ReactiveGameState(Reactive[GameState]):
-  def __init__(self, timeline: 'Timeline', frame: Reactive[int]) -> None:
-    self.timeline = timeline
-    self.frame = frame
-
-  @property
-  def value(self) -> GameState:
-    return self.timeline._get_state_now(self.frame.value)
-
-  def _on_change(self, callback: Callable[[], None]) -> None:
-    self.frame.on_change(callback)
-    self.timeline._on_state_change(self.frame, callback)
-
-
 class Timeline:
   def __init__(
     self,
@@ -257,42 +238,25 @@ class Timeline:
     edits: Edits,
   ) -> None:
     self._cell_manager = _CellManager(lib, edits, capacity=200)
-    self._callbacks: List[Tuple[Reactive[int], Callable[[], None]]] = []
+    edits.on_edit(self._cell_manager.invalidate_frame)
 
-    edits.latest_edited_frame.on_change(self._invalidate_frame)
-
-  def _get_state_now(self, frame: int) -> GameState:
+  def __getitem__(self, frame: int) -> GameState:
     state = self._cell_manager.request_frame(frame)
     assert state is not None
     return state
-
-  def _on_state_change(self, frame: Reactive[int], callback: Callable[[], None]) -> None:
-    self._callbacks.append((frame, callback))
-
-  def _invalidate_frame(self, frame: int) -> None:
-    self._cell_manager.invalidate_frame(frame)
-
-    callbacks = [cb for f, cb in self._callbacks if f.value >= frame]
-    for callback in callbacks:
-      callback()
-
-  def frame(self, frame: Union[int, Reactive[int]]) -> Reactive[GameState]:
-    if isinstance(frame, int):
-      frame = ReactiveValue(frame)
-    return _ReactiveGameState(self, frame)
 
   def __len__(self) -> int:
     # TODO: Handle length better
     return len(self._cell_manager.edits._items)
 
-  def add_hotspot(self, frame: Reactive[int]) -> None:
+  def set_hotspot(self, name: str, frame: int) -> None:
     """Mark a certain frame as a "hotspot", which is a hint to try to ensure
     that scrolling near the frame is smooth.
     """
-    self._cell_manager.add_hotspot(frame)
+    self._cell_manager.set_hotspot(name, frame)
 
-  def delete_hotspot(self, frame: Reactive[int]) -> None:
-    self._cell_manager.remove_hotspot(frame)
+  def delete_hotspot(self, name: str) -> None:
+    self._cell_manager.delete_hotspot(name)
 
   def balance_distribution(self, max_run_time: float) -> None:
     """Perform maintenance to maintain a nice distribution of loaded frames."""

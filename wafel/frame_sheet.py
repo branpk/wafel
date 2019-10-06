@@ -1,3 +1,4 @@
+import sys
 from typing import *
 import traceback
 
@@ -15,7 +16,7 @@ class FrameSheetColumn:
     object_type: Optional[ObjectType] = None,
   ) -> None:
     self.variable = variable
-    # TODO: Semantics object ids should make object_type unnecessary
+    # TODO: Semantic object ids should make object_type unnecessary
     self.object_type = object_type
     self.width = 100
 
@@ -56,7 +57,7 @@ class FrameSheet:
       column = FrameSheetColumn(variable)
     else:
       # TODO: This should use the state that the drop began
-      state = self.model.timeline.frame(self.model.selected_frame).value
+      state = self.model.timeline[self.model.selected_frame]
       column = FrameSheetColumn(variable, self.model.get_object_type(state, object_id))
     if column not in self.columns:
       self.columns.insert(index, column)
@@ -91,7 +92,7 @@ class FrameSheet:
 
   def get_data(self, row: int, column: FrameSheetColumn) -> Any:
     variable = column.variable
-    state = self.model.timeline.frame(row).value
+    state = self.model.timeline[row]
 
     object_id = variable.get_object_id()
     if column.object_type is not None and object_id is not None:
@@ -109,7 +110,7 @@ class FrameSheet:
 
     object_id = variable.get_object_id()
     if column.object_type is not None and object_id is not None:
-      state = self.model.timeline.frame(row).value
+      state = self.model.timeline[row]
       row_object_type = self.model.get_object_type(state, object_id)
       if row_object_type != column.object_type:
         return False

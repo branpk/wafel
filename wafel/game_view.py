@@ -65,7 +65,7 @@ class GameView:
 
 
   def compute_camera(self) -> Camera:
-    args = { VariableParam.STATE: self.model.timeline.frame(self.model.selected_frame).value }
+    args = { VariableParam.STATE: self.model.timeline[self.model.selected_frame] }
     mario_pos = [
       self.model.variables['mario-pos-x'].get(args),
       self.model.variables['mario-pos-y'].get(args),
@@ -111,9 +111,9 @@ class GameView:
     self.renderer.render(RenderInfo(
       Viewport(viewport_x, viewport_y, viewport_w, viewport_h),
       self.compute_camera(),
-      self.model.timeline.frame(self.model.selected_frame).value,
+      self.model.timeline[self.model.selected_frame],
       [
-        self.model.timeline.frame(self.model.selected_frame + i).value
+        self.model.timeline[self.model.selected_frame + i]
           for i in range(-5, 31)
             if self.model.selected_frame + i in range(len(self.model.timeline))
       ],

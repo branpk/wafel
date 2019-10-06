@@ -1,9 +1,8 @@
-import ctypes
-from typing import IO, Any, Optional, List
+from typing import *
+from typing import IO
 
 from wafel.core.game_state import GameState
 from wafel.core.variable import Variable, VariableParam, Variables
-from wafel.reactive import Reactive, ReactiveValue
 
 
 class Edit:
@@ -55,12 +54,16 @@ class Edits:
 
   def __init__(self):
     self._items: List[List[Edit]] = []
-    self.latest_edited_frame = ReactiveValue(-1)
+    self.edit_frame_callbacks: List[Callable[[int], None]] = []
+
+  def on_edit(self, callback: Callable[[int], None]) -> None:
+    self.edit_frame_callbacks.append(callback)
 
   def add(self, frame: int, edit: Edit) -> None:
     # TODO: Remove overwritten edits
     self._get_edits(frame).append(edit)
-    self.latest_edited_frame.value = frame
+    for callback in list(self.edit_frame_callbacks):
+      callback(frame)
 
   def _get_edits(self, frame: int) -> List[Edit]:
     while frame >= len(self._items):
