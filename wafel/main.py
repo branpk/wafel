@@ -59,9 +59,9 @@ class Model:
 
   @selected_frame.setter
   def selected_frame(self, frame: int) -> None:
-    self._selected_frame = frame
+    self._selected_frame = min(max(frame, 0), len(self.timeline) - 1)
     for callback in list(self.selected_frame_callbacks):
-      callback(frame)
+      callback(self._selected_frame)
 
   def on_selected_frame_change(self, callback: Callable[[int], None]) -> None:
     self.selected_frame_callbacks.append(callback)
@@ -348,6 +348,7 @@ class FrameSheet:
     else:
       clicked, _ = ig.selectable(
         data + '##fs-cell-' + str(row) + '-' + str(id(column)),
+        row == self.model.selected_frame,
         height=self.row_height - 8, # TODO: Compute padding
         flags=ig.SELECTABLE_ALLOW_DOUBLE_CLICK,
       )
@@ -373,6 +374,7 @@ class FrameSheet:
         ig.set_column_width(-1, self.frame_column_width)
       clicked, _ = ig.selectable(
         str(row) + '##fs-framenum-' + str(row),
+        row == self.model.selected_frame,
         height=self.row_height - 8, # TODO: Compute padding
       )
       if clicked:
@@ -700,6 +702,10 @@ def render(window, ig_renderer, model: Model) -> None:
     if ig.is_key_pressed(ig.get_key_index(ig.KEY_UP_ARROW)) or \
         ig.is_key_pressed(ig.get_key_index(ig.KEY_LEFT_ARROW)):
       model.selected_frame -= 1
+    if ig.is_key_pressed(ig.get_key_index(ig.KEY_PAGE_DOWN)):
+      model.selected_frame += 5
+    if ig.is_key_pressed(ig.get_key_index(ig.KEY_PAGE_UP)):
+      model.selected_frame -= 5
 
   style = ig.get_style()
   style.window_rounding = 0
