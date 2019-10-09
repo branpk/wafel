@@ -101,6 +101,7 @@ class View:
 
 def render(window, ig_renderer, view: View) -> None:
   # TODO: Move keyboard handling somewhere else
+  # TODO: Make this work when holding down mouse button
   model = view.model
   ig.get_io().key_repeat_rate = 1/30
   if not ig.get_io().want_capture_keyboard:

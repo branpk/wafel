@@ -11,8 +11,22 @@ class VariableFormatter:
     raise NotImplementedError
 
 
+class TextFormatter(VariableFormatter):
+  pass
+
+
+class EmptyFormatter(TextFormatter): # TODO: Implement better UI than empty text
+  def output(self, data):
+    assert data is None
+    return ''
+
+  def input(self, rep):
+    assert rep == ''
+    return None
+
+
 # TODO: Signed, unsigned, int sizes
-class DecimalIntFormatter(VariableFormatter):
+class DecimalIntFormatter(TextFormatter):
   def output(self, data):
     assert isinstance(data, int)
     return str(data)
@@ -23,7 +37,7 @@ class DecimalIntFormatter(VariableFormatter):
 
 
 # TODO: Precision
-class FloatFormatter(VariableFormatter):
+class FloatFormatter(TextFormatter):
   def output(self, data):
     assert isinstance(data, float)
     return str(data)

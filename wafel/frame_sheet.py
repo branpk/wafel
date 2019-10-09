@@ -7,7 +7,9 @@ import imgui as ig
 from wafel.core import Variable, ObjectType, VariableParam, VariableEdit, \
   VariableId
 from wafel.model import Model
-from wafel.variable_format import Formatters
+from wafel.variable_format import Formatters, EmptyFormatter
+from wafel.variable_display import VariableDisplayAction, \
+  VariableDisplayEditState, display_variable_data
 
 
 class FrameSheetColumn:
@@ -27,13 +29,23 @@ class FrameSheetColumn:
       self.object_type == other.object_type
 
 
-class CellEditInfo:
-  def __init__(
-    self, row: int, column: FrameSheetColumn) -> None:
-    self.row = row
-    self.column = column
-    self.initial_focus = False
-    self.error = False
+T = TypeVar('T')
+
+class CellEditState(Generic[T]):
+  def __init__(self) -> None:
+    self.current_cell: Optional[Tuple[T, VariableDisplayEditState]] = None
+
+  def begin_edit(self, cell: T) -> None:
+    self.current_cell = (cell, VariableDisplayEditState())
+
+  def end_edit(self) -> None:
+    self.current_cell = None
+
+  def get(self, cell: T) -> Optional[VariableDisplayEditState]:
+    if self.current_cell is not None and self.current_cell[0] == cell:
+      return self.current_cell[1]
+    else:
+      return None
 
 
 class FrameSheet:
@@ -45,7 +57,7 @@ class FrameSheet:
     self.columns: List[FrameSheetColumn] = []
     self.row_height = 30
     self.frame_column_width = 60
-    self.cell_edit: Optional[CellEditInfo] = None
+    self.cell_edit_state: CellEditState[Tuple[int, FrameSheetColumn]] = CellEditState()
 
     self.scroll_to_frame: Optional[int] = None
     def selected_frame_changed(frame: int) -> None:
@@ -100,14 +112,13 @@ class FrameSheet:
     if column.object_type is not None and object_id is not None:
       row_object_type = self.model.get_object_type(state, object_id)
       if row_object_type != column.object_type:
-        return ''
+        raise Exception # TODO: Error msg
 
     args = { VariableParam.STATE: state }
-    formatter = self.formatters[variable]
-    return formatter.output(variable.get(args))
+    return variable.get(args)
 
 
-  def set_data(self, row: int, column: FrameSheetColumn, value: Any) -> bool:
+  def set_data(self, row: int, column: FrameSheetColumn, data: Any) -> None:
     variable = column.variable
 
     object_id = variable.get_object_id()
@@ -115,21 +126,10 @@ class FrameSheet:
       state = self.model.timeline[row]
       row_object_type = self.model.get_object_type(state, object_id)
       if row_object_type != column.object_type:
-        return False
+        raise Exception # TODO: Error message
       del state
 
-    formatter = self.formatters[variable]
-    assert isinstance(value, str)
-
-    try:
-      value = formatter.input(value)
-    except:
-      sys.stderr.write(traceback.format_exc())
-      sys.stderr.flush()
-      return False
-
-    self.model.edits.add(row, VariableEdit(variable, value))
-    return True
+    self.model.edits.add(row, VariableEdit(variable, data))
 
 
   def get_content_width(self) -> int:
@@ -185,60 +185,36 @@ class FrameSheet:
 
 
   def render_cell(self, row: int, column: FrameSheetColumn) -> None:
-    data = self.get_data(row, column)
-    assert isinstance(data, str)
+    try:
+      data = self.get_data(row, column)
+      formatter = self.formatters[column.variable]
+    except: # TODO: Only catch object mismatch exception
+      data = None
+      formatter = EmptyFormatter()
 
-    cursor_pos = ig.get_cursor_pos()
-    cursor_pos = (
-      ig.get_window_position()[0] + cursor_pos[0],
-      ig.get_window_position()[1] + cursor_pos[1] - ig.get_scroll_y(),
+    def on_select() -> None:
+      self.model.selected_frame = row
+
+    def on_edit(data: Any) -> None:
+      self.set_data(row, column, data)
+
+    action = display_variable_data(
+      'fs-cell-' + str(row) + '-' + str(id(column)),
+      data,
+      formatter,
+      (
+        column.width - 2 * ig.get_style().item_spacing[0],
+        self.row_height - 2 * ig.get_style().item_spacing[1],
+      ),
+      self.cell_edit_state.get((row, column)),
+      highlight = row == self.model.selected_frame,
+      on_edit = on_edit,
+      on_select = on_select,
     )
-
-    if self.cell_edit is not None and \
-        self.cell_edit.row == row and \
-        self.cell_edit.column is column:
-      input_width = column.width - 2 * ig.get_style().item_spacing[0]
-
-      ig.push_item_width(input_width)
-      _, value = ig.input_text(
-        '##fs-cell-' + str(row) + '-' + str(id(column)),
-        data,
-        32,
-      )
-      ig.pop_item_width()
-
-      if value != data:
-        self.cell_edit.error = not self.set_data(row, column, value)
-
-      if self.cell_edit.error:
-        dl = ig.get_window_draw_list()
-        dl.add_rect(
-          cursor_pos[0],
-          cursor_pos[1],
-          cursor_pos[0] + input_width,
-          cursor_pos[1] + ig.get_text_line_height() + 2 * ig.get_style().frame_padding[1],
-          0xFF0000FF,
-        )
-        # TODO: Show error message?
-
-      if not self.cell_edit.initial_focus:
-        ig.set_keyboard_focus_here(-1)
-        self.cell_edit.initial_focus = True
-      elif not ig.is_item_active():
-        self.cell_edit = None
-
-    else:
-      clicked, _ = ig.selectable(
-        data + '##fs-cell-' + str(row) + '-' + str(id(column)),
-        row == self.model.selected_frame,
-        height=self.row_height - 8, # TODO: Compute padding
-        flags=ig.SELECTABLE_ALLOW_DOUBLE_CLICK,
-      )
-
-      if clicked:
-        self.model.selected_frame = row
-        if ig.is_mouse_double_clicked():
-          self.cell_edit = CellEditInfo(row, column)
+    if action == VariableDisplayAction.BEGIN_EDIT:
+      self.cell_edit_state.begin_edit((row, column))
+    elif action == VariableDisplayAction.END_EDIT:
+      self.cell_edit_state.end_edit()
 
 
   def render_rows(self) -> None:
