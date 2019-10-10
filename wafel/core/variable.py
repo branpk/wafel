@@ -42,11 +42,12 @@ class VariableGroup:
     return VariableGroup('_hidden')
 
   @staticmethod
-  def objects(names: Optional[Set[str]] = None) -> 'VariableGroup':
-    if names is None:
-      return VariableGroup('_object', ObjectSet.all())
-    else:
-      return VariableGroup('_object', ObjectSet(names))
+  def objects(names: Set[str]) -> 'VariableGroup':
+    return VariableGroup('_object', ObjectSet(names))
+
+  @staticmethod
+  def all_objects() -> 'VariableGroup':
+    return VariableGroup('_object', ObjectSet.all())
 
   @staticmethod
   def object(name: str) -> 'VariableGroup':
@@ -361,7 +362,7 @@ def _all_variables(lib: GameLib) -> Variables:
     _DataVariable('mario-vel-y', VariableGroup.object('Mario'), 'mario vel y', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[1]'),
     _DataVariable('mario-vel-z', VariableGroup.object('Mario'), 'mario vel z', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[2]'),
 
-    _DataVariable('obj-hitbox-radius', VariableGroup.objects(), 'hitbox radius', lib, VariableSemantics.RAW, '$object.hitboxRadius'),
+    _DataVariable('obj-hitbox-radius', VariableGroup.all_objects(), 'hitbox radius', lib, VariableSemantics.RAW, '$object.hitboxRadius'),
     _DataVariable('obj-behavior-ptr', VariableGroup.hidden(), 'behavior', lib, VariableSemantics.RAW, '$object.behaviorSeg'),
-    _FlagVariable('obj-active-flags-active', VariableGroup.objects(), 'active', active_flags, 'ACTIVE_FLAG_ACTIVE'),
+    _FlagVariable('obj-active-flags-active', VariableGroup.hidden(), 'active', active_flags, 'ACTIVE_FLAG_ACTIVE'),
   ])

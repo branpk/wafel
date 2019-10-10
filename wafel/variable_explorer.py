@@ -3,16 +3,19 @@ from typing import *
 import imgui as ig
 
 from wafel.model import Model
-from wafel.core import ObjectId, Variable, VariableGroup
+from wafel.core import ObjectId, Variable, VariableGroup, VariableParam, VariableEdit
+from wafel.variable_display import VariableDisplayAction, display_variable_data
+from wafel.variable_format import Formatters
+from wafel.frame_sheet import CellEditState
 
 
-class ExplorerTabId:
+class TabId:
   def __init__(self, name: str, object_id: Optional[ObjectId] = None) -> None:
     self.name = name
     self.object_id = object_id
 
   def __eq__(self, other: object) -> bool:
-    if not isinstance(other, ExplorerTabId):
+    if not isinstance(other, TabId):
       return False
     return self.name == other.name and self.object_id == other.object_id
 
@@ -20,17 +23,36 @@ class ExplorerTabId:
     return hash((self.name, self.object_id))
 
 
+class VariableCell:
+  def __init__(self, tab: TabId, variable: Variable, frame: int) -> None:
+    self.tab = tab
+    self.variable = variable
+    self.frame = frame
+
+  def __eq__(self, other: object) -> bool:
+    if not isinstance(other, VariableCell):
+      return False
+    return self.tab == other.tab and \
+      self.variable == other.variable and \
+      self.frame == other.frame
+
+  def __hash__(self) -> int:
+    return hash((self.tab, self.variable, self.frame))
+
+
 class VariableExplorer:
 
-  def __init__(self, model: Model) -> None:
+  def __init__(self, model: Model, formatters: Formatters) -> None:
     self.model = model
-    self.open_tabs: List[ExplorerTabId] = []
+    self.formatters = formatters
+    self.open_tabs: List[TabId] = []
     self.rendered = False
+    self.cell_edit_state: CellEditState[VariableCell] = CellEditState()
 
     fixed_tabs = [
-      ExplorerTabId('Input'),
-      ExplorerTabId('Misc'),
-      ExplorerTabId('Objects'),
+      TabId('Input'),
+      TabId('Misc'),
+      TabId('Objects'),
     ]
     for tab in fixed_tabs:
       self.open_tab(tab)
@@ -38,13 +60,13 @@ class VariableExplorer:
     self.current_tab = self.open_tabs[0]
 
 
-  def open_tab(self, tab: ExplorerTabId) -> None:
+  def open_tab(self, tab: TabId) -> None:
     if tab not in self.open_tabs:
       self.open_tabs.append(tab)
     self.current_tab = tab
 
 
-  def close_tab(self, tab: ExplorerTabId) -> None:
+  def close_tab(self, tab: TabId) -> None:
     if self.current_tab == tab:
       # TODO
       pass
@@ -52,7 +74,7 @@ class VariableExplorer:
       self.open_tabs.remove(tab)
 
 
-  def get_tab_label(self, tab: ExplorerTabId) -> str:
+  def get_tab_label(self, tab: TabId) -> str:
     if tab.object_id is not None:
       state = self.model.timeline[self.model.selected_frame]
       object_type = self.model.get_object_type(state, tab.object_id)
@@ -90,10 +112,10 @@ class VariableExplorer:
         label = str(slot) + '\n' + object_type.name
 
       if ig.button(label + '##slot-' + str(slot), 50, 50):
-        self.open_tab(ExplorerTabId('_object', object_id))
+        self.open_tab(TabId('_object', object_id))
 
 
-  def get_variables_for_tab(self, tab: ExplorerTabId) -> List[Variable]:
+  def get_variables_for_tab(self, tab: TabId) -> List[Variable]:
     if tab.object_id is None:
       return self.model.variables.group(VariableGroup(tab.name))
 
@@ -108,25 +130,47 @@ class VariableExplorer:
     ]
 
 
-  def render_variable_tab(self, tab: ExplorerTabId) -> None:
+  def render_variable(self, tab: TabId, variable: Variable) -> None:
+    frame = self.model.selected_frame
+    state = self.model.timeline[frame]
+    cell = VariableCell(tab, variable, state.frame)
+    data = variable.get({ VariableParam.STATE: state })
+    del state
+
+    ig.selectable(variable.display_name + '##ve-label-' + str(hash(cell)), width=80)
+
+    if ig.begin_drag_drop_source():
+      ig.text(variable.display_name)
+      ig.set_drag_drop_payload('ve-var', variable.id.to_bytes())
+      ig.end_drag_drop_source()
+
+    ig.same_line()
+
+    def on_edit(data: Any) -> None:
+      self.model.edits.add(frame, VariableEdit(variable, data))
+
+    action = display_variable_data(
+      've-var-' + str(hash(cell)),
+      data,
+      self.formatters[variable],
+      (80, ig.get_text_line_height() + 2*ig.get_style().frame_padding[1]),
+      self.cell_edit_state.get(cell),
+      on_edit = on_edit,
+    )
+
+    if action == VariableDisplayAction.BEGIN_EDIT:
+      self.cell_edit_state.begin_edit(cell)
+    elif action == VariableDisplayAction.END_EDIT:
+      self.cell_edit_state.end_edit()
+
+
+  def render_variable_tab(self, tab: TabId) -> None:
     variables = self.get_variables_for_tab(tab)
     for variable in variables:
-      # TODO: Variable id
-      ig.selectable(variable.display_name, width=80)
-
-      if ig.begin_drag_drop_source():
-        ig.text(variable.display_name)
-        ig.set_drag_drop_payload('ve-var', variable.id.to_bytes())
-        ig.end_drag_drop_source()
-
-      # TODO: Reuse display/edit code with frame sheet
-      ig.same_line()
-      ig.push_item_width(80)
-      ig.input_text('##' + variable.display_name, 'hey', 32, False)
-      ig.pop_item_width()
+      self.render_variable(tab, variable)
 
 
-  def render_tab_contents(self, tab: ExplorerTabId) -> None:
+  def render_tab_contents(self, tab: TabId) -> None:
     if tab.name == 'Objects':
       self.render_objects_tab()
     else:
@@ -135,6 +179,7 @@ class VariableExplorer:
 
   def render(self) -> None:
     ig.columns(2)
+    # TODO: Make tab column fixed when resizing (render param for refreshing?)
     if not self.rendered:
       self.rendered = True
       ig.set_column_width(-1, 120)

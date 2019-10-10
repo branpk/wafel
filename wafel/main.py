@@ -28,7 +28,7 @@ class View:
     self.formatters = Formatters()
 
     self.frame_sheets: List[FrameSheet] = [FrameSheet(self.model, self.formatters)]
-    self.variable_explorer = VariableExplorer(self.model)
+    self.variable_explorer = VariableExplorer(self.model, self.formatters)
     self.game_views: List[GameView] = [
       GameView(self.model, CameraMode.ROTATE),
       GameView(self.model, CameraMode.BIRDS_EYE),
