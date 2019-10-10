@@ -179,7 +179,6 @@ class VariableExplorer:
 
   def render(self) -> None:
     ig.columns(2)
-    # TODO: Make tab column fixed when resizing (render param for refreshing?)
     if not self.rendered:
       self.rendered = True
       ig.set_column_width(-1, 120)
