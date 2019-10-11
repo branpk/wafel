@@ -54,7 +54,10 @@ class FrameSheet:
     super().__init__()
     self.model = model
     self.formatters = formatters
+
     self.columns: List[FrameSheetColumn] = []
+    self.next_columns: List[FrameSheetColumn] = []
+
     self.row_height = 30
     self.frame_column_width = 60
     self.cell_edit_state: CellEditState[Tuple[int, FrameSheetColumn]] = CellEditState()
@@ -65,7 +68,11 @@ class FrameSheet:
     self.model.on_selected_frame_change(selected_frame_changed)
 
 
-  def insert_variable(self, index: int, variable: Variable) -> None:
+  def _insert_variable(self, index: int, variable: Variable) -> None:
+    if self.columns != self.next_columns:
+      sys.stderr.write('Multiple frame sheet column mods on same frame\n')
+      return
+
     object_id = variable.get_object_id()
     if object_id is None:
       column = FrameSheetColumn(variable)
@@ -74,17 +81,29 @@ class FrameSheet:
       state = self.model.timeline[self.model.selected_frame]
       column = FrameSheetColumn(variable, self.model.get_object_type(state, object_id))
     if column not in self.columns:
-      self.columns.insert(index, column)
+      self.next_columns.insert(index, column)
 
 
   def append_variable(self, variable: Variable) -> None:
-    self.insert_variable(len(self.columns), variable)
+    self._insert_variable(len(self.columns), variable)
+    self.columns = list(self.next_columns)
 
 
-  def move_column(self, source: int, dest: int) -> None:
-    column = self.columns[source]
-    del self.columns[source]
-    self.columns.insert(dest, column)
+  def _move_column(self, source: int, dest: int) -> None:
+    if self.columns != self.next_columns:
+      sys.stderr.write('Multiple frame sheet column mods on same frame\n')
+      return
+
+    column = self.next_columns[source]
+    del self.next_columns[source]
+    self.next_columns.insert(dest, column)
+
+
+  def _remove_column(self, index: int) -> None:
+    if self.columns != self.next_columns:
+      sys.stderr.write('Multiple frame sheet column mods on same frame\n')
+      return
+    del self.next_columns[index]
 
 
   def get_row_count(self) -> int:
@@ -148,7 +167,7 @@ class FrameSheet:
     ig.text('')
     ig.next_column()
 
-    for index, column in list(enumerate(self.columns)):
+    for index, column in enumerate(self.columns):
       initial_cursor_pos = ig.get_cursor_pos()
       ig.selectable(
         '##fs-col-' + str(id(column)),
@@ -167,14 +186,17 @@ class FrameSheet:
         payload = ig.accept_drag_drop_payload('fs-col')
         if payload is not None:
           source = int(payload.decode('utf-8'))
-          self.move_column(source, index)
+          self._move_column(source, index)
 
         payload = ig.accept_drag_drop_payload('ve-var')
         if payload is not None:
           variable = self.model.variables[VariableId.from_bytes(payload)]
-          self.insert_variable(index, variable)
+          self._insert_variable(index, variable)
 
         ig.end_drag_drop_target()
+
+      if ig.is_item_hovered() and ig.is_mouse_clicked(2):
+        self._remove_column(index)
 
       ig.set_cursor_pos(initial_cursor_pos)
       ig.text(header_labels[index])
@@ -294,3 +316,5 @@ class FrameSheet:
     self.update_scolling()
     self.render_rows()
     ig.end_child()
+
+    self.columns = list(self.next_columns)

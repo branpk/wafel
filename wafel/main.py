@@ -47,6 +47,8 @@ class View:
     ]
     self.frame_slider = FrameSlider(self.model)
 
+    self.dbg_frame_advance = False
+
 
   def render_left_column(self, window_size: Tuple[int, int]) -> None:
     slider_space = 45
@@ -111,6 +113,20 @@ class View:
     ig.end()
 
 
+  def dbg_is_key_pressed(self, key: int) -> bool:
+    if not hasattr(self, 'dbg_keys_down'):
+      self.dbg_keys_down = set()
+
+    if ig.is_key_down(key):
+      pressed = key not in self.dbg_keys_down
+      self.dbg_keys_down.add(key)
+      return pressed
+    else:
+      if key in self.dbg_keys_down:
+        self.dbg_keys_down.remove(key)
+      return False
+
+
 def render(window, ig_renderer, view: View) -> None:
   # TODO: Move keyboard handling somewhere else
   # TODO: Make this work when holding down mouse button
@@ -127,6 +143,13 @@ def render(window, ig_renderer, view: View) -> None:
       model.selected_frame += 5
     if ig.is_key_pressed(ig.get_key_index(ig.KEY_PAGE_UP)):
       model.selected_frame -= 5
+
+    if view.dbg_is_key_pressed(ord(']')):
+      view.dbg_frame_advance = not view.dbg_frame_advance
+
+  if view.dbg_frame_advance and not view.dbg_is_key_pressed(ord('\\')):
+    glfw.swap_buffers(window)
+    return
 
   style = ig.get_style()
   style.window_rounding = 0
