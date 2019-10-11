@@ -47,19 +47,31 @@ class Edits:
 
     edits = Edits()
 
+    prev_buttons = 0
+    prev_stick_x = 0
+    prev_stick_y = 0
+
     m64.seek(0x400)
     frame = 0
     while True:
       buttons = read_big_short(m64)
       stick_x = read_byte(m64)
       stick_y = read_byte(m64)
+
       if buttons is None or stick_x is None or stick_y is None:
         break
       else:
         for variable, flag in input_button_vars.items():
-          edits.add(frame, VariableEdit(variable, bool(buttons & flag)))
-        edits.add(frame, VariableEdit(variables['input-stick-x'], stick_x))
-        edits.add(frame, VariableEdit(variables['input-stick-y'], stick_y))
+          if (prev_buttons & flag) != (buttons & flag):
+            edits.add(frame, VariableEdit(variable, bool(buttons & flag)))
+        if stick_x != prev_stick_x:
+          edits.add(frame, VariableEdit(variables['input-stick-x'], stick_x))
+        if stick_y != prev_stick_y:
+          edits.add(frame, VariableEdit(variables['input-stick-y'], stick_y))
+
+      prev_buttons = buttons
+      prev_stick_x = stick_x
+      prev_stick_y = stick_y
       frame += 1
 
     return edits
@@ -71,11 +83,14 @@ class Edits:
   def on_edit(self, callback: Callable[[int], None]) -> None:
     self.edit_frame_callbacks.append(callback)
 
+  def _invalidate(self, frame: int) -> None:
+    for callback in list(self.edit_frame_callbacks):
+      callback(frame)
+
   def add(self, frame: int, edit: Edit) -> None:
     # TODO: Remove overwritten edits
     self._get_edits(frame).append(edit)
-    for callback in list(self.edit_frame_callbacks):
-      callback(frame)
+    self._invalidate(frame)
 
   def _get_edits(self, frame: int) -> List[Edit]:
     while frame >= len(self._items):
@@ -91,3 +106,10 @@ class Edits:
       if isinstance(edit, VariableEdit) and edit.variable == variable:
         return True
     return False
+
+  def reset(self, frame: int, variable: Variable) -> None:
+    edits = self._get_edits(frame)
+    for edit in list(edits):
+      if isinstance(edit, VariableEdit) and edit.variable == variable:
+        edits.remove(edit)
+    self._invalidate(frame)

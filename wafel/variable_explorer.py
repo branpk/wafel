@@ -172,6 +172,9 @@ class VariableExplorer:
     elif action == VariableDisplayAction.END_EDIT:
       self.cell_edit_state.end_edit()
 
+    if ig.is_item_hovered() and ig.is_mouse_down(2):
+      self.model.edits.reset(frame, variable)
+
     if self.model.edits.is_edited(frame, variable):
       dl = ig.get_window_draw_list()
       spacing = ig.get_style().item_spacing
