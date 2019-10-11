@@ -20,6 +20,15 @@ from wafel.frame_slider import *
 from wafel.variable_format import Formatters
 
 
+DEFAULT_FRAME_SHEET_VARS = [
+  'input-stick-x',
+  'input-stick-y',
+  'input-button-a',
+  'input-button-b',
+  'input-button-z',
+]
+
+
 class View:
 
   def __init__(self, model: Model) -> None:
@@ -28,6 +37,9 @@ class View:
     self.formatters = Formatters()
 
     self.frame_sheets: List[FrameSheet] = [FrameSheet(self.model, self.formatters)]
+    for var_name in DEFAULT_FRAME_SHEET_VARS:
+      self.frame_sheets[0].append_variable(self.model.variables[var_name])
+
     self.variable_explorer = VariableExplorer(self.model, self.formatters)
     self.game_views: List[GameView] = [
       GameView(self.model, CameraMode.ROTATE),

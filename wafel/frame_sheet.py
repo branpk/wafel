@@ -104,9 +104,9 @@ class FrameSheet:
     return str(object_id) + ' - ' + column.object_type.name + '\n' + variable.display_name
 
 
-  def get_data(self, row: int, column: FrameSheetColumn) -> Any:
+  def get_data(self, frame: int, column: FrameSheetColumn) -> Any:
     variable = column.variable
-    state = self.model.timeline[row]
+    state = self.model.timeline[frame]
 
     object_id = variable.get_object_id()
     if column.object_type is not None and object_id is not None:
@@ -118,18 +118,18 @@ class FrameSheet:
     return variable.get(args)
 
 
-  def set_data(self, row: int, column: FrameSheetColumn, data: Any) -> None:
+  def set_data(self, frame: int, column: FrameSheetColumn, data: Any) -> None:
     variable = column.variable
 
     object_id = variable.get_object_id()
     if column.object_type is not None and object_id is not None:
-      state = self.model.timeline[row]
+      state = self.model.timeline[frame]
       row_object_type = self.model.get_object_type(state, object_id)
       if row_object_type != column.object_type:
         raise Exception # TODO: Error message
       del state
 
-    self.model.edits.add(row, VariableEdit(variable, data))
+    self.model.edits.add(frame, VariableEdit(variable, data))
 
 
   def get_content_width(self) -> int:
@@ -184,37 +184,53 @@ class FrameSheet:
     ig.columns(1)
 
 
-  def render_cell(self, row: int, column: FrameSheetColumn) -> None:
+  def render_cell(self, frame: int, column: FrameSheetColumn) -> None:
+    cell_cursor_pos = ig.get_cursor_pos()
+    cell_cursor_pos = (
+      cell_cursor_pos[0] + ig.get_window_position()[0] - ig.get_style().item_spacing[0],
+      cell_cursor_pos[1] + ig.get_window_position()[1] - ig.get_scroll_y() - ig.get_style().item_spacing[1],
+    )
+
     try:
-      data = self.get_data(row, column)
+      data = self.get_data(frame, column)
       formatter = self.formatters[column.variable]
     except: # TODO: Only catch object mismatch exception
       data = None
       formatter = EmptyFormatter()
 
     def on_select() -> None:
-      self.model.selected_frame = row
+      self.model.selected_frame = frame
 
     def on_edit(data: Any) -> None:
-      self.set_data(row, column, data)
+      self.set_data(frame, column, data)
 
     action = display_variable_data(
-      'fs-cell-' + str(row) + '-' + str(id(column)),
+      'fs-cell-' + str(frame) + '-' + str(id(column)),
       data,
       formatter,
       (
         column.width - 2 * ig.get_style().item_spacing[0],
         self.row_height - 2 * ig.get_style().item_spacing[1],
       ),
-      self.cell_edit_state.get((row, column)),
-      highlight = row == self.model.selected_frame,
+      self.cell_edit_state.get((frame, column)),
+      highlight = frame == self.model.selected_frame,
       on_edit = on_edit,
       on_select = on_select,
     )
     if action == VariableDisplayAction.BEGIN_EDIT:
-      self.cell_edit_state.begin_edit((row, column))
+      self.cell_edit_state.begin_edit((frame, column))
     elif action == VariableDisplayAction.END_EDIT:
       self.cell_edit_state.end_edit()
+
+    if self.model.edits.is_edited(frame, column.variable):
+      dl = ig.get_window_draw_list()
+      dl.add_rect(
+        cell_cursor_pos[0],
+        cell_cursor_pos[1],
+        cell_cursor_pos[0] + column.width - 1,
+        cell_cursor_pos[1] + self.row_height - 1,
+        ig.get_color_u32_rgba(0.8, 0.6, 0, 1),
+      )
 
 
   def render_rows(self) -> None:

@@ -79,7 +79,7 @@ def _display_text_edit(
       cursor_pos[1],
       cursor_pos[0] + size[0],
       cursor_pos[1] + ig.get_text_line_height() + 2 * ig.get_style().frame_padding[1],
-      0xFF0000FF,
+      ig.get_color_u32_rgba(1, 0, 0, 1),
     )
 
   return VariableDisplayAction.NONE

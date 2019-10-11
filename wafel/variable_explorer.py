@@ -146,6 +146,15 @@ class VariableExplorer:
 
     ig.same_line()
 
+    cell_width = 80
+    cell_height = ig.get_text_line_height() + 2 * ig.get_style().frame_padding[1]
+
+    cell_cursor_pos = ig.get_cursor_pos()
+    cell_cursor_pos = (
+      cell_cursor_pos[0] + ig.get_window_position()[0],
+      cell_cursor_pos[1] + ig.get_window_position()[1] - ig.get_scroll_y(),
+    )
+
     def on_edit(data: Any) -> None:
       self.model.edits.add(frame, VariableEdit(variable, data))
 
@@ -153,7 +162,7 @@ class VariableExplorer:
       've-var-' + str(hash(cell)),
       data,
       self.formatters[variable],
-      (80, ig.get_text_line_height() + 2*ig.get_style().frame_padding[1]),
+      (cell_width, cell_height),
       self.cell_edit_state.get(cell),
       on_edit = on_edit,
     )
@@ -162,6 +171,18 @@ class VariableExplorer:
       self.cell_edit_state.begin_edit(cell)
     elif action == VariableDisplayAction.END_EDIT:
       self.cell_edit_state.end_edit()
+
+    if self.model.edits.is_edited(frame, variable):
+      dl = ig.get_window_draw_list()
+      spacing = ig.get_style().item_spacing
+      spacing = (spacing[0] / 2, spacing[1] / 2)
+      dl.add_rect(
+        cell_cursor_pos[0] - spacing[0],
+        cell_cursor_pos[1] - spacing[1],
+        cell_cursor_pos[0] + cell_width + spacing[0] - 1,
+        cell_cursor_pos[1] + cell_height + spacing[1] - 1,
+        ig.get_color_u32_rgba(0.8, 0.6, 0, 1),
+      )
 
 
   def render_variable_tab(self, tab: TabId) -> None:

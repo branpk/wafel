@@ -26,4 +26,8 @@ class FrameSlider:
     dl = ig.get_window_draw_list()
     for frame in self.model.timeline.get_loaded_frames():
       line_pos = pos[0] + frame / len(self.model.timeline) * width
-      dl.add_line(line_pos, pos[1], line_pos, pos[1] + 18, 0xFF0000FF)
+      dl.add_line(
+        line_pos, pos[1],
+        line_pos, pos[1] + 18,
+        ig.get_color_u32_rgba(1, 0, 0, 1),
+      )

@@ -2,7 +2,8 @@ from typing import *
 from typing import IO
 
 from wafel.core.game_state import GameState
-from wafel.core.variable import Variable, VariableParam, Variables
+from wafel.core.variable import Variable, VariableParam, Variables, \
+  VariableGroup, _FlagVariable
 
 
 class Edit:
@@ -14,6 +15,11 @@ class VariableEdit(Edit):
   def __init__(self, variable: Variable, value: Any) -> None:
     self.variable = variable
     self.value = value
+
+    # Don't edit hidden variables, e.g. buttons instead of A, B, Z, as then
+    # the edits won't be visible to the user
+    # TODO: Maybe implement Variable#contains(Variable) to handle this case instead?
+    assert variable.group != VariableGroup.hidden()
 
   def apply(self, state: GameState) -> None:
     self.variable.set(self.value, { VariableParam.STATE: state })
@@ -34,6 +40,11 @@ def read_big_short(f: IO[bytes]) -> Optional[int]:
 class Edits:
   @staticmethod
   def from_m64(m64: IO[bytes], variables: Variables) -> 'Edits':
+    input_button_vars = {}
+    for variable in variables:
+      if isinstance(variable, _FlagVariable) and variable.flags == variables['input-buttons']:
+        input_button_vars[variable] = variable.flag
+
     edits = Edits()
 
     m64.seek(0x400)
@@ -45,7 +56,8 @@ class Edits:
       if buttons is None or stick_x is None or stick_y is None:
         break
       else:
-        edits.add(frame, VariableEdit(variables['input-buttons'], buttons))
+        for variable, flag in input_button_vars.items():
+          edits.add(frame, VariableEdit(variable, bool(buttons & flag)))
         edits.add(frame, VariableEdit(variables['input-stick-x'], stick_x))
         edits.add(frame, VariableEdit(variables['input-stick-y'], stick_y))
       frame += 1
@@ -73,3 +85,9 @@ class Edits:
   def apply(self, state: GameState) -> None:
     for edit in self._get_edits(state.frame):
       edit.apply(state)
+
+  def is_edited(self, frame: int, variable: Variable) -> bool:
+    for edit in self._get_edits(frame):
+      if isinstance(edit, VariableEdit) and edit.variable == variable:
+        return True
+    return False
