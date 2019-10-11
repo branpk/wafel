@@ -170,7 +170,7 @@ class FrameSheet:
     for index, column in enumerate(self.columns):
       initial_cursor_pos = ig.get_cursor_pos()
       ig.selectable(
-        '##fs-col-' + str(id(column)),
+        '##fs-col-' + str(id(self)) + '-' + str(id(column)),
         height = header_lines * ig.get_text_line_height(),
       )
 
@@ -227,7 +227,7 @@ class FrameSheet:
       self.set_data(frame, column, data)
 
     action = display_variable_data(
-      'fs-cell-' + str(frame) + '-' + str(id(column)),
+      'fs-cell-' + str(id(self)) + '-' + str(frame) + '-' + str(id(column)),
       data,
       formatter,
       (
@@ -273,7 +273,7 @@ class FrameSheet:
       if len(self.columns) > 0:
         ig.set_column_width(-1, self.frame_column_width)
       clicked, _ = ig.selectable(
-        str(row) + '##fs-framenum-' + str(row),
+        str(row) + '##fs-framenum-' + str(id(self)) + '-' + str(row),
         row == self.model.selected_frame,
         height=self.row_height - 8, # TODO: Compute padding
       )
