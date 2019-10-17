@@ -138,10 +138,10 @@ class VariableExplorer:
     data = variable.get({ VariableParam.STATE: state })
     del state
 
-    ig.selectable(variable.display_name + '##ve-label-' + str(hash(cell)), width=80)
+    ig.selectable(variable.label + '##ve-label-' + str(hash(cell)), width=80)
 
     if ig.begin_drag_drop_source():
-      ig.text(variable.display_name)
+      ig.text(variable.label)
       ig.set_drag_drop_payload('ve-var', variable.id.to_bytes())
       ig.end_drag_drop_source()
 

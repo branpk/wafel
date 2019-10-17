@@ -115,12 +115,12 @@ class FrameSheet:
     object_id = variable.get_object_id()
 
     if object_id is None:
-      return variable.display_name
+      return variable.label
 
     if column.object_type is None:
-      return str(object_id) + '\n' + variable.display_name
+      return str(object_id) + '\n' + variable.label
 
-    return str(object_id) + ' - ' + column.object_type.name + '\n' + variable.display_name
+    return str(object_id) + ' - ' + column.object_type.name + '\n' + variable.label
 
 
   def get_data(self, frame: int, column: FrameSheetColumn) -> Any:

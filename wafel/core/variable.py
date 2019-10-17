@@ -63,6 +63,9 @@ class VariableGroup:
       return False
     return self.name == other.name and self.object_set == other.object_set
 
+  def __hash__(self) -> int:
+    return hash((self.name, self.object_set))
+
   def contains(self, other: 'VariableGroup') -> bool:
     if self.name != other.name:
       return False
@@ -173,7 +176,7 @@ class Variable:
     self,
     id: VariableId,
     group: VariableGroup,
-    display_name: str,
+    label: str,
     lib: GameLib,
     params: List[VariableParam],
     semantics: VariableSemantics,
@@ -182,7 +185,7 @@ class Variable:
   ) -> None:
     self.id = id
     self.group = group
-    self.display_name = display_name
+    self.label = label
     self.lib = lib
     self.params = params
     self.semantics = semantics
@@ -216,7 +219,7 @@ class _DataVariable(Variable):
     self,
     name: str,
     group: VariableGroup,
-    display_name: str,
+    label: str,
     lib: GameLib,
     semantics: VariableSemantics,
     path: str,
@@ -226,7 +229,7 @@ class _DataVariable(Variable):
     super().__init__(
       VariableId(name),
       group,
-      display_name,
+      label,
       lib,
       self.path.params,
       semantics,
@@ -247,7 +250,7 @@ class _FlagVariable(Variable):
     self,
     name: str,
     group: VariableGroup,
-    display_name: str,
+    label: str,
     flags: Variable,
     flag: str,
     read_only: bool = False
@@ -255,7 +258,7 @@ class _FlagVariable(Variable):
     super().__init__(
       flags.id.with_name(name),
       group,
-      display_name,
+      label,
       flags.lib,
       flags.params,
       VariableSemantics.FLAG,
@@ -287,7 +290,7 @@ class _ObjectVariable(Variable):
     super().__init__(
       variable.id.with_object_id(object_id),
       variable.group,
-      variable.display_name,
+      variable.label,
       variable.lib,
       params,
       variable.semantics,
@@ -319,6 +322,34 @@ class _ObjectVariable(Variable):
     self.variable.set(value, self._get_args(args))
 
 
+class VariableSpec:
+  def __init__(self) -> None:
+    pass
+
+  def label(self, label: str) -> 'VariableSpec':
+    self._label = label
+    return self
+
+  def hidden(self) -> 'VariableSpec':
+    self._label = None
+    return self
+
+  def _dependencies(self) -> List[str]:
+    return []
+
+class DataVariableSpec(VariableSpec):
+  def __init__(self, path: str) -> None:
+    self.path = path
+
+class FlagVariableSpec(VariableSpec):
+  def __init__(self, flags: str, flag: str) -> None:
+    self.flags = flags
+    self.flag = flag
+
+  def _dependencies(self) -> List[str]:
+    return [self.flags]
+
+
 class Variables:
   def __init__(self, variables: List[Variable]) -> None:
     self.variables = variables
@@ -342,46 +373,53 @@ class Variables:
 
 
 def _all_variables(lib: GameLib) -> Variables:
-  input_buttons = _DataVariable('input-buttons', VariableGroup.hidden(), 'buttons', lib, VariableSemantics.RAW, '$state.gControllerPads[0].button')
-  active_flags = _DataVariable('obj-active-flags', VariableGroup.hidden(), 'active flags', lib, VariableSemantics.RAW, '$object.activeFlags')
-  return Variables([
-    input_buttons,
-    active_flags,
-    _DataVariable('input-stick-x', VariableGroup('Input'), 'stick x', lib, VariableSemantics.RAW, '$state.gControllerPads[0].stick_x'),
-    _DataVariable('input-stick-y', VariableGroup('Input'), 'stick y', lib, VariableSemantics.RAW, '$state.gControllerPads[0].stick_y'),
-    _FlagVariable('input-button-a', VariableGroup('Input'), 'A', input_buttons, 'A_BUTTON'),
-    _FlagVariable('input-button-b', VariableGroup('Input'), 'B', input_buttons, 'B_BUTTON'),
-    _FlagVariable('input-button-z', VariableGroup('Input'), 'Z', input_buttons, 'Z_TRIG'),
-    _FlagVariable('input-button-start', VariableGroup('Input'), 'S', input_buttons, 'START_BUTTON'),
-    _FlagVariable('input-button-l', VariableGroup('Input'), 'L', input_buttons, 'L_TRIG'),
-    _FlagVariable('input-button-r', VariableGroup('Input'), 'R', input_buttons, 'R_TRIG'),
-    _FlagVariable('input-button-cu', VariableGroup('Input'), 'C^', input_buttons, 'U_CBUTTONS'),
-    _FlagVariable('input-button-cl', VariableGroup('Input'), 'C<', input_buttons, 'L_CBUTTONS'),
-    _FlagVariable('input-button-cr', VariableGroup('Input'), 'C>', input_buttons, 'R_CBUTTONS'),
-    _FlagVariable('input-button-cd', VariableGroup('Input'), 'Cv', input_buttons, 'D_CBUTTONS'),
-    _FlagVariable('input-button-du', VariableGroup('Input'), 'D^', input_buttons, 'U_JPAD'),
-    _FlagVariable('input-button-dl', VariableGroup('Input'), 'D<', input_buttons, 'L_JPAD'),
-    _FlagVariable('input-button-dr', VariableGroup('Input'), 'D>', input_buttons, 'R_JPAD'),
-    _FlagVariable('input-button-dd', VariableGroup('Input'), 'Dv', input_buttons, 'D_JPAD'),
+  from wafel.core.variables import VARIABLES
 
-    _DataVariable('global-timer', VariableGroup('Misc'), 'global timer', lib, VariableSemantics.RAW, '$state.gGlobalTimer'),
-    _DataVariable('mario-pos-x', VariableGroup('Mario'), 'mario x', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[0]'),
-    _DataVariable('mario-pos-y', VariableGroup('Mario'), 'mario y', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[1]'),
-    _DataVariable('mario-pos-z', VariableGroup('Mario'), 'mario z', lib, VariableSemantics.POSITION, '$state.gMarioState[].pos[2]'),
-    _DataVariable('mario-vel-f', VariableGroup('Mario'), 'mario vel f', lib, VariableSemantics.RAW, '$state.gMarioState[].forwardVel'),
-    _DataVariable('mario-vel-x', VariableGroup('Mario'), 'mario vel x', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[0]'),
-    _DataVariable('mario-vel-y', VariableGroup('Mario'), 'mario vel y', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[1]'),
-    _DataVariable('mario-vel-z', VariableGroup('Mario'), 'mario vel z', lib, VariableSemantics.RAW, '$state.gMarioState[].vel[2]'),
+  info: Dict[str, Tuple[VariableGroup, VariableSpec]] = {}
+  for group, group_variables in VARIABLES.items():
+    for name, spec in group_variables.items():
+      if name in info:
+        raise Exception('Duplicate variable ' + name)
+      info[name] = (group, spec)
 
-    _DataVariable('obj-hitbox-radius', VariableGroup.all_objects(), 'hitbox radius', lib, VariableSemantics.RAW, '$object.hitboxRadius'),
-    _DataVariable('obj-behavior-ptr', VariableGroup.hidden(), 'behavior', lib, VariableSemantics.RAW, '$object.behaviorSeg'),
-    _FlagVariable('obj-active-flags-active', VariableGroup.hidden(), 'active', active_flags, 'ACTIVE_FLAG_ACTIVE'),
+  dependencies = {
+    name: spec._dependencies() for name, (_, spec) in info.items()
+  }
+  ordered = topological_sort(dependencies)
 
-    _DataVariable('obj-pos-x', VariableGroup.all_objects(), 'pos x', lib, VariableSemantics.RAW, '$object.oPosX'),
-    _DataVariable('obj-pos-y', VariableGroup.all_objects(), 'pos y', lib, VariableSemantics.RAW, '$object.oPosY'),
-    _DataVariable('obj-pos-z', VariableGroup.all_objects(), 'pos z', lib, VariableSemantics.RAW, '$object.oPosZ'),
-    _DataVariable('obj-vel-x', VariableGroup.all_objects(), 'vel x', lib, VariableSemantics.RAW, '$object.oVelX'),
-    _DataVariable('obj-vel-y', VariableGroup.all_objects(), 'vel y', lib, VariableSemantics.RAW, '$object.oVelY'),
-    _DataVariable('obj-vel-z', VariableGroup.all_objects(), 'vel z', lib, VariableSemantics.RAW, '$object.oVelZ'),
-    _DataVariable('obj-vel-f', VariableGroup.all_objects(), 'vel f', lib, VariableSemantics.RAW, '$object.oForwardVel'),
-  ])
+  variables: Dict[str, Variable] = {}
+
+  for name in ordered:
+    group, spec = info[name]
+
+    if not hasattr(spec, '_label'):
+      raise Exception('Missing label or .hidden(): ' + name)
+    label = spec._label
+    if label is None:
+      label = name
+      group = VariableGroup.hidden()
+
+    if isinstance(spec, DataVariableSpec):
+      variable = _DataVariable(
+        name,
+        group,
+        label,
+        lib,
+        VariableSemantics.RAW,
+        spec.path,
+      )
+    elif isinstance(spec, FlagVariableSpec):
+      flags = variables[spec.flags]
+      variable = _FlagVariable(
+        name,
+        group,
+        label,
+        flags,
+        spec.flag,
+      )
+    else:
+      raise NotImplementedError(spec)
+
+    variables[name] = variable
+
+  return Variables(list(variables.values()))
