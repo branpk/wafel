@@ -51,6 +51,7 @@ class VariableExplorer:
 
     fixed_tabs = [
       TabId('Input'),
+      TabId('Mario'),
       TabId('Misc'),
       TabId('Objects'),
     ]

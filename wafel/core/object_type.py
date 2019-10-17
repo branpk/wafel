@@ -1192,7 +1192,7 @@ OBJECT_TYPES = [
     ['bhvYellowBall'],
   ),
   ObjectType(
-    'Mario',
+    'Mario Object',
     ['bhvMario'],
   ),
   ObjectType(
