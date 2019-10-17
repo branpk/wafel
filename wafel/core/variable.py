@@ -376,4 +376,12 @@ def _all_variables(lib: GameLib) -> Variables:
     _DataVariable('obj-hitbox-radius', VariableGroup.all_objects(), 'hitbox radius', lib, VariableSemantics.RAW, '$object.hitboxRadius'),
     _DataVariable('obj-behavior-ptr', VariableGroup.hidden(), 'behavior', lib, VariableSemantics.RAW, '$object.behaviorSeg'),
     _FlagVariable('obj-active-flags-active', VariableGroup.hidden(), 'active', active_flags, 'ACTIVE_FLAG_ACTIVE'),
+
+    _DataVariable('obj-pos-x', VariableGroup.all_objects(), 'pos x', lib, VariableSemantics.RAW, '$object.oPosX'),
+    _DataVariable('obj-pos-y', VariableGroup.all_objects(), 'pos y', lib, VariableSemantics.RAW, '$object.oPosY'),
+    _DataVariable('obj-pos-z', VariableGroup.all_objects(), 'pos z', lib, VariableSemantics.RAW, '$object.oPosZ'),
+    _DataVariable('obj-vel-x', VariableGroup.all_objects(), 'vel x', lib, VariableSemantics.RAW, '$object.oVelX'),
+    _DataVariable('obj-vel-y', VariableGroup.all_objects(), 'vel y', lib, VariableSemantics.RAW, '$object.oVelY'),
+    _DataVariable('obj-vel-z', VariableGroup.all_objects(), 'vel z', lib, VariableSemantics.RAW, '$object.oVelZ'),
+    _DataVariable('obj-vel-f', VariableGroup.all_objects(), 'vel f', lib, VariableSemantics.RAW, '$object.oForwardVel'),
   ])

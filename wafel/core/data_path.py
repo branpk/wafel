@@ -163,11 +163,21 @@ class _Field(DataPath):
   def __init__(self, lib: GameLib, struct: DataPath, field: str) -> None:
     struct_type = lib.concrete_type(struct.type)
     assert struct_type['kind'] == 'struct'
-    field_spec = struct_type['fields'][field]
 
-    super().__init__(lib, struct.params, field_spec['type'])
+    if field in struct_type['fields']:
+      field_spec = struct_type['fields'][field]
+      field_type = field_spec['type']
+      field_offset = field_spec['offset']
+    elif field in lib.spec['extra']['object_fields']:
+      field_spec = lib.spec['extra']['object_fields'][field]
+      field_type = field_spec['type']
+      field_offset = struct_type['fields']['rawData']['offset'] + field_spec['offset']
+    else:
+      raise NotImplementedError(struct_type, field)
+
+    super().__init__(lib, struct.params, field_type)
     self.struct = struct
-    self.offset = field_spec['offset']
+    self.offset = field_offset
 
   def get_addr(self, args: VariableArgs) -> int:
     return self.struct.get_addr(args) + self.offset
