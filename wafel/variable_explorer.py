@@ -40,6 +40,19 @@ class VariableCell:
     return hash((self.tab, self.variable, self.frame))
 
 
+class JoystickControl:
+  def __init__(self):
+    self.start_value: Optional[Tuple[float, float]] = None
+
+  def update(self, value: Tuple[float, float], drag: Tuple[float, float]) -> Tuple[float, float]:
+    if self.start_value is None:
+      self.start_value = value
+    return (self.start_value[0] + drag[0], self.start_value[1] + drag[1])
+
+  def reset(self):
+    self.start_value = None
+
+
 class VariableExplorer:
 
   def __init__(self, model: Model, formatters: Formatters) -> None:
@@ -59,6 +72,7 @@ class VariableExplorer:
       self.open_tab(tab)
 
     self.current_tab = self.open_tabs[0]
+    self.joystick_control = JoystickControl()
 
 
   def open_tab(self, tab: TabId) -> None:
@@ -189,6 +203,84 @@ class VariableExplorer:
       )
 
 
+  def render_stick_control(self, stick_x: Variable, stick_y: Variable) -> None:
+    dl = ig.get_window_draw_list()
+
+    padding = 20
+    size = min(
+      ig.get_column_width() - ig.get_style().scrollbar_size - 2 * padding,
+      ig.get_window_height() - 2 * padding,
+      200,
+    )
+    top_left = ig.get_cursor_pos()
+    top_left = (
+      top_left[0] + ig.get_window_position()[0] + padding,
+      top_left[1] + ig.get_window_position()[1] - ig.get_scroll_y() + padding,
+    )
+
+    dl.add_rect_filled(
+      top_left[0],
+      top_left[1],
+      top_left[0] + size,
+      top_left[1] + size,
+      ig.get_color_u32_rgba(0, 0, 0, 0.3),
+    )
+
+    offset = (
+      (self.model.get(stick_x) + 128) / 255 * size,
+      (1 - (self.model.get(stick_y) + 128) / 255) * size,
+    )
+    dl.add_line(
+      top_left[0] + size / 2,
+      top_left[1] + size / 2,
+      top_left[0] + offset[0],
+      top_left[1] + offset[1],
+      ig.get_color_u32_rgba(1, 1, 1, 0.5),
+    )
+
+    button_size = 20
+    button_pos = ig.get_cursor_pos()
+    button_pos = (
+      padding + button_pos[0] + offset[0] - button_size / 2,
+      padding + button_pos[1] + offset[1] - button_size / 2,
+    )
+    ig.set_cursor_pos(button_pos)
+    ig.button('##ve-stick-control-button', button_size, button_size)
+
+    if ig.is_item_active():
+      new_offset = self.joystick_control.update(offset, ig.get_mouse_drag_delta(lock_threshold=0))
+
+      new_stick_x = new_offset[0] / size * 255 - 128
+      new_stick_y = (1 - new_offset[1] / size) * 255 - 128
+      new_stick_x = min(max(int(new_stick_x), -128), 127)
+      new_stick_y = min(max(int(new_stick_y), -128), 127)
+
+      if new_stick_x != self.model.get(stick_x) or new_stick_y != self.model.get(stick_y):
+        self.model.edits.add(self.model.selected_frame, VariableEdit(stick_x, new_stick_x))
+        self.model.edits.add(self.model.selected_frame, VariableEdit(stick_y, new_stick_y))
+
+    else:
+      self.joystick_control.reset()
+
+
+  def render_input_tab(self, tab: TabId) -> None:
+    ig.columns(2)
+    ig.set_column_width(-1, 160)
+
+    variables = self.get_variables_for_tab(tab)
+    for variable in variables:
+      self.render_variable(tab, variable)
+
+    ig.next_column()
+
+    self.render_stick_control(
+      self.model.variables['input-stick-x'],
+      self.model.variables['input-stick-y'],
+    )
+
+    ig.columns(1)
+
+
   def render_variable_tab(self, tab: TabId) -> None:
     variables = self.get_variables_for_tab(tab)
     for variable in variables:
@@ -196,8 +288,13 @@ class VariableExplorer:
 
 
   def render_tab_contents(self, tab: TabId) -> None:
+    if tab.name != 'Input':
+      self.joystick_control.reset()
+
     if tab.name == 'Objects':
       self.render_objects_tab()
+    elif tab.name == 'Input':
+      self.render_input_tab(tab)
     else:
       self.render_variable_tab(tab)
 

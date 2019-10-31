@@ -41,6 +41,12 @@ class Model:
   def on_selected_frame_change(self, callback: Callable[[int], None]) -> None:
     self.selected_frame_callbacks.append(callback)
 
+  def get(self, variable: Variable, frame: Optional[int] = None) -> Any:
+    if frame is None:
+      frame = self.selected_frame
+    state = self.timeline[frame]
+    return variable.get({ VariableParam.STATE: state })
+
   def get_object_type(self, state: GameState, object_id: ObjectId) -> Optional[ObjectType]:
     active = self.variables['obj-active-flags-active'].at_object(object_id).get({
       VariableParam.STATE: state,
