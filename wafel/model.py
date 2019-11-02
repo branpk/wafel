@@ -46,6 +46,16 @@ class Model:
   def on_selected_frame_change(self, callback: Callable[[int], None]) -> None:
     self.selected_frame_callbacks.append(callback)
 
+  def insert_frame(self, index: int) -> None:
+    self.edits.insert_frame(index)
+    if self.selected_frame >= index:
+      self.selected_frame += 1
+
+  def delete_frame(self, index: int) -> None:
+    self.edits.delete_frame(index)
+    if self.selected_frame > index or self.selected_frame >= len(self.timeline):
+      self.selected_frame -= 1
+
   def get(self, variable: Variable, frame: Optional[int] = None) -> Any:
     if frame is None:
       frame = self.selected_frame

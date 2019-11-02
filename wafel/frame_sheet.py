@@ -267,6 +267,8 @@ class FrameSheet:
 
     self.model.edits.extend(max_row + 100)
 
+    timeline_operations: List[Callable[[], None]] = []
+
     for row in range(min_row, max_row + 1):
       initial_pos = ig.get_cursor_pos()
       ig.set_cursor_pos((initial_pos[0], row * self.row_height))
@@ -280,6 +282,22 @@ class FrameSheet:
       )
       if clicked:
         self.model.selected_frame = row
+
+      if ig.begin_popup_context_item('##fs-framenumctx-' + str(id(self)) + '-' + str(row)):
+        if ig.selectable('Insert above')[0]:
+          def op(row):
+            return lambda: self.model.insert_frame(row)
+          timeline_operations.append(op(row))
+        if ig.selectable('Insert below')[0]:
+          def op(row):
+            return lambda: self.model.insert_frame(row + 1)
+          timeline_operations.append(op(row))
+        if ig.selectable('Delete')[0]:
+          def op(row):
+            return lambda: self.model.delete_frame(row)
+          timeline_operations.append(op(row))
+        ig.end_popup()
+
       ig.next_column()
 
       for column in self.columns:
@@ -292,6 +310,9 @@ class FrameSheet:
     ig.set_cursor_pos((0, self.get_row_count() * self.row_height))
 
     ig.columns(1)
+
+    for operation in timeline_operations:
+      operation()
 
 
   def update_scolling(self) -> None:

@@ -87,6 +87,16 @@ class Edits:
     while len(self._items) < new_len:
       self._items.append([])
 
+  def insert_frame(self, index: int) -> None:
+    self.extend(index)
+    self._items.insert(index, [])
+    self._invalidate(index)
+
+  def delete_frame(self, index: int) -> None:
+    if index < len(self._items):
+      del self._items[index]
+      self._invalidate(index - 1)
+
   def _invalidate(self, frame: int) -> None:
     for callback in list(self.edit_frame_callbacks):
       callback(frame)
