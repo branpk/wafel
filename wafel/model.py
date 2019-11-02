@@ -16,8 +16,7 @@ class Model:
 
     self.variables = Variable.create_all(self.lib)
 
-    with open('test_files/1key_j.m64', 'rb') as m64:
-      self.set_edits(Edits.from_m64(m64, self.variables))
+    self.set_edits(Edits())
 
   def set_edits(self, edits: Edits) -> None:
     self.edits = edits

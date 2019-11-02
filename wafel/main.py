@@ -4,6 +4,8 @@ import json
 import math
 import sys
 import traceback
+import tkinter
+import tkinter.filedialog
 
 import glfw
 import imgui as ig
@@ -20,6 +22,11 @@ from wafel.frame_slider import *
 from wafel.variable_format import Formatters
 
 
+def load_m64(model: Model, filename: str) -> None:
+  with open(filename, 'rb') as m64:
+    model.set_edits(Edits.from_m64(m64, model.variables))
+
+
 DEFAULT_FRAME_SHEET_VARS = [
   'input-stick-x',
   'input-stick-y',
@@ -34,6 +41,8 @@ class View:
   def __init__(self, model: Model) -> None:
     self.model = model
     self.epoch = 0
+    self.tkinter_root = tkinter.Tk()
+    self.tkinter_root.withdraw()
     self.reload()
 
 
@@ -113,8 +122,12 @@ class View:
 
     if ig.begin_menu_bar():
       if ig.begin_menu('File'):
-        if ig.menu_item('New TAS')[0]:
+        if ig.menu_item('New')[0]:
           self.model.set_edits(Edits())
+          self.reload()
+        if ig.menu_item('Open')[0]:
+          filename = tkinter.filedialog.askopenfilename()
+          load_m64(self.model, filename)
           self.reload()
         ig.end_menu()
       ig.end_menu_bar()
@@ -213,6 +226,8 @@ def run() -> None:
   glfw.set_window_refresh_callback(window, refresh_callback)
 
   model = Model()
+  load_m64(model, 'test_files/1key_j.m64')
+
   view = View(model)
 
   while not glfw.window_should_close(window):
