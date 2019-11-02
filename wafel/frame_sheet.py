@@ -197,6 +197,11 @@ class FrameSheet:
       if ig.is_item_hovered() and ig.is_mouse_clicked(2):
         self._remove_column(index)
 
+      if ig.begin_popup_context_item('##fs-colctx-' + str(id(self)) + '-' + str(id(column))):
+        if ig.selectable('Close')[0]:
+          self._remove_column(index)
+        ig.end_popup()
+
       ig.set_cursor_pos(initial_cursor_pos)
       ig.text(header_labels[index])
 
