@@ -1,6 +1,7 @@
 from typing import *
 from ctypes import cdll
 import json
+import gc
 
 from wafel.core import GameLib, Variable, Edits, Timeline, GameState, ObjectId, \
   ObjectType, VariableParam
@@ -16,8 +17,10 @@ class Model:
     self.variables = Variable.create_all(self.lib)
 
     with open('test_files/1key_j.m64', 'rb') as m64:
-      self.edits = Edits.from_m64(m64, self.variables)
+      self.set_edits(Edits.from_m64(m64, self.variables))
 
+  def set_edits(self, edits: Edits) -> None:
+    self.edits = edits
     self.timeline = Timeline(self.lib, self.edits)
 
     self._selected_frame = 0
@@ -27,6 +30,8 @@ class Model:
       self.timeline.set_hotspot('selected-frame', frame)
     self.on_selected_frame_change(set_hotspot)
     set_hotspot(self._selected_frame)
+
+    gc.collect() # Force garbage collection of game state cells
 
   @property
   def selected_frame(self) -> int:

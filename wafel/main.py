@@ -33,7 +33,11 @@ class View:
 
   def __init__(self, model: Model) -> None:
     self.model = model
+    self.epoch = 0
+    self.reload()
 
+
+  def reload(self) -> None:
     self.formatters = Formatters()
 
     self.frame_sheets: List[FrameSheet] = [FrameSheet(self.model, self.formatters)]
@@ -49,35 +53,38 @@ class View:
 
     self.dbg_frame_advance = False
 
+    self.epoch += 1
 
-  def render_left_column(self, window_size: Tuple[int, int]) -> None:
+
+  def render_left_column(self, framebuffer_size: Tuple[int, int]) -> None:
+    total_height = ig.get_window_height() - ig.get_frame_height() # subtract menu bar
     slider_space = 45
 
     ig.begin_child(
       'Game View 1',
-      height=int(window_size[1] // 2) - slider_space // 2,
+      height=int(total_height // 2) - slider_space // 2,
       border=True,
     )
-    self.game_views[0].render(window_size)
+    self.game_views[0].render(framebuffer_size)
     ig.end_child()
 
     ig.begin_child(
       'Game View 2',
-      height=int(window_size[1] // 2) - slider_space // 2,
+      height=int(total_height // 2) - slider_space // 2,
       border=True,
     )
-    self.game_views[1].render(window_size)
+    self.game_views[1].render(framebuffer_size)
     ig.end_child()
 
     self.frame_slider.render()
 
 
-  def render_right_column(self, window_size: Tuple[int, int]) -> None:
+  def render_right_column(self) -> None:
     frame_sheet = self.frame_sheets[0]
     ig.set_next_window_content_size(frame_sheet.get_content_width(), 0)
     ig.begin_child(
       'Frame Sheet',
-      height=int(window_size[1] * 0.7),
+      height=int(ig.get_window_height() * 0.7),
       flags=ig.WINDOW_HORIZONTAL_SCROLLING_BAR,
     )
     frame_sheet.render()
@@ -99,15 +106,23 @@ class View:
     ig.set_next_window_position(0, 0)
     ig.set_next_window_size(*window_size)
     ig.begin(
-      'Main',
+      'Main##' + str(self.epoch),
       False,
-      ig.WINDOW_NO_SAVED_SETTINGS | ig.WINDOW_NO_RESIZE | ig.WINDOW_NO_TITLE_BAR,
+      ig.WINDOW_NO_SAVED_SETTINGS | ig.WINDOW_NO_RESIZE | ig.WINDOW_NO_TITLE_BAR | ig.WINDOW_MENU_BAR,
     )
+
+    if ig.begin_menu_bar():
+      if ig.begin_menu('File'):
+        if ig.menu_item('New TAS')[0]:
+          self.model.set_edits(Edits())
+          self.reload()
+        ig.end_menu()
+      ig.end_menu_bar()
 
     ig.columns(2)
     self.render_left_column(window_size)
     ig.next_column()
-    self.render_right_column(window_size)
+    self.render_right_column()
     ig.columns(1)
 
     ig.end()

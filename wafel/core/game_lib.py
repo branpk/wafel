@@ -27,6 +27,9 @@ class GameLib:
   def state_new(self) -> int:
     return dcast(int, self.dll.sm64_state_new())
 
+  def state_delete(self, addr: int) -> None:
+    self.dll.sm64_state_delete(addr)
+
   def state_raw_copy(self, dst: int, src: int) -> None:
     self.dll.sm64_state_raw_copy(dst, src)
 

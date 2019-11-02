@@ -83,6 +83,10 @@ class Edits:
   def on_edit(self, callback: Callable[[int], None]) -> None:
     self.edit_frame_callbacks.append(callback)
 
+  def extend(self, new_len: int) -> None:
+    while len(self._items) < new_len:
+      self._items.append([])
+
   def _invalidate(self, frame: int) -> None:
     for callback in list(self.edit_frame_callbacks):
       callback(frame)

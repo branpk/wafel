@@ -62,6 +62,10 @@ class _CellManager:
 
     self.hotspots: Dict[str, int] = {}
 
+  def __del__(self) -> None:
+    for cell in self.cells:
+      self.lib.state_delete(cell.addr)
+
   def can_modify_cell(self, cell: _Cell) -> bool:
     return cell is not self.power_on_cell and not cell.loaded
 

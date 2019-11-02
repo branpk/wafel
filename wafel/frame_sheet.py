@@ -1,6 +1,5 @@
 import sys
 from typing import *
-import traceback
 
 import imgui as ig
 
@@ -264,7 +263,9 @@ class FrameSheet:
     min_row = int(ig.get_scroll_y()) // self.row_height - 1
     min_row = max(min_row, 0)
     max_row = int(ig.get_scroll_y() + ig.get_window_height()) // self.row_height
-    max_row = min(max_row, self.get_row_count() - 1)
+    # max_row = min(max_row, self.get_row_count() - 1)
+
+    self.model.edits.extend(max_row + 100)
 
     for row in range(min_row, max_row + 1):
       initial_pos = ig.get_cursor_pos()
