@@ -22,11 +22,6 @@ from wafel.frame_slider import *
 from wafel.variable_format import Formatters
 
 
-def load_m64(model: Model, filename: str) -> None:
-  with open(filename, 'rb') as m64:
-    model.set_edits(Edits.from_m64(m64, model.variables))
-
-
 DEFAULT_FRAME_SHEET_VARS = [
   'input-stick-x',
   'input-stick-y',
@@ -65,6 +60,18 @@ class View:
     self.epoch += 1
 
 
+  def load(self, filename: Optional[str] = None) -> None:
+    self.filename = filename
+
+    if filename is None:
+      self.model.set_edits(Edits())
+    else:
+      with open(filename, 'rb') as m64:
+        self.model.set_edits(Edits.from_m64(m64, self.model.variables))
+
+    self.reload()
+
+
   def render_left_column(self, framebuffer_size: Tuple[int, int]) -> None:
     total_height = ig.get_window_height() - ig.get_frame_height() # subtract menu bar
     slider_space = 45
@@ -92,7 +99,7 @@ class View:
     frame_sheet = self.frame_sheets[0]
     ig.set_next_window_content_size(frame_sheet.get_content_width(), 0)
     ig.begin_child(
-      'Frame Sheet',
+      'Frame Sheet##' + str(self.epoch) + '-0',
       height=int(ig.get_window_height() * 0.7),
       flags=ig.WINDOW_HORIZONTAL_SCROLLING_BAR,
     )
@@ -123,12 +130,10 @@ class View:
     if ig.begin_menu_bar():
       if ig.begin_menu('File'):
         if ig.menu_item('New')[0]:
-          self.model.set_edits(Edits())
-          self.reload()
+          self.load()
         if ig.menu_item('Open')[0]:
           filename = tkinter.filedialog.askopenfilename()
-          load_m64(self.model, filename)
-          self.reload()
+          self.load(filename)
         ig.end_menu()
       ig.end_menu_bar()
 
@@ -226,9 +231,8 @@ def run() -> None:
   glfw.set_window_refresh_callback(window, refresh_callback)
 
   model = Model()
-  load_m64(model, 'test_files/1key_j.m64')
-
   view = View(model)
+  view.load('test_files/1key_j.m64')
 
   while not glfw.window_should_close(window):
     glfw.poll_events()
