@@ -29,3 +29,5 @@ def topological_sort(dependencies: _tp.Dict[_T, _tp.List[_T]]) -> _tp.List[_T]:
     raise Exception('Graph has loop')
   return result
 
+def bytes_to_buffer(b: bytes, n: int) -> bytes:
+  return b[:n].ljust(n, b'\x00')

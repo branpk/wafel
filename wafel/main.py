@@ -20,6 +20,7 @@ from wafel.variable_explorer import VariableExplorer
 from wafel.game_view import GameView
 from wafel.frame_slider import *
 from wafel.variable_format import Formatters
+from wafel.m64_format import load_m64, save_m64
 
 
 DEFAULT_FRAME_SHEET_VARS = [
@@ -48,7 +49,7 @@ class View:
       self.model.set_edits(Edits())
     else:
       with open(self.filename, 'rb') as m64:
-        self.model.set_edits(Edits.from_m64(m64, self.model.variables))
+        self.model.set_edits(load_m64(m64, self.model.variables))
 
     self.formatters = Formatters()
 
@@ -71,7 +72,7 @@ class View:
   def save(self) -> None:
     assert self.filename is not None
     with open(self.filename, 'wb') as m64:
-      self.model.edits.save_m64(m64, self.model.variables)
+      save_m64(self.model.edits, m64, self.model.variables)
 
 
   def render_left_column(self, framebuffer_size: Tuple[int, int]) -> None:
@@ -120,6 +121,17 @@ class View:
     ig.end_child()
 
 
+  def ask_save_filename(self) -> bool:
+    filename = tkinter.filedialog.asksaveasfilename(filetypes=[
+      ('Wafel TAS', '*.wafi'),
+      ('Mupen64 TAS', '*.m64'),
+    ])
+    if not filename:
+      return False
+    self.filename = filename
+    return True
+
+
   def render(self, window_size: Tuple[int, int]) -> None:
     ig.set_next_window_position(0, 0)
     ig.set_next_window_size(*window_size)
@@ -139,11 +151,13 @@ class View:
           self.reload()
         if ig.menu_item('Save')[0]:
           if self.filename is None:
-            self.filename = tkinter.filedialog.asksaveasfilename()
-          self.save()
+            if self.ask_save_filename():
+              self.save()
+          else:
+            self.save()
         if ig.menu_item('Save as')[0]:
-          self.filename = tkinter.filedialog.asksaveasfilename()
-          self.save()
+          if self.ask_save_filename():
+            self.save()
         ig.end_menu()
       ig.end_menu_bar()
 
