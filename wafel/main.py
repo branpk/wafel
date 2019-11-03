@@ -263,8 +263,8 @@ def run() -> None:
   while not glfw.window_should_close(window):
     glfw.poll_events()
     ig_renderer.process_inputs()
-    model.timeline.balance_distribution(1/120)
     render(window, ig_renderer, view)
+    model.timeline.balance_distribution(1/120)
 
   ig_renderer.shutdown()
   ig.destroy_context(ig_context)

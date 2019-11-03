@@ -44,10 +44,17 @@ class JoystickControl:
   def __init__(self):
     self.start_value: Optional[Tuple[float, float]] = None
 
-  def update(self, value: Tuple[float, float], drag: Tuple[float, float]) -> Tuple[float, float]:
+  def get_value(self, drag: Tuple[float, float]) -> Tuple[float, float]:
+    assert self.active
+    return (self.start_value[0] + drag[0], self.start_value[1] + drag[1])
+
+  @property
+  def active(self):
+    return self.start_value is not None
+
+  def set_active(self, value: Tuple[float, float]) -> None:
     if self.start_value is None:
       self.start_value = value
-    return (self.start_value[0] + drag[0], self.start_value[1] + drag[1])
 
   def reset(self):
     self.start_value = None
@@ -226,10 +233,23 @@ class VariableExplorer:
       ig.get_color_u32_rgba(0, 0, 0, 0.3),
     )
 
+    if self.joystick_control.active and ig.is_mouse_down():
+      new_offset = self.joystick_control.get_value(ig.get_mouse_drag_delta(lock_threshold=0))
+
+      new_stick_x = new_offset[0] / size * 255 - 128
+      new_stick_y = (1 - new_offset[1] / size) * 255 - 128
+      new_stick_x = min(max(int(new_stick_x), -128), 127)
+      new_stick_y = min(max(int(new_stick_y), -128), 127)
+
+      if new_stick_x != self.model.get(stick_x) or new_stick_y != self.model.get(stick_y):
+        self.model.edits.add(self.model.selected_frame, VariableEdit(stick_x, new_stick_x))
+        self.model.edits.add(self.model.selected_frame, VariableEdit(stick_y, new_stick_y))
+
     offset = (
       (self.model.get(stick_x) + 128) / 255 * size,
       (1 - (self.model.get(stick_y) + 128) / 255) * size,
     )
+
     dl.add_line(
       top_left[0] + size / 2,
       top_left[1] + size / 2,
@@ -248,17 +268,7 @@ class VariableExplorer:
     ig.button('##ve-stick-control-button', button_size, button_size)
 
     if ig.is_item_active():
-      new_offset = self.joystick_control.update(offset, ig.get_mouse_drag_delta(lock_threshold=0))
-
-      new_stick_x = new_offset[0] / size * 255 - 128
-      new_stick_y = (1 - new_offset[1] / size) * 255 - 128
-      new_stick_x = min(max(int(new_stick_x), -128), 127)
-      new_stick_y = min(max(int(new_stick_y), -128), 127)
-
-      if new_stick_x != self.model.get(stick_x) or new_stick_y != self.model.get(stick_y):
-        self.model.edits.add(self.model.selected_frame, VariableEdit(stick_x, new_stick_x))
-        self.model.edits.add(self.model.selected_frame, VariableEdit(stick_y, new_stick_y))
-
+      self.joystick_control.set_active(offset)
     else:
       self.joystick_control.reset()
 
