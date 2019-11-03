@@ -38,10 +38,18 @@ class View:
     self.epoch = 0
     self.tkinter_root = tkinter.Tk()
     self.tkinter_root.withdraw()
+
+    self.filename: Optional[str] = None
     self.reload()
 
 
   def reload(self) -> None:
+    if self.filename is None:
+      self.model.set_edits(Edits())
+    else:
+      with open(self.filename, 'rb') as m64:
+        self.model.set_edits(Edits.from_m64(m64, self.model.variables))
+
     self.formatters = Formatters()
 
     self.frame_sheets: List[FrameSheet] = [FrameSheet(self.model, self.formatters)]
@@ -60,16 +68,10 @@ class View:
     self.epoch += 1
 
 
-  def load(self, filename: Optional[str] = None) -> None:
-    self.filename = filename
-
-    if filename is None:
-      self.model.set_edits(Edits())
-    else:
-      with open(filename, 'rb') as m64:
-        self.model.set_edits(Edits.from_m64(m64, self.model.variables))
-
-    self.reload()
+  def save(self) -> None:
+    assert self.filename is not None
+    with open(self.filename, 'wb') as m64:
+      self.model.edits.save_m64(m64, self.model.variables)
 
 
   def render_left_column(self, framebuffer_size: Tuple[int, int]) -> None:
@@ -130,10 +132,18 @@ class View:
     if ig.begin_menu_bar():
       if ig.begin_menu('File'):
         if ig.menu_item('New')[0]:
-          self.load()
+          self.filename = None
+          self.reload()
         if ig.menu_item('Open')[0]:
-          filename = tkinter.filedialog.askopenfilename()
-          self.load(filename)
+          self.filename = tkinter.filedialog.askopenfilename()
+          self.reload()
+        if ig.menu_item('Save')[0]:
+          if self.filename is None:
+            self.filename = tkinter.filedialog.asksaveasfilename()
+          self.save()
+        if ig.menu_item('Save as')[0]:
+          self.filename = tkinter.filedialog.asksaveasfilename()
+          self.save()
         ig.end_menu()
       ig.end_menu_bar()
 
@@ -232,7 +242,9 @@ def run() -> None:
 
   model = Model()
   view = View(model)
-  view.load('test_files/1key_j.m64')
+  view.filename = 'test_files/1key_j.m64'
+  view.reload()
+  view.filename = None
 
   while not glfw.window_should_close(window):
     glfw.poll_events()

@@ -1,5 +1,6 @@
 from typing import *
 from typing import IO
+import struct
 
 from wafel.core.game_state import GameState
 from wafel.core.variable import Variable, VariableParam, Variables, \
@@ -75,6 +76,57 @@ class Edits:
       frame += 1
 
     return edits
+
+  def save_m64(self, m64: IO[bytes], variables: Variables) -> None:
+    # TODO: Remove blank frames at end
+    m64.write(b'\x4d\x36\x34\x1a')
+    m64.write(b'\x03\x00\x00\x00')
+    m64.write(b'\x00\x00\x00\x00') # movie uid
+    m64.write(b'\xff\xff\xff\xff')
+
+    m64.write(b'\xbb\xff\xff\xff')
+    m64.write(b'\x3c\x01\x00\x00')
+    m64.write(struct.pack('<I', len(self._items)))
+    m64.write(b'\x02\x00\x00\x00') # power-on
+
+    m64.write(b'\x01\x00\x00\x00')
+    m64.write(bytes(160))
+    m64.write(b'SUPER MARIO 64'.ljust(32, b'\x00'))
+    m64.write(b'\x4e\xaa\x3d\x0e') # crc
+    m64.write(b'J\x00') # country code
+    m64.write(bytes(56))
+
+    m64.write(bytes(64))
+    m64.write(bytes(64))
+    m64.write(bytes(64))
+    m64.write(bytes(64))
+
+    m64.write(b'Authors here'.ljust(222, b'\x00')) # TODO
+    m64.write(b'Description here'.ljust(256, b'\x00')) # TODO
+
+    buttons = 0
+    stick_x = 0
+    stick_y = 0
+
+    for edits in self._items:
+      for edit in edits:
+        if isinstance(edit, VariableEdit):
+          if isinstance(edit.variable, _FlagVariable) and \
+              edit.variable.flags == variables['input-buttons']:
+            if edit.value:
+              buttons = buttons | edit.variable.flag
+            else:
+              buttons = buttons & ~edit.variable.flag
+          elif edit.variable == variables['input-buttons']:
+            buttons = edit.value
+          elif edit.variable == variables['input-stick-x']:
+            stick_x = edit.value
+          elif edit.variable == variables['input-stick-y']:
+            stick_y = edit.value
+
+      m64.write(struct.pack(b'>H', buttons & 0xFFFF))
+      m64.write(struct.pack(b'<B', stick_x & 0xFF))
+      m64.write(struct.pack(b'<B', stick_y & 0xFF))
 
   def __init__(self):
     self._items: List[List[Edit]] = []
