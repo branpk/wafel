@@ -12,7 +12,7 @@ VARIABLES = {
     'input-button-a': flag('input-buttons', 'A_BUTTON').label('A'),
     'input-button-b': flag('input-buttons', 'B_BUTTON').label('B'),
     'input-button-z': flag('input-buttons', 'Z_TRIG').label('Z'),
-    'input-button-start': flag('input-buttons', 'START_BUTTON').label('S'),
+    'input-button-s': flag('input-buttons', 'START_BUTTON').label('S'),
     'input-button-l': flag('input-buttons', 'L_TRIG').label('L'),
     'input-button-r': flag('input-buttons', 'R_TRIG').label('R'),
     'input-button-cu': flag('input-buttons', 'U_CBUTTONS').label('C^'),

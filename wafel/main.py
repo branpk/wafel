@@ -6,6 +6,7 @@ import sys
 import traceback
 import tkinter
 import tkinter.filedialog
+import os
 
 import glfw
 import imgui as ig
@@ -20,7 +21,8 @@ from wafel.variable_explorer import VariableExplorer
 from wafel.game_view import GameView
 from wafel.frame_slider import *
 from wafel.variable_format import Formatters
-from wafel.m64_format import load_m64, save_m64
+from wafel.format_m64 import load_m64, save_m64
+from wafel.format_wafi import save_wafi
 
 
 DEFAULT_FRAME_SHEET_VARS = [
@@ -32,6 +34,28 @@ DEFAULT_FRAME_SHEET_VARS = [
 ]
 
 
+class SequenceFile:
+  FILE_TYPES = [
+    ('Wafel TAS', '*.wafi'),
+    ('Mupen64 TAS', '*.m64'),
+    ('All files', '*'),
+  ]
+
+  @staticmethod
+  def from_filename(filename: str) -> 'SequenceFile':
+    _, ext = os.path.splitext(filename)
+    if ext == '.wafi':
+      return SequenceFile(filename, 'wafi')
+    elif ext == '.m64':
+      return SequenceFile(filename, 'm64')
+    else:
+      raise NotImplementedError(ext) # TODO: User message
+
+  def __init__(self, filename: str, type_: str) -> None:
+    self.filename = filename
+    self.type = type_
+
+
 class View:
 
   def __init__(self, model: Model) -> None:
@@ -40,15 +64,15 @@ class View:
     self.tkinter_root = tkinter.Tk()
     self.tkinter_root.withdraw()
 
-    self.filename: Optional[str] = None
+    self.file: Optional[SequenceFile] = None
     self.reload()
 
 
   def reload(self) -> None:
-    if self.filename is None:
+    if self.file is None:
       self.model.set_edits(Edits())
     else:
-      with open(self.filename, 'rb') as m64:
+      with open(self.file.filename, 'rb') as m64:
         self.model.set_edits(load_m64(m64, self.model.variables))
 
     self.formatters = Formatters()
@@ -70,9 +94,15 @@ class View:
 
 
   def save(self) -> None:
-    assert self.filename is not None
-    with open(self.filename, 'wb') as m64:
-      save_m64(self.model.edits, m64, self.model.variables)
+    assert self.file is not None
+    if self.file.type == 'wafi':
+      with open(self.file.filename, 'w') as f:
+        save_wafi(self.model.edits, f, self.model.variables)
+    elif self.file.type == 'm64':
+      with open(self.file.filename, 'wb') as f:
+        save_m64(self.model.edits, f, self.model.variables)
+    else:
+      raise NotImplementedError(self.file.type)
 
 
   def render_left_column(self, framebuffer_size: Tuple[int, int]) -> None:
@@ -122,14 +152,41 @@ class View:
 
 
   def ask_save_filename(self) -> bool:
-    filename = tkinter.filedialog.asksaveasfilename(filetypes=[
-      ('Wafel TAS', '*.wafi'),
-      ('Mupen64 TAS', '*.m64'),
-    ])
-    if not filename:
+    filename = tkinter.filedialog.asksaveasfilename(
+      defaultext='.wafi',
+      filetypes=SequenceFile.FILE_TYPES,
+    ) or None
+    if filename is None:
       return False
-    self.filename = filename
+    self.file = SequenceFile.from_filename(filename)
     return True
+
+
+  def render_menu_bar(self) -> None:
+    if ig.begin_menu_bar():
+      if ig.begin_menu('File'):
+        if ig.menu_item('New')[0]:
+          self.file = None
+          self.reload()
+
+        if ig.menu_item('Open')[0]:
+          filename = tkinter.filedialog.askopenfilename() or None
+          if filename is not None:
+            self.file = SequenceFile(filename, 'm64')
+            self.reload()
+
+        if ig.menu_item('Save')[0]:
+          if self.file is None:
+            if self.ask_save_filename():
+              self.save()
+          else:
+            self.save()
+
+        if ig.menu_item('Save as')[0]:
+          if self.ask_save_filename():
+            self.save()
+        ig.end_menu()
+      ig.end_menu_bar()
 
 
   def render(self, window_size: Tuple[int, int]) -> None:
@@ -141,25 +198,7 @@ class View:
       ig.WINDOW_NO_SAVED_SETTINGS | ig.WINDOW_NO_RESIZE | ig.WINDOW_NO_TITLE_BAR | ig.WINDOW_MENU_BAR,
     )
 
-    if ig.begin_menu_bar():
-      if ig.begin_menu('File'):
-        if ig.menu_item('New')[0]:
-          self.filename = None
-          self.reload()
-        if ig.menu_item('Open')[0]:
-          self.filename = tkinter.filedialog.askopenfilename()
-          self.reload()
-        if ig.menu_item('Save')[0]:
-          if self.filename is None:
-            if self.ask_save_filename():
-              self.save()
-          else:
-            self.save()
-        if ig.menu_item('Save as')[0]:
-          if self.ask_save_filename():
-            self.save()
-        ig.end_menu()
-      ig.end_menu_bar()
+    self.render_menu_bar()
 
     ig.columns(2)
     self.render_left_column(window_size)
@@ -256,9 +295,9 @@ def run() -> None:
 
   model = Model()
   view = View(model)
-  view.filename = 'test_files/1key_j.m64'
+  view.file = SequenceFile('test_files/1key_j.m64', 'm64')
   view.reload()
-  view.filename = None
+  view.file = None
 
   while not glfw.window_should_close(window):
     glfw.poll_events()
