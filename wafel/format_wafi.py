@@ -23,6 +23,13 @@ INPUT_BUTTON_LABELS = {
 }
 
 
+def get_input_button_by_label(label: str) -> str:
+  for id, value in INPUT_BUTTON_LABELS.items():
+    if value.lower() == label.lower():
+      return id
+  raise Exception('Invalid button: ' + label)
+
+
 class NoIndent:
   def __init__(self, data: object):
     self.data = data
@@ -110,3 +117,48 @@ def save_wafi(edits: Edits, file: IO[str], variables: Variables) -> None:
     '_version': 0,
   }
   json.dump(data, file, indent=2, cls=Encoder)
+
+
+def load_wafi(file: IO[str], variables: Variables) -> Edits:
+  data = json.load(file)
+  assert data['_version'] == 0
+
+  edits = Edits()
+
+  prev_buttons = 0
+  prev_stick_x = 0
+  prev_stick_y = 0
+
+  frame = 0
+  for edit in data['inputs']:
+    if isinstance(edit, dict):
+      # TODO: Error if variable not supported
+      variable = variables[edit['variable']]
+      if 'object_slot' in edit:
+        variable = variable.at_object(edit['object_slot'])
+      edits.add(frame, VariableEdit(variable, edit['value']))
+
+    else:
+      assert isinstance(edit, list)
+
+      stick_x = edit[0]
+      stick_y = edit[1]
+      buttons = 0
+      for button_label in edit[2:]:
+        button = get_input_button_by_label(button_label)
+        buttons |= INPUT_BUTTON_FLAGS[button]
+
+      if stick_x != prev_stick_x:
+        edits.add(frame, VariableEdit(variables['input-stick-x'], stick_x))
+      if stick_y != prev_stick_y:
+        edits.add(frame, VariableEdit(variables['input-stick-y'], stick_y))
+      for button, flag in INPUT_BUTTON_FLAGS.items():
+        if (buttons & flag) != (prev_buttons & flag):
+          edits.add(frame, VariableEdit(variables[button], bool(buttons & flag)))
+
+      prev_buttons = buttons
+      prev_stick_x = stick_x
+      prev_stick_y = stick_y
+      frame += 1
+
+  return edits

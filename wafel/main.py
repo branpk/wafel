@@ -22,7 +22,7 @@ from wafel.game_view import GameView
 from wafel.frame_slider import *
 from wafel.variable_format import Formatters
 from wafel.format_m64 import load_m64, save_m64
-from wafel.format_wafi import save_wafi
+from wafel.format_wafi import load_wafi, save_wafi
 
 
 DEFAULT_FRAME_SHEET_VARS = [
@@ -72,8 +72,14 @@ class View:
     if self.file is None:
       self.model.set_edits(Edits())
     else:
-      with open(self.file.filename, 'rb') as m64:
-        self.model.set_edits(load_m64(m64, self.model.variables))
+      if self.file.type == 'wafi':
+        with open(self.file.filename, 'r') as f:
+          self.model.set_edits(load_wafi(f, self.model.variables))
+      elif self.file.type == 'm64':
+        with open(self.file.filename, 'rb') as f:
+          self.model.set_edits(load_m64(f, self.model.variables))
+      else:
+        raise NotImplementedError(self.file.type)
 
     self.formatters = Formatters()
 
@@ -172,7 +178,7 @@ class View:
         if ig.menu_item('Open')[0]:
           filename = tkinter.filedialog.askopenfilename() or None
           if filename is not None:
-            self.file = SequenceFile(filename, 'm64')
+            self.file = SequenceFile.from_filename(filename)
             self.reload()
 
         if ig.menu_item('Save')[0]:

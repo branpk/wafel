@@ -77,9 +77,9 @@ def save_m64(edits: Edits, file: IO[bytes], variables: Variables) -> None:
         if edit.variable.id.name in INPUT_BUTTON_FLAGS:
           flag = INPUT_BUTTON_FLAGS[edit.variable.id.name]
           if edit.value:
-            buttons = buttons | flag
+            buttons |= flag
           else:
-            buttons = buttons & ~flag
+            buttons &= ~flag
         elif edit.variable == variables['input-buttons']:
           buttons = edit.value
         elif edit.variable == variables['input-stick-x']:
