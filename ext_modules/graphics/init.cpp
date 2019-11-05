@@ -178,14 +178,6 @@ struct GameState {
 };
 
 
-struct RenderInfo {
-  Viewport viewport;
-  Camera camera;
-  GameState current_state;
-  vector<GameState> path_states;
-};
-
-
 static vec3 read_vec3(py::object vec_object) {
   return vec3(
     vec_object[py::cast(0)].cast<float>(),
@@ -259,30 +251,17 @@ static vector<GameState> read_game_state_list(py::object states_object) {
 }
 
 
-static RenderInfo read_render_info(py::object info_object) {
-  RenderInfo info;
-  memset(&info, 0, sizeof(info));
-  info.viewport = read_viewport(info_object.attr("viewport"));
-  info.camera = read_camera(info_object.attr("camera"));
-  info.current_state = read_game_state(info_object.attr("current_state"));
-  info.path_states = read_game_state_list(info_object.attr("path_states"));
-  return info;
-}
-
-
 float remove_x = 0;
 
 
-static void render(u64 renderer_addr, py::object render_info_object) {
+static void render(u64 renderer_addr, py::object info) {
   Renderer *renderer = (Renderer *)renderer_addr;
-  RenderInfo render_info = read_render_info(render_info_object);
-  RenderInfo *info = &render_info;
 
 
   Scene scene;
 
 
-  GameState st = info->current_state;
+  GameState st = read_game_state(info.attr("current_state"));
 
 
   mat4 in_game_view_matrix;
@@ -311,7 +290,7 @@ static void render(u64 renderer_addr, py::object render_info_object) {
   }
 
 
-  scene.camera = info->camera;
+  scene.camera = read_camera(info.attr("camera"));
 
 
   for (s32 i = 0; i < st.data->gSurfacesAllocated; i++) {
@@ -350,12 +329,14 @@ static void render(u64 renderer_addr, py::object render_info_object) {
     }
   }
 
+  vector<GameState> path_states = read_game_state_list(info.attr("path_states"));
+
   size_t current_index = std::distance(
-    info->path_states.begin(),
-    std::find(info->path_states.begin(), info->path_states.end(), info->current_state));
+    path_states.begin(),
+    std::find(path_states.begin(), path_states.end(), st));
 
   vector<ObjectPathNode> mario_path;
-  for (GameState path_st : info->path_states) {
+  for (GameState path_st : path_states) {
     sm64::MarioState *m = path_st.from_base(path_st.data->gMarioState);
 
     if (!mario_path.empty() && mario_path.size() == current_index + 1) {
@@ -396,7 +377,7 @@ static void render(u64 renderer_addr, py::object render_info_object) {
   //   }
   // }
 
-  renderer->render(info->viewport, scene);
+  renderer->render(read_viewport(info.attr("viewport")), scene);
 
 
   // glUseProgram(0);
