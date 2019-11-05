@@ -1,9 +1,7 @@
 #include <cstdio>
 #include <algorithm>
 
-#include "util.hpp"
-
-#include <Python.h>
+#include <pybind11/pybind11.h>
 #include <glad.h>
 #include <glm/glm.hpp>
 namespace sm64 {
@@ -14,6 +12,9 @@ namespace sm64 {
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "renderer.hpp"
+#include "util.hpp"
+
+namespace py = pybind11;
 
 using sm64::s8;
 using sm64::s16;
@@ -30,37 +31,24 @@ using sm64::f64;
 #define VEC3F_TO_VEC3(v) (vec3((v)[0], (v)[1], (v)[2]))
 
 
-static PyObject *new_renderer(PyObject *self, PyObject *args) {
+static u64 new_renderer() {
   static bool loaded_gl = false;
 
   if (!loaded_gl) {
     if (!gladLoadGL()) {
-      PyErr_SetString(PyExc_Exception, "Failed to load OpenGL");
-      return NULL;
+      throw std::runtime_error("Failed to load OpenGL");
     }
     loaded_gl = true;
   }
 
   Renderer *renderer = new Renderer;
-
-  return PyLong_FromVoidPtr((void *)renderer);
+  return (u64)renderer;
 }
 
 
-static PyObject *delete_renderer(PyObject *self, PyObject *args) {
-  PyObject *renderer_object;
-  if (!PyArg_ParseTuple(args, "O", &renderer_object)) {
-    return NULL;
-  }
-
-  Renderer *renderer = (Renderer *)PyLong_AsVoidPtr(renderer_object);
-  if (PyErr_Occurred()) {
-    return NULL;
-  }
-
+static void delete_renderer(u64 renderer_addr) {
+  Renderer *renderer = (Renderer *)renderer_addr;
   delete renderer;
-
-  Py_RETURN_NONE;
 }
 
 
@@ -198,231 +186,97 @@ struct RenderInfo {
 };
 
 
-static int read_int(int *result, PyObject *int_object) {
-  if (int_object == NULL) {
-    return false;
-  }
-
-  *result = (int)PyLong_AsLong(int_object);
-  if (PyErr_Occurred()) {
-    return false;
-  }
-
-  Py_DECREF(int_object);
-  return true;
+static vec3 read_vec3(py::object vec_object) {
+  return vec3(
+    vec_object[py::cast(0)].cast<float>(),
+    vec_object[py::cast(1)].cast<float>(),
+    vec_object[py::cast(2)].cast<float>());
 }
 
 
-static bool read_float(float *result, PyObject *float_object) {
-  if (float_object == NULL) {
-    return false;
-  }
-
-  *result = (float)PyFloat_AsDouble(float_object);
-  if (PyErr_Occurred()) {
-    return false;
-  }
-
-  Py_DECREF(float_object);
-  return true;
+static Viewport read_viewport(py::object viewport_object) {
+  Viewport viewport = {
+    ivec2(
+      viewport_object.attr("x").cast<int>(),
+      viewport_object.attr("y").cast<int>()),
+    ivec2(
+      viewport_object.attr("width").cast<int>(),
+      viewport_object.attr("height").cast<int>()),
+  };
+  return viewport;
 }
 
 
-static bool read_vec3(vec3 *result, PyObject *vec_object) {
-  if (vec_object == NULL) {
-    return false;
-  }
+static Camera read_camera(py::object camera_object) {
+  Camera camera;
+  camera.mode = (CameraMode)camera_object.attr("mode").attr("value").cast<int>();
 
-  for (int i = 0; i < 3; i++) {
-    PyObject *index = PyLong_FromLong(i);
-    if (index == NULL) {
-      return false;
-    }
-
-    if (!read_float(&(*result)[i], PyObject_GetItem(vec_object, index))) {
-      return false;
-    }
-
-    Py_DECREF(index);
-  }
-
-  Py_DECREF(vec_object);
-  return true;
-}
-
-
-static bool read_viewport(Viewport *viewport, PyObject *viewport_object) {
-  if (viewport_object == NULL) {
-    return false;
-  }
-
-  if (!read_int(&viewport->pos.x, PyObject_GetAttrString(viewport_object, "x"))) {
-    return false;
-  }
-  if (!read_int(&viewport->pos.y, PyObject_GetAttrString(viewport_object, "y"))) {
-    return false;
-  }
-  if (!read_int(&viewport->size.x, PyObject_GetAttrString(viewport_object, "width"))) {
-    return false;
-  }
-  if (!read_int(&viewport->size.y, PyObject_GetAttrString(viewport_object, "height"))) {
-    return false;
-  }
-
-  Py_DECREF(viewport_object);
-  return true;
-}
-
-
-static bool read_camera(Camera *camera, PyObject *camera_object) {
-  if (camera_object == NULL) {
-    return false;
-  }
-
-  PyObject *mode_object = PyObject_GetAttrString(camera_object, "mode");
-  if (mode_object == NULL) {
-    return false;
-  }
-  PyObject *mode_int_object = PyObject_GetAttrString(mode_object, "value");
-  if (mode_int_object == NULL) {
-    return false;
-  }
-  camera->mode = (CameraMode)PyLong_AsLong(mode_int_object);
-  if (PyErr_Occurred()) {
-    return false;
-  }
-  Py_DECREF(mode_int_object);
-  Py_DECREF(mode_object);
-
-  switch (camera->mode) {
+  switch (camera.mode) {
     case CameraMode::ROTATE: {
-      if (!read_vec3(&camera->rotate_camera.pos, PyObject_GetAttrString(camera_object, "pos")) ||
-        !read_float(&camera->rotate_camera.pitch, PyObject_GetAttrString(camera_object, "pitch")) ||
-        !read_float(&camera->rotate_camera.yaw, PyObject_GetAttrString(camera_object, "yaw")) ||
-        !read_float(&camera->rotate_camera.fov_y, PyObject_GetAttrString(camera_object, "fov_y")))
-      {
-        return false;
-      }
+      RotateCamera rotate_camera = {
+        read_vec3(camera_object.attr("pos")),
+        camera_object.attr("pitch").cast<float>(),
+        camera_object.attr("yaw").cast<float>(),
+        camera_object.attr("fov_y").cast<float>(),
+      };
+      camera.rotate_camera = rotate_camera;
       break;
     }
+
     case CameraMode::BIRDS_EYE: {
-      if (!read_vec3(&camera->birds_eye_camera.pos, PyObject_GetAttrString(camera_object, "pos")) ||
-        !read_float(&camera->birds_eye_camera.span_y, PyObject_GetAttrString(camera_object, "span_y")))
-      {
-        return false;
-      }
+      BirdsEyeCamera birds_eye_camera = {
+        read_vec3(camera_object.attr("pos")),
+        camera_object.attr("span_y").cast<float>(),
+      };
+      camera.birds_eye_camera = birds_eye_camera;
       break;
     }
   }
 
-  Py_DECREF(camera_object);
-  return true;
+  return camera;
 }
 
 
-static bool read_game_state(GameState *state, PyObject *state_object) {
-  if (state_object == NULL) {
-    return false;
-  }
-
-  if (!read_int(&state->frame, PyObject_GetAttrString(state_object, "frame"))) {
-    return false;
-  }
-
-  PyObject *addr_object = PyObject_GetAttrString(state_object, "addr");
-  if (addr_object == NULL) {
-    return false;
-  }
-  state->data = (sm64::SM64State *)PyLong_AsVoidPtr(addr_object);
-  if (PyErr_Occurred()) {
-    return false;
-  }
-
-  PyObject *base_addr_object = PyObject_GetAttrString(state_object, "base_addr");
-  if (base_addr_object == NULL) {
-    return false;
-  }
-  state->base = (sm64::SM64State *)PyLong_AsVoidPtr(base_addr_object);
-  if (PyErr_Occurred()) {
-    return false;
-  }
-
-  Py_DECREF(addr_object);
-  Py_DECREF(state_object);
-  return true;
+static GameState read_game_state(py::object state_object) {
+  GameState state = {
+    state_object.attr("frame").cast<int>(),
+    (sm64::SM64State *)state_object.attr("base_addr").cast<u64>(),
+    (sm64::SM64State *)state_object.attr("addr").cast<u64>(),
+  };
+  return state;
 }
 
 
-static bool read_game_state_list(vector<GameState> *states, PyObject *states_object) {
-  if (states_object == NULL) {
-    return false;
-  }
-
-  size_t length = PyObject_Length(states_object);
-  *states = vector<GameState>(length);
+static vector<GameState> read_game_state_list(py::object states_object) {
+  size_t length = py::len(states_object);
+  vector<GameState> states = vector<GameState>(length);
 
   for (size_t i = 0; i < length; i++) {
-    PyObject *index = PyLong_FromLong(i);
-    if (index == NULL) {
-      return false;
-    }
-
-    if (!read_game_state(&(*states)[i], PyObject_GetItem(states_object, index))) {
-      return false;
-    }
-
-    Py_DECREF(index);
+    states[i] = read_game_state(states_object[py::cast(i)]);
   }
 
-  Py_DECREF(states_object);
-  return true;
+  return states;
 }
 
 
-static bool read_render_args(Renderer **renderer, RenderInfo *info, PyObject *args) {
-  PyObject *renderer_object, *info_object;
-  if (!PyArg_ParseTuple(args, "OO", &renderer_object, &info_object)) {
-    return false;
-  }
-
-  *renderer = (Renderer *)PyLong_AsVoidPtr(renderer_object);
-  if (PyErr_Occurred()) {
-    return false;
-  }
-
-  if (!read_viewport(&info->viewport, PyObject_GetAttrString(info_object, "viewport"))) {
-    return false;
-  }
-
-  if (!read_camera(&info->camera, PyObject_GetAttrString(info_object, "camera"))) {
-    return false;
-  }
-
-  if (!read_game_state(&info->current_state, PyObject_GetAttrString(info_object, "current_state"))) {
-    return false;
-  }
-
-  if (!read_game_state_list(&info->path_states, PyObject_GetAttrString(info_object, "path_states"))) {
-    return false;
-  }
-
-  return true;
+static RenderInfo read_render_info(py::object info_object) {
+  RenderInfo info;
+  memset(&info, 0, sizeof(info));
+  info.viewport = read_viewport(info_object.attr("viewport"));
+  info.camera = read_camera(info_object.attr("camera"));
+  info.current_state = read_game_state(info_object.attr("current_state"));
+  info.path_states = read_game_state_list(info_object.attr("path_states"));
+  return info;
 }
 
 
 float remove_x = 0;
 
 
-static PyObject *render(PyObject *self, PyObject *args) {
-  Renderer *renderer;
-  RenderInfo render_info;
+static void render(u64 renderer_addr, py::object render_info_object) {
+  Renderer *renderer = (Renderer *)renderer_addr;
+  RenderInfo render_info = read_render_info(render_info_object);
   RenderInfo *info = &render_info;
-
-  memset(info, 0, sizeof(*info));
-
-  if (!read_render_args(&renderer, info, args)) {
-    return NULL;
-  }
 
 
   Scene scene;
@@ -669,8 +523,6 @@ static PyObject *render(PyObject *self, PyObject *args) {
   // //     }
   // //   }
   // // }
-
-  Py_RETURN_NONE;
 }
 
 
@@ -821,23 +673,8 @@ void interpret_display_list(GameState st, u32 *dl, string indent) {
 }
 
 
-static PyMethodDef method_defs[] = {
-  { "new_renderer", new_renderer, METH_NOARGS, NULL },
-  { "delete_renderer", delete_renderer, METH_VARARGS, NULL },
-  { "render", render, METH_VARARGS, NULL },
-  { NULL, NULL, 0, NULL },
-};
-
-
-static PyModuleDef module_def = {
-  PyModuleDef_HEAD_INIT,
-  "graphics",
-  NULL,
-  -1,
-  method_defs,
-};
-
-
-PyMODINIT_FUNC PyInit_graphics(void) {
-  return PyModule_Create(&module_def);
+PYBIND11_MODULE(graphics, m) {
+  m.def("new_renderer", new_renderer);
+  m.def("delete_renderer", delete_renderer);
+  m.def("render", render);
 }

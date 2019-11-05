@@ -97,8 +97,8 @@ class GameView:
 
 
   def render(self, window_size: Tuple[int, int]) -> None:
-    viewport_x, viewport_y = ig.get_window_position()
-    viewport_w, viewport_h = ig.get_window_size()
+    viewport_x, viewport_y = tuple(map(int, ig.get_window_position()))
+    viewport_w, viewport_h = tuple(map(int, ig.get_window_size()))
     viewport_y = window_size[1] - viewport_y - viewport_h
 
     drag_amount = self.mouse_tracker.get_drag_amount()
