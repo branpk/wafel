@@ -27,11 +27,13 @@ using sm64::u64;
 using sm64::f32;
 using sm64::f64;
 
+typedef u64 uptr; // integer at least the size of a pointer, for pybind11 conversions
+
 
 #define VEC3F_TO_VEC3(v) (vec3((v)[0], (v)[1], (v)[2]))
 
 
-static u64 new_renderer() {
+static uptr new_renderer() {
   static bool loaded_gl = false;
 
   if (!loaded_gl) {
@@ -42,11 +44,11 @@ static u64 new_renderer() {
   }
 
   Renderer *renderer = new Renderer;
-  return (u64)renderer;
+  return (uptr)renderer;
 }
 
 
-static void delete_renderer(u64 renderer_addr) {
+static void delete_renderer(uptr renderer_addr) {
   Renderer *renderer = (Renderer *)renderer_addr;
   delete renderer;
 }
@@ -157,23 +159,19 @@ mat4 mat4_lookat(vec3 from, vec3 to, float roll) {
 
 
 struct GameState {
+  py::object state_object;
   int frame;
-  sm64::SM64State *base;
-  sm64::SM64State *data;
-
-  template<typename T>
-  T *from_base(T *addr) {
-    char *addr1 = (char *)addr;
-    char *base1 = (char *)base;
-    char *data1 = (char *)data;
-    if (addr1 < base1 || addr1 >= (char *)(base + 1)) {
-      return addr;
-    }
-    return (T *)(addr1 - base1 + data1);
-  }
 
   bool operator==(const GameState &other) const {
     return frame == other.frame;
+  }
+
+  py::object data(const std::string &path) const {
+    return state_object.attr("get_data")(py::cast(path));
+  }
+
+  void *addr(const std::string &path) const {
+    return (void *)state_object.attr("get_data_addr")(py::cast(path)).cast<uptr>();
   }
 };
 
@@ -231,9 +229,8 @@ static Camera read_camera(py::object camera_object) {
 
 static GameState read_game_state(py::object state_object) {
   GameState state = {
+    state_object,
     state_object.attr("frame").cast<int>(),
-    (sm64::SM64State *)state_object.attr("base_addr").cast<u64>(),
-    (sm64::SM64State *)state_object.attr("addr").cast<u64>(),
   };
   return state;
 }
@@ -254,7 +251,7 @@ static vector<GameState> read_game_state_list(py::object states_object) {
 float remove_x = 0;
 
 
-static void render(u64 renderer_addr, py::object info) {
+static void render(uptr renderer_addr, py::object info) {
   Renderer *renderer = (Renderer *)renderer_addr;
 
 
@@ -264,37 +261,40 @@ static void render(u64 renderer_addr, py::object info) {
   GameState st = read_game_state(info.attr("current_state"));
 
 
-  mat4 in_game_view_matrix;
-  {
-    // f32 *camera_pos = st.data->D_8033B328.unk0[1];
-    // f32 camera_pitch = st.data->D_8033B328.unk4C * 3.14159f / 0x8000;
-    // f32 camera_yaw = st.data->D_8033B328.unk4E * 3.14159f / 0x8000;
-    // f32 camera_roll = st.data->D_8033B328.unk7A * 3.14159f / 0x8000;
-    // f32 camera_fov_y = st.data->D_8033B230.fieldOfView * 3.14159f / 180;
+  // mat4 in_game_view_matrix;
+  // {
+  //   // f32 *camera_pos = st.data->D_8033B328.unk0[1];
+  //   // f32 camera_pitch = st.data->D_8033B328.unk4C * 3.14159f / 0x8000;
+  //   // f32 camera_yaw = st.data->D_8033B328.unk4E * 3.14159f / 0x8000;
+  //   // f32 camera_roll = st.data->D_8033B328.unk7A * 3.14159f / 0x8000;
+  //   // f32 camera_fov_y = st.data->D_8033B230.fieldOfView * 3.14159f / 180;
 
-    vec3 camera_pos = VEC3F_TO_VEC3(st.data->D_8033B328.unk8C);
-    vec3 camera_focus = VEC3F_TO_VEC3(st.data->D_8033B328.unk80);
-    float camera_roll = st.data->D_8033B328.unk7A * glm::pi<float>() / 0x8000;
+  //   vec3 camera_pos = VEC3F_TO_VEC3(st.data->D_8033B328.unk8C);
+  //   vec3 camera_focus = VEC3F_TO_VEC3(st.data->D_8033B328.unk80);
+  //   float camera_roll = st.data->D_8033B328.unk7A * glm::pi<float>() / 0x8000;
 
-    in_game_view_matrix = mat4_lookat(camera_pos, camera_focus, camera_roll);
+  //   in_game_view_matrix = mat4_lookat(camera_pos, camera_focus, camera_roll);
 
-    // info->camera.mode = CameraMode::ROTATE;
+  //   // info->camera.mode = CameraMode::ROTATE;
 
-    // info->camera.mode = CameraMode::ROTATE;
-    // info->camera.rotate_camera = {
-    //   VEC3F_TO_VEC3(camera_pos),
-    //   camera_pitch,
-    //   camera_yaw,
-    //   camera_fov_y,
-    // };
-  }
+  //   // info->camera.mode = CameraMode::ROTATE;
+  //   // info->camera.rotate_camera = {
+  //   //   VEC3F_TO_VEC3(camera_pos),
+  //   //   camera_pitch,
+  //   //   camera_yaw,
+  //   //   camera_fov_y,
+  //   // };
+  // }
 
 
   scene.camera = read_camera(info.attr("camera"));
 
 
-  for (s32 i = 0; i < st.data->gSurfacesAllocated; i++) {
-    struct sm64::Surface *surface = &st.from_base(st.data->sSurfacePool)[i];
+  s32 num_surfaces = st.data("$state.gSurfacesAllocated").cast<s32>();
+  sm64::Surface *surfaces = (sm64::Surface *)st.data("$state.sSurfacePool").cast<uptr>();
+
+  for (s32 i = 0; i < num_surfaces; i++) {
+    struct sm64::Surface *surface = &surfaces[i];
 
     SurfaceType type;
     if (surface->normal.y > 0.01) {
@@ -318,8 +318,9 @@ static void render(u64 renderer_addr, py::object info) {
     });
   }
 
+  sm64::Object *object_pool = (sm64::Object *)st.addr("$state.gObjectPool");
   for (s32 i = 0; i < 240; i++) {
-    sm64::Object *obj = &st.data->gObjectPool[i];
+    sm64::Object *obj = &object_pool[i];
     if (obj->activeFlags & ACTIVE_FLAG_ACTIVE) {
       scene.objects.push_back({
         vec3(obj->oPosX, obj->oPosY, obj->oPosZ),
@@ -337,10 +338,10 @@ static void render(u64 renderer_addr, py::object info) {
 
   vector<ObjectPathNode> mario_path;
   for (GameState path_st : path_states) {
-    sm64::MarioState *m = path_st.from_base(path_st.data->gMarioState);
+    sm64::MarioState *m = (sm64::MarioState *)path_st.data("$state.gMarioState").cast<uptr>();
 
     if (!mario_path.empty() && mario_path.size() == current_index + 1) {
-      sm64::QStepsInfo *qsteps = &path_st.data->gQStepsInfo;
+      sm64::QStepsInfo *qsteps = (sm64::QStepsInfo *)path_st.addr("$state.gQStepsInfo");
       if (qsteps->numSteps > 4) {
         printf("%d\n", qsteps->numSteps);
       }
@@ -520,138 +521,138 @@ mat4 matrix_fixed_to_float(u16 *mtx) {
 }
 
 
-void interpret_display_list(GameState st, u32 *dl, string indent) {
-  // printf("%s-----\n", indent.c_str());
+// void interpret_display_list(GameState st, u32 *dl, string indent) {
+//   // printf("%s-----\n", indent.c_str());
 
-  while (true) {
-    u32 w0 = dl[0];
-    u32 w1 = dl[1];
-    u8 cmd = w0 >> 24;
+//   while (true) {
+//     u32 w0 = dl[0];
+//     u32 w1 = dl[1];
+//     u8 cmd = w0 >> 24;
 
-    // printf("%s%08X %08X\n", indent.c_str(), w0, w1);
+//     // printf("%s%08X %08X\n", indent.c_str(), w0, w1);
 
-    switch (cmd) {
-    case 0x01: { // gSPMatrix
-      fprintf(stderr, "gSPMatrix\n");
-      exit(1);
+//     switch (cmd) {
+//     case 0x01: { // gSPMatrix
+//       fprintf(stderr, "gSPMatrix\n");
+//       exit(1);
 
-      // u8 p = (w0 >> 16) & 0xFF;
-      // u16 *fixed_point = st.from_base((u16 *)w1);
-      // mat4 matrix = matrix_fixed_to_float(fixed_point);
+//       // u8 p = (w0 >> 16) & 0xFF;
+//       // u16 *fixed_point = st.from_base((u16 *)w1);
+//       // mat4 matrix = matrix_fixed_to_float(fixed_point);
 
-      // glMatrixMode((p & 0x01) ? GL_PROJECTION : GL_MODELVIEW);
+//       // glMatrixMode((p & 0x01) ? GL_PROJECTION : GL_MODELVIEW);
 
-      // if (p & 0x04) {
-      //   glPushMatrix();
-      // } else {
-      //   // no push
-      // }
+//       // if (p & 0x04) {
+//       //   glPushMatrix();
+//       // } else {
+//       //   // no push
+//       // }
 
-      // if (p & 0x02) {
-      //   // load
-      //   fprintf(stderr, "gSPMatrix load\n");
-      //   exit(1);
-      // } else {
-      //   glMultMatrixf(&matrix[0][0]);
-      // }
+//       // if (p & 0x02) {
+//       //   // load
+//       //   fprintf(stderr, "gSPMatrix load\n");
+//       //   exit(1);
+//       // } else {
+//       //   glMultMatrixf(&matrix[0][0]);
+//       // }
 
-      break;
-    }
+//       break;
+//     }
 
-    case 0x03: // gSPViewport, gSPLight
-      break;
+//     case 0x03: // gSPViewport, gSPLight
+//       break;
 
-    case 0x04: { // gSPVertex
-      u32 n = ((w0 >> 20) & 0xF) + 1;
-      u32 v0 = (w0 >> 16) & 0xF;
-      sm64::Vtx *v = st.from_base((sm64::Vtx *)w1);
+//     case 0x04: { // gSPVertex
+//       u32 n = ((w0 >> 20) & 0xF) + 1;
+//       u32 v0 = (w0 >> 16) & 0xF;
+//       sm64::Vtx *v = st.from_base((sm64::Vtx *)w1);
 
-      loaded_vertices.clear();
-      for (u32 i = 0; i < n; i++) {
-        loaded_vertices[v0 + i] = vec3(v[i].v.ob[0], v[i].v.ob[1], v[i].v.ob[2]);
-      }
+//       loaded_vertices.clear();
+//       for (u32 i = 0; i < n; i++) {
+//         loaded_vertices[v0 + i] = vec3(v[i].v.ob[0], v[i].v.ob[1], v[i].v.ob[2]);
+//       }
 
-      break;
-    }
+//       break;
+//     }
 
-    case 0x06: { // gSPDisplayList, gSPBranchList
-      u32 *new_dl = st.from_base((u32 *)w1);
-      if (w0 == 0x06000000) {
-        interpret_display_list(st, new_dl, indent + "  ");
-      } else if (w0 == 0x06010000) {
-        dl = new_dl - 2;
-      } else {
-        fprintf(stderr, "gSPDisplayList: 0x%08X\n", w0);
-        exit(1);
-      }
-      break;
-    }
+//     case 0x06: { // gSPDisplayList, gSPBranchList
+//       u32 *new_dl = st.from_base((u32 *)w1);
+//       if (w0 == 0x06000000) {
+//         interpret_display_list(st, new_dl, indent + "  ");
+//       } else if (w0 == 0x06010000) {
+//         dl = new_dl - 2;
+//       } else {
+//         fprintf(stderr, "gSPDisplayList: 0x%08X\n", w0);
+//         exit(1);
+//       }
+//       break;
+//     }
 
-    case 0xB6: // gSPClearGeometryMode
-      break;
+//     case 0xB6: // gSPClearGeometryMode
+//       break;
 
-    case 0xB7: // gSPSetGeometryMode
-      break;
+//     case 0xB7: // gSPSetGeometryMode
+//       break;
 
-    case 0xB8: // gSPEndDisplayList
-      return;
+//     case 0xB8: // gSPEndDisplayList
+//       return;
 
-    case 0xB9: // gDPSetAlphaCompare, gDPSetDepthSource, gDPSetRenderMode
-      break;
+//     case 0xB9: // gDPSetAlphaCompare, gDPSetDepthSource, gDPSetRenderMode
+//       break;
 
-    case 0xBB: // gSPTexture
-      break;
+//     case 0xBB: // gSPTexture
+//       break;
 
-    case 0xBF: { // gSP1Triangle
-      u32 v0 = ((w1 >> 16) & 0xFF) / 10;
-      u32 v1 = ((w1 >> 8) & 0xFF) / 10;
-      u32 v2 = ((w1 >> 0) & 0xFF) / 10;
+//     case 0xBF: { // gSP1Triangle
+//       u32 v0 = ((w1 >> 16) & 0xFF) / 10;
+//       u32 v1 = ((w1 >> 8) & 0xFF) / 10;
+//       u32 v2 = ((w1 >> 0) & 0xFF) / 10;
 
-      glBegin(GL_LINE_LOOP);
-      glVertex3f(loaded_vertices[v0].x, loaded_vertices[v0].y, loaded_vertices[v0].z);
-      glVertex3f(loaded_vertices[v1].x, loaded_vertices[v1].y, loaded_vertices[v1].z);
-      glVertex3f(loaded_vertices[v2].x, loaded_vertices[v2].y, loaded_vertices[v2].z);
-      glEnd();
+//       glBegin(GL_LINE_LOOP);
+//       glVertex3f(loaded_vertices[v0].x, loaded_vertices[v0].y, loaded_vertices[v0].z);
+//       glVertex3f(loaded_vertices[v1].x, loaded_vertices[v1].y, loaded_vertices[v1].z);
+//       glVertex3f(loaded_vertices[v2].x, loaded_vertices[v2].y, loaded_vertices[v2].z);
+//       glEnd();
 
-      break;
-    }
+//       break;
+//     }
 
-    case 0xE6: // gDPLoadSync
-      break;
+//     case 0xE6: // gDPLoadSync
+//       break;
 
-    case 0xE7: // gDPPipeSync
-      break;
+//     case 0xE7: // gDPPipeSync
+//       break;
 
-    case 0xE8: // gDPTileSync
-      break;
+//     case 0xE8: // gDPTileSync
+//       break;
 
-    case 0xF2: // gDPSetTileSize
-      break;
+//     case 0xF2: // gDPSetTileSize
+//       break;
 
-    case 0xF3: // gDPLoadBlock
-      break;
+//     case 0xF3: // gDPLoadBlock
+//       break;
 
-    case 0xF5: // gDPSetTile
-      break;
+//     case 0xF5: // gDPSetTile
+//       break;
 
-    case 0xFB: // gDPSetEnvColor
-      break;
+//     case 0xFB: // gDPSetEnvColor
+//       break;
 
-    case 0xFC: // gDPSetCombineMode
-      break;
+//     case 0xFC: // gDPSetCombineMode
+//       break;
 
-    case 0xFD: // gDPSetTextureImage
-      break;
+//     case 0xFD: // gDPSetTextureImage
+//       break;
 
-    default:
-      // fprintf(stderr, "0x%02X\n", cmd);
-      // exit(1);
-      break;
-    }
+//     default:
+//       // fprintf(stderr, "0x%02X\n", cmd);
+//       // exit(1);
+//       break;
+//     }
 
-    dl += 2;
-  }
-}
+//     dl += 2;
+//   }
+// }
 
 
 PYBIND11_MODULE(graphics, m) {

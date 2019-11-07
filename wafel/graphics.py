@@ -1,10 +1,31 @@
 from enum import Enum
-from typing import List
+from typing import *
 import math
 
-from wafel.core import GameState
+from wafel.core import GameState, DataPath, VariableParam
 
 import ext_modules.graphics as ext_graphics
+
+
+class GameStateWrapper:
+  def __init__(self, state: GameState) -> None:
+    self.state = state
+
+  @property
+  def frame(self) -> int:
+    return self.state.frame
+
+  def get_data(self, path: str) -> Any:
+    data_path = DataPath.parse(self.state.lib, path)
+    return data_path.get({
+      VariableParam.STATE: self.state,
+    })
+
+  def get_data_addr(self, path: str) -> int:
+    data_path = DataPath.parse(self.state.lib, path)
+    return data_path.get_addr({
+      VariableParam.STATE: self.state,
+    })
 
 
 class CameraMode(Enum):
@@ -66,10 +87,8 @@ class RenderInfo:
   ) -> None:
     self.viewport = viewport
     self.camera = camera
-    self.current_state = current_state
-    self.path_states = path_states
-
-  # TODO: Make expression evaluation available to ext module to compute offsets?
+    self.current_state = GameStateWrapper(current_state)
+    self.path_states = [GameStateWrapper(st) for st in path_states]
 
 
 class Renderer:
