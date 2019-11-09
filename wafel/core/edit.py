@@ -1,7 +1,7 @@
 from typing import *
 
 from wafel.core.game_state import GameState
-from wafel.core.variable import Variable, VariableParam, VariableGroup
+from wafel.core.variable import Variable, VariableParam, VariableGroup, VariableId
 
 
 class _Edit:

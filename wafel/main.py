@@ -76,8 +76,8 @@ class View:
         with open(self.file.filename, 'r') as f:
           self.model.set_edits(load_wafi(f, self.model.variables))
       elif self.file.type == 'm64':
-        with open(self.file.filename, 'rb') as f:
-          self.model.set_edits(load_m64(f, self.model.variables))
+        input_file = load_m64(self.file.filename)
+        self.model.set_edits(input_file.to_edits(self.model.variables))
       else:
         raise NotImplementedError(self.file.type)
 
@@ -105,6 +105,7 @@ class View:
       with open(self.file.filename, 'w') as f:
         save_wafi(self.model.edits, f, self.model.variables)
     elif self.file.type == 'm64':
+      raise NotImplementedError(self.file.type)
       with open(self.file.filename, 'wb') as f:
         save_m64(self.model.edits, f, self.model.variables)
     else:
