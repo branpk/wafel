@@ -23,6 +23,7 @@ from wafel.frame_slider import *
 from wafel.variable_format import Formatters
 from wafel.format_m64 import load_m64, save_m64
 from wafel.format_wafi import load_wafi, save_wafi
+from wafel.tas_metadata import TasMetadata
 
 
 DEFAULT_FRAME_SHEET_VARS = [
@@ -70,16 +71,17 @@ class View:
 
   def reload(self) -> None:
     if self.file is None:
-      self.model.set_edits(Edits())
+      metadata = TasMetadata('jp', 'Untitled TAS', [], 'Made using Wafel')
+      edits = Edits()
     else:
       if self.file.type == 'wafi':
-        with open(self.file.filename, 'r') as f:
-          self.model.set_edits(load_wafi(f, self.model.variables))
+        metadata, edits = load_m64(self.file.filename)
       elif self.file.type == 'm64':
-        input_file = load_m64(self.file.filename)
-        self.model.set_edits(input_file.to_edits(self.model.variables))
+        metadata, edits = load_m64(self.file.filename)
       else:
         raise NotImplementedError(self.file.type)
+    self.metadata = metadata
+    self.model.set_edits(edits)
 
     self.formatters = Formatters()
 
@@ -102,12 +104,9 @@ class View:
   def save(self) -> None:
     assert self.file is not None
     if self.file.type == 'wafi':
-      with open(self.file.filename, 'w') as f:
-        save_wafi(self.model.edits, f, self.model.variables)
+      save_wafi(self.file.filename, self.metadata, self.model.edits)
     elif self.file.type == 'm64':
-      raise NotImplementedError(self.file.type)
-      with open(self.file.filename, 'wb') as f:
-        save_m64(self.model.edits, f, self.model.variables)
+      save_m64(self.file.filename, self.metadata, self.model.edits)
     else:
       raise NotImplementedError(self.file.type)
 

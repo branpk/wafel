@@ -1,12 +1,12 @@
 from typing import *
 import struct
 
-from wafel.core import INPUT_BUTTON_FLAGS, VariableId
+from wafel.core import INPUT_BUTTON_FLAGS, VariableId, Edits
 from wafel.util import *
-from wafel.input_file import InputFile
+from wafel.tas_metadata import TasMetadata
 
 
-def save_m64(filename: str, input: InputFile) -> None:
+def save_m64(filename: str, metadata: TasMetadata, edits: Edits) -> None:
   with open(filename, 'wb') as f:
     # TODO: Remove blank frames at end
     # TODO: crc, country code, authors, description
@@ -17,7 +17,7 @@ def save_m64(filename: str, input: InputFile) -> None:
 
     f.write(b'\xbb\xff\xff\xff')
     f.write(b'\x3c\x01\x00\x00')
-    f.write(struct.pack('<I', len(input.edits)))
+    f.write(struct.pack('<I', len(edits)))
     f.write(b'\x02\x00\x00\x00') # power-on
 
     f.write(b'\x01\x00\x00\x00')
@@ -39,34 +39,36 @@ def save_m64(filename: str, input: InputFile) -> None:
     stick_x = 0
     stick_y = 0
 
-    for frame in range(len(input.edits)):
-      for variable, value in input.get_edits(frame):
-        if variable in INPUT_BUTTON_FLAGS:
-          flag = INPUT_BUTTON_FLAGS[variable]
-          if value:
+    for frame in range(len(edits)):
+      for edit in edits.get_edits(frame):
+        if edit.variable_id in INPUT_BUTTON_FLAGS:
+          flag = INPUT_BUTTON_FLAGS[edit.variable_id]
+          if edit.value:
             buttons |= flag
           else:
             buttons &= ~flag
-        elif variable == VariableId('input-buttons'):
-          buttons = value
-        elif variable == VariableId('input-stick-x'):
-          stick_x = value
-        elif variable == VariableId('input-stick-y'):
-          stick_y = value
+        elif edit.variable_id == VariableId('input-buttons'):
+          buttons = edit.value
+        elif edit.variable_id == VariableId('input-stick-x'):
+          stick_x = edit.value
+        elif edit.variable_id == VariableId('input-stick-y'):
+          stick_y = edit.value
 
       f.write(struct.pack(b'>H', buttons & 0xFFFF))
       f.write(struct.pack(b'=B', stick_x & 0xFF))
       f.write(struct.pack(b'=B', stick_y & 0xFF))
 
 
-def load_m64(filename: str) -> InputFile:
+def load_m64(filename: str) -> Tuple[TasMetadata, Edits]:
   with open(filename, 'rb') as f:
-    input = InputFile(
+    # TODO: Metadata
+    metadata = TasMetadata(
       'jp',
       filename,
-      ['TODO'],
-      'TODO',
+      [],
+      '',
     )
+    edits = Edits()
 
     prev_buttons = 0
     prev_stick_x = 0
@@ -84,15 +86,15 @@ def load_m64(filename: str) -> InputFile:
 
       for variable, flag in INPUT_BUTTON_FLAGS.items():
         if (prev_buttons & flag) != (buttons & flag):
-          input.get_edits(frame).append((variable, bool(buttons & flag)))
+          edits.edit(frame, variable, bool(buttons & flag))
       if stick_x != prev_stick_x:
-        input.get_edits(frame).append((VariableId('input-stick-x'), stick_x))
+        edits.edit(frame, 'input-stick-x', stick_x)
       if stick_y != prev_stick_y:
-        input.get_edits(frame).append((VariableId('input-stick-y'), stick_y))
+        edits.edit(frame, 'input-stick-y', stick_y)
 
       prev_buttons = buttons
       prev_stick_x = stick_x
       prev_stick_y = stick_y
       frame += 1
 
-    return input
+    return (metadata, edits)
