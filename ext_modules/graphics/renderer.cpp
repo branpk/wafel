@@ -250,8 +250,8 @@ void Renderer::render_objects(const Scene &scene) {
     if (object.hitboxRadius > 0) {
       const int num_edges = 64;
       for (int i = 0; i < num_edges; i++) {
-        float a0 = (float)i / (float)num_edges * 2 * glm::pi<float>();
-        float a1 = (float)(i + 1) / (float)num_edges * 2 * glm::pi<float>();
+        float a0 = (float) i / (float) num_edges * 2 * glm::pi<float>();
+        float a1 = (float) (i + 1) / (float) num_edges * 2 * glm::pi<float>();
 
         vec3 offset0 = object.hitboxRadius * vec3(sinf(a0), 0, cosf(a0));
         vec3 offset1 = object.hitboxRadius * vec3(sinf(a1), 0, cosf(a1));
@@ -273,13 +273,13 @@ void Renderer::render_objects(const Scene &scene) {
 }
 
 float get_path_alpha(const ObjectPath &path, size_t index) {
-  int rel_index = (int)index - (int)path.root_index;
+  int rel_index = (int) index - (int) path.root_index;
 
   float t;
   if (rel_index > 0) {
-    t = (float)rel_index / (float)(path.nodes.size() - path.root_index - 1);
+    t = (float) rel_index / (float) (path.nodes.size() - path.root_index - 1);
   } else if (rel_index < 0) {
-    t = -(float)rel_index / (float)path.root_index;
+    t = -(float) rel_index / (float) path.root_index;
   } else {
     t = 0;
   }
@@ -390,8 +390,8 @@ void Renderer::render_path_dots(const vector<PathDot> &dots) {
     in_radius.insert(in_radius.end(), 3 * num_edges, vec2(x_radius, dot.radius));
 
     for (int i = 0; i < num_edges; i++) {
-      float a0 = (float)i / (float)num_edges * 2 * glm::pi<float>();
-      float a1 = (float)(i + 1) / (float)num_edges * 2 * glm::pi<float>();
+      float a0 = (float) i / (float) num_edges * 2 * glm::pi<float>();
+      float a1 = (float) (i + 1) / (float) num_edges * 2 * glm::pi<float>();
 
       in_offset.push_back(vec2(0, 0));
       in_offset.push_back(vec2(cosf(a0), sinf(a0)));

@@ -44,12 +44,12 @@ static uptr new_renderer() {
   }
 
   Renderer *renderer = new Renderer;
-  return (uptr)renderer;
+  return (uptr) renderer;
 }
 
 
 static void delete_renderer(uptr renderer_addr) {
-  Renderer *renderer = (Renderer *)renderer_addr;
+  Renderer *renderer = (Renderer *) renderer_addr;
   delete renderer;
 }
 
@@ -88,7 +88,7 @@ static u32 get_object_list_from_behavior(u32 *behavior) {
 }
 
 static u32 get_object_list(sm64::Object *object) {
-  return get_object_list_from_behavior((u32 *)object->behavior);
+  return get_object_list_from_behavior((u32 *) object->behavior);
 }
 
 
@@ -171,7 +171,7 @@ struct GameState {
   }
 
   void *addr(const std::string &path) const {
-    return (void *)state_object.attr("get_data_addr")(py::cast(path)).cast<uptr>();
+    return (void *) state_object.attr("get_data_addr")(py::cast(path)).cast<uptr>();
   }
 };
 
@@ -199,7 +199,7 @@ static Viewport read_viewport(py::object viewport_object) {
 
 static Camera read_camera(py::object camera_object) {
   Camera camera;
-  camera.mode = (CameraMode)camera_object.attr("mode").attr("value").cast<int>();
+  camera.mode = (CameraMode) camera_object.attr("mode").attr("value").cast<int>();
 
   switch (camera.mode) {
     case CameraMode::ROTATE: {
@@ -252,7 +252,7 @@ float remove_x = 0;
 
 
 static void render(uptr renderer_addr, py::object info) {
-  Renderer *renderer = (Renderer *)renderer_addr;
+  Renderer *renderer = (Renderer *) renderer_addr;
 
 
   Scene scene;
@@ -291,7 +291,7 @@ static void render(uptr renderer_addr, py::object info) {
 
 
   s32 num_surfaces = st.data("$state.gSurfacesAllocated").cast<s32>();
-  sm64::Surface *surfaces = (sm64::Surface *)st.data("$state.sSurfacePool").cast<uptr>();
+  sm64::Surface *surfaces = (sm64::Surface *) st.data("$state.sSurfacePool").cast<uptr>();
 
   for (s32 i = 0; i < num_surfaces; i++) {
     struct sm64::Surface *surface = &surfaces[i];
@@ -318,7 +318,7 @@ static void render(uptr renderer_addr, py::object info) {
     });
   }
 
-  sm64::Object *object_pool = (sm64::Object *)st.addr("$state.gObjectPool");
+  sm64::Object *object_pool = (sm64::Object *) st.addr("$state.gObjectPool");
   for (s32 i = 0; i < 240; i++) {
     sm64::Object *obj = &object_pool[i];
     if (obj->activeFlags & ACTIVE_FLAG_ACTIVE) {
@@ -338,10 +338,10 @@ static void render(uptr renderer_addr, py::object info) {
 
   vector<ObjectPathNode> mario_path;
   for (GameState path_st : path_states) {
-    sm64::MarioState *m = (sm64::MarioState *)path_st.data("$state.gMarioState").cast<uptr>();
+    sm64::MarioState *m = (sm64::MarioState *) path_st.data("$state.gMarioState").cast<uptr>();
 
     if (!mario_path.empty() && mario_path.size() == current_index + 1) {
-      sm64::QStepsInfo *qsteps = (sm64::QStepsInfo *)path_st.addr("$state.gQStepsInfo");
+      sm64::QStepsInfo *qsteps = (sm64::QStepsInfo *) path_st.addr("$state.gQStepsInfo");
       if (qsteps->numSteps > 4) {
         printf("%d\n", qsteps->numSteps);
       }
@@ -421,9 +421,9 @@ static void render(uptr renderer_addr, py::object info) {
   //     sm64::Object *mario_object = st.from_base(st.data->gMarioObject);
 
   //     if (mario_object != nullptr && object == mario_object) {
-  //       u16 *transform = (u16 *)st.from_base(node->unk0);
+  //       u16 *transform = (u16 *) st.from_base(node->unk0);
   //       // printf("%p -> %p\n", node->unk4, st.from_base(node->unk4));
-  //       u32 *display_list = (u32 *)st.from_base(node->unk4);
+  //       u32 *display_list = (u32 *) st.from_base(node->unk4);
 
   //       // printf("%d %p %08X %08X\n", i, display_list, display_list[0], display_list[1]);
 
@@ -498,8 +498,8 @@ static void render(uptr renderer_addr, py::object info) {
   // //     if (object != nullptr) {
   // //       printf("%p %p\n", object->displayListStart, object->displayListEnd);
   // //       // done = true;
-  // //       // u32 *dl = (u32 *)object->displayListStart;
-  // //       // while (dl < (u32 *)object->displayListEnd) {
+  // //       // u32 *dl = (u32 *) object->displayListStart;
+  // //       // while (dl < (u32 *) object->displayListEnd) {
   // //       //   printf("0x%08X\n", dl);
   // //       // }
   // //     }
@@ -514,8 +514,8 @@ vector<vec3> loaded_vertices(32);
 mat4 matrix_fixed_to_float(u16 *mtx) {
   mat4 result;
   for (size_t i = 0; i < 16; i++) {
-    s32 val32 = (s32)((mtx[i] << 16) + mtx[16 + i]);
-    result[i / 4][i % 4] = (f32)val32 / 0x10000;
+    s32 val32 = (s32) ((mtx[i] << 16) + mtx[16 + i]);
+    result[i / 4][i % 4] = (f32) val32 / 0x10000;
   }
   return result;
 }
@@ -537,7 +537,7 @@ mat4 matrix_fixed_to_float(u16 *mtx) {
 //       exit(1);
 
 //       // u8 p = (w0 >> 16) & 0xFF;
-//       // u16 *fixed_point = st.from_base((u16 *)w1);
+//       // u16 *fixed_point = st.from_base((u16 *) w1);
 //       // mat4 matrix = matrix_fixed_to_float(fixed_point);
 
 //       // glMatrixMode((p & 0x01) ? GL_PROJECTION : GL_MODELVIEW);
@@ -565,7 +565,7 @@ mat4 matrix_fixed_to_float(u16 *mtx) {
 //     case 0x04: { // gSPVertex
 //       u32 n = ((w0 >> 20) & 0xF) + 1;
 //       u32 v0 = (w0 >> 16) & 0xF;
-//       sm64::Vtx *v = st.from_base((sm64::Vtx *)w1);
+//       sm64::Vtx *v = st.from_base((sm64::Vtx *) w1);
 
 //       loaded_vertices.clear();
 //       for (u32 i = 0; i < n; i++) {
@@ -576,7 +576,7 @@ mat4 matrix_fixed_to_float(u16 *mtx) {
 //     }
 
 //     case 0x06: { // gSPDisplayList, gSPBranchList
-//       u32 *new_dl = st.from_base((u32 *)w1);
+//       u32 *new_dl = st.from_base((u32 *) w1);
 //       if (w0 == 0x06000000) {
 //         interpret_display_list(st, new_dl, indent + "  ");
 //       } else if (w0 == 0x06010000) {
