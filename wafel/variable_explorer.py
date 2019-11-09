@@ -195,9 +195,9 @@ class VariableExplorer:
       self.cell_edit_state.end_edit()
 
     if ig.is_item_hovered() and ig.is_mouse_down(2):
-      self.model.edits.reset(frame, variable)
+      self.model.edits.reset(frame, variable.id)
 
-    if self.model.edits.is_edited(frame, variable):
+    if self.model.edits.is_edited(frame, variable.id):
       dl = ig.get_window_draw_list()
       spacing = ig.get_style().item_spacing
       spacing = (spacing[0] / 2, spacing[1] / 2)

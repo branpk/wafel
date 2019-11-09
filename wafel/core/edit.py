@@ -1,26 +1,24 @@
 from typing import *
 
-from wafel.core.game_state import GameState
-from wafel.core.variable import Variable, VariableParam, VariableGroup, VariableId
+from wafel.core.variable import Variable, VariableId
 
 
-class _Edit:
-  def __init__(self, variable: Variable, value: Any) -> None:
-    self.variable = variable
-    self.value = value
-
+# FIXME: Move this somewhere
     # Don't edit hidden variables, e.g. buttons instead of A, B, Z, as then
     # the edits won't be visible to the user
     # TODO: Maybe implement Variable#contains(Variable) to handle this case instead?
-    assert variable.group != VariableGroup.hidden()
+    # assert variable.group != VariableGroup.hidden()
 
-  def apply(self, state: GameState) -> None:
-    self.variable.set(self.value, { VariableParam.STATE: state })
+
+class Edit:
+  def __init__(self, variable_id: VariableId, value: Any) -> None:
+    self.variable_id = variable_id
+    self.value = value
 
 
 class Edits:
   def __init__(self):
-    self._frames: List[List[_Edit]] = []
+    self._frames: List[List[Edit]] = []
     self._on_edit_callbacks: List[Callable[[int], None]] = []
 
   def on_edit(self, callback: Callable[[int], None]) -> None:
@@ -47,32 +45,26 @@ class Edits:
       del self._frames[index]
       self._invalidate(index - 1)
 
-  def _get_edits(self, frame: int) -> List[_Edit]:
+  def get_edits(self, frame: int) -> List[Edit]:
     while frame >= len(self._frames):
       self._frames.append([])
     return self._frames[frame]
 
-  def get_edits(self, frame: int) -> List[Tuple[Variable, Any]]:
-    return [(e.variable, e.value) for e in self._get_edits(frame)]
-
-  def edit(self, frame: int, variable: Variable, value: Any) -> None:
+  def edit(self, frame: int, variable: Union[Variable, VariableId, str], value: Any) -> None:
     # TODO: Remove overwritten edits
-    self._get_edits(frame).append(_Edit(variable, value))
+    if isinstance(variable, Variable):
+      variable = variable.id
+    elif isinstance(variable, str):
+      variable = VariableId(variable)
+    self.get_edits(frame).append(Edit(variable, value))
     self._invalidate(frame)
 
-  def is_edited(self, frame: int, variable: Variable) -> bool:
-    for edit in self._get_edits(frame):
-      if edit.variable == variable:
-        return True
-    return False
+  def is_edited(self, frame: int, variable_id: VariableId) -> bool:
+    return any(edit.variable_id == variable_id for edit in self.get_edits(frame))
 
-  def reset(self, frame: int, variable: Variable) -> None:
-    edits = self._get_edits(frame)
+  def reset(self, frame: int, variable_id: VariableId) -> None:
+    edits = self.get_edits(frame)
     for edit in list(edits):
-      if edit.variable == variable:
+      if edit.variable_id == variable_id:
         edits.remove(edit)
     self._invalidate(frame)
-
-  def apply(self, state: GameState) -> None:
-    for edit in self._get_edits(state.frame):
-      edit.apply(state)

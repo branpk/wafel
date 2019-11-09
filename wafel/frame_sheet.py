@@ -248,9 +248,9 @@ class FrameSheet:
       self.cell_edit_state.end_edit()
 
     if ig.is_item_hovered() and ig.is_mouse_down(2):
-      self.model.edits.reset(frame, column.variable)
+      self.model.edits.reset(frame, column.variable.id)
 
-    if self.model.edits.is_edited(frame, column.variable):
+    if self.model.edits.is_edited(frame, column.variable.id):
       dl = ig.get_window_draw_list()
       dl.add_rect(
         cell_cursor_pos[0],

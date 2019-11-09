@@ -20,7 +20,7 @@ class Model:
 
   def set_edits(self, edits: Edits) -> None:
     self.edits = edits
-    self.timeline = Timeline(self.lib, self.edits)
+    self.timeline = Timeline(self.lib, self.variables, self.edits)
 
     self._selected_frame = 0
     self.selected_frame_callbacks: List[Callable[[int], None]] = []
