@@ -161,7 +161,7 @@ class _CellManager:
 
   def get_timeline_length(self) -> int:
     # TODO: Compute this correctly
-    return len(self.edits._items)
+    return len(self.edits)
 
   def get_cell_buckets(self) -> Dict[int, List[_Cell]]:
     """Divide the frame timeline into buckets, where each bucket ideally
@@ -252,7 +252,7 @@ class Timeline:
 
   def __len__(self) -> int:
     # TODO: Handle length better
-    return len(self._cell_manager.edits._items)
+    return len(self._cell_manager.edits)
 
   def set_hotspot(self, name: str, frame: int) -> None:
     """Mark a certain frame as a "hotspot", which is a hint to try to ensure

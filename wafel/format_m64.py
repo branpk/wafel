@@ -2,41 +2,8 @@ from typing import *
 from typing.io import *
 import struct
 
-from wafel.core import Variables, Edits, VariableEdit, Variable, INPUT_BUTTON_FLAGS
+from wafel.core import Variables, Edits, INPUT_BUTTON_FLAGS
 from wafel.util import *
-
-
-def load_m64(file: IO[bytes], variables: Variables) -> Edits:
-  edits = Edits()
-
-  prev_buttons = 0
-  prev_stick_x = 0
-  prev_stick_y = 0
-
-  file.seek(0x400)
-  frame = 0
-  while True:
-    try:
-      buttons = struct.unpack('>H', file.read(2))[0]
-      stick_x = struct.unpack('=b', file.read(1))[0]
-      stick_y = struct.unpack('=b', file.read(1))[0]
-    except struct.error:
-      break
-
-    for var_name, flag in INPUT_BUTTON_FLAGS.items():
-      if (prev_buttons & flag) != (buttons & flag):
-        edits.add(frame, VariableEdit(variables[var_name], bool(buttons & flag)))
-    if stick_x != prev_stick_x:
-      edits.add(frame, VariableEdit(variables['input-stick-x'], stick_x))
-    if stick_y != prev_stick_y:
-      edits.add(frame, VariableEdit(variables['input-stick-y'], stick_y))
-
-    prev_buttons = buttons
-    prev_stick_x = stick_x
-    prev_stick_y = stick_y
-    frame += 1
-
-  return edits
 
 
 def save_m64(edits: Edits, file: IO[bytes], variables: Variables) -> None:
@@ -49,7 +16,7 @@ def save_m64(edits: Edits, file: IO[bytes], variables: Variables) -> None:
 
   file.write(b'\xbb\xff\xff\xff')
   file.write(b'\x3c\x01\x00\x00')
-  file.write(struct.pack('<I', len(edits._items)))
+  file.write(struct.pack('<I', len(edits)))
   file.write(b'\x02\x00\x00\x00') # power-on
 
   file.write(b'\x01\x00\x00\x00')
@@ -71,22 +38,54 @@ def save_m64(edits: Edits, file: IO[bytes], variables: Variables) -> None:
   stick_x = 0
   stick_y = 0
 
-  for frame_edits in edits._items:
-    for edit in frame_edits:
-      if isinstance(edit, VariableEdit):
-        if edit.variable.id.name in INPUT_BUTTON_FLAGS:
-          flag = INPUT_BUTTON_FLAGS[edit.variable.id.name]
-          if edit.value:
-            buttons |= flag
-          else:
-            buttons &= ~flag
-        elif edit.variable == variables['input-buttons']:
-          buttons = edit.value
-        elif edit.variable == variables['input-stick-x']:
-          stick_x = edit.value
-        elif edit.variable == variables['input-stick-y']:
-          stick_y = edit.value
+  for frame in range(len(edits)):
+    for variable, value in edits.get_edits(frame):
+      if variable.id.name in INPUT_BUTTON_FLAGS:
+        flag = INPUT_BUTTON_FLAGS[variable.id.name]
+        if value:
+          buttons |= flag
+        else:
+          buttons &= ~flag
+      elif variable == variables['input-buttons']:
+        buttons = value
+      elif variable == variables['input-stick-x']:
+        stick_x = value
+      elif variable == variables['input-stick-y']:
+        stick_y = value
 
     file.write(struct.pack(b'>H', buttons & 0xFFFF))
     file.write(struct.pack(b'=B', stick_x & 0xFF))
     file.write(struct.pack(b'=B', stick_y & 0xFF))
+
+
+def load_m64(file: IO[bytes], variables: Variables) -> Edits:
+  edits = Edits()
+
+  prev_buttons = 0
+  prev_stick_x = 0
+  prev_stick_y = 0
+
+  file.seek(0x400)
+  frame = 0
+  while True:
+    try:
+      buttons = struct.unpack('>H', file.read(2))[0]
+      stick_x = struct.unpack('=b', file.read(1))[0]
+      stick_y = struct.unpack('=b', file.read(1))[0]
+    except struct.error:
+      break
+
+    for var_name, flag in INPUT_BUTTON_FLAGS.items():
+      if (prev_buttons & flag) != (buttons & flag):
+        edits.edit(frame, variables[var_name], bool(buttons & flag))
+    if stick_x != prev_stick_x:
+      edits.edit(frame, variables['input-stick-x'], stick_x)
+    if stick_y != prev_stick_y:
+      edits.edit(frame, variables['input-stick-y'], stick_y)
+
+    prev_buttons = buttons
+    prev_stick_x = stick_x
+    prev_stick_y = stick_y
+    frame += 1
+
+  return edits

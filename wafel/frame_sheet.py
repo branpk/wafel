@@ -3,8 +3,7 @@ from typing import *
 
 import imgui as ig
 
-from wafel.core import Variable, ObjectType, VariableParam, VariableEdit, \
-  VariableId
+from wafel.core import Variable, ObjectType, VariableParam, VariableId
 from wafel.model import Model
 from wafel.variable_format import Formatters, EmptyFormatter
 from wafel.variable_display import VariableDisplayAction, \
@@ -147,7 +146,7 @@ class FrameSheet:
         raise Exception # TODO: Error message
       del state
 
-    self.model.edits.add(frame, VariableEdit(variable, data))
+    self.model.edits.edit(frame, variable, data)
 
 
   def get_content_width(self) -> int:

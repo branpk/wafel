@@ -5,7 +5,7 @@ import json
 from wafel.util import *
 from wafel.core.variable_param import *
 from wafel.core.data_path import DataPath
-from wafel.core.game_state import ObjectId, Object, GameState
+from wafel.core.game_state import ObjectId, Object
 from wafel.core.game_lib import GameLib
 from wafel.core.object_type import ObjectType
 

@@ -2,7 +2,7 @@ from typing import *
 from typing.io import *
 import json
 
-from wafel.core import Edits, Variables, VariableEdit, INPUT_BUTTON_FLAGS
+from wafel.core import Edits, Variables, INPUT_BUTTON_FLAGS
 
 
 INPUT_BUTTON_LABELS = {
@@ -59,41 +59,33 @@ def save_wafi(edits: Edits, file: IO[str], variables: Variables) -> None:
   stick_x = 0
   stick_y = 0
 
-  for frame_edits in edits._items:
+  for frame in range(len(edits)):
     # Variable hacks
-    for edit in frame_edits:
-      if not isinstance(edit, VariableEdit):
-        raise NotImplementedError(edit)
-
-      var = edit.variable
-      if not var.id.name.startswith('input-'):
-        hack_data: Dict[str, Any] = { 'variable': var.id.name }
-        if var.id.object_id is not None:
-          hack_data['object_slot'] = var.id.object_id  # TODO: Slot
-        hack_data['value'] = edit.value
+    for variable, value in edits.get_edits(frame):
+      if not variable.id.name.startswith('input-'):
+        hack_data: Dict[str, Any] = { 'variable': variable.id.name }
+        if variable.id.object_id is not None:
+          hack_data['object_slot'] = variable.id.object_id  # TODO: Slot
+        hack_data['value'] = value
         input_data.append(NoIndent(hack_data))
 
     # Inputs
-    for edit in frame_edits:
-      if not isinstance(edit, VariableEdit):
-        raise NotImplementedError(edit)
-
-      var = edit.variable
-      if var.id.name.startswith('input-'):
-        if var.id.name in INPUT_BUTTON_FLAGS:
-          flag = INPUT_BUTTON_FLAGS[var.id.name]
-          if edit.value:
+    for variable, value in edits.get_edits(frame):
+      if variable.id.name.startswith('input-'):
+        if variable.id.name in INPUT_BUTTON_FLAGS:
+          flag = INPUT_BUTTON_FLAGS[variable.id.name]
+          if value:
             buttons = buttons | flag
           else:
             buttons = buttons & ~flag
-        elif var.id.name == 'input-buttons':
-          buttons = edit.value
-        elif var.id.name == 'input-stick-x':
-          stick_x = edit.value
-        elif var.id.name == 'input-stick-y':
-          stick_y = edit.value
+        elif variable.id.name == 'input-buttons':
+          buttons = value
+        elif variable.id.name == 'input-stick-x':
+          stick_x = value
+        elif variable.id.name == 'input-stick-y':
+          stick_y = value
         else:
-          raise NotImplementedError(var)
+          raise NotImplementedError(variable)
 
     button_labels = [
       label for id, label in INPUT_BUTTON_LABELS.items()
@@ -112,7 +104,7 @@ def save_wafi(edits: Edits, file: IO[str], variables: Variables) -> None:
       'name': 'Super Mario 64',
       'version': 'J',
     },
-    'frame_range': [0, len(edits._items)],
+    'frame_range': [0, len(edits)],
     'inputs': input_data,
     '_version': 0,
   }
@@ -136,7 +128,7 @@ def load_wafi(file: IO[str], variables: Variables) -> Edits:
       variable = variables[edit['variable']]
       if 'object_slot' in edit:
         variable = variable.at_object(edit['object_slot'])
-      edits.add(frame, VariableEdit(variable, edit['value']))
+      edits.edit(frame, variable, edit['value'])
 
     else:
       assert isinstance(edit, list)
@@ -149,12 +141,12 @@ def load_wafi(file: IO[str], variables: Variables) -> Edits:
         buttons |= INPUT_BUTTON_FLAGS[button]
 
       if stick_x != prev_stick_x:
-        edits.add(frame, VariableEdit(variables['input-stick-x'], stick_x))
+        edits.edit(frame, variables['input-stick-x'], stick_x)
       if stick_y != prev_stick_y:
-        edits.add(frame, VariableEdit(variables['input-stick-y'], stick_y))
+        edits.edit(frame, variables['input-stick-y'], stick_y)
       for button, flag in INPUT_BUTTON_FLAGS.items():
         if (buttons & flag) != (prev_buttons & flag):
-          edits.add(frame, VariableEdit(variables[button], bool(buttons & flag)))
+          edits.edit(frame, variables[button], bool(buttons & flag))
 
       prev_buttons = buttons
       prev_stick_x = stick_x

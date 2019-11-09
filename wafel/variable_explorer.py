@@ -3,7 +3,7 @@ from typing import *
 import imgui as ig
 
 from wafel.model import Model
-from wafel.core import ObjectId, Variable, VariableGroup, VariableParam, VariableEdit
+from wafel.core import ObjectId, Variable, VariableGroup, VariableParam
 from wafel.variable_display import VariableDisplayAction, display_variable_data
 from wafel.variable_format import Formatters
 from wafel.frame_sheet import CellEditState
@@ -178,7 +178,7 @@ class VariableExplorer:
     )
 
     def on_edit(data: Any) -> None:
-      self.model.edits.add(frame, VariableEdit(variable, data))
+      self.model.edits.edit(frame, variable, data)
 
     action = display_variable_data(
       've-var-' + str(hash(cell)),
@@ -242,8 +242,8 @@ class VariableExplorer:
       new_stick_y = min(max(int(new_stick_y), -128), 127)
 
       if new_stick_x != self.model.get(stick_x) or new_stick_y != self.model.get(stick_y):
-        self.model.edits.add(self.model.selected_frame, VariableEdit(stick_x, new_stick_x))
-        self.model.edits.add(self.model.selected_frame, VariableEdit(stick_y, new_stick_y))
+        self.model.edits.edit(self.model.selected_frame, stick_x, new_stick_x)
+        self.model.edits.edit(self.model.selected_frame, stick_y, new_stick_y)
 
     offset = (
       (self.model.get(stick_x) + 128) / 255 * size,
