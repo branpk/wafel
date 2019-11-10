@@ -1,5 +1,6 @@
 from typing import *
 import struct
+import os
 
 from wafel.core import INPUT_BUTTON_FLAGS, VariableId, Edits
 from wafel.util import *
@@ -87,7 +88,7 @@ def load_m64(filename: str) -> Tuple[TasMetadata, Edits]:
 
     metadata = TasMetadata(
       game_version,
-      filename,
+      os.path.split(filename)[1],
       authors,
       description,
       rerecords,

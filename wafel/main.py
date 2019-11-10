@@ -74,7 +74,7 @@ class View:
       metadata = TasMetadata('us', 'Untitled TAS', 'Unknown author(s)', 'Made using Wafel')
       edits = Edits()
     elif self.file.type == 'wafi':
-      metadata, edits = load_m64(self.file.filename)
+      metadata, edits = load_wafi(self.file.filename)
     elif self.file.type == 'm64':
       metadata, edits = load_m64(self.file.filename)
     else:

@@ -94,16 +94,15 @@ def save_wafi(filename: str, metadata: TasMetadata, edits: Edits) -> None:
     ]
     input_data.append(NoIndent([stick_x, stick_y] + button_labels))
 
-   # TODO: Title, author, description, game version
   data = {
     'info': {
-      'title': 'Title',
-      'authors': '',
-      'description': 'Description',
+      'title': metadata.title,
+      'authors': metadata.authors,
+      'description': metadata.description,
     },
     'game': {
       'name': 'Super Mario 64',
-      'version': 'jp',
+      'version': metadata.game_version,
     },
     'frame_range': [0, len(edits)],
     'inputs': input_data,
@@ -115,16 +114,17 @@ def save_wafi(filename: str, metadata: TasMetadata, edits: Edits) -> None:
 
 
 def load_wafi(filename: str) -> Tuple[TasMetadata, Edits]:
+  # TODO: Json validation
+
   with open(filename, 'r') as f:
     data = json.load(f)
   assert data['_version'] == 0
 
-  # TODO: Metadata
   metadata = TasMetadata(
-    'jp',
-    '',
-    '',
-    '',
+    data['game']['version'],
+    data['info']['title'],
+    data['info']['authors'],
+    data['info']['description'],
   )
 
   edits = Edits()
