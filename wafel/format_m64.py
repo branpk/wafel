@@ -6,6 +6,17 @@ from wafel.util import *
 from wafel.tas_metadata import TasMetadata
 
 
+CRC_CODES = {
+  'jp': b'\x4e\xaa\x3d\x0e',
+  'us': b'\x63\x5a\x2b\xff',
+}
+
+COUNTRY_CODES = {
+  'jp': b'J',
+  'us': b'E',
+}
+
+
 def save_m64(filename: str, metadata: TasMetadata, edits: Edits) -> None:
   with open(filename, 'wb') as f:
     # TODO: Remove blank frames at end
@@ -24,8 +35,8 @@ def save_m64(filename: str, metadata: TasMetadata, edits: Edits) -> None:
     f.write(bytes(160))
     f.write(bytes_to_buffer(b'SUPER MARIO 64', 32))
     f.write(b'\x4e\xaa\x3d\x0e') # crc
-    f.write(b'J\x00') # country code
-    f.write(bytes(56))
+    f.write(b'J') # country code
+    f.write(bytes(57))
 
     f.write(bytes(64))
     f.write(bytes(64))
@@ -61,12 +72,22 @@ def save_m64(filename: str, metadata: TasMetadata, edits: Edits) -> None:
 
 def load_m64(filename: str) -> Tuple[TasMetadata, Edits]:
   with open(filename, 'rb') as f:
-    # TODO: Metadata
+    f.seek(0xE4)
+    crc = f.read(4)
+    game_version = dict_inverse(CRC_CODES)[crc] # TODO: Default
+    # TODO: Fall back to country code?
+
+    f.seek(0x222)
+    authors = f.read(222).partition(b'\x00')[0].decode('utf-8')
+
+    f.seek(0x300)
+    description = f.read(256).partition(b'\x00')[0].decode('utf-8')
+
     metadata = TasMetadata(
-      'jp',
+      game_version,
       filename,
-      [],
-      '',
+      authors,
+      description,
     )
     edits = Edits()
 

@@ -1,6 +1,7 @@
 import typing as _tp
 
 _T = _tp.TypeVar('T')
+_S = _tp.TypeVar('S')
 
 def dcast(type_: _tp.Type[_T], value: _tp.Any) -> _T:
   if not isinstance(value, type_):
@@ -31,3 +32,6 @@ def topological_sort(dependencies: _tp.Dict[_T, _tp.List[_T]]) -> _tp.List[_T]:
 
 def bytes_to_buffer(b: bytes, n: int) -> bytes:
   return b[:n].ljust(n, b'\x00')
+
+def dict_inverse(d: _tp.Dict[_T, _S]) -> _tp.Dict[_S, _T]:
+  return {v: k for k, v in d.items()}

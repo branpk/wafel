@@ -5,7 +5,7 @@ class TasMetadata:
     self,
     game_version: str,
     title: str,
-    authors: List[str],
+    authors: str,
     description: str,
   ) -> None:
     self.game_version = game_version

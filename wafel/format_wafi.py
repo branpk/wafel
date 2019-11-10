@@ -98,12 +98,12 @@ def save_wafi(filename: str, metadata: TasMetadata, edits: Edits) -> None:
   data = {
     'info': {
       'title': 'Title',
-      'authors': ['Author 1', 'Author 2'],
+      'authors': '',
       'description': 'Description',
     },
     'game': {
       'name': 'Super Mario 64',
-      'version': 'J',
+      'version': 'jp',
     },
     'frame_range': [0, len(edits)],
     'inputs': input_data,
@@ -123,7 +123,7 @@ def load_wafi(filename: str) -> Tuple[TasMetadata, Edits]:
   metadata = TasMetadata(
     'jp',
     '',
-    [],
+    '',
     '',
   )
 

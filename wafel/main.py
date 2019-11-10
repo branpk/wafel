@@ -71,7 +71,7 @@ class View:
 
   def reload(self) -> None:
     if self.file is None:
-      metadata = TasMetadata('jp', 'Untitled TAS', [], 'Made using Wafel')
+      metadata = TasMetadata('us', 'Untitled TAS', 'Unknown author(s)', 'Made using Wafel')
       edits = Edits()
     else:
       if self.file.type == 'wafi':
@@ -81,7 +81,7 @@ class View:
       else:
         raise NotImplementedError(self.file.type)
     self.metadata = metadata
-    self.model.set_edits(edits)
+    self.model.load(metadata.game_version, edits)
 
     self.formatters = Formatters()
 

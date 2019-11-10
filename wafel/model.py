@@ -2,23 +2,32 @@ from typing import *
 from ctypes import cdll
 import json
 import gc
+import os
 
 from wafel.core import GameLib, Variable, Edits, Timeline, GameState, ObjectId, \
   ObjectType, VariableParam
 
 
 class Model:
-  def __init__(self):
-    dll = cdll.LoadLibrary('lib/libsm64/jp/sm64')
-    with open('lib/libsm64/jp/libsm64.json', 'r') as f:
-      spec: dict = json.load(f)
+
+  def load(self, game_version: str, edits: Edits) -> None:
+    self._load_lib(game_version)
+    self._set_edits(edits)
+
+  def _load_lib(self, game_version: str) -> None:
+    if hasattr(self, 'game_version') and self.game_version == game_version:
+      return
+    self.game_version = game_version
+
+    libsm64 = os.path.join('lib', 'libsm64', game_version)
+    dll = cdll.LoadLibrary(os.path.join(libsm64, 'sm64'))
+    with open(os.path.join(libsm64, 'libsm64.json'), 'r') as f:
+      spec = json.load(f)
     self.lib = GameLib(spec, dll)
 
     self.variables = Variable.create_all(self.lib)
 
-    self.set_edits(Edits())
-
-  def set_edits(self, edits: Edits) -> None:
+  def _set_edits(self, edits: Edits) -> None:
     self.edits = edits
     self.timeline = Timeline(self.lib, self.variables, self.edits)
 
