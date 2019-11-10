@@ -20,13 +20,12 @@ COUNTRY_CODES = {
 def save_m64(filename: str, metadata: TasMetadata, edits: Edits) -> None:
   with open(filename, 'wb') as f:
     # TODO: Remove blank frames at end
-    # TODO: crc, country code, authors, description
     f.write(b'\x4d\x36\x34\x1a')
     f.write(b'\x03\x00\x00\x00')
     f.write(b'\x00\x00\x00\x00') # movie uid
     f.write(b'\xff\xff\xff\xff')
 
-    f.write(b'\xbb\xff\xff\xff')
+    f.write(struct.pack('<I', (metadata.rerecords or 0) & 0xFFFFFFFF))
     f.write(b'\x3c\x01\x00\x00')
     f.write(struct.pack('<I', len(edits)))
     f.write(b'\x02\x00\x00\x00') # power-on
@@ -34,8 +33,8 @@ def save_m64(filename: str, metadata: TasMetadata, edits: Edits) -> None:
     f.write(b'\x01\x00\x00\x00')
     f.write(bytes(160))
     f.write(bytes_to_buffer(b'SUPER MARIO 64', 32))
-    f.write(b'\x4e\xaa\x3d\x0e') # crc
-    f.write(b'J') # country code
+    f.write(CRC_CODES[metadata.game_version])
+    f.write(COUNTRY_CODES[metadata.game_version])
     f.write(bytes(57))
 
     f.write(bytes(64))
@@ -43,8 +42,8 @@ def save_m64(filename: str, metadata: TasMetadata, edits: Edits) -> None:
     f.write(bytes(64))
     f.write(bytes(64))
 
-    f.write(bytes_to_buffer(b'Authors here', 222))
-    f.write(bytes_to_buffer(b'Description here', 256))
+    f.write(bytes_to_buffer(metadata.authors.encode('utf-8'), 222))
+    f.write(bytes_to_buffer(metadata.description.encode('utf-8'), 256))
 
     buttons = 0
     stick_x = 0
@@ -72,9 +71,12 @@ def save_m64(filename: str, metadata: TasMetadata, edits: Edits) -> None:
 
 def load_m64(filename: str) -> Tuple[TasMetadata, Edits]:
   with open(filename, 'rb') as f:
+    f.seek(0x10)
+    rerecords = struct.unpack('>H', f.read(2))[0]
+
     f.seek(0xE4)
     crc = f.read(4)
-    game_version = dict_inverse(CRC_CODES)[crc] # TODO: Default
+    game_version = dict_inverse(CRC_CODES).get(crc) or 'us'
     # TODO: Fall back to country code?
 
     f.seek(0x222)
@@ -88,6 +90,7 @@ def load_m64(filename: str) -> Tuple[TasMetadata, Edits]:
       filename,
       authors,
       description,
+      rerecords,
     )
     edits = Edits()
 

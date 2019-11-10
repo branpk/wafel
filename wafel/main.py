@@ -73,13 +73,12 @@ class View:
     if self.file is None:
       metadata = TasMetadata('us', 'Untitled TAS', 'Unknown author(s)', 'Made using Wafel')
       edits = Edits()
+    elif self.file.type == 'wafi':
+      metadata, edits = load_m64(self.file.filename)
+    elif self.file.type == 'm64':
+      metadata, edits = load_m64(self.file.filename)
     else:
-      if self.file.type == 'wafi':
-        metadata, edits = load_m64(self.file.filename)
-      elif self.file.type == 'm64':
-        metadata, edits = load_m64(self.file.filename)
-      else:
-        raise NotImplementedError(self.file.type)
+      raise NotImplementedError(self.file.type)
     self.metadata = metadata
     self.model.load(metadata.game_version, edits)
 
