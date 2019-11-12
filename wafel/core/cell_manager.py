@@ -82,6 +82,14 @@ class _CellManager(Generic[ST, ADDR]):
 
     self.hotspots: Dict[str, int] = {}
 
+    # Prevent callback from keeping self alive
+    weak_self = weakref.ref(self)
+    def invalidate(frame: int) -> None:
+      self_ref = weak_self()
+      if self_ref is not None:
+        self_ref.invalidate_frame(frame)
+    self.game.on_invalidation(invalidate)
+
   def __del__(self) -> None:
     for cell in self.cells:
       self.game.dealloc_state(cell.addr)
@@ -265,7 +273,6 @@ class GenericTimeline(Generic[ST, ADDR]):
   def __init__(self, game: StateSequence[ST, ADDR]) -> None:
     self._cell_manager = _CellManager(game, capacity=200)
     self._game = game
-    game.on_invalidation(self._cell_manager.invalidate_frame)
 
   def __getitem__(self, frame: int) -> ST:
     return self._cell_manager.request_frame(frame)

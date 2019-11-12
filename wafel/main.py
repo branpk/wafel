@@ -65,6 +65,8 @@ class View:
     self.tkinter_root = tkinter.Tk()
     self.tkinter_root.withdraw()
 
+    self.dbg_frame_advance = False
+
     self.file: Optional[SequenceFile] = None
     self.reload()
 
@@ -82,6 +84,10 @@ class View:
     self.metadata = metadata
     self.model.load(metadata.game_version, edits)
 
+    self.reload_ui()
+
+
+  def reload_ui(self) -> None:
     self.formatters = Formatters()
 
     self.frame_sheets: List[FrameSheet] = [FrameSheet(self.model, self.formatters)]
@@ -94,8 +100,6 @@ class View:
       GameView(self.model, CameraMode.BIRDS_EYE),
     ]
     self.frame_slider = FrameSlider(self.model)
-
-    self.dbg_frame_advance = False
 
     self.epoch += 1
 
@@ -190,6 +194,19 @@ class View:
         if ig.menu_item('Save as')[0]:
           if self.ask_save_filename():
             self.save()
+
+        if ig.begin_menu('Game version'):
+          versions = [
+            ('US', 'us'),
+            ('J', 'jp'),
+          ]
+          for label, version in versions:
+            if ig.menu_item(label, selected = self.metadata.game_version == version)[0]:
+              self.metadata.game_version = version
+              self.model.change_version(version)
+              self.reload_ui()
+          ig.end_menu()
+
         ig.end_menu()
       ig.end_menu_bar()
 

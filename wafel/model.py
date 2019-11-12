@@ -14,6 +14,9 @@ class Model:
     self._load_lib(game_version)
     self._set_edits(edits)
 
+  def change_version(self, game_version: str) -> None:
+    self.load(game_version, self.edits)
+
   def _load_lib(self, game_version: str) -> None:
     if hasattr(self, 'game_version') and self.game_version == game_version:
       return
