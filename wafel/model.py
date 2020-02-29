@@ -4,6 +4,7 @@ import json
 import gc
 import os
 
+from wafel.config import config
 from wafel.core import GameLib, Variable, Edits, Timeline, GameState, ObjectId, \
   ObjectType, VariableParam
 
@@ -22,8 +23,8 @@ class Model:
       return
     self.game_version = game_version
 
-    libsm64 = os.path.join('lib', 'libsm64', game_version)
-    dll = cdll.LoadLibrary(os.path.join(libsm64, 'sm64'))
+    dll = cdll.LoadLibrary(
+      os.path.join(config.lib_directory, 'libsm64', f'sm64_{game_version}'))
     with open(os.path.join(libsm64, 'libsm64.json'), 'r') as f:
       spec = json.load(f)
     self.lib = GameLib(spec, dll)

@@ -1,1 +1,0 @@
--e git+https://github.com/branpk/pyimgui.git#egg=imgui[Cython,GLFW]

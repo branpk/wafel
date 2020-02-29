@@ -6,6 +6,9 @@ from wafel.util import *
 from wafel.core.object_type import ObjectType, OBJECT_TYPES
 
 
+DataSpec = Any
+
+
 class GameLib:
   def __init__(self, spec: dict, dll: C.CDLL) -> None:
     self.spec = spec

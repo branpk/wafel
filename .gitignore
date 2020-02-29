@@ -8,3 +8,4 @@ __pycache__
 lib/libsm64
 imgui.ini
 .mypy_cache
+.wafel_cache

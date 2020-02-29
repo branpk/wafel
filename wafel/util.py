@@ -1,17 +1,22 @@
 import typing as _tp
 
-_T = _tp.TypeVar('T')
-_S = _tp.TypeVar('S')
+_T = _tp.TypeVar('_T')
+_S = _tp.TypeVar('_S')
 
 def dcast(type_: _tp.Type[_T], value: _tp.Any) -> _T:
   if not isinstance(value, type_):
     raise TypeError('Could not cast ' + str(value) + ' to ' + str(type_))
   return value
 
-def align_up(value: int, align: int) -> int:
-  while value % align != 0:
-    value += 1
+def assert_not_none(value: _tp.Optional[_T]) -> _T:
+  assert value is not None
   return value
+
+def align_up(value: int, align: int) -> int:
+  if value % align == 0:
+    return value
+  else:
+    return value + (align - (value % align))
 
 def topological_sort(dependencies: _tp.Dict[_T, _tp.List[_T]]) -> _tp.List[_T]:
   deps = [(v, list(e)) for v, e in dependencies.items()]
