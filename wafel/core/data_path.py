@@ -40,6 +40,7 @@ class DataPath:
   def parse(lib: GameLib, expr: str) -> 'DataPath':
     expr = expr.strip()
 
+    result: DataPath
     if expr.startswith('$state'):
       expr = expr[len('$state'):]
       result = _State(lib)

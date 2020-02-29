@@ -317,9 +317,9 @@ def run() -> None:
 
   model = Model()
   view = View(model)
-  view.file = SequenceFile('test_files/1key_j.m64', 'm64')
-  view.reload()
-  view.file = None
+  # view.file = SequenceFile('test_files/1key_j.m64', 'm64')
+  # view.reload()
+  # view.file = None
 
   while not glfw.window_should_close(window):
     glfw.poll_events()

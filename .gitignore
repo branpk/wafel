@@ -7,3 +7,4 @@ __pycache__
 *.pyd
 lib/libsm64
 imgui.ini
+.mypy_cache
