@@ -1,4 +1,5 @@
 import typing as _tp
+from enum import Enum as _Enum
 
 _T = _tp.TypeVar('_T')
 _S = _tp.TypeVar('_S')
@@ -40,3 +41,6 @@ def bytes_to_buffer(b: bytes, n: int) -> bytes:
 
 def dict_inverse(d: _tp.Dict[_T, _S]) -> _tp.Dict[_S, _T]:
   return {v: k for k, v in d.items()}
+
+class NoArg(_Enum):
+  marker = 0

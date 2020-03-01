@@ -1,63 +1,27 @@
 from typing import *
+from dataclasses import dataclass
 
 import imgui as ig
 
 from wafel.model import Model
-from wafel.core import ObjectId, Variable, VariableGroup, VariableParam
+from wafel.core import ObjectId, Variable, VariableGroup, VariableParam, ObjectType
 from wafel.variable_display import VariableDisplayAction, display_variable_data
 from wafel.variable_format import Formatters
 from wafel.frame_sheet import CellEditState
+import wafel.ui as ui
 
 
+@dataclass(frozen=True)
 class TabId:
-  def __init__(self, name: str, object_id: Optional[ObjectId] = None) -> None:
-    self.name = name
-    self.object_id = object_id
-
-  def __eq__(self, other: object) -> bool:
-    if not isinstance(other, TabId):
-      return False
-    return self.name == other.name and self.object_id == other.object_id
-
-  def __hash__(self) -> int:
-    return hash((self.name, self.object_id))
+  name: str
+  object_id: Optional[ObjectId] = None
 
 
+@dataclass(frozen=True)
 class VariableCell:
-  def __init__(self, tab: TabId, variable: Variable, frame: int) -> None:
-    self.tab = tab
-    self.variable = variable
-    self.frame = frame
-
-  def __eq__(self, other: object) -> bool:
-    if not isinstance(other, VariableCell):
-      return False
-    return self.tab == other.tab and \
-      self.variable == other.variable and \
-      self.frame == other.frame
-
-  def __hash__(self) -> int:
-    return hash((self.tab, self.variable, self.frame))
-
-
-class JoystickControl:
-  def __init__(self):
-    self.start_value: Optional[Tuple[float, float]] = None
-
-  def get_value(self, drag: Tuple[float, float]) -> Tuple[float, float]:
-    assert self.active
-    return (self.start_value[0] + drag[0], self.start_value[1] + drag[1])
-
-  @property
-  def active(self):
-    return self.start_value is not None
-
-  def set_active(self, value: Tuple[float, float]) -> None:
-    if self.start_value is None:
-      self.start_value = value
-
-  def reset(self):
-    self.start_value = None
+  tab: TabId
+  variable: Variable
+  frame: int
 
 
 class VariableExplorer:
@@ -79,7 +43,6 @@ class VariableExplorer:
       self.open_tab(tab)
 
     self.current_tab = self.open_tabs[0]
-    self.joystick_control = JoystickControl()
 
 
   def open_tab(self, tab: TabId) -> None:
@@ -109,32 +72,18 @@ class VariableExplorer:
 
 
   def render_objects_tab(self) -> None:
-    button_size = 50
-    window_left = ig.get_window_position()[0]
-    window_right = window_left + ig.get_window_content_region_max()[0]
-    prev_item_right = window_left
-    style = ig.get_style()
+    object_types: List[Optional[ObjectType]] = []
 
+    state = self.model.timeline[self.model.selected_frame]
     for slot in range(240):
-      item_right = prev_item_right + style.item_spacing[0] + button_size
-      if item_right > window_right:
-        prev_item_right = window_left
-      elif slot != 0:
-        ig.same_line()
-      prev_item_right = prev_item_right + style.item_spacing[0] + button_size
-
       object_id = slot
-      object_type = self.model.get_object_type(
-        self.model.timeline[self.model.selected_frame],
-        object_id,
-      )
-      if object_type is None:
-        label = str(slot)
-      else:
-        label = str(slot) + '\n' + object_type.name
+      object_types.append(self.model.get_object_type(state, object_id))
 
-      if ig.button(label + '##slot-' + str(slot), 50, 50):
-        self.open_tab(TabId('_object', object_id))
+    def on_select(slot: int) -> None:
+      object_id = slot
+      self.open_tab(TabId('_object', object_id))
+
+    ui.render_object_slots(object_types, on_select)
 
 
   def get_variables_for_tab(self, tab: TabId) -> List[Variable]:
@@ -210,67 +159,17 @@ class VariableExplorer:
       )
 
 
-  def render_stick_control(self, stick_x: Variable, stick_y: Variable) -> None:
-    dl = ig.get_window_draw_list()
+  def render_stick_control(self, stick_x_var: Variable, stick_y_var: Variable) -> None:
+    stick_x = self.model.get(stick_x_var)
+    stick_y = self.model.get(stick_y_var)
 
-    padding = 20
-    size = min(
-      ig.get_column_width() - ig.get_style().scrollbar_size - 2 * padding,
-      ig.get_window_height() - 2 * padding,
-      200,
-    )
-    top_left = ig.get_cursor_pos()
-    top_left = (
-      top_left[0] + ig.get_window_position()[0] + padding,
-      top_left[1] + ig.get_window_position()[1] - ig.get_scroll_y() + padding,
-    )
+    new_values = ui.render_joystick_control(stick_x, stick_y)
 
-    dl.add_rect_filled(
-      top_left[0],
-      top_left[1],
-      top_left[0] + size,
-      top_left[1] + size,
-      ig.get_color_u32_rgba(0, 0, 0, 0.3),
-    )
+    if new_values is not None:
+      new_stick_x, new_stick_y = new_values
 
-    if self.joystick_control.active and ig.is_mouse_down():
-      new_offset = self.joystick_control.get_value(ig.get_mouse_drag_delta(lock_threshold=0))
-
-      new_stick_x = new_offset[0] / size * 255 - 128
-      new_stick_y = (1 - new_offset[1] / size) * 255 - 128
-      new_stick_x = min(max(int(new_stick_x), -128), 127)
-      new_stick_y = min(max(int(new_stick_y), -128), 127)
-
-      if new_stick_x != self.model.get(stick_x) or new_stick_y != self.model.get(stick_y):
-        self.model.edits.edit(self.model.selected_frame, stick_x, new_stick_x)
-        self.model.edits.edit(self.model.selected_frame, stick_y, new_stick_y)
-
-    offset = (
-      (self.model.get(stick_x) + 128) / 255 * size,
-      (1 - (self.model.get(stick_y) + 128) / 255) * size,
-    )
-
-    dl.add_line(
-      top_left[0] + size / 2,
-      top_left[1] + size / 2,
-      top_left[0] + offset[0],
-      top_left[1] + offset[1],
-      ig.get_color_u32_rgba(1, 1, 1, 0.5),
-    )
-
-    button_size = 20
-    button_pos = ig.get_cursor_pos()
-    button_pos = (
-      padding + button_pos[0] + offset[0] - button_size / 2,
-      padding + button_pos[1] + offset[1] - button_size / 2,
-    )
-    ig.set_cursor_pos(button_pos)
-    ig.button('##ve-stick-control-button', button_size, button_size)
-
-    if ig.is_item_active():
-      self.joystick_control.set_active(offset)
-    else:
-      self.joystick_control.reset()
+      self.model.edits.edit(self.model.selected_frame, stick_x_var, new_stick_x)
+      self.model.edits.edit(self.model.selected_frame, stick_y_var, new_stick_y)
 
 
   def render_input_tab(self, tab: TabId) -> None:
@@ -298,9 +197,6 @@ class VariableExplorer:
 
 
   def render_tab_contents(self, tab: TabId) -> None:
-    if tab.name != 'Input':
-      self.joystick_control.reset()
-
     if tab.name == 'Objects':
       self.render_objects_tab()
     elif tab.name == 'Input':
