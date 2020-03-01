@@ -447,4 +447,12 @@ def extract_data_spec_cached(path: str) -> DataSpec:
 def load_libsm64(path: str) -> GameLib:
   dll = ctypes.cdll.LoadLibrary(path)
   spec = extract_data_spec_cached(path)
+
+  # TODO: Hacks until macros/object fields are implemented
+  with open('hack_constants.json', 'r') as f:
+    spec['constants'].update(json.load(f))
+  with open('hack_object_fields.json', 'r') as f:
+    spec['extra'] = {}
+    spec['extra']['object_fields'] = json.load(f)
+
   return GameLib(spec, dll)

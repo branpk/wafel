@@ -5,9 +5,136 @@
 #include <glad.h>
 #include <glm/glm.hpp>
 namespace sm64 {
-  extern "C" {
-    #include <libsm64.h>
-  }
+  typedef int8_t s8;
+  typedef int16_t s16;
+  typedef int32_t s32;
+  typedef int64_t s64;
+  typedef uint8_t u8;
+  typedef uint16_t u16;
+  typedef uint32_t u32;
+  typedef uint64_t u64;
+  typedef float f32;
+  typedef double f64;
+
+  enum ObjectList
+  {
+      OBJ_LIST_PLAYER,      //  (0) mario
+      OBJ_LIST_UNUSED_1,    //  (1) (unused)
+      OBJ_LIST_DESTRUCTIVE, //  (2) things that can be used to destroy other objects, like
+                            //      bob-ombs and corkboxes
+      OBJ_LIST_UNUSED_3,    //  (3) (unused)
+      OBJ_LIST_GENACTOR,    //  (4) general actors. most normal 'enemies' or actors are
+                            //      on this list. (MIPS, bullet bill, bully, etc)
+      OBJ_LIST_PUSHABLE,    //  (5) pushable actors. This is a group of objects which
+                            //      can push each other around as well as their parent
+                            //      objects. (goombas, koopas, spinies)
+      OBJ_LIST_LEVEL,       //  (6) level objects. general level objects such as heart, star
+      OBJ_LIST_UNUSED_7,    //  (7) (unused)
+      OBJ_LIST_DEFAULT,     //  (8) default objects. objects that didnt start with a 00
+                            //      command are put here, so this is treated as a default.
+      OBJ_LIST_SURFACE,     //  (9) surface objects. objects that specifically have surface
+                            //      collision and not object collision. (thwomp, whomp, etc)
+      OBJ_LIST_POLELIKE,    // (10) polelike objects. objects that attract or otherwise
+                            //      "cling" mario similar to a pole action. (hoot,
+                            //      whirlpool, trees/poles, etc)
+      OBJ_LIST_SPAWNER,     // (11) spawners
+      OBJ_LIST_UNIMPORTANT, // (12) unimportant objects. objects that will not load
+                            //      if there are not enough object slots: they will also
+                            //      be manually unloaded to make room for slots if the list
+                            //      gets exhausted.
+      NUM_OBJ_LISTS
+  };
+
+  typedef f32 Vec2f[2];
+  typedef f32 Vec3f[3]; // X, Y, Z, where Y is up
+  typedef s16 Vec3s[3];
+  typedef s32 Vec3i[3];
+  typedef f32 Vec4f[4];
+  typedef s16 Vec4s[4];
+
+  struct Surface
+  {
+      /*0x00*/ s16 type;
+      /*0x02*/ s16 force;
+      /*0x04*/ s8 flags;
+      /*0x05*/ s8 room;
+      /*0x06*/ s16 lowerY;
+      /*0x08*/ s16 upperY;
+      /*0x0A*/ Vec3s vertex1;
+      /*0x10*/ Vec3s vertex2;
+      /*0x16*/ Vec3s vertex3;
+      /*0x1C*/ struct {
+          f32 x;
+          f32 y;
+          f32 z;
+      } normal;
+      /*0x28*/ f32 originOffset;
+      /*0x2C*/ struct Object *object;
+  };
+
+  struct MarioState
+  {
+      /*0x00*/ u16 unk00;
+      /*0x02*/ u16 input;
+      /*0x04*/ u32 flags;
+      /*0x08*/ u32 particleFlags;
+      /*0x0C*/ u32 action;
+      /*0x10*/ u32 prevAction;
+      /*0x14*/ u32 terrainSoundAddend;
+      /*0x18*/ u16 actionState;
+      /*0x1A*/ u16 actionTimer;
+      /*0x1C*/ u32 actionArg;
+      /*0x20*/ f32 intendedMag;
+      /*0x24*/ s16 intendedYaw;
+      /*0x26*/ s16 invincTimer;
+      /*0x28*/ u8 framesSinceA;
+      /*0x29*/ u8 framesSinceB;
+      /*0x2A*/ u8 wallKickTimer;
+      /*0x2B*/ u8 doubleJumpTimer;
+      /*0x2C*/ Vec3s faceAngle;
+      /*0x32*/ Vec3s angleVel;
+      /*0x38*/ s16 slideYaw;
+      /*0x3A*/ s16 twirlYaw;
+      /*0x3C*/ Vec3f pos;
+      /*0x48*/ Vec3f vel;
+      /*0x54*/ f32 forwardVel;
+      /*0x58*/ f32 slideVelX;
+      /*0x5C*/ f32 slideVelZ;
+      /*0x60*/ struct Surface *wall;
+      /*0x64*/ struct Surface *ceil;
+      /*0x68*/ struct Surface *floor;
+      /*0x6C*/ f32 ceilHeight;
+      /*0x70*/ f32 floorHeight;
+      /*0x74*/ s16 floorAngle;
+      /*0x76*/ s16 waterLevel;
+      /*0x78*/ struct Object *interactObj;
+      /*0x7C*/ struct Object *heldObj;
+      /*0x80*/ struct Object *usedObj;
+      /*0x84*/ struct Object *riddenObj;
+      /*0x88*/ struct Object *marioObj;
+      /*0x8C*/ struct SpawnInfo *spawnInfo;
+      /*0x90*/ struct Area *area;
+      /*0x94*/ struct PlayerCameraState *statusForCamera;
+      /*0x98*/ struct MarioBodyState *marioBodyState;
+      /*0x9C*/ struct Controller *controller;
+      /*0xA0*/ struct MarioAnimation *animation;
+      /*0xA4*/ u32 collidedObjInteractTypes;
+      /*0xA8*/ s16 numCoins;
+      /*0xAA*/ s16 numStars;
+      /*0xAC*/ s8 numKeys; // Unused key mechanic
+      /*0xAD*/ s8 numLives;
+      /*0xAE*/ s16 health;
+      /*0xB0*/ s16 unkB0;
+      /*0xB2*/ u8 hurtCounter;
+      /*0xB3*/ u8 healCounter;
+      /*0xB4*/ u8 squishTimer;
+      /*0xB5*/ u8 fadeWarpOpacity;
+      /*0xB6*/ u16 capTimer;
+      /*0xB8*/ s16 unkB8;
+      /*0xBC*/ f32 peakHeight;
+      /*0xC0*/ f32 quicksandDepth;
+      /*0xC4*/ f32 unkC4;
+  };
 }
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -54,42 +181,42 @@ static void delete_renderer(uptr renderer_addr) {
 }
 
 
-static void *segmented_to_virtual(sm64::SM64State *st, void *addr) {
-  void *result = ((void *)0);
-  s32 i = 0;
-  for (; (i < 32); (i++)) {
-    if (((st->sSegmentTable[i].srcStart <= addr) && (addr < st->sSegmentTable[i].srcEnd))) {
-      if ((result != ((void *)0))) {
-        fprintf(stderr, "Warning: segmented_to_virtual: Found two segments containing address\n");
-        exit(1);
-      }
-      (result = ((((u8 *)addr) - ((u8 *)st->sSegmentTable[i].srcStart)) + (u8 *)st->sSegmentTable[i].dstStart));
-    }
-  }
-  if ((result == ((void *)0))) {
-    (result = addr);
-  }
-  return result;
-}
+// static void *segmented_to_virtual(sm64::SM64State *st, void *addr) {
+//   void *result = ((void *)0);
+//   s32 i = 0;
+//   for (; (i < 32); (i++)) {
+//     if (((st->sSegmentTable[i].srcStart <= addr) && (addr < st->sSegmentTable[i].srcEnd))) {
+//       if ((result != ((void *)0))) {
+//         fprintf(stderr, "Warning: segmented_to_virtual: Found two segments containing address\n");
+//         exit(1);
+//       }
+//       (result = ((((u8 *)addr) - ((u8 *)st->sSegmentTable[i].srcStart)) + (u8 *)st->sSegmentTable[i].dstStart));
+//     }
+//   }
+//   if ((result == ((void *)0))) {
+//     (result = addr);
+//   }
+//   return result;
+// }
 
 
-static u32 get_object_list_from_behavior(u32 *behavior) {
-  u32 objectList;
+// static u32 get_object_list_from_behavior(u32 *behavior) {
+//   u32 objectList;
 
-  // If the first behavior command is "begin", then get the object list header
-  // from there
-  if ((behavior[0] >> 24) == 0) {
-    objectList = (behavior[0] >> 16) & 0xFFFF;
-  } else {
-    objectList = sm64::OBJ_LIST_DEFAULT;
-  }
+//   // If the first behavior command is "begin", then get the object list header
+//   // from there
+//   if ((behavior[0] >> 24) == 0) {
+//     objectList = (behavior[0] >> 16) & 0xFFFF;
+//   } else {
+//     objectList = sm64::OBJ_LIST_DEFAULT;
+//   }
 
-  return objectList;
-}
+//   return objectList;
+// }
 
-static u32 get_object_list(sm64::Object *object) {
-  return get_object_list_from_behavior((u32 *) object->behavior);
-}
+// static u32 get_object_list(sm64::Object *object) {
+//   return get_object_list_from_behavior((u32 *) object->behavior);
+// }
 
 
 mat4 mat4_lookat(vec3 from, vec3 to, float roll) {
@@ -318,17 +445,17 @@ static void render(uptr renderer_addr, py::object info) {
     });
   }
 
-  sm64::Object *object_pool = (sm64::Object *) st.addr("$state.gObjectPool");
-  for (s32 i = 0; i < 240; i++) {
-    sm64::Object *obj = &object_pool[i];
-    if (obj->activeFlags & ACTIVE_FLAG_ACTIVE) {
-      scene.objects.push_back({
-        vec3(obj->oPosX, obj->oPosY, obj->oPosZ),
-        obj->hitboxHeight,
-        obj->hitboxRadius,
-      });
-    }
-  }
+  // sm64::Object *object_pool = (sm64::Object *) st.addr("$state.gObjectPool");
+  // for (s32 i = 0; i < 240; i++) {
+  //   sm64::Object *obj = &object_pool[i];
+  //   if (obj->activeFlags & ACTIVE_FLAG_ACTIVE) {
+  //     scene.objects.push_back({
+  //       vec3(obj->oPosX, obj->oPosY, obj->oPosZ),
+  //       obj->hitboxHeight,
+  //       obj->hitboxRadius,
+  //     });
+  //   }
+  // }
 
   vector<GameState> path_states = read_game_state_list(info.attr("path_states"));
 
@@ -340,18 +467,18 @@ static void render(uptr renderer_addr, py::object info) {
   for (GameState path_st : path_states) {
     sm64::MarioState *m = (sm64::MarioState *) path_st.data("$state.gMarioState").cast<uptr>();
 
-    if (!mario_path.empty() && mario_path.size() == current_index + 1) {
-      sm64::QStepsInfo *qsteps = (sm64::QStepsInfo *) path_st.addr("$state.gQStepsInfo");
-      if (qsteps->numSteps > 4) {
-        printf("%d\n", qsteps->numSteps);
-      }
-      for (int i = 0; i < qsteps->numSteps; i++) {
-        mario_path.back().quarter_steps.push_back({
-          VEC3F_TO_VEC3(qsteps->steps[i].intendedPos),
-          VEC3F_TO_VEC3(qsteps->steps[i].resultPos),
-        });
-      }
-    }
+    // if (!mario_path.empty() && mario_path.size() == current_index + 1) {
+    //   sm64::QStepsInfo *qsteps = (sm64::QStepsInfo *) path_st.addr("$state.gQStepsInfo");
+    //   if (qsteps->numSteps > 4) {
+    //     printf("%d\n", qsteps->numSteps);
+    //   }
+    //   for (int i = 0; i < qsteps->numSteps; i++) {
+    //     mario_path.back().quarter_steps.push_back({
+    //       VEC3F_TO_VEC3(qsteps->steps[i].intendedPos),
+    //       VEC3F_TO_VEC3(qsteps->steps[i].resultPos),
+    //     });
+    //   }
+    // }
 
     mario_path.push_back({
       vec3(m->pos[0], m->pos[1], m->pos[2]),

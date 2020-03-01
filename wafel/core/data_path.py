@@ -101,12 +101,11 @@ class DataPath:
       value = int(addr[0] or 0)
 
       state = args[VariableParam.STATE]
-      state_size = self.lib.spec['types']['struct']['SM64State']['size']
 
-      if value < state.base_addr or value >= state.base_addr + state_size:
-        return value
-      else:
+      if value in self.lib.base_state_range():
         return value - state.base_addr + state.addr
+      else:
+        return value
 
     elif self.concrete_type['kind'] == 'array':
       assert self.concrete_type['length'] is not None
@@ -146,7 +145,7 @@ class DataPath:
 
 class _State(DataPath):
   def __init__(self, lib: GameLib) -> None:
-    super().__init__(lib, [VariableParam.STATE], lib.spec['types']['struct']['SM64State'])
+    super().__init__(lib, [VariableParam.STATE], { 'kind': 'global' })
 
   def get_addr(self, args: VariableArgs) -> int:
     return args[VariableParam.STATE].addr
@@ -163,18 +162,27 @@ class _Object(DataPath):
 class _Field(DataPath):
   def __init__(self, lib: GameLib, struct: DataPath, field: str) -> None:
     struct_type = lib.concrete_type(struct.type)
-    assert struct_type['kind'] == 'struct'
 
-    if field in struct_type['fields']:
-      field_spec = struct_type['fields'][field]
-      field_type = field_spec['type']
-      field_offset = field_spec['offset']
-    elif field in lib.spec['extra']['object_fields']:
-      field_spec = lib.spec['extra']['object_fields'][field]
-      field_type = field_spec['type']
-      field_offset = struct_type['fields']['rawData']['offset'] + field_spec['offset']
+    if struct_type['kind'] == 'global':
+      field_type = lib.spec['globals'][field]['type']
+      field_offset = lib.symbol_offset(field)
+
+    elif struct_type['kind'] == 'struct':
+      if field in struct_type['fields']:
+        field_spec = struct_type['fields'][field]
+        field_type = field_spec['type']
+        field_offset = field_spec['offset']
+      elif field in lib.spec['extra']['object_fields']:
+        field_spec = lib.spec['extra']['object_fields'][field]
+        field_type = field_spec['type']
+        field_offset = struct_type['fields']['rawData']['offset'] + field_spec['offset']
+      else:
+        import json
+        print(json.dumps(struct_type, indent=2))
+        raise NotImplementedError(struct_type, field)
+
     else:
-      raise NotImplementedError(struct_type, field)
+      raise NotImplementedError(struct_type['kind'])
 
     super().__init__(lib, struct.params, field_type)
     self.struct = struct

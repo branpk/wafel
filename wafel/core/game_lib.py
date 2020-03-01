@@ -9,6 +9,10 @@ from wafel.core.object_type import ObjectType, OBJECT_TYPES
 DataSpec = Any
 
 
+# TODO: Improve this abstraction - maybe copy dll and allow loading multiple times for different base states?
+# Then could revert to old simpler API
+
+
 class GameLib:
   def __init__(self, spec: DataSpec, dll: C.CDLL) -> None:
     self.spec = spec
@@ -28,6 +32,8 @@ class GameLib:
       section_range('.bss'),
     ]
 
+    self.dll.sm64_init()
+
   def _cache_object_types(self) -> None:
     self.object_types: Dict[int, ObjectType] = {}
     for type_ in OBJECT_TYPES:
@@ -40,8 +46,14 @@ class GameLib:
         sys.stderr.write('Warning: Could not load object type ' + type_.name + '\n')
         sys.stderr.flush()
 
+  def symbol_offset(self, symbol: str) -> int:
+    return C.addressof(C.c_uint32.in_dll(self.dll, symbol)) - self.base_state()
+
   def base_state(self) -> int:
     return self.dll._handle
+
+  def base_state_range(self) -> range:
+    return range(self.base_state(), self.base_state() + max(r.stop for r in self.state_ranges))
 
   def alloc_state_buffer(self) -> int:
     contiguous_state_range = range(
@@ -54,7 +66,8 @@ class GameLib:
     return addr
 
   def dealloc_state_buffer(self, addr: int) -> None:
-    del self._buffers[addr]
+    if addr != self.base_state():
+      del self._buffers[addr]
 
   def raw_copy_state(self, dst: int, src: int) -> None:
     for state_range in self.state_ranges:

@@ -39,7 +39,7 @@ VARIABLES = {
   VariableGroup.all_objects(): {
     'obj-active-flags': data('$object.activeFlags').hidden(),
     'obj-active-flags-active': flag('obj-active-flags', 'ACTIVE_FLAG_ACTIVE').label('active'),
-    'obj-behavior-ptr': data('$object.behaviorSeg').hidden(),
+    'obj-behavior-ptr': data('$object.behavior').hidden(),
     'obj-hitbox-radius': data('$object.hitboxRadius').label('hitbox radius'),
     'obj-pos-x': data('$object.oPosX').label('pos x'),
     'obj-pos-y': data('$object.oPosY').label('pos y'),

@@ -71,7 +71,7 @@ class _CellManager(Generic[ST, ADDR]):
     self.game = game
     self.capacity = capacity
 
-    self.cells = [self.base_cell] + [self.new_cell() for _ in range(capacity - 1)]
+    self.cells = [self.new_cell() for _ in range(capacity - 1)]
 
     self.temp_cell = self.cells.pop()
 
