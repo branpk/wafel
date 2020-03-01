@@ -10,10 +10,23 @@ DataSpec = Any
 
 
 class GameLib:
-  def __init__(self, spec: dict, dll: C.CDLL) -> None:
+  def __init__(self, spec: DataSpec, dll: C.CDLL) -> None:
     self.spec = spec
     self.dll = dll
+    self._buffers: Dict[int, object] = {}
     self._cache_object_types()
+
+    # TODO: Maybe allow .data and .bss to be stored separately to save memory
+    def section_range(name):
+      section = self.spec['sections'][name]
+      return range(
+        section['virtual_address'],
+        section['virtual_address'] + section['virtual_size'],
+      )
+    self.state_ranges = [
+      section_range('.data'),
+      section_range('.bss'),
+    ]
 
   def _cache_object_types(self) -> None:
     self.object_types: Dict[int, ObjectType] = {}
@@ -27,17 +40,28 @@ class GameLib:
         sys.stderr.write('Warning: Could not load object type ' + type_.name + '\n')
         sys.stderr.flush()
 
-  def state_new(self) -> int:
-    return dcast(int, self.dll.sm64_state_new())
+  def base_state(self) -> int:
+    return self.dll._handle
 
-  def state_delete(self, addr: int) -> None:
-    self.dll.sm64_state_delete(addr)
+  def alloc_state_buffer(self) -> int:
+    contiguous_state_range = range(
+      min(r.start for r in self.state_ranges),
+      max(r.stop for r in self.state_ranges),
+    )
+    buffer = C.create_string_buffer(len(contiguous_state_range))
+    addr = C.addressof(buffer) - contiguous_state_range.start
+    self._buffers[addr] = buffer
+    return addr
 
-  def state_raw_copy(self, dst: int, src: int) -> None:
-    self.dll.sm64_state_raw_copy(dst, src)
+  def dealloc_state_buffer(self, addr: int) -> None:
+    del self._buffers[addr]
 
-  def state_update(self, addr: int) -> None:
-    self.dll.sm64_state_update(addr)
+  def raw_copy_state(self, dst: int, src: int) -> None:
+    for state_range in self.state_ranges:
+      C.memmove(dst + state_range.start, src + state_range.start, len(state_range))
+
+  def execute_frame(self) -> None:
+    self.dll.sm64_update()
 
   def concrete_type(self, type_: dict) -> dict:
     while type_['kind'] == 'symbol':

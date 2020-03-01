@@ -1,6 +1,9 @@
 from typing import *
 
 
+# TODO: Maintaining this may be too much work - consider just loading dynamically based on type
+
+
 class ObjectType:
   def __init__(
     self,

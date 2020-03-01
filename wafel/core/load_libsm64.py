@@ -1,17 +1,19 @@
 from typing import *
 import io
+import dataclasses
 from dataclasses import dataclass
 import textwrap
 import os
 import json
 import hashlib
+import ctypes
 
 import pefile
 from elftools.dwarf.dwarfinfo import DWARFInfo, DwarfConfig, DebugSectionDescriptor
 from elftools.dwarf.compileunit import CompileUnit
 from elftools.dwarf.die import DIE
 
-from wafel.core.game_lib import DataSpec
+from wafel.core.game_lib import DataSpec, GameLib
 from wafel.util import *
 from wafel.config import config
 
@@ -399,6 +401,14 @@ def extract_data_spec(path: str) -> DataSpec:
   spec: DataSpec = {
     'format_version': CURRENT_SPEC_FORMAT_VERSION,
     'library_hash': hash_file(path),
+    'sections': {
+      name: {
+        'raw_address': section.raw_address,
+        'raw_size': section.raw_size,
+        'virtual_address': section.virtual_address,
+        'virtual_size': section.virtual_size,
+      } for name, section in sections.items()
+    },
     'types': {
       'struct': {},
       'union': {},
@@ -434,5 +444,7 @@ def extract_data_spec_cached(path: str) -> DataSpec:
   return spec
 
 
-def load_libsm64(path: str) -> None:
-  extract_data_spec_cached(path)
+def load_libsm64(path: str) -> GameLib:
+  dll = ctypes.cdll.LoadLibrary(path)
+  spec = extract_data_spec_cached(path)
+  return GameLib(spec, dll)

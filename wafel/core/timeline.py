@@ -19,17 +19,20 @@ class _GameStateSequence(StateSequence[GameState, int]):
     self.variables = variables
     self.edits = edits
 
-  def alloc_state(self) -> int:
-    return self.lib.state_new()
+  def base_state(self) -> int:
+    return self.lib.base_state()
 
-  def dealloc_state(self, addr: int) -> None:
-    self.lib.state_delete(addr)
+  def alloc_state_buffer(self) -> int:
+    return self.lib.alloc_state_buffer()
+
+  def dealloc_state_buffer(self, addr: int) -> None:
+    self.lib.dealloc_state_buffer(addr)
 
   def raw_copy_state(self, dst: int, src: int) -> None:
-    self.lib.state_raw_copy(dst, src)
+    self.lib.raw_copy_state(dst, src)
 
-  def execute_frame(self, addr: int) -> None:
-    self.lib.state_update(addr)
+  def execute_frame(self) -> None:
+    self.lib.execute_frame()
 
   def to_owned(self, base_addr: int, frame: int, addr: int) -> GameState:
     return GameState(self.lib, base_addr, frame, addr)

@@ -1,6 +1,7 @@
 from typing import Optional, Any, IO
 import json
 import os
+import sys
 
 from dataclasses import dataclass
 
@@ -58,7 +59,8 @@ class Config:
       with open(os.path.join(self.cache_directory, filename), 'r') as f:
         return json.load(f)
     except Exception as e:
-      print(f'Warning: Error while reading from cache: {e}')
+      sys.stderr.write(f'Warning: Error while reading from cache: {e}\n')
+      sys.stderr.flush()
       return None
 
   def cache_put(self, key: str, value: object, filename='object*') -> None:
@@ -78,7 +80,8 @@ class Config:
       index[key] = filename
       self._save_cache_index(index)
     except Exception as e:
-      print(f'Warning: Error while writing to cache: {e}')
+      sys.stderr.write(f'Warning: Error while writing to cache: {e}')
+      sys.stderr.flush()
 
 
 config = Config()

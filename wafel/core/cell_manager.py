@@ -15,17 +15,20 @@ ST = TypeVar('ST')
 
 
 class StateSequence(Generic[ST, ADDR]):
-  def alloc_state(self) -> ADDR:
+  def base_state(self) -> ADDR:
     raise NotImplementedError
 
-  def dealloc_state(self, addr: ADDR) -> None:
+  def alloc_state_buffer(self) -> ADDR:
+    raise NotImplementedError
+
+  def dealloc_state_buffer(self, addr: ADDR) -> None:
     raise NotImplementedError
 
   def raw_copy_state(self, dst: ADDR, src: ADDR) -> None:
     """Copy without updating pointers."""
     raise NotImplementedError
 
-  def execute_frame(self, addr: ADDR) -> None:
+  def execute_frame(self) -> None:
     raise NotImplementedError
 
   def to_owned(self, base_addr: ADDR, frame: int, addr: ADDR) -> ST:
@@ -45,7 +48,7 @@ class _Cell(Generic[ST, ADDR]):
   """A block of memory containing an SM64State struct."""
 
   def __init__(self, frame: int, addr: ADDR) -> None:
-    self.state = None
+    self.state: Optional[weakref.ref[ST]] = None
     self.frame = frame
     self.addr = addr
 
@@ -68,12 +71,14 @@ class _CellManager(Generic[ST, ADDR]):
     self.game = game
     self.capacity = capacity
 
-    self.cells = [self.new_cell() for _ in range(capacity)]
+    self.cells = [self.base_cell] + [self.new_cell() for _ in range(capacity - 1)]
+
     self.temp_cell = self.cells.pop()
 
     # The base cell is the only one that SM64 C code can be run on, since
     # its pointers refer to its own memory
-    self.base_cell = self.cells[0]
+    self.base_cell: _Cell[ST, ADDR] = _Cell(-1, self.game.base_state())
+    self.cells.insert(0, self.base_cell)
     for cell in self.cells:
       self.copy_cell(cell, self.base_cell, unsafe=True)
 
@@ -92,7 +97,7 @@ class _CellManager(Generic[ST, ADDR]):
 
   def __del__(self) -> None:
     for cell in self.cells:
-      self.game.dealloc_state(cell.addr)
+      self.game.dealloc_state_buffer(cell.addr)
 
   def can_modify_cell(self, cell: _Cell[ST, ADDR]) -> bool:
     return cell is not self.power_on_cell and not cell.loaded
@@ -100,7 +105,7 @@ class _CellManager(Generic[ST, ADDR]):
   def new_cell(self) -> _Cell[ST, ADDR]:
     # Frame "-1" is a power-on state before any edits have been applied.
     # Frame 0 is after edits are applied but before the first frame advance.
-    return _Cell(-1, self.game.alloc_state())
+    return _Cell(-1, self.game.alloc_state_buffer())
 
   def copy_cell(
     self,
@@ -118,7 +123,7 @@ class _CellManager(Generic[ST, ADDR]):
     assert self.can_modify_cell(self.base_cell)
 
     if self.base_cell.frame != -1:
-      self.game.execute_frame(self.base_cell.addr)
+      self.game.execute_frame()
     self.base_cell.frame += 1
 
     temp_state = self.load_cell(self.base_cell)
