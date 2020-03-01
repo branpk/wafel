@@ -3,7 +3,7 @@ from typing import *
 import sys
 
 from wafel.util import *
-from wafel.core.object_type import ObjectType, OBJECT_TYPES
+from wafel.core.object_type import ObjectType
 
 
 DataSpec = Any
@@ -18,7 +18,7 @@ class GameLib:
     self.spec = spec
     self.dll = dll
     self._buffers: Dict[int, object] = {}
-    self._cache_object_types()
+    self._symbols_by_offset: Dict[int, str] = self._build_symbols_by_offset()
 
     # TODO: Maybe allow .data and .bss to be stored separately to save memory
     def section_range(name):
@@ -34,20 +34,22 @@ class GameLib:
 
     self.dll.sm64_init()
 
-  def _cache_object_types(self) -> None:
-    self.object_types: Dict[int, ObjectType] = {}
-    for type_ in OBJECT_TYPES:
-      # TODO: Backup behaviors
+  def _build_symbols_by_offset(self) -> Dict[int, str]:
+    result: Dict[int, str] = {}
+    for symbol in self.spec['globals']:
       try:
-        behavior_addr = C.addressof(C.c_uint32.in_dll(self.dll, type_.behavior[0]))
-        assert behavior_addr not in self.object_types, type_.name
-        self.object_types[behavior_addr] = type_
+        offset = self.symbol_offset(symbol)
       except ValueError:
-        sys.stderr.write('Warning: Could not load object type ' + type_.name + '\n')
-        sys.stderr.flush()
+        continue
+      assert offset not in result, symbol
+      result[offset] = symbol
+    return result
 
   def symbol_offset(self, symbol: str) -> int:
     return C.addressof(C.c_uint32.in_dll(self.dll, symbol)) - self.base_state()
+
+  def symbol_for_offset(self, offset: int) -> str:
+    return self._symbols_by_offset[offset]
 
   def base_state(self) -> int:
     return self.dll._handle
@@ -81,5 +83,6 @@ class GameLib:
       type_ = self.spec['types'][type_['namespace']][type_['name']]
     return type_
 
-  def get_object_type(self, behavior: int) -> ObjectType:
-    return self.object_types[behavior]
+  def get_object_type(self, behavior_offset: int) -> ObjectType:
+    symbol = self.symbol_for_offset(behavior_offset)
+    return ObjectType(behavior_offset, symbol)

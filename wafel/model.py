@@ -82,4 +82,4 @@ class Model:
     behavior = self.variables['obj-behavior-ptr'].at_object(object_id).get({
       VariableParam.STATE: state,
     })
-    return self.lib.get_object_type(behavior)
+    return self.lib.get_object_type(behavior - state.addr)
