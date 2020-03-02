@@ -4,10 +4,10 @@ from wafel.core import Variable, VariableDataType
 
 
 class VariableFormatter:
-  def output(self, data: Any) -> Any:
+  def output(self, data: object) -> object:
     raise NotImplementedError
 
-  def input(self, rep: Any) -> Any:
+  def input(self, rep: object) -> object:
     raise NotImplementedError
 
 
@@ -16,43 +16,43 @@ class TextFormatter(VariableFormatter):
 
 
 class EmptyFormatter(TextFormatter): # TODO: Implement better UI than empty text
-  def output(self, data):
+  def output(self, data: object) -> object:
     assert data is None
     return ''
 
-  def input(self, rep):
+  def input(self, rep: object) -> object:
     assert rep == ''
     return None
 
 
 # TODO: Signed, unsigned, int sizes
 class DecimalIntFormatter(TextFormatter):
-  def output(self, data):
+  def output(self, data: object) -> object:
     assert isinstance(data, int)
     return str(data)
 
-  def input(self, rep):
+  def input(self, rep: object) -> object:
     assert isinstance(rep, str)
     return int(rep, base=0)
 
 
 # TODO: Precision
 class FloatFormatter(TextFormatter):
-  def output(self, data):
+  def output(self, data: object) -> object:
     assert isinstance(data, float)
     return str(data)
 
-  def input(self, rep):
+  def input(self, rep: object) -> object:
     assert isinstance(rep, str)
     return float(rep)
 
 
 class CheckboxFormatter(VariableFormatter):
-  def output(self, data):
+  def output(self, data: object) -> object:
     assert isinstance(data, bool)
     return data
 
-  def input(self, rep):
+  def input(self, rep: object) -> object:
     assert isinstance(rep, bool)
     return rep
 

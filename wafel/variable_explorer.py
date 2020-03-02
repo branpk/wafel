@@ -5,9 +5,7 @@ import imgui as ig
 
 from wafel.model import Model
 from wafel.core import ObjectId, Variable, VariableGroup, VariableParam, ObjectType
-from wafel.variable_display import VariableDisplayAction, display_variable_data
 from wafel.variable_format import Formatters
-from wafel.frame_sheet import CellEditState
 import wafel.ui as ui
 
 
@@ -31,7 +29,6 @@ class VariableExplorer:
     self.formatters = formatters
     self.open_tabs: List[TabId] = []
     self.rendered = False
-    self.cell_edit_state: CellEditState[VariableCell] = CellEditState()
 
     fixed_tabs = [
       TabId('Input'),
@@ -79,7 +76,7 @@ class VariableExplorer:
       object_id = slot
       object_types.append(self.model.get_object_type(state, object_id))
 
-    selected_slot = ui.render_object_slots(object_types)
+    selected_slot = ui.render_object_slots('object-slots', object_types)
     if selected_slot is not None:
       object_id = selected_slot
       self.open_tab(TabId('_object', object_id))
@@ -125,22 +122,14 @@ class VariableExplorer:
       cell_cursor_pos[1] + ig.get_window_position()[1] - ig.get_scroll_y(),
     )
 
-    def on_edit(data: Any) -> None:
-      self.model.edits.edit(frame, variable, data)
-
-    action = display_variable_data(
+    changed_data, _ = ui.render_variable_value(
       've-var-' + str(hash(cell)),
       data,
       self.formatters[variable],
       (cell_width, cell_height),
-      self.cell_edit_state.get(cell),
-      on_edit = on_edit,
     )
-
-    if action == VariableDisplayAction.BEGIN_EDIT:
-      self.cell_edit_state.begin_edit(cell)
-    elif action == VariableDisplayAction.END_EDIT:
-      self.cell_edit_state.end_edit()
+    if changed_data is not None:
+      self.model.edits.edit(frame, variable, changed_data.value)
 
     if ig.is_item_hovered() and ig.is_mouse_down(2):
       self.model.edits.reset(frame, variable.id)
@@ -162,7 +151,7 @@ class VariableExplorer:
     stick_x = self.model.get(stick_x_var)
     stick_y = self.model.get(stick_y_var)
 
-    new_values = ui.render_joystick_control(stick_x, stick_y)
+    new_values = ui.render_joystick_control('joystick-control', stick_x, stick_y)
 
     if new_values is not None:
       new_stick_x, new_stick_y = new_values

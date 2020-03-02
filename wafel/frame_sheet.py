@@ -6,8 +6,7 @@ import imgui as ig
 from wafel.core import Variable, ObjectType, VariableParam, VariableId
 from wafel.model import Model
 from wafel.variable_format import Formatters, EmptyFormatter
-from wafel.variable_display import VariableDisplayAction, \
-  VariableDisplayEditState, display_variable_data
+import wafel.ui as ui
 
 
 class FrameSheetColumn:
@@ -27,25 +26,6 @@ class FrameSheetColumn:
       self.object_type == other.object_type
 
 
-T = TypeVar('T')
-
-class CellEditState(Generic[T]):
-  def __init__(self) -> None:
-    self.current_cell: Optional[Tuple[T, VariableDisplayEditState]] = None
-
-  def begin_edit(self, cell: T) -> None:
-    self.current_cell = (cell, VariableDisplayEditState())
-
-  def end_edit(self) -> None:
-    self.current_cell = None
-
-  def get(self, cell: T) -> Optional[VariableDisplayEditState]:
-    if self.current_cell is not None and self.current_cell[0] == cell:
-      return self.current_cell[1]
-    else:
-      return None
-
-
 class FrameSheet:
 
   def __init__(self, model: Model, formatters: Formatters) -> None:
@@ -58,7 +38,6 @@ class FrameSheet:
 
     self.row_height = 30
     self.frame_column_width = 60
-    self.cell_edit_state: CellEditState[Tuple[int, FrameSheetColumn]] = CellEditState()
 
     self.scroll_to_frame: Optional[int] = None
     def selected_frame_changed(frame: int) -> None:
@@ -223,13 +202,7 @@ class FrameSheet:
       data = None
       formatter = EmptyFormatter()
 
-    def on_select() -> None:
-      self.model.selected_frame = frame
-
-    def on_edit(data: Any) -> None:
-      self.set_data(frame, column, data)
-
-    action = display_variable_data(
+    changed_data, clicked = ui.render_variable_value(
       'fs-cell-' + str(id(self)) + '-' + str(frame) + '-' + str(id(column)),
       data,
       formatter,
@@ -237,15 +210,12 @@ class FrameSheet:
         column.width - 2 * ig.get_style().item_spacing[0],
         self.row_height - 2 * ig.get_style().item_spacing[1],
       ),
-      self.cell_edit_state.get((frame, column)),
       highlight = frame == self.model.selected_frame,
-      on_edit = on_edit,
-      on_select = on_select,
     )
-    if action == VariableDisplayAction.BEGIN_EDIT:
-      self.cell_edit_state.begin_edit((frame, column))
-    elif action == VariableDisplayAction.END_EDIT:
-      self.cell_edit_state.end_edit()
+    if changed_data is not None:
+      self.set_data(frame, column, changed_data.value)
+    if clicked:
+      self.model.selected_frame = frame
 
     if ig.is_item_hovered() and ig.is_mouse_down(2):
       self.model.edits.reset(frame, column.variable.id)

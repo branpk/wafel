@@ -8,7 +8,7 @@ from wafel.local_state import use_state, use_state_with, local_state
 from wafel.window import open_window_and_run
 from wafel.core import ObjectType
 from wafel.util import *
-from wafel.variable_format import DecimalIntFormatter
+from wafel.variable_format import DecimalIntFormatter, CheckboxFormatter
 
 
 # TODO: Hot reloading?
@@ -54,18 +54,48 @@ def test_joystick_control(id: str):
 def test_variable_value(id: str):
   ig.push_id(id)
 
-  variable = use_state('value', 0)
+  int_variable = use_state('int-variable', 0)
+  bool_variable = use_state('bool-variable', False)
+  last_selected = use_state('last-selected', '')
 
   cell_width = 80
   cell_height = ig.get_text_line_height() + 2 * ig.get_style().frame_padding[1]
-  new_value = ui.render_variable_value(
-    'variable-value',
-    variable.value,
+
+  new_int_value, selected = ui.render_variable_value(
+    'int-value',
+    int_variable.value,
     DecimalIntFormatter(),
     (cell_width, cell_height),
+    highlight=bool_variable.value,
   )
-  if new_value is not None:
-    variable.value = new_value.value
+  if new_int_value is not None:
+    int_variable.value = new_int_value.value
+  if selected:
+    last_selected.value = 'int'
+
+  new_int_value, selected = ui.render_variable_value(
+    'int-value-copy',
+    int_variable.value,
+    DecimalIntFormatter(),
+    (cell_width, cell_height),
+    highlight=not bool_variable.value,
+  )
+  if new_int_value is not None:
+    int_variable.value = new_int_value.value
+  if selected:
+    last_selected.value = 'int2'
+
+  new_bool_value, selected = ui.render_variable_value(
+    'bool-value',
+    bool_variable.value,
+    CheckboxFormatter(),
+    (cell_width, cell_height),
+    highlight=bool_variable.value,
+  )
+  if new_bool_value is not None:
+    bool_variable.value = new_bool_value.value
+  if selected:
+    last_selected.value = 'bool'
 
   ig.pop_id()
 

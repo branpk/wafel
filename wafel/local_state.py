@@ -6,7 +6,7 @@ import imgui as ig
 from wafel.util import *
 
 
-# TODO: Garbage collection?
+# TODO: Garbage collection? Probably safe to delete after one frame w/o usage
 local_state: Dict[Tuple[int, str], Any] = {}
 
 

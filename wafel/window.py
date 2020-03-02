@@ -45,7 +45,7 @@ def _render_window(window, ig_renderer, render: Callable[[str], None]) -> None:
   glfw.swap_buffers(window)
 
 
-def open_window_and_run(render: Callable[[str], None]) -> None:
+def open_window_and_run(render: Callable[[str], None], maximize = False) -> None:
   glfw.init()
 
   glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
@@ -57,7 +57,8 @@ def open_window_and_run(render: Callable[[str], None]) -> None:
   glfw.window_hint(glfw.VISIBLE, False)
   window = glfw.create_window(800, 600, 'Wafel', None, None)
   glfw.set_window_size_limits(window, 1, 1, glfw.DONT_CARE, glfw.DONT_CARE)
-  glfw.maximize_window(window)
+  if maximize:
+    glfw.maximize_window(window)
   glfw.show_window(window)
 
   glfw.make_context_current(window)

@@ -264,15 +264,17 @@ def run() -> None:
   view = None
 
   # TODO: Clean up (use local_state)
-  def render():
+  def render(id: str):
     nonlocal view
     if view is None:
       view = View(model)
       view.file = SequenceFile('test_files/1key_j.m64', 'm64')
       view.reload()
       view.file = None
+    ig.push_id(id)
     view.render()
+    ig.pop_id()
 
     model.timeline.balance_distribution(1/120)
 
-  open_window_and_run(render)
+  open_window_and_run(render, maximize=True)
