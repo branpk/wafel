@@ -79,11 +79,10 @@ class VariableExplorer:
       object_id = slot
       object_types.append(self.model.get_object_type(state, object_id))
 
-    def on_select(slot: int) -> None:
-      object_id = slot
+    selected_slot = ui.render_object_slots(object_types)
+    if selected_slot is not None:
+      object_id = selected_slot
       self.open_tab(TabId('_object', object_id))
-
-    ui.render_object_slots(object_types, on_select)
 
 
   def get_variables_for_tab(self, tab: TabId) -> List[Variable]:

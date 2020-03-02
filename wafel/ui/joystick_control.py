@@ -1,13 +1,14 @@
 from typing import *
+from dataclasses import dataclass
 
 import imgui as ig
 
-from wafel.ui.local_state import get_state
+from wafel.ui.local_state import use_state
 
 
+@dataclass
 class JoystickControlState:
-  def __init__(self) -> None:
-    self.start_value: Optional[Tuple[float, float]] = None
+  start_value: Optional[Tuple[float, float]] = None
 
   def get_value(self, drag: Tuple[float, float]) -> Tuple[float, float]:
     assert self.start_value is not None
@@ -27,21 +28,23 @@ class JoystickControlState:
 
 def render_joystick_control(stick_x: float, stick_y: float) -> Optional[Tuple[float, float]]:
   ig.push_id('joystick-control')
-
-  state = get_state('', JoystickControlState())
+  state = use_state('', JoystickControlState()).value
 
   dl = ig.get_window_draw_list()
 
   padding = 20
+  content_region = ig.get_content_region_available()
   size = min(
-    ig.get_column_width() - ig.get_style().scrollbar_size - 2 * padding,
-    ig.get_window_height() - 2 * padding,
+    content_region.x - ig.get_style().scrollbar_size - 2 * padding,
+    content_region.y - 2 * padding,
     200,
   )
-  top_left = ig.get_cursor_pos()
+  size = max(size, 100)
+
+  initial_cursor_pos = ig.get_cursor_pos()
   top_left = (
-    top_left[0] + ig.get_window_position()[0] + padding,
-    top_left[1] + ig.get_window_position()[1] - ig.get_scroll_y() + padding,
+    initial_cursor_pos[0] + ig.get_window_position()[0] + padding,
+    initial_cursor_pos[1] + ig.get_window_position()[1] - ig.get_scroll_y() + padding,
   )
 
   dl.add_rect_filled(
@@ -80,13 +83,17 @@ def render_joystick_control(stick_x: float, stick_y: float) -> Optional[Tuple[fl
   )
 
   button_size = 20
-  button_pos = ig.get_cursor_pos()
   button_pos = (
-    padding + button_pos[0] + offset[0] - button_size / 2,
-    padding + button_pos[1] + offset[1] - button_size / 2,
+    padding + initial_cursor_pos[0] + offset[0] - button_size / 2,
+    padding + initial_cursor_pos[1] + offset[1] - button_size / 2,
   )
   ig.set_cursor_pos(button_pos)
   ig.button('##joystick-button', button_size, button_size)
+
+  ig.set_cursor_pos((
+    initial_cursor_pos[0] + size + 2 * padding,
+    initial_cursor_pos[1] + size + 2 * padding,
+  ))
 
   if ig.is_item_active():
     state.set_active(offset)

@@ -44,3 +44,7 @@ def dict_inverse(d: _tp.Dict[_T, _S]) -> _tp.Dict[_S, _T]:
 
 class NoArg(_Enum):
   marker = 0
+
+class Ref(_tp.Generic[_T]):
+  def __init__(self, value: _T) -> None:
+    self.value = value

@@ -13,25 +13,14 @@ local_state: Dict[Tuple[int, str], Any] = {}
 T = TypeVar('T')
 
 
-def get_state(
-  name: str,
-  default: Union[NoArg, T] = NoArg.marker,
-  get_default: Union[NoArg, Callable[[], T]] = NoArg.marker,
-) -> T:
+def use_state_with(name: str, default: Callable[[], T]) -> Ref[T]:
   key = (ig.get_id(''), name)
-  if key in local_state:
-    return cast(T, local_state[key])
-
-  if default is not NoArg.marker:
-    assert get_default is NoArg.marker
-    value = default
-  else:
-    assert get_default is not NoArg.marker
-    value = get_default()
-
-  local_state[key] = value
-  return value
+  ref = local_state.get(key)
+  if ref is None:
+    ref = Ref(default())
+    local_state[key] = ref
+  return ref
 
 
-def set_state(name: str, value: T) -> None:
-  local_state[(ig.get_id(''), name)] = value
+def use_state(name: str, default: T) -> Ref[T]:
+  return use_state_with(name, lambda: default)
