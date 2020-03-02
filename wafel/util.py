@@ -1,15 +1,16 @@
-import typing as _tp
-from enum import Enum as _Enum
+from typing import *
+from enum import Enum
+from dataclasses import dataclass
 
-_T = _tp.TypeVar('_T')
-_S = _tp.TypeVar('_S')
+T = TypeVar('T')
+S = TypeVar('S')
 
-def dcast(type_: _tp.Type[_T], value: _tp.Any) -> _T:
+def dcast(type_: Type[T], value: Any) -> T:
   if not isinstance(value, type_):
     raise TypeError('Could not cast ' + str(value) + ' to ' + str(type_))
   return value
 
-def assert_not_none(value: _tp.Optional[_T]) -> _T:
+def assert_not_none(value: Optional[T]) -> T:
   assert value is not None
   return value
 
@@ -19,7 +20,7 @@ def align_up(value: int, align: int) -> int:
   else:
     return value + (align - (value % align))
 
-def topological_sort(dependencies: _tp.Dict[_T, _tp.List[_T]]) -> _tp.List[_T]:
+def topological_sort(dependencies: Dict[T, List[T]]) -> List[T]:
   deps = [(v, list(e)) for v, e in dependencies.items()]
   deps.reverse()
   result = []
@@ -39,12 +40,32 @@ def topological_sort(dependencies: _tp.Dict[_T, _tp.List[_T]]) -> _tp.List[_T]:
 def bytes_to_buffer(b: bytes, n: int) -> bytes:
   return b[:n].ljust(n, b'\x00')
 
-def dict_inverse(d: _tp.Dict[_T, _S]) -> _tp.Dict[_S, _T]:
+def dict_inverse(d: Dict[T, S]) -> Dict[S, T]:
   return {v: k for k, v in d.items()}
 
-class NoArg(_Enum):
+class NoArg(Enum):
   marker = 0
 
-class Ref(_tp.Generic[_T]):
-  def __init__(self, value: _T) -> None:
+class Ref(Generic[T]):
+  def __init__(self, value: T) -> None:
     self.value = value
+
+@dataclass(frozen=True)
+class Just(Generic[T]):
+  value: T
+
+Maybe = Optional[Just[T]]
+
+
+__all__ = [
+  'dcast',
+  'assert_not_none',
+  'align_up',
+  'topological_sort',
+  'bytes_to_buffer',
+  'dict_inverse',
+  'NoArg',
+  'Ref',
+  'Just',
+  'Maybe',
+]

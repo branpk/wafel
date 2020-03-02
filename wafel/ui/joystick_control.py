@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 import imgui as ig
 
-from wafel.ui.local_state import use_state
+from wafel.local_state import use_state
 
 
 @dataclass
@@ -26,8 +26,12 @@ class JoystickControlState:
     self.start_value = None
 
 
-def render_joystick_control(stick_x: float, stick_y: float) -> Optional[Tuple[float, float]]:
-  ig.push_id('joystick-control')
+def render_joystick_control(
+  id: str,
+  stick_x: float,
+  stick_y: float,
+) -> Optional[Tuple[float, float]]:
+  ig.push_id(id)
   state = use_state('', JoystickControlState()).value
 
   dl = ig.get_window_draw_list()

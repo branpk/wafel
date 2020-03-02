@@ -5,7 +5,9 @@ import imgui as ig
 from wafel.core import ObjectType
 
 
-def render_object_slots(object_types: List[Optional[ObjectType]]) -> Optional[int]:
+def render_object_slots(id: str, object_types: List[Optional[ObjectType]]) -> Optional[int]:
+  ig.push_id(id)
+
   button_size = 50
   window_left = ig.get_window_position()[0]
   window_right = window_left + ig.get_window_content_region_max()[0]
@@ -30,4 +32,5 @@ def render_object_slots(object_types: List[Optional[ObjectType]]) -> Optional[in
     if ig.button(label + '##slot-' + str(slot), button_size, button_size):
       result = slot
 
+  ig.pop_id()
   return result

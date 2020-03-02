@@ -6,7 +6,7 @@ from imgui.integrations.glfw import GlfwRenderer
 from OpenGL import GL as gl
 
 
-def _render_window(window, ig_renderer, render: Callable[[], None]) -> None:
+def _render_window(window, ig_renderer, render: Callable[[str], None]) -> None:
   #   if view.dbg_is_key_pressed(ord(']')):
   #     view.dbg_frame_advance = not view.dbg_frame_advance
 
@@ -33,7 +33,7 @@ def _render_window(window, ig_renderer, render: Callable[[], None]) -> None:
     False,
     ig.WINDOW_NO_SAVED_SETTINGS | ig.WINDOW_NO_RESIZE | ig.WINDOW_NO_TITLE_BAR | ig.WINDOW_MENU_BAR,
   )
-  render()
+  render('root')
   ig.end()
 
   ig.end_frame()
@@ -45,7 +45,7 @@ def _render_window(window, ig_renderer, render: Callable[[], None]) -> None:
   glfw.swap_buffers(window)
 
 
-def open_window_and_run(render: Callable[[], None]) -> None:
+def open_window_and_run(render: Callable[[str], None]) -> None:
   glfw.init()
 
   glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
