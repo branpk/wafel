@@ -4,22 +4,17 @@ from dataclasses import dataclass
 import imgui as ig
 
 from wafel.model import Model
-from wafel.core import ObjectId, Variable, VariableGroup, VariableParam, ObjectType
-from wafel.variable_format import Formatters
+from wafel.core import ObjectId, Variable, VariableGroup, VariableParam, \
+  ObjectType, VariableId
+from wafel.variable_format import Formatters, VariableFormatter
 import wafel.ui as ui
+from wafel.util import *
 
 
 @dataclass(frozen=True)
 class TabId:
   name: str
   object_id: Optional[ObjectId] = None
-
-
-@dataclass(frozen=True)
-class VariableCell:
-  tab: TabId
-  variable: Variable
-  frame: int
 
 
 class VariableExplorer:
@@ -100,51 +95,23 @@ class VariableExplorer:
   def render_variable(self, tab: TabId, variable: Variable) -> None:
     frame = self.model.selected_frame
     state = self.model.timeline[frame]
-    cell = VariableCell(tab, variable, state.frame)
-    data = variable.get({ VariableParam.STATE: state })
+    value = variable.get({ VariableParam.STATE: state })
     del state
 
-    ig.selectable(variable.label + '##ve-label-' + str(hash(cell)), width=80)
-
-    if ig.begin_drag_drop_source():
-      ig.text(variable.label)
-      ig.set_drag_drop_payload('ve-var', variable.id.to_bytes())
-      ig.end_drag_drop_source()
-
-    ig.same_line()
-
-    cell_width = 80
-    cell_height = ig.get_text_line_height() + 2 * ig.get_style().frame_padding[1]
-
-    cell_cursor_pos = ig.get_cursor_pos()
-    cell_cursor_pos = (
-      cell_cursor_pos[0] + ig.get_window_position()[0],
-      cell_cursor_pos[1] + ig.get_window_position()[1] - ig.get_scroll_y(),
-    )
-
-    changed_data, _ = ui.render_variable_value(
-      've-var-' + str(hash(cell)),
-      data,
+    changed_data, clear_edit = ui.render_labeled_variable(
+      f'var-{hash((tab, variable))}',
+      variable.label,
+      variable.id,
+      value,
       self.formatters[variable],
-      (cell_width, cell_height),
+      self.model.edits.is_edited(frame, variable.id),
     )
+
     if changed_data is not None:
       self.model.edits.edit(frame, variable, changed_data.value)
 
-    if ig.is_item_hovered() and ig.is_mouse_down(2):
+    if clear_edit:
       self.model.edits.reset(frame, variable.id)
-
-    if self.model.edits.is_edited(frame, variable.id):
-      dl = ig.get_window_draw_list()
-      spacing = ig.get_style().item_spacing
-      spacing = (spacing[0] / 2, spacing[1] / 2)
-      dl.add_rect(
-        cell_cursor_pos[0] - spacing[0],
-        cell_cursor_pos[1] - spacing[1],
-        cell_cursor_pos[0] + cell_width + spacing[0] - 1,
-        cell_cursor_pos[1] + cell_height + spacing[1] - 1,
-        ig.get_color_u32_rgba(0.8, 0.6, 0, 1),
-      )
 
 
   def render_stick_control(self, stick_x_var: Variable, stick_y_var: Variable) -> None:

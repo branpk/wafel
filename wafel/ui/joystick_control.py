@@ -106,3 +106,6 @@ def render_joystick_control(
 
   ig.pop_id()
   return result
+
+
+__all__ = ['render_joystick_control']

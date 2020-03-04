@@ -113,3 +113,6 @@ def render_variable_value(
 
   ig.pop_id()
   return result
+
+
+__all__ = ['render_variable_value']

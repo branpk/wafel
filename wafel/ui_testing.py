@@ -6,7 +6,7 @@ import imgui as ig
 import wafel.ui as ui
 from wafel.local_state import use_state, use_state_with, local_state
 from wafel.window import open_window_and_run
-from wafel.core import ObjectType
+from wafel.core import ObjectType, VariableId
 from wafel.util import *
 from wafel.variable_format import DecimalIntFormatter, CheckboxFormatter
 
@@ -14,7 +14,7 @@ from wafel.variable_format import DecimalIntFormatter, CheckboxFormatter
 # TODO: Hot reloading?
 
 
-def test_object_slots(id: str):
+def test_object_slots(id: str) -> None:
   ig.push_id(id)
 
   def initial_object_types() -> List[Optional[ObjectType]]:
@@ -39,7 +39,7 @@ def test_object_slots(id: str):
   ig.pop_id()
 
 
-def test_joystick_control(id: str):
+def test_joystick_control(id: str) -> None:
   ig.push_id(id)
 
   stick = use_state('stick', (0.0, 0.0))
@@ -51,7 +51,7 @@ def test_joystick_control(id: str):
   ig.pop_id()
 
 
-def test_variable_value(id: str):
+def test_variable_value(id: str) -> None:
   ig.push_id(id)
 
   int_variable = use_state('int-variable', 0)
@@ -100,7 +100,65 @@ def test_variable_value(id: str):
   ig.pop_id()
 
 
+def test_labeled_variable(id: str) -> None:
+  ig.push_id(id)
+
+  default = 1234
+  variable = use_state('value', default)
+  edited = use_state('edited', False)
+
+  changed_value, clear_edit = ui.render_labeled_variable(
+    'var',
+    'Variable',
+    VariableId('my-var'),
+    variable.value,
+    DecimalIntFormatter(),
+    edited.value,
+  )
+
+  if changed_value is not None:
+    variable.value = changed_value.value
+    edited.value = True
+  if clear_edit:
+    edited.value = False
+
+  ig.pop_id()
+
+
+def test_tabs(id: str) -> None:
+  ig.push_id(id)
+
+  open_tabs = use_state('open-tabs', {3}).value
+
+  for i in range(1, 6):
+    if ig.button(f'Open {i}##open-{i}'):
+      open_tabs.add(i)
+    if i != 5:
+      ig.same_line()
+  for i in range(1, 6):
+    if ig.button(f'Close {i}##close-{i}'):
+      if i in open_tabs:
+        open_tabs.remove(i)
+    if i != 5:
+      ig.same_line()
+
+  def tab_render(id: str) -> None:
+    ig.text(f'Tab id = {id}')
+
+  ui.render_tabs(
+    'tabs',
+    [
+      (f'tab-{i}', f'Tab {i}', tab_render)
+        for i in sorted(open_tabs)
+    ],
+  )
+
+  ig.pop_id()
+
+
 TESTS = [
+  test_tabs,
+  test_labeled_variable,
   test_variable_value,
   test_object_slots,
   test_joystick_control,

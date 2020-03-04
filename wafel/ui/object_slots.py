@@ -34,3 +34,6 @@ def render_object_slots(id: str, object_types: List[Optional[ObjectType]]) -> Op
 
   ig.pop_id()
   return result
+
+
+__all__ = ['render_object_slots']
