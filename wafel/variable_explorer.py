@@ -23,7 +23,6 @@ class VariableExplorer:
     self.model = model
     self.formatters = formatters
     self.open_tabs: List[TabId] = []
-    self.rendered = False
 
     fixed_tabs = [
       TabId('Input'),
@@ -34,8 +33,6 @@ class VariableExplorer:
     for tab in fixed_tabs:
       self.open_tab(tab)
 
-    self.current_tab = self.open_tabs[0]
-
 
   def open_tab(self, tab: TabId) -> None:
     if tab not in self.open_tabs:
@@ -44,9 +41,6 @@ class VariableExplorer:
 
 
   def close_tab(self, tab: TabId) -> None:
-    if self.current_tab == tab:
-      # TODO
-      pass
     if tab in self.open_tabs:
       self.open_tabs.remove(tab)
 
@@ -151,35 +145,29 @@ class VariableExplorer:
       self.render_variable(tab, variable)
 
 
-  def render_tab_contents(self, tab: TabId) -> None:
+  def render_tab_contents(self, id: str, tab: TabId) -> None:
+    ig.push_id(id)
     if tab.name == 'Objects':
       self.render_objects_tab()
     elif tab.name == 'Input':
       self.render_input_tab(tab)
     else:
       self.render_variable_tab(tab)
+    ig.pop_id()
 
 
-  def render(self) -> None:
-    ig.columns(2)
-    if not self.rendered:
-      self.rendered = True
-      ig.set_column_width(-1, 120)
+  def render(self, id: str) -> None:
+    ig.push_id(id)
 
-    ig.begin_child('Variable Explorer Tabs')
-    for tab in self.open_tabs:
-      _, selected = ig.selectable(
-        self.get_tab_label(tab) + '##' + str(id(tab)),
-        self.current_tab == tab,
-      )
-      if selected:
-        self.current_tab = tab
-    ig.end_child()
+    def render_tab(tab: TabId) -> Callable[[str], None]:
+      return lambda id: self.render_tab_contents(id, tab)
 
-    ig.next_column()
+    ui.render_tabs(
+      'tabs',
+      [
+        (f'tab-{hash(tab)}', self.get_tab_label(tab), render_tab(tab))
+          for tab in self.open_tabs
+      ]
+    )
 
-    ig.begin_child('Variable Explorer Content')
-    self.render_tab_contents(self.current_tab)
-    ig.end_child()
-
-    ig.columns(1)
+    ig.pop_id()

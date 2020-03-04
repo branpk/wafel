@@ -157,7 +157,7 @@ class View:
       ig.end_drag_drop_target()
 
     ig.begin_child('Variable Explorer', border=True)
-    self.variable_explorer.render()
+    self.variable_explorer.render('variable-explorer')
     ig.end_child()
 
 

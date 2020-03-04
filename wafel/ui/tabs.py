@@ -8,8 +8,6 @@ from wafel.local_state import use_state
 TabInfo = Tuple[str, str, Callable[[str], None]]
 
 def render_tabs(id: str, tabs: List[TabInfo]) -> None:
-  assert len(tabs) > 0
-
   ig.push_id(id)
   ig.columns(2)
 
@@ -17,6 +15,10 @@ def render_tabs(id: str, tabs: List[TabInfo]) -> None:
   if not rendered.value:
     rendered.value = True
     ig.set_column_width(-1, 120)
+
+  if len(tabs) == 0:
+    ig.pop_id()
+    return
 
   selected_tab_index = use_state('selected-tab-index', 0)
   selected_tab_id = use_state('selected-tab', tabs[0][0])

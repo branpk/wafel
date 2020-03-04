@@ -96,7 +96,8 @@ class Renderer:
     self._addr = ext_graphics.new_renderer()
 
   def __del__(self):
-    ext_graphics.delete_renderer(self._addr)
+    if ext_graphics.delete_renderer is not None:
+      ext_graphics.delete_renderer(self._addr)
 
   def render(self, info: RenderInfo):
     ext_graphics.render(self._addr, info)
