@@ -19,12 +19,12 @@ from wafel.model import Model
 from wafel.frame_sheet import FrameSheet
 from wafel.variable_explorer import VariableExplorer
 from wafel.game_view import GameView
-from wafel.frame_slider import *
 from wafel.variable_format import Formatters
 from wafel.format_m64 import load_m64, save_m64
 from wafel.format_wafi import load_wafi, save_wafi
 from wafel.tas_metadata import TasMetadata
 from wafel.window import open_window_and_run
+import wafel.ui as ui
 
 
 DEFAULT_FRAME_SHEET_VARS = [
@@ -100,7 +100,6 @@ class View:
       GameView(self.model, CameraMode.ROTATE),
       GameView(self.model, CameraMode.BIRDS_EYE),
     ]
-    self.frame_slider = FrameSlider(self.model)
 
     self.epoch += 1
 
@@ -135,7 +134,14 @@ class View:
     self.game_views[1].render(framebuffer_size)
     ig.end_child()
 
-    self.frame_slider.render()
+    new_frame = ui.render_frame_slider(
+      'frame-slider',
+      self.model.selected_frame,
+      len(self.model.timeline),
+      # self.model.timeline.get_loaded_frames(),
+    )
+    if new_frame is not None:
+      self.model.selected_frame = new_frame.value
 
 
   def render_right_column(self) -> None:

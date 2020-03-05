@@ -156,7 +156,34 @@ def test_tabs(id: str) -> None:
   ig.pop_id()
 
 
+def test_frame_slider(id: str) -> None:
+  ig.push_id(id)
+
+  current = use_state('current', 0)
+  length = use_state('length', 1000)
+
+  new_length = ui.render_frame_slider(
+    'length',
+    length.value,
+    10000,
+  )
+  if new_length is not None:
+    length.value = new_length.value
+
+  new_value = ui.render_frame_slider(
+    'slider',
+    current.value,
+    length.value,
+    [0, 5, 10, length.value - 11, length.value - 6, length.value - 1],
+  )
+  if new_value is not None:
+    current.value = new_value.value
+
+  ig.pop_id()
+
+
 TESTS = [
+  test_frame_slider,
   test_tabs,
   test_labeled_variable,
   test_variable_value,
