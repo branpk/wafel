@@ -1,6 +1,6 @@
 from typing import *
 
-from wafel.core.cell_manager import StateSequence, GenericTimeline
+from wafel.core.cell_manager import CellManager, OwnedBuffer, Buffer
 from wafel.core.game_state import GameState
 from wafel.core.game_lib import GameLib
 from wafel.core.edit import Edits
@@ -8,7 +8,10 @@ from wafel.core.variable import Variables
 from wafel.core.variable_param import VariableParam
 
 
-class _GameStateSequence(StateSequence[GameState, int]):
+# TODO: These classes are solely for moving lib around. Get rid of them
+
+
+class _EditsWrapper:
   def __init__(
     self,
     lib: GameLib,
@@ -19,41 +22,49 @@ class _GameStateSequence(StateSequence[GameState, int]):
     self.variables = variables
     self.edits = edits
 
-  def base_state(self) -> int:
-    return self.lib.base_state()
-
-  def alloc_state_buffer(self) -> int:
-    return self.lib.alloc_state_buffer()
-
-  def dealloc_state_buffer(self, addr: int) -> None:
-    self.lib.dealloc_state_buffer(addr)
-
-  def raw_copy_state(self, dst: int, src: int) -> None:
-    self.lib.raw_copy_state(dst, src)
-
-  def execute_frame(self) -> None:
-    self.lib.execute_frame()
-
-  def to_owned(self, base_addr: int, frame: int, addr: int) -> GameState:
-    return GameState(self.lib, base_addr, frame, addr)
-
-  def apply_edits(self, state: GameState) -> None:
+  def apply_edits(self, frame: int, buffer: OwnedBuffer) -> None:
+    state = GameState(self.lib, frame, buffer, self.lib.base_buffer())
     for edit in self.edits.get_edits(state.frame):
       variable = self.variables[edit.variable_id]
       variable.set(edit.value, { VariableParam.STATE: state })
 
-  def get_num_frames(self) -> int:
+  def __len__(self) -> int:
     return len(self.edits)
 
-  def on_invalidation(self, callback: Callable[[int], None]) -> None:
+  def on_edit(self, callback: Callable[[int], None]) -> None:
     self.edits.on_edit(callback)
 
 
-class Timeline(GenericTimeline[GameState, int]):
+class Timeline:
   def __init__(
     self,
     lib: GameLib,
     variables: Variables,
     edits: Edits,
   ) -> None:
-    super().__init__(_GameStateSequence(lib, variables, edits))
+    self.lib = lib
+    self.cell_manager = CellManager(lib, _EditsWrapper(lib, variables, edits), capacity=200)
+
+  def __getitem__(self, frame: int) -> GameState:
+    buffer = self.cell_manager.request_frame(frame)
+    return GameState(self.lib, frame, buffer, self.lib.base_buffer())
+
+  def __len__(self) -> int:
+    # TODO: Handle length better
+    return self.cell_manager.get_timeline_length()
+
+  def set_hotspot(self, name: str, frame: int) -> None:
+    """Mark a certain frame as a "hotspot", which is a hint to try to ensure
+    that scrolling near the frame is smooth.
+    """
+    self.cell_manager.set_hotspot(name, frame)
+
+  def delete_hotspot(self, name: str) -> None:
+    self.cell_manager.delete_hotspot(name)
+
+  def balance_distribution(self, max_run_time: float) -> None:
+    """Perform maintenance to maintain a nice distribution of loaded frames."""
+    self.cell_manager.balance_distribution(max_run_time)
+
+  def get_loaded_frames(self) -> List[int]:
+    return self.cell_manager.get_loaded_frames()

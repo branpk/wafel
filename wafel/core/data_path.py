@@ -5,6 +5,7 @@ import ctypes as C
 
 from wafel.core.game_lib import GameLib
 from wafel.core.variable_param import VariableParam, VariableArgs
+from wafel.core.game_state import GameState
 from wafel.util import *
 
 
@@ -100,10 +101,10 @@ class DataPath:
       addr = C.cast(self.get_addr(args), C.POINTER(C.c_void_p))
       value = int(addr[0] or 0)
 
-      state = args[VariableParam.STATE]
+      state = dcast(GameState, args[VariableParam.STATE])
 
-      if value in self.lib.base_state_range():
-        return value - state.base_addr + state.addr
+      if value in state.base_buffer.addr_range:
+        return value - state.base_buffer.addr + state.buffer.addr
       else:
         return value
 
@@ -148,7 +149,7 @@ class _State(DataPath):
     super().__init__(lib, [VariableParam.STATE], { 'kind': 'global' })
 
   def get_addr(self, args: VariableArgs) -> int:
-    return args[VariableParam.STATE].addr
+    return args[VariableParam.STATE].buffer.addr
 
 
 class _Object(DataPath):
@@ -156,7 +157,7 @@ class _Object(DataPath):
     super().__init__(lib, [VariableParam.OBJECT], lib.spec['types']['struct']['Object'])
 
   def get_addr(self, args: VariableArgs) -> int:
-    return args[VariableParam.OBJECT].addr
+    return args[VariableParam.OBJECT].buffer.addr
 
 
 class _Field(DataPath):

@@ -1,74 +1,90 @@
 import random
 from typing import *
+from dataclasses import dataclass
 import weakref
 import time
+
+from wafel.util import Ref
 
 
 # TODO: Could do a quick warm up pass on first load and input change
 
-
-# Raw state address
-ADDR = TypeVar('ADDR')
-
-# Owned game state
-ST = TypeVar('ST')
+# TODO: Make generic over Buffer?
 
 
-class StateSequence(Generic[ST, ADDR]):
-  def base_state(self) -> ADDR:
+@dataclass(frozen=True)
+class Buffer:
+  addr: int
+  size: int
+
+  @property
+  def addr_range(self) -> range:
+    return range(self.addr, self.size + self.addr)
+
+# Represents a buffer whose contents will remain frozen until this object is
+# deleted
+OwnedBuffer = Ref[Buffer]
+
+
+class Game(Protocol):
+  def base_buffer(self) -> Buffer:
     raise NotImplementedError
 
-  def alloc_state_buffer(self) -> ADDR:
+  def alloc_buffer(self) -> Buffer:
     raise NotImplementedError
 
-  def dealloc_state_buffer(self, addr: ADDR) -> None:
+  def dealloc_buffer(self, buffer: Buffer) -> None:
     raise NotImplementedError
 
-  def raw_copy_state(self, dst: ADDR, src: ADDR) -> None:
+  def raw_copy_buffer(self, dst: Buffer, src: Buffer) -> None:
     """Copy without updating pointers."""
     raise NotImplementedError
 
   def execute_frame(self) -> None:
     raise NotImplementedError
 
-  def to_owned(self, base_addr: ADDR, frame: int, addr: ADDR) -> ST:
+
+class EditSequence(Protocol):
+  def apply_edits(self, frame: int, buffer: OwnedBuffer) -> None:
     raise NotImplementedError
 
-  def apply_edits(self, state: ST) -> None:
+  def __len__(self) -> int:
     raise NotImplementedError
 
-  def get_num_frames(self) -> int:
-    raise NotImplementedError
-
-  def on_invalidation(self, callback: Callable[[int], None]) -> None:
+  def on_edit(self, callback: Callable[[int], None]) -> None:
     raise NotImplementedError
 
 
-class _Cell(Generic[ST, ADDR]):
-  """A block of memory containing an SM64State struct."""
-
-  def __init__(self, frame: int, addr: ADDR) -> None:
-    self.state: Optional[weakref.ref[ST]] = None
+class Cell:
+  def __init__(self, frame: int, buffer: Buffer) -> None:
     self.frame = frame
-    self.addr = addr
+    self.buffer = buffer
+    self._owned: Optional[weakref.ref[OwnedBuffer]] = None
 
-  def mark_loaded(self, state: ST) -> None:
-    self.state = weakref.ref(state)
+  def freeze(self) -> OwnedBuffer:
+    assert not self.frozen
+    owned = OwnedBuffer(self.buffer)
+    self._owned = weakref.ref(owned)
+    return owned
 
   @property
-  def loaded(self) -> bool:
-    if self.state is None:
+  def frozen(self) -> bool:
+    if self._owned is None:
       return False
-    elif self.state() is None:
-      self.state = None
+    elif self._owned() is None:
+      self._owned = None
       return False
     else:
       return True
 
 
-class _CellManager(Generic[ST, ADDR]):
-  def __init__(self, game: StateSequence[ST, ADDR], capacity: int) -> None:
+# TODO: Try to factor request and balancing code out of this class for ease of reading/editing
+
+
+class CellManager:
+  def __init__(self, game: Game, seq: EditSequence, capacity: int) -> None:
     self.game = game
+    self.seq = seq
     self.capacity = capacity
 
     self.cells = [self.new_cell() for _ in range(capacity - 1)]
@@ -77,13 +93,14 @@ class _CellManager(Generic[ST, ADDR]):
 
     # The base cell is the only one that SM64 C code can be run on, since
     # its pointers refer to its own memory
-    self.base_cell: _Cell[ST, ADDR] = _Cell(-1, self.game.base_state())
+    self.base_cell = Cell(-1, self.game.base_buffer())
     self.cells.insert(0, self.base_cell)
     for cell in self.cells:
-      self.copy_cell(cell, self.base_cell, unsafe=True)
+      self.copy_cell(cell, self.base_cell, unsafe=True) # TODO: Is unsafe necessary?
 
     # Keep one cell fixed at frame 0
     self.power_on_cell = self.cells[1]
+    self.power_on_cell_owned = self.power_on_cell.freeze()
 
     self.hotspots: Dict[str, int] = {}
 
@@ -93,30 +110,25 @@ class _CellManager(Generic[ST, ADDR]):
       self_ref = weak_self()
       if self_ref is not None:
         self_ref.invalidate_frame(frame)
-    self.game.on_invalidation(invalidate)
+    self.seq.on_edit(invalidate)
 
   def __del__(self) -> None:
     for cell in self.cells:
-      self.game.dealloc_state_buffer(cell.addr)
+      self.game.dealloc_buffer(cell.buffer)
 
-  def can_modify_cell(self, cell: _Cell[ST, ADDR]) -> bool:
-    return cell is not self.power_on_cell and not cell.loaded
+  def can_modify_cell(self, cell: Cell) -> bool:
+    return not cell.frozen
 
-  def new_cell(self) -> _Cell[ST, ADDR]:
+  def new_cell(self) -> Cell:
     # Frame "-1" is a power-on state before any edits have been applied.
     # Frame 0 is after edits are applied but before the first frame advance.
-    return _Cell(-1, self.game.alloc_state_buffer())
+    return Cell(-1, self.game.alloc_buffer())
 
-  def copy_cell(
-    self,
-    dst: _Cell[ST, ADDR],
-    src: _Cell[ST, ADDR],
-    unsafe: bool = False,
-  ) -> None:
+  def copy_cell(self, dst: Cell, src: Cell, unsafe=False) -> None:
     if not unsafe:
       assert self.can_modify_cell(dst)
     if src is not dst:
-      self.game.raw_copy_state(dst.addr, src.addr)
+      self.game.raw_copy_buffer(dst.buffer, src.buffer)
       dst.frame = src.frame
 
   def advance_base_cell(self) -> None:
@@ -126,40 +138,37 @@ class _CellManager(Generic[ST, ADDR]):
       self.game.execute_frame()
     self.base_cell.frame += 1
 
-    temp_state = self.load_cell(self.base_cell)
-    self.game.apply_edits(temp_state)
+    temp_owned = self.base_cell.freeze()
+    self.seq.apply_edits(self.base_cell.frame, temp_owned)
+    del temp_owned
 
-  def swap_cell_contents(self, cell1: _Cell[ST, ADDR], cell2: _Cell[ST, ADDR]) -> None:
+  def swap_cell_contents(self, cell1: Cell, cell2: Cell) -> None:
     if cell1 is not cell2:
       self.copy_cell(self.temp_cell, cell1)
       self.copy_cell(cell1, cell2)
       self.copy_cell(cell2, self.temp_cell)
 
-  def load_cell(self, cell: _Cell[ST, ADDR]) -> ST:
-    state = self.game.to_owned(self.base_cell.addr, cell.frame, cell.addr)
-    cell.mark_loaded(state)
-    return state
-
   def invalidate_frame(self, frame: int) -> None:
     valid_cells = [cell for cell in self.cells if cell.frame < frame]
     invalid_cells = [cell for cell in self.cells if cell.frame >= frame]
 
+    # TODO: Copying here is probably slow. Probably just mark as invalid
     for invalid_cell in invalid_cells:
       valid_cell = random.choice(valid_cells)
       self.copy_cell(invalid_cell, valid_cell)
 
-  def find_latest_cell_before(self, frame: int) -> _Cell:
+  def find_latest_cell_before(self, frame: int) -> Cell:
     usable_cells = [cell for cell in self.cells if cell.frame <= frame]
     return max(usable_cells, key=lambda cell: cell.frame)
 
-  def request_frame(self, frame: int, based: bool = False) -> ST:
+  def request_frame(self, frame: int, based: bool = False) -> OwnedBuffer:
     # Load a state as close to the desired frame as possible
     latest_cell = self.find_latest_cell_before(frame)
 
     # Avoid copies in common case
     if latest_cell.frame == frame and self.can_modify_cell(latest_cell) and \
         based == (latest_cell is self.base_cell):
-      return self.load_cell(latest_cell)
+      return latest_cell.freeze()
 
     if self.can_modify_cell(latest_cell):
       self.swap_cell_contents(self.base_cell, latest_cell)
@@ -188,7 +197,7 @@ class _CellManager(Generic[ST, ADDR]):
       selected = random.choice(free_cells)
       self.swap_cell_contents(selected, self.base_cell)
 
-    return self.load_cell(selected)
+    return selected.freeze()
 
   def set_hotspot(self, name: str, frame: int) -> None:
     self.hotspots[name] = frame
@@ -199,9 +208,9 @@ class _CellManager(Generic[ST, ADDR]):
 
   def get_timeline_length(self) -> int:
     # TODO: Compute this correctly
-    return self.game.get_num_frames()
+    return len(self.seq)
 
-  def get_cell_buckets(self) -> Dict[int, List[_Cell]]:
+  def get_cell_buckets(self) -> Dict[int, List[Cell]]:
     """Divide the frame timeline into buckets, where each bucket ideally
     contains the same number of cells."""
 
@@ -211,7 +220,7 @@ class _CellManager(Generic[ST, ADDR]):
     if default_bucket_size == 0:
       default_bucket_size = 1
 
-    buckets: Dict[int, List[_Cell]] = {
+    buckets: Dict[int, List[Cell]] = {
       frame: [] for frame in range(-1, self.get_timeline_length(), default_bucket_size)
     }
 
@@ -229,7 +238,7 @@ class _CellManager(Generic[ST, ADDR]):
 
     return buckets
 
-  def move_cell_to_frame(self, cell: _Cell, target_frame: int, max_advances: int) -> None:
+  def move_cell_to_frame(self, cell: Cell, target_frame: int, max_advances: int) -> None:
     # Save the base cell's contents to the selected cell, and load the base
     # cell with a good starting point
     self.copy_cell(cell, self.base_cell)
@@ -274,30 +283,4 @@ class _CellManager(Generic[ST, ADDR]):
     return [cell.frame for cell in self.cells]
 
 
-class GenericTimeline(Generic[ST, ADDR]):
-  def __init__(self, game: StateSequence[ST, ADDR]) -> None:
-    self._cell_manager = _CellManager(game, capacity=200)
-    self._game = game
-
-  def __getitem__(self, frame: int) -> ST:
-    return self._cell_manager.request_frame(frame)
-
-  def __len__(self) -> int:
-    # TODO: Handle length better
-    return self._game.get_num_frames()
-
-  def set_hotspot(self, name: str, frame: int) -> None:
-    """Mark a certain frame as a "hotspot", which is a hint to try to ensure
-    that scrolling near the frame is smooth.
-    """
-    self._cell_manager.set_hotspot(name, frame)
-
-  def delete_hotspot(self, name: str) -> None:
-    self._cell_manager.delete_hotspot(name)
-
-  def balance_distribution(self, max_run_time: float) -> None:
-    """Perform maintenance to maintain a nice distribution of loaded frames."""
-    self._cell_manager.balance_distribution(max_run_time)
-
-  def get_loaded_frames(self) -> List[int]:
-    return self._cell_manager.get_loaded_frames()
+__all__ = ['Buffer', 'OwnedBuffer', 'CellManager']

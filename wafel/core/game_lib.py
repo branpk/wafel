@@ -4,6 +4,7 @@ import sys
 
 from wafel.util import *
 from wafel.core.object_type import ObjectType
+from wafel.core.cell_manager import Buffer
 
 
 DataSpec = Any
@@ -46,18 +47,24 @@ class GameLib:
     return result
 
   def symbol_offset(self, symbol: str) -> int:
-    return C.addressof(C.c_uint32.in_dll(self.dll, symbol)) - self.base_state()
+    return C.addressof(C.c_uint32.in_dll(self.dll, symbol)) - self.dll._handle
 
   def symbol_for_offset(self, offset: int) -> str:
     return self._symbols_by_offset[offset]
 
-  def base_state(self) -> int:
-    return self.dll._handle
+  def concrete_type(self, type_: dict) -> dict:
+    while type_['kind'] == 'symbol':
+      type_ = self.spec['types'][type_['namespace']][type_['name']]
+    return type_
 
-  def base_state_range(self) -> range:
-    return range(self.base_state(), self.base_state() + max(r.stop for r in self.state_ranges))
 
-  def alloc_state_buffer(self) -> int:
+  def buffer_size(self) -> int:
+    return cast(int, max(r.stop for r in self.state_ranges))
+
+  def base_buffer(self) -> Buffer:
+    return Buffer(self.dll._handle, self.buffer_size())
+
+  def alloc_buffer(self) -> Buffer:
     contiguous_state_range = range(
       min(r.start for r in self.state_ranges),
       max(r.stop for r in self.state_ranges),
@@ -65,20 +72,15 @@ class GameLib:
     buffer = C.create_string_buffer(len(contiguous_state_range))
     addr = C.addressof(buffer) - contiguous_state_range.start
     self._buffers[addr] = buffer
-    return addr
+    return Buffer(addr, self.buffer_size())
 
-  def dealloc_state_buffer(self, addr: int) -> None:
-    if addr != self.base_state():
-      del self._buffers[addr]
+  def dealloc_buffer(self, buffer: Buffer) -> None:
+    if buffer != self.base_buffer():
+      del self._buffers[buffer.addr]
 
-  def raw_copy_state(self, dst: int, src: int) -> None:
+  def raw_copy_buffer(self, dst: Buffer, src: Buffer) -> None:
     for state_range in self.state_ranges:
-      C.memmove(dst + state_range.start, src + state_range.start, len(state_range))
+      C.memmove(dst.addr + state_range.start, src.addr + state_range.start, len(state_range))
 
   def execute_frame(self) -> None:
     self.dll.sm64_update()
-
-  def concrete_type(self, type_: dict) -> dict:
-    while type_['kind'] == 'symbol':
-      type_ = self.spec['types'][type_['namespace']][type_['name']]
-    return type_
