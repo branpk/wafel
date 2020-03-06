@@ -182,7 +182,33 @@ def test_frame_slider(id: str) -> None:
   ig.pop_id()
 
 
+def test_variable_cell(id: str) -> None:
+  ig.push_id(id)
+
+  num_columns = 5
+  num_rows = 5
+  ig.columns(num_columns)
+
+  for row in range(num_rows):
+    for column in range(num_columns):
+      ui.render_variable_cell(
+        f'cell-{row}-{column}',
+        1234,
+        DecimalIntFormatter(),
+        (ig.get_column_width(-1), 30),
+        row == 1 and column == 2,
+        False,
+      )
+      ig.next_column()
+    ig.separator()
+
+  ig.columns(1)
+
+  ig.pop_id()
+
+
 TESTS = [
+  test_variable_cell,
   test_frame_slider,
   test_tabs,
   test_labeled_variable,

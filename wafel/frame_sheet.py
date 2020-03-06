@@ -18,12 +18,15 @@ class FrameSheetColumn:
     self.variable = variable
     # TODO: Semantic object ids should make object_type unnecessary
     self.object_type = object_type
-    self.width = 100
+    self.width = 100 # TODO: Remove
 
   def __eq__(self, other) -> bool:
     return isinstance(other, FrameSheetColumn) and \
       self.variable == other.variable and \
       self.object_type == other.object_type
+
+  def __hash__(self) -> int:
+    return hash((self.variable, self.object_type))
 
 
 class FrameSheet:
@@ -189,12 +192,6 @@ class FrameSheet:
 
 
   def render_cell(self, frame: int, column: FrameSheetColumn) -> None:
-    cell_cursor_pos = ig.get_cursor_pos()
-    cell_cursor_pos = (
-      cell_cursor_pos[0] + ig.get_window_position()[0] - ig.get_style().item_spacing[0],
-      cell_cursor_pos[1] + ig.get_window_position()[1] - ig.get_scroll_y() - ig.get_style().item_spacing[1],
-    )
-
     try:
       data = self.get_data(frame, column)
       formatter = self.formatters[column.variable]
@@ -202,33 +199,20 @@ class FrameSheet:
       data = None
       formatter = EmptyFormatter()
 
-    changed_data, clicked = ui.render_variable_value(
-      'fs-cell-' + str(id(self)) + '-' + str(frame) + '-' + str(id(column)),
+    changed_data, clear_edit, selected = ui.render_variable_cell(
+      f'cell-{frame}-{hash(column)}',
       data,
       formatter,
-      (
-        column.width - 2 * ig.get_style().item_spacing[0],
-        self.row_height - 2 * ig.get_style().item_spacing[1],
-      ),
-      highlight = frame == self.model.selected_frame,
+      (column.width, self.row_height),
+      self.model.edits.is_edited(frame, column.variable.id),
+      frame == self.model.selected_frame,
     )
     if changed_data is not None:
       self.set_data(frame, column, changed_data.value)
-    if clicked:
-      self.model.selected_frame = frame
-
-    if ig.is_item_hovered() and ig.is_mouse_down(2):
+    if clear_edit:
       self.model.edits.reset(frame, column.variable.id)
-
-    if self.model.edits.is_edited(frame, column.variable.id):
-      dl = ig.get_window_draw_list()
-      dl.add_rect(
-        cell_cursor_pos[0],
-        cell_cursor_pos[1],
-        cell_cursor_pos[0] + column.width - 1,
-        cell_cursor_pos[1] + self.row_height - 1,
-        ig.get_color_u32_rgba(0.8, 0.6, 0, 1),
-      )
+    if selected:
+      self.model.selected_frame = frame
 
 
   def render_rows(self) -> None:
