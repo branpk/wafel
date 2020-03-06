@@ -24,8 +24,7 @@ class Model:
     self.game_version = game_version
 
     # TODO: Loading bar?
-    lib_path = os.path.join(config.lib_directory, 'libsm64', f'sm64_{game_version}.dll')
-    self.lib = load_libsm64(lib_path)
+    self.lib = load_libsm64(game_version)
 
     self.variables = Variable.create_all(self.lib)
 
@@ -79,7 +78,11 @@ class Model:
     if not active:
       return None
 
-    behavior = self.variables['obj-behavior-ptr'].at_object(object_id).get({
+    behavior_addr = self.variables['obj-behavior-ptr'].at_object(object_id).get({
       VariableParam.STATE: state,
     })
-    return self.lib.get_object_type(behavior - state.addr)
+    behavior_offset = behavior_addr - state.addr
+    return ObjectType(
+      behavior_offset,
+      self.lib.symbol_for_offset(behavior_offset),
+    )

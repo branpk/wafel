@@ -444,7 +444,9 @@ def extract_data_spec_cached(path: str) -> DataSpec:
   return spec
 
 
-def load_libsm64(path: str) -> GameLib:
+def load_libsm64(game_version: str) -> GameLib:
+  path = os.path.join(config.lib_directory, 'libsm64', f'sm64_{game_version}.dll')
+
   dll = ctypes.cdll.LoadLibrary(path)
   spec = extract_data_spec_cached(path)
 

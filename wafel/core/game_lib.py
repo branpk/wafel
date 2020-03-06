@@ -82,7 +82,3 @@ class GameLib:
     while type_['kind'] == 'symbol':
       type_ = self.spec['types'][type_['namespace']][type_['name']]
     return type_
-
-  def get_object_type(self, behavior_offset: int) -> ObjectType:
-    symbol = self.symbol_for_offset(behavior_offset)
-    return ObjectType(behavior_offset, symbol)
