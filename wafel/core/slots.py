@@ -6,10 +6,10 @@ from wafel.core.variable import Variables
 from wafel.core.variable_param import VariableParam
 from wafel.core.game_lib import GameLib
 from wafel.core.edit import Edits
-from wafel.core.game_state import Slot
+from wafel.core.game_state import StateSlot
 
 
-class Slots(AbstractSlots[Slot]):
+class StateSlots(AbstractSlots[StateSlot]):
   def __init__(
     self,
     lib: GameLib,
@@ -38,18 +38,18 @@ class Slots(AbstractSlots[Slot]):
       self.lib.dealloc_slot(slot)
 
   @property
-  def temp(self) -> Slot:
+  def temp(self) -> StateSlot:
     return self._temp
 
   @property
-  def base(self) -> Slot:
+  def base(self) -> StateSlot:
     return self._base
 
   @property
-  def non_base(self) -> List[Slot]:
+  def non_base(self) -> List[StateSlot]:
     return self._non_base
 
-  def copy(self, dst: Slot, src: Slot) -> None:
+  def copy(self, dst: StateSlot, src: StateSlot) -> None:
     assert not dst.frozen
     self.lib.raw_copy_slot(dst, src)
     dst.frame = src.frame

@@ -1,12 +1,12 @@
 from typing import *
 
 from wafel.core.slot_manager import SlotManager
-from wafel.core.game_state import Slot
+from wafel.core.game_state import StateSlot
 from wafel.core.game_lib import GameLib
 from wafel.core.edit import Edits
 from wafel.core.variable import Variables
 from wafel.core.variable_param import VariableParam
-from wafel.core.slots import Slots
+from wafel.core.slots import StateSlots
 
 
 class Timeline:
@@ -17,10 +17,10 @@ class Timeline:
     edits: Edits,
   ) -> None:
     self.edits = edits
-    self.slots = Slots(lib, variables, edits, capacity=200)
+    self.slots = StateSlots(lib, variables, edits, capacity=200)
     self.slot_manager = SlotManager(self.slots)
 
-  def __getitem__(self, frame: int) -> Slot:
+  def __getitem__(self, frame: int) -> StateSlot:
     return self.slot_manager.request_frame(frame)
 
   def __len__(self) -> int:

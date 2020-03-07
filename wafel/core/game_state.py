@@ -13,35 +13,35 @@ from wafel.core.slot_manager import AbstractSlot, AbstractSlots
 class GameState:
   """The state of the game on a particular frame.
 
-  The state is backed by a Slot object which contains the contents of the game's
+  The state is backed by a StateSlot object which contains the contents of the game's
   memory.
 
   A GameState should only be created using
     with slot as state:
       ...
   and state should not be used outside that scope.
-  This guarantees that the corresponding Slot object is not changed while this
+  This guarantees that the corresponding StateSlot object is not changed while this
   GameState is in use.
 
   A GameState should ideally be short lived. If too many GameStates are alive
-  at once, then the number of available Slots will be too low to perform
+  at once, then the number of available StateSlots will be too low to perform
   frame lookups quickly.
   """
 
-  def __init__(self, frame: int, slot: Slot) -> None:
+  def __init__(self, frame: int, slot: StateSlot) -> None:
     self.frame = frame
-    self._slot: Optional[Slot] = slot
+    self._slot: Optional[StateSlot] = slot
 
   def invalidate(self) -> None:
     self._slot = None
 
   @property
-  def slot(self) -> Slot:
+  def slot(self) -> StateSlot:
     assert self._slot is not None
     return self._slot
 
 
-class Slot(AbstractSlot):
+class StateSlot(AbstractSlot):
   """A memory buffer that can hold an entire game state.
 
   If slot.frame is not None, then the slot holds the game state for that frame.
@@ -56,7 +56,7 @@ class Slot(AbstractSlot):
   future usages of the slot.
   """
 
-  def __init__(self, addr: int, size: int, base_slot: Optional[Slot]) -> None:
+  def __init__(self, addr: int, size: int, base_slot: Optional[StateSlot]) -> None:
     self.addr = addr
     self.size = size
     self.base_slot = base_slot or self

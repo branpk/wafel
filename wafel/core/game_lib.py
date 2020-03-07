@@ -5,7 +5,7 @@ import weakref
 
 from wafel.util import *
 from wafel.core.object_type import ObjectType
-from wafel.core.game_state import Slot
+from wafel.core.game_state import StateSlot
 
 
 DataSpec = Any
@@ -62,13 +62,13 @@ class GameLib:
   def slot_size(self) -> int:
     return cast(int, max(r.stop for r in self.state_ranges))
 
-  def base_slot(self) -> Slot:
+  def base_slot(self) -> StateSlot:
     # TODO: Rename to create_base_slot() and only allow calling once
-    base_slot = Slot(addr=self.dll._handle, size=self.slot_size(), base_slot=None)
+    base_slot = StateSlot(addr=self.dll._handle, size=self.slot_size(), base_slot=None)
     base_slot.frame = -1
     return base_slot
 
-  def alloc_slot(self) -> Slot:
+  def alloc_slot(self) -> StateSlot:
     contiguous_state_range = range(
       min(r.start for r in self.state_ranges),
       max(r.stop for r in self.state_ranges),
@@ -76,13 +76,13 @@ class GameLib:
     buffer = C.create_string_buffer(len(contiguous_state_range))
     addr = C.addressof(buffer) - contiguous_state_range.start
     self._buffers[addr] = buffer
-    return Slot(addr, self.slot_size(), self.base_slot())
+    return StateSlot(addr, self.slot_size(), self.base_slot())
 
-  def dealloc_slot(self, slot: Slot) -> None:
+  def dealloc_slot(self, slot: StateSlot) -> None:
     if not slot.based:
       del self._buffers[slot.addr]
 
-  def raw_copy_slot(self, dst: Slot, src: Slot) -> None:
+  def raw_copy_slot(self, dst: StateSlot, src: StateSlot) -> None:
     for state_range in self.state_ranges:
       C.memmove(dst.addr + state_range.start, src.addr + state_range.start, len(state_range))
 
