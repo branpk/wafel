@@ -9,6 +9,7 @@ from wafel.window import open_window_and_run
 from wafel.core import ObjectType, VariableId
 from wafel.util import *
 from wafel.variable_format import DecimalIntFormatter, CheckboxFormatter
+from wafel.slot_testing import test_timeline_algorithm
 
 
 # TODO: Hot reloading?
@@ -208,6 +209,7 @@ def test_variable_cell(id: str) -> None:
 
 
 TESTS = [
+  test_timeline_algorithm,
   test_variable_cell,
   test_frame_slider,
   test_tabs,
@@ -224,7 +226,7 @@ def render_tests(id: str) -> None:
   test_index = use_state('_current-test', 0)
   ig.columns(2)
 
-  ig.set_column_width(-1, 300)
+  ig.set_column_width(-1, 220)
 
   for i, test in enumerate(TESTS):
     test_name = test.__name__.replace('_', '-')
@@ -238,9 +240,9 @@ def render_tests(id: str) -> None:
   ig.next_column()
   ig.begin_child('test')
 
-  for k, v in local_state.items():
-    if not k[1].startswith('_'):
-      ig.text(f'{k} -> {v.value}')
+  # for k, v in local_state.items():
+  #   if not k[1].startswith('_'):
+  #     ig.text(f'{k} -> {v.value}')
 
   ig.separator()
   test = TESTS[test_index.value]

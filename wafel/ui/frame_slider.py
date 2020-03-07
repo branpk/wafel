@@ -33,7 +33,7 @@ def render_frame_slider(
   for frame in loaded_frames:
     line_pos = pos[0] + frame / num_frames * width
     dl.add_line(
-      line_pos, pos[1],
+      line_pos, pos[1] + 13,
       line_pos, pos[1] + 18,
       ig.get_color_u32_rgba(1, 0, 0, 1),
     )

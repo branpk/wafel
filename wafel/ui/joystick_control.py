@@ -95,7 +95,7 @@ def render_joystick_control(
   ig.button('##joystick-button', button_size, button_size)
 
   ig.set_cursor_pos((
-    initial_cursor_pos[0] + size + 2 * padding,
+    initial_cursor_pos[0],
     initial_cursor_pos[1] + size + 2 * padding,
   ))
 
