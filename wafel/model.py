@@ -40,7 +40,7 @@ class Model:
     self.on_selected_frame_change(set_hotspot)
     set_hotspot(self._selected_frame)
 
-    gc.collect() # Force garbage collection of game state cells
+    gc.collect() # Force garbage collection of game state slots
 
   @property
   def selected_frame(self) -> int:

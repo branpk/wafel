@@ -182,7 +182,7 @@ class SlotManager(Generic[SLOT]):
     while assert_not_none(self.slots.base.frame) < target_frame:
       self.slots.execute_frame()
 
-    # The base cell gets overwritten often, so swap it back to avoid immediately
+    # The base slot gets overwritten often, so swap it back to avoid immediately
     # undoing our work
     self.slots.swap_contents(self.slots.base, slot)
 
@@ -192,7 +192,7 @@ class SlotManager(Generic[SLOT]):
     shuffled_buckets = list(buckets.items())
     random.shuffle(shuffled_buckets)
 
-    # Find the buckets with the least and most number of cells
+    # Find the buckets with the least and most number of slots
     min_bucket = min(shuffled_buckets, key=lambda e: len(e[1]))[0]
     max_bucket = max(shuffled_buckets, key=lambda e: len(e[1]))[0]
 
