@@ -70,7 +70,7 @@
                 "glfw"
             ],
             "git": "https://github.com/branpk/pyimgui.git",
-            "ref": "7aabc066b3502da8893a44a4c71b3750841d0824"
+            "ref": "7ea85f2f94c37c860546b1a24fc5ff8ec1a38fd0"
         },
         "pefile": {
             "git": "https://github.com/erocarrera/pefile.git",

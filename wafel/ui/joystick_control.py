@@ -1,5 +1,6 @@
 from typing import *
 from dataclasses import dataclass
+import math
 
 import imgui as ig
 
@@ -30,6 +31,7 @@ def render_joystick_control(
   id: str,
   stick_x: float,
   stick_y: float,
+  shape = 'square',
 ) -> Optional[Tuple[float, float]]:
   ig.push_id(id)
   state = use_state('', JoystickControlState()).value
@@ -51,31 +53,47 @@ def render_joystick_control(
     initial_cursor_pos[1] + ig.get_window_position()[1] - ig.get_scroll_y() + padding,
   )
 
-  dl.add_rect_filled(
-    top_left[0],
-    top_left[1],
-    top_left[0] + size,
-    top_left[1] + size,
-    ig.get_color_u32_rgba(0, 0, 0, 0.3),
-  )
+  background_color = ig.get_color_u32_rgba(0, 0, 0, 0.3)
+  if shape == 'square':
+    dl.add_rect_filled(
+      top_left[0],
+      top_left[1],
+      top_left[0] + size,
+      top_left[1] + size,
+      background_color,
+    )
+  elif shape == 'circle':
+    dl.add_circle_filled(
+      top_left[0] + size / 2,
+      top_left[1] + size / 2,
+      size / 2,
+      background_color,
+      num_segments = 32,
+    )
 
   result = None
 
   if state.active and ig.is_mouse_down():
     new_offset = state.get_value(ig.get_mouse_drag_delta(lock_threshold=0))
 
-    new_stick_x = new_offset[0] / size * 255 - 128
-    new_stick_y = (1 - new_offset[1] / size) * 255 - 128
-    new_stick_x = min(max(int(new_stick_x), -128), 127)
-    new_stick_y = min(max(int(new_stick_y), -128), 127)
+    new_stick_x = new_offset[0] / size * 2 - 1
+    new_stick_y = (1 - new_offset[1] / size) * 2 - 1
+    if shape == 'square':
+      new_stick_x = min(max(new_stick_x, -1), 1)
+      new_stick_y = min(max(new_stick_y, -1), 1)
+    elif shape == 'circle':
+      mag = math.sqrt(new_stick_x**2 + new_stick_y**2)
+      if mag > 1:
+        new_stick_x /= mag
+        new_stick_y /= mag
 
     if (new_stick_x, new_stick_y) != (stick_x, stick_y):
       stick_x, stick_y = new_stick_x, new_stick_y
       result = (stick_x, stick_y)
 
   offset = (
-    (stick_x + 128) / 255 * size,
-    (1 - (stick_y + 128) / 255) * size,
+    (stick_x + 1) / 2 * size,
+    (1 - (stick_y + 1) / 2) * size,
   )
 
   dl.add_line(

@@ -4,10 +4,11 @@ from wafel.core.variable import Variable, VariableId
 
 
 # FIXME: Move this somewhere
-    # Don't edit hidden variables, e.g. buttons instead of A, B, Z, as then
-    # the edits won't be visible to the user
-    # TODO: Maybe implement Variable#contains(Variable) to handle this case instead?
-    # assert variable.group != VariableGroup.hidden()
+# Don't edit hidden variables, e.g. buttons instead of A, B, Z, as then
+# the edits won't be visible to the user
+# TODO: Maybe implement Variable#contains(Variable) to handle this case instead?
+# This might also help with input modes
+# assert variable.group != VariableGroup.hidden()
 
 
 class Edit:

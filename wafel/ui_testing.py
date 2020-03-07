@@ -43,11 +43,22 @@ def test_object_slots(id: str) -> None:
 def test_joystick_control(id: str) -> None:
   ig.push_id(id)
 
+  shapes = ['square', 'circle']
+  shape_index = use_state('shape-index', 0)
+  _, shape_index.value = ig.combo('##shape', shape_index.value, shapes)
+
   stick = use_state('stick', (0.0, 0.0))
 
-  new_stick = ui.render_joystick_control('joystick-control', stick.value[0], stick.value[1])
+  new_stick = ui.render_joystick_control(
+    'joystick-control',
+    stick.value[0],
+    stick.value[1],
+    shapes[shape_index.value],
+  )
   if new_stick is not None:
     stick.value = new_stick
+
+  ig.text(f'stick = {stick.value}')
 
   ig.pop_id()
 
@@ -208,22 +219,24 @@ def test_variable_cell(id: str) -> None:
   ig.pop_id()
 
 
+DEFAULT_TEST = test_joystick_control
+
 TESTS = [
-  test_timeline_algorithm,
-  test_variable_cell,
-  test_frame_slider,
-  test_tabs,
-  test_labeled_variable,
-  test_variable_value,
-  test_object_slots,
   test_joystick_control,
+  test_object_slots,
+  test_variable_value,
+  test_labeled_variable,
+  test_tabs,
+  test_frame_slider,
+  test_variable_cell,
+  test_timeline_algorithm,
 ]
 
 
 def render_tests(id: str) -> None:
   ig.push_id(id)
 
-  test_index = use_state('_current-test', 0)
+  test_index = use_state('_current-test', TESTS.index(DEFAULT_TEST))
   ig.columns(2)
 
   ig.set_column_width(-1, 220)
