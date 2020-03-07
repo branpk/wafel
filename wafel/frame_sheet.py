@@ -58,8 +58,8 @@ class FrameSheet:
       column = FrameSheetColumn(variable)
     else:
       # TODO: This should use the state that the drop began
-      state = self.model.timeline[self.model.selected_frame]
-      column = FrameSheetColumn(variable, self.model.get_object_type(state, object_id))
+      with self.model.timeline[self.model.selected_frame] as state:
+        column = FrameSheetColumn(variable, self.model.get_object_type(state, object_id))
     if column not in self.columns:
       self.next_columns.insert(index, column)
 
@@ -105,16 +105,15 @@ class FrameSheet:
 
   def get_data(self, frame: int, column: FrameSheetColumn) -> Any:
     variable = column.variable
-    state = self.model.timeline[frame]
+    with self.model.timeline[frame] as state:
+      object_id = variable.get_object_id()
+      if column.object_type is not None and object_id is not None:
+        row_object_type = self.model.get_object_type(state, object_id)
+        if row_object_type != column.object_type:
+          raise Exception # TODO: Error msg
 
-    object_id = variable.get_object_id()
-    if column.object_type is not None and object_id is not None:
-      row_object_type = self.model.get_object_type(state, object_id)
-      if row_object_type != column.object_type:
-        raise Exception # TODO: Error msg
-
-    args = { VariableParam.STATE: state }
-    return variable.get(args)
+      args = { VariableParam.STATE: state }
+      return variable.get(args)
 
 
   def set_data(self, frame: int, column: FrameSheetColumn, data: Any) -> None:
@@ -122,11 +121,10 @@ class FrameSheet:
 
     object_id = variable.get_object_id()
     if column.object_type is not None and object_id is not None:
-      state = self.model.timeline[frame]
-      row_object_type = self.model.get_object_type(state, object_id)
-      if row_object_type != column.object_type:
-        raise Exception # TODO: Error message
-      del state
+      with self.model.timeline[frame] as state:
+        row_object_type = self.model.get_object_type(state, object_id)
+        if row_object_type != column.object_type:
+          raise Exception # TODO: Error message
 
     self.model.edits.edit(frame, variable, data)
 
@@ -195,7 +193,7 @@ class FrameSheet:
     try:
       data = self.get_data(frame, column)
       formatter = self.formatters[column.variable]
-    except: # TODO: Only catch object mismatch exception
+    except: # TODO: Only catch object type mismatch exception
       data = None
       formatter = EmptyFormatter()
 

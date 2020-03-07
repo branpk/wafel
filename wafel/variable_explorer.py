@@ -47,8 +47,8 @@ class VariableExplorer:
 
   def get_tab_label(self, tab: TabId) -> str:
     if tab.object_id is not None:
-      state = self.model.timeline[self.model.selected_frame]
-      object_type = self.model.get_object_type(state, tab.object_id)
+      with self.model.timeline[self.model.selected_frame] as state:
+        object_type = self.model.get_object_type(state, tab.object_id)
       if object_type is None:
         return str(tab.object_id)
       else:
@@ -60,10 +60,10 @@ class VariableExplorer:
   def render_objects_tab(self) -> None:
     object_types: List[Optional[ObjectType]] = []
 
-    state = self.model.timeline[self.model.selected_frame]
-    for slot in range(240):
-      object_id = slot
-      object_types.append(self.model.get_object_type(state, object_id))
+    with self.model.timeline[self.model.selected_frame] as state:
+      for slot in range(240):
+        object_id = slot
+        object_types.append(self.model.get_object_type(state, object_id))
 
     selected_slot = ui.render_object_slots('object-slots', object_types)
     if selected_slot is not None:
@@ -75,8 +75,8 @@ class VariableExplorer:
     if tab.object_id is None:
       return self.model.variables.group(VariableGroup(tab.name))
 
-    state = self.model.timeline[self.model.selected_frame]
-    object_type = self.model.get_object_type(state, tab.object_id)
+    with self.model.timeline[self.model.selected_frame] as state:
+      object_type = self.model.get_object_type(state, tab.object_id)
     if object_type is None:
       return []
 
@@ -88,9 +88,8 @@ class VariableExplorer:
 
   def render_variable(self, tab: TabId, variable: Variable) -> None:
     frame = self.model.selected_frame
-    state = self.model.timeline[frame]
-    value = variable.get({ VariableParam.STATE: state })
-    del state
+    with self.model.timeline[frame] as state:
+      value = variable.get({ VariableParam.STATE: state })
 
     changed_data, clear_edit = ui.render_labeled_variable(
       f'var-{hash((tab, variable))}',

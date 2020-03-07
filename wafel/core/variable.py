@@ -207,7 +207,7 @@ class Variable:
   def __repr__(self) -> str:
     return repr(self.id)
 
-  def __eq__(self, other: 'Variable') -> bool:
+  def __eq__(self, other: object) -> bool:
     return isinstance(other, Variable) and self.id == other.id
 
   def __hash__(self) -> int:

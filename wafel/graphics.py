@@ -2,13 +2,14 @@ from enum import Enum
 from typing import *
 import math
 
-from wafel.core import GameState, DataPath, VariableParam
+from wafel.core import GameState, DataPath, VariableParam, GameLib
 
 import ext_modules.graphics as ext_graphics
 
 
 class GameStateWrapper:
-  def __init__(self, state: GameState) -> None:
+  def __init__(self, lib: GameLib, state: GameState) -> None:
+    self.lib = lib
     self.state = state
 
   @property
@@ -16,13 +17,13 @@ class GameStateWrapper:
     return self.state.frame
 
   def get_data(self, path: str) -> Any:
-    data_path = DataPath.parse(self.state.lib, path)
+    data_path = DataPath.parse(self.lib, path)
     return data_path.get({
       VariableParam.STATE: self.state,
     })
 
   def get_data_addr(self, path: str) -> int:
-    data_path = DataPath.parse(self.state.lib, path)
+    data_path = DataPath.parse(self.lib, path)
     return data_path.get_addr({
       VariableParam.STATE: self.state,
     })
@@ -80,6 +81,7 @@ class BirdsEyeCamera(Camera):
 class RenderInfo:
   def __init__(
     self,
+    lib: GameLib,
     viewport: Viewport,
     camera: Camera,
     current_state: GameState,
@@ -87,8 +89,8 @@ class RenderInfo:
   ) -> None:
     self.viewport = viewport
     self.camera = camera
-    self.current_state = GameStateWrapper(current_state)
-    self.path_states = [GameStateWrapper(st) for st in path_states]
+    self.current_state = GameStateWrapper(lib, current_state)
+    self.path_states = [GameStateWrapper(lib, st) for st in path_states]
 
 
 class Renderer:

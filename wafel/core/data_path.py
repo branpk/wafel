@@ -103,8 +103,8 @@ class DataPath:
 
       state = dcast(GameState, args[VariableParam.STATE])
 
-      if value in state.base_buffer.addr_range:
-        return value - state.base_buffer.addr + state.buffer.addr
+      if value in state.slot.base_slot.addr_range:
+        return value - state.slot.base_slot.addr + state.slot.addr
       else:
         return value
 
@@ -149,7 +149,7 @@ class _State(DataPath):
     super().__init__(lib, [VariableParam.STATE], { 'kind': 'global' })
 
   def get_addr(self, args: VariableArgs) -> int:
-    return args[VariableParam.STATE].buffer.addr
+    return args[VariableParam.STATE].slot.addr
 
 
 class _Object(DataPath):
@@ -157,7 +157,7 @@ class _Object(DataPath):
     super().__init__(lib, [VariableParam.OBJECT], lib.spec['types']['struct']['Object'])
 
   def get_addr(self, args: VariableArgs) -> int:
-    return args[VariableParam.OBJECT].buffer.addr
+    return args[VariableParam.OBJECT].addr
 
 
 class _Field(DataPath):

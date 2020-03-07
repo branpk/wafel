@@ -1,5 +1,6 @@
 from typing import *
 import math
+import contextlib
 
 import imgui as ig
 
@@ -65,12 +66,13 @@ class GameView:
 
 
   def compute_camera(self) -> Camera:
-    args = { VariableParam.STATE: self.model.timeline[self.model.selected_frame] }
-    mario_pos = [
-      self.model.variables['mario-pos-x'].get(args),
-      self.model.variables['mario-pos-y'].get(args),
-      self.model.variables['mario-pos-z'].get(args),
-    ]
+    with self.model.timeline[self.model.selected_frame] as state:
+      args = { VariableParam.STATE: state }
+      mario_pos = [
+        self.model.variables['mario-pos-x'].get(args),
+        self.model.variables['mario-pos-y'].get(args),
+        self.model.variables['mario-pos-z'].get(args),
+      ]
 
     if self.camera_mode == CameraMode.ROTATE:
       target = mario_pos
@@ -108,13 +110,18 @@ class GameView:
     )
     self.zoom += self.mouse_tracker.get_wheel_amount() / 5
 
-    self.renderer.render(RenderInfo(
-      Viewport(viewport_x, viewport_y, viewport_w, viewport_h),
-      self.compute_camera(),
-      self.model.timeline[self.model.selected_frame],
-      [
-        self.model.timeline[self.model.selected_frame + i]
+    with contextlib.ExitStack() as stack:
+      root_state = stack.enter_context(self.model.timeline[self.model.selected_frame])
+      neighbor_states = [
+        stack.enter_context(self.model.timeline[self.model.selected_frame + i])
           for i in range(-5, 31)
             if self.model.selected_frame + i in range(len(self.model.timeline))
-      ],
-    ))
+      ]
+
+      self.renderer.render(RenderInfo(
+        self.model.lib,
+        Viewport(viewport_x, viewport_y, viewport_w, viewport_h),
+        self.compute_camera(),
+        root_state,
+        neighbor_states,
+      ))

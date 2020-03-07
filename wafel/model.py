@@ -68,8 +68,8 @@ class Model:
   def get(self, variable: Variable, frame: Optional[int] = None) -> Any:
     if frame is None:
       frame = self.selected_frame
-    state = self.timeline[frame]
-    return variable.get({ VariableParam.STATE: state })
+    with self.timeline[frame] as state:
+      return variable.get({ VariableParam.STATE: state })
 
   def get_object_type(self, state: GameState, object_id: ObjectId) -> Optional[ObjectType]:
     active = self.variables['obj-active-flags-active'].at_object(object_id).get({
@@ -81,7 +81,7 @@ class Model:
     behavior_addr = self.variables['obj-behavior-ptr'].at_object(object_id).get({
       VariableParam.STATE: state,
     })
-    behavior_offset = behavior_addr - state.addr
+    behavior_offset = behavior_addr - state.slot.addr
     return ObjectType(
       behavior_offset,
       self.lib.symbol_for_offset(behavior_offset),
