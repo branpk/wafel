@@ -163,9 +163,10 @@ def test_timeline_algorithm(id: str) -> None:
     x, y = map(int, cur_value[0].split(','))
   except:
     x, y = 0, 0
-  new_xy = ui.render_joystick_control('joystick', x, y)
+  new_xy = ui.render_joystick_control('joystick', x / 256, y / 256)
   if new_xy is not None:
-    slots.edit(cur_frame.value, f'{new_xy[0]},{new_xy[1]}')
+    x, y = int(new_xy[0] * 256), int(new_xy[1] * 256)
+    slots.edit(cur_frame.value, f'{x},{y}')
 
   values = []
   for i in range(-20, 30):

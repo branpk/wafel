@@ -219,7 +219,7 @@ def test_variable_cell(id: str) -> None:
   ig.pop_id()
 
 
-DEFAULT_TEST = test_joystick_control
+DEFAULT_TEST = test_timeline_algorithm
 
 TESTS = [
   test_joystick_control,
