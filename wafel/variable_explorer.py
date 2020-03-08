@@ -1,5 +1,6 @@
 from typing import *
 from dataclasses import dataclass
+import math
 
 import imgui as ig
 
@@ -9,6 +10,7 @@ from wafel.core import ObjectId, Variable, VariableGroup, VariableParam, \
 from wafel.variable_format import Formatters, VariableFormatter
 import wafel.ui as ui
 from wafel.util import *
+import wafel.joystick_util as joystick_util
 
 
 @dataclass(frozen=True)
@@ -107,33 +109,100 @@ class VariableExplorer:
       self.model.edits.reset(frame, variable.id)
 
 
-  def render_stick_control(self, stick_x_var: Variable, stick_y_var: Variable) -> None:
+  def render_stick_control(self, id: str) -> None:
+    stick_x_var = self.model.variables['input-stick-x']
+    stick_y_var = self.model.variables['input-stick-y']
+
     stick_x = self.model.get(stick_x_var)
     stick_y = self.model.get(stick_y_var)
 
-    new_values = ui.render_joystick_control('joystick-control', stick_x, stick_y)
+    n_x = 2 * ((stick_x + 128) / 255) - 1
+    n_y = 2 * ((stick_y + 128) / 255) - 1
+    new_n = ui.render_joystick_control(id, n_x, n_y)
 
-    if new_values is not None:
-      new_stick_x, new_stick_y = new_values
+    if new_n is not None:
+      new_stick_x = int(0.5 * (new_n[0] + 1) * 255 - 128)
+      new_stick_y = int(0.5 * (new_n[1] + 1) * 255 - 128)
 
       self.model.edits.edit(self.model.selected_frame, stick_x_var, new_stick_x)
       self.model.edits.edit(self.model.selected_frame, stick_y_var, new_stick_y)
 
 
+  def render_adjusted_stick_control(self, id: str) -> None:
+    stick_x_var = self.model.variables['input-stick-x']
+    stick_y_var = self.model.variables['input-stick-y']
+
+    raw_stick_x = self.model.get(stick_x_var)
+    raw_stick_y = self.model.get(stick_y_var)
+
+    stick_x, stick_y = joystick_util.raw_to_adjusted(raw_stick_x, raw_stick_y)
+    new_n = ui.render_joystick_control(id, stick_x / 64, stick_y / 64, 'circle')
+
+    if new_n is not None:
+      new_stick_x = new_n[0] * 64
+      new_stick_y = new_n[1] * 64
+
+      new_raw_stick_x, new_raw_stick_y = \
+        joystick_util.adjusted_to_raw(new_stick_x, new_stick_y)
+
+      self.model.edits.edit(self.model.selected_frame, stick_x_var, new_raw_stick_x)
+      self.model.edits.edit(self.model.selected_frame, stick_y_var, new_raw_stick_y)
+
+
+  def render_dyaw_stick_control(self, id: str) -> None:
+    stick_x_var = self.model.variables['input-stick-x']
+    stick_y_var = self.model.variables['input-stick-y']
+    face_yaw = self.model.get(self.model.variables['mario-face-yaw'])
+    camera_yaw = self.model.get(self.model.variables['camera-yaw'])
+    squish_timer = 0 # TODO
+
+    raw_stick_x = self.model.get(stick_x_var)
+    raw_stick_y = self.model.get(stick_y_var)
+
+    int_yaw, int_mag = joystick_util.raw_to_intended(
+      raw_stick_x,
+      raw_stick_y,
+      face_yaw,
+      camera_yaw,
+      squish_timer,
+    )
+    int_dyaw = int_yaw - face_yaw
+    n_x = int_mag / 32 * math.sin(-int_dyaw * math.pi / 0x8000)
+    n_y = int_mag / 32 * math.cos(int_dyaw * math.pi / 0x8000)
+    new_n = ui.render_joystick_control(id, n_x, n_y, 'circle')
+
+    if new_n is not None:
+      new_int_dyaw = math.atan2(-new_n[0], new_n[1]) * 0x8000 / math.pi
+      new_int_mag = 32 * math.sqrt(new_n[0]**2 + new_n[1]**2)
+      new_int_yaw = face_yaw + new_int_dyaw
+
+      new_raw_stick_x, new_raw_stick_y = joystick_util.intended_to_raw(
+        new_int_yaw,
+        new_int_mag,
+        face_yaw,
+        camera_yaw,
+        squish_timer,
+      )
+
+      self.model.edits.edit(self.model.selected_frame, stick_x_var, new_raw_stick_x)
+      self.model.edits.edit(self.model.selected_frame, stick_y_var, new_raw_stick_y)
+
+
   def render_input_tab(self, tab: TabId) -> None:
-    ig.columns(2)
+    ig.columns(3)
     ig.set_column_width(-1, 160)
+    ig.set_column_width(-2, 160)
 
     variables = self.get_variables_for_tab(tab)
     for variable in variables:
       self.render_variable(tab, variable)
 
     ig.next_column()
-
-    self.render_stick_control(
-      self.model.variables['input-stick-x'],
-      self.model.variables['input-stick-y'],
-    )
+    self.render_stick_control('joystick')
+    # ig.next_column()
+    # self.render_adjusted_stick_control('adjusted')
+    ig.next_column()
+    self.render_dyaw_stick_control('intended')
 
     ig.columns(1)
 

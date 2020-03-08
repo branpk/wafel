@@ -32,9 +32,13 @@ VARIABLES = {
     'mario-vel-x': data('$state.gMarioState[].vel[0]').label('vel x'),
     'mario-vel-y': data('$state.gMarioState[].vel[1]').label('vel y'),
     'mario-vel-z': data('$state.gMarioState[].vel[2]').label('vel z'),
+    'mario-face-pitch': data('$state.gMarioState[].faceAngle[0]').label('face pitch'),
+    'mario-face-yaw': data('$state.gMarioState[].faceAngle[1]').label('face yaw'),
+    'mario-face-roll': data('$state.gMarioState[].faceAngle[2]').label('face roll'),
   },
   VariableGroup('Misc'): {
     'global-timer': data('$state.gGlobalTimer').label('global timer'),
+    'camera-yaw': data('$state.gMarioState[].area[].camera[].yaw').label('camera yaw'),
   },
   VariableGroup.all_objects(): {
     'obj-active-flags': data('$object.activeFlags').hidden(),

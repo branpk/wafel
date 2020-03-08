@@ -9,6 +9,9 @@ from wafel.core.game_state import GameState
 from wafel.util import *
 
 
+# TODO: Handle null better?
+
+
 PRIMITIVE_CTYPES = {
   'u8': C.c_uint8,
   's8': C.c_int8,
@@ -95,11 +98,11 @@ class DataPath:
       ctype = PRIMITIVE_CTYPES[self.concrete_type['name']]
       pytype = PRIMITIVE_PYTYPES[self.concrete_type['name']]
       addr = C.cast(self.get_addr(args), C.POINTER(ctype))
-      return pytype(addr[0])
+      return pytype(addr[0] if addr else 0)
 
     elif self.concrete_type['kind'] == 'pointer':
       addr = C.cast(self.get_addr(args), C.POINTER(C.c_void_p))
-      value = int(addr[0] or 0)
+      value = int(addr[0] or 0 if addr else 0)
 
       state = dcast(GameState, args[VariableParam.STATE])
 
@@ -190,7 +193,8 @@ class _Field(DataPath):
     self.offset = field_offset
 
   def get_addr(self, args: VariableArgs) -> int:
-    return self.struct.get_addr(args) + self.offset
+    struct_addr = self.struct.get_addr(args)
+    return 0 if struct_addr == 0 else struct_addr + self.offset
 
 
 class _Index(DataPath):
@@ -205,7 +209,8 @@ class _Index(DataPath):
     self.offset = stride * index
 
   def get_addr(self, args: VariableArgs) -> int:
-    return self.array.get_addr(args) + self.offset
+    array_addr = self.array.get_addr(args)
+    return 0 if array_addr == 0 else array_addr + self.offset
 
 
 class _Deref(DataPath):
