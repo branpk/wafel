@@ -62,6 +62,9 @@ class TestSlot(AbstractSlot):
     assert self.frame is not None
     self._owners.append(TestState(self.frame, self))
 
+  def __repr__(self) -> str:
+    return f'Slot(based={self.based}, frame={self.frame}, frozen={self.frozen})'
+
 
 class TestSlots(AbstractSlots[TestSlot]):
   def __init__(self, num_frames: int, capacity: int) -> None:
@@ -75,6 +78,9 @@ class TestSlots(AbstractSlots[TestSlot]):
     self._num_frames = num_frames
 
     self.edits: Dict[int, str] = {}
+
+    self.copies = 0
+    self.updates = 0
 
   @property
   def temp(self) -> TestSlot:
@@ -90,9 +96,11 @@ class TestSlots(AbstractSlots[TestSlot]):
 
   def copy(self, dst: TestSlot, src: TestSlot) -> None:
     assert not dst.frozen
-    amortized_sleep(0.001 * SLOWDOWN, 10)
-    dst.content = src.content
-    dst.frame = src.frame
+    if dst is not src:
+      amortized_sleep(0.001 * SLOWDOWN, 10)
+      dst.content = src.content
+      dst.frame = src.frame
+      self.copies += 1
 
   def num_frames(self) -> int:
     return self._num_frames
@@ -106,6 +114,7 @@ class TestSlots(AbstractSlots[TestSlot]):
         amortized_sleep(0.0001 * SLOWDOWN, 20)
         label, count = self.base.content
         self.base.content = label, count + 1
+        self.updates += 1
 
       self.base.frame += 1
       state.frame += 1
@@ -119,12 +128,18 @@ class TestSlots(AbstractSlots[TestSlot]):
       if slot.frame is not None and slot.frame >= frame:
         slot.frame = None
 
+  def __repr__(self) -> str:
+    return str(self.where())
+
 
 def test_timeline_algorithm(id: str) -> None:
   ig.push_id(id)
 
-  slots = use_state_with('slots', lambda: TestSlots(7000, 200)).value
+  slots = use_state_with('slots', lambda: TestSlots(7000, 10)).value
   slot_manager = use_state_with('slot-manager', lambda: SlotManager(slots)).value
+
+  slots.copies = 0
+  slots.updates = 0
 
   cur_frame = use_state('cur-frame', 0)
   slot_manager.set_hotspot('cur-frame', cur_frame.value)
@@ -169,7 +184,8 @@ def test_timeline_algorithm(id: str) -> None:
     slots.edit(cur_frame.value, f'{x},{y}')
 
   values = []
-  for i in range(-20, 30):
+  # for i in range(-20, 30):
+  for i in range(0, 50):
     frame = cur_frame.value + i
     if frame in range(slots.num_frames()):
       with slot_manager.request_frame(frame) as state:
@@ -189,5 +205,7 @@ def test_timeline_algorithm(id: str) -> None:
     frame_count.value = 0
 
   ig.text(f'fps: {fps.value}')
+  ig.text(f'copies: {slots.copies}')
+  ig.text(f'updates: {slots.updates}')
 
   ig.pop_id()

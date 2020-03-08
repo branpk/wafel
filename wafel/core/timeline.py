@@ -97,6 +97,9 @@ class Timeline:
   def __getitem__(self, frame: int) -> StateSlot:
     return self.slot_manager.request_frame(frame)
 
+  def get(self, frame: int, allow_nesting=False) -> StateSlot:
+    return self.slot_manager.request_frame(frame, allow_nesting=allow_nesting)
+
   def __len__(self) -> int:
     # TODO: Handle length better
     return len(self.edits)

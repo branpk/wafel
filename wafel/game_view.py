@@ -111,9 +111,9 @@ class GameView:
     self.zoom += self.mouse_tracker.get_wheel_amount() / 5
 
     with contextlib.ExitStack() as stack:
-      root_state = stack.enter_context(self.model.timeline[self.model.selected_frame])
+      root_state = stack.enter_context(self.model.timeline.get(self.model.selected_frame, allow_nesting=True))
       neighbor_states = [
-        stack.enter_context(self.model.timeline[self.model.selected_frame + i])
+        stack.enter_context(self.model.timeline.get(self.model.selected_frame + i, allow_nesting=True))
           for i in range(-5, 31)
             if self.model.selected_frame + i in range(len(self.model.timeline))
       ]

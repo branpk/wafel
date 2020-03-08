@@ -20,6 +20,9 @@ def align_up(value: int, align: int) -> int:
   else:
     return value + (align - (value % align))
 
+def align_down(value: int, align: int) -> int:
+  return value - (value % align)
+
 def topological_sort(dependencies: Dict[T, List[T]]) -> List[T]:
   deps = [(v, list(e)) for v, e in dependencies.items()]
   deps.reverse()
@@ -61,6 +64,7 @@ __all__ = [
   'dcast',
   'assert_not_none',
   'align_up',
+  'align_down',
   'topological_sort',
   'bytes_to_buffer',
   'dict_inverse',
