@@ -62,7 +62,7 @@ def open_window_and_run(render: Callable[[str], None], maximize = False) -> None
   glfw.show_window(window)
 
   glfw.make_context_current(window)
-  glfw.swap_interval(1)
+  glfw.swap_interval(0)
 
   ig_context = ig.create_context()
   ig_renderer = GlfwRenderer(window)

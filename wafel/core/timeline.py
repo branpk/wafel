@@ -25,6 +25,9 @@ class StateSlots(AbstractSlots[StateSlot]):
     self._non_base = [self.lib.alloc_slot() for _ in range(capacity - 1)]
     self._temp = self._non_base.pop()
 
+    self.copies = 0
+    self.updates = 0
+
     assert self.base.frame == -1
     self._power_on = self.where(base=False, frozen=False)[0]
     self.copy(self._power_on, self.base)
@@ -62,8 +65,10 @@ class StateSlots(AbstractSlots[StateSlot]):
 
   def copy(self, dst: StateSlot, src: StateSlot) -> None:
     assert not dst.frozen
-    self.lib.raw_copy_slot(dst, src)
-    dst.frame = src.frame
+    if dst is not src:
+      self.lib.raw_copy_slot(dst, src)
+      dst.frame = src.frame
+      self.copies += 1
 
   def execute_frame(self) -> None:
     assert self.base.frame is not None
@@ -76,6 +81,7 @@ class StateSlots(AbstractSlots[StateSlot]):
 
       if self.base.frame != -1:
         self.lib.execute_frame()
+        self.updates += 1
       self.base.frame += 1
       state.frame += 1
 

@@ -140,7 +140,7 @@ class View:
       'frame-slider',
       self.model.selected_frame,
       len(self.model.timeline),
-      # self.model.timeline.slot_manager.get_loaded_frames(),
+      self.model.timeline.slot_manager.get_loaded_frames(),
     )
     if new_frame is not None:
       self.model.selected_frame = new_frame.value
@@ -292,7 +292,12 @@ def run() -> None:
       last_fps_time.value = time.time()
       fps.value = frame_count.value
       frame_count.value = 0
-      print(f'mspf: {int(1000 / fps.value * 10) / 10} ({fps.value} fps)')
+      print(
+        f'mspf: {int(1000 / fps.value * 10) / 10} ({fps.value} fps) - ' +
+        f'{model.timeline.slots.copies} copies, {model.timeline.slots.updates} updates'
+      )
+    model.timeline.slots.copies = 0
+    model.timeline.slots.updates = 0
 
     ig.pop_id()
 
