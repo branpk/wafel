@@ -1,7 +1,7 @@
 from typing import *
 
 
-# TODO: Maintaining this may be too much work - consider just loading dynamically based on type
+# TODO: Clean up
 
 
 class ObjectType:

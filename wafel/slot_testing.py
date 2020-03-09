@@ -67,15 +67,13 @@ class TestSlot(AbstractSlot):
 
 
 class TestSlots(AbstractSlots[TestSlot]):
-  def __init__(self, num_frames: int, capacity: int) -> None:
+  def __init__(self, capacity: int) -> None:
     self._base = TestSlot(True)
     self._base.frame = -1
     self._base.content = ('a', 0)
 
     self._non_base = [TestSlot(False) for _ in range(capacity - 1)]
     self._temp = self._non_base.pop()
-
-    self._num_frames = num_frames
 
     self.edits: Dict[int, str] = {}
 
@@ -101,9 +99,6 @@ class TestSlots(AbstractSlots[TestSlot]):
       dst.content = src.content
       dst.frame = src.frame
       self.copies += 1
-
-  def num_frames(self) -> int:
-    return self._num_frames
 
   def execute_frame(self) -> None:
     assert self.base.frame is not None
@@ -164,7 +159,7 @@ def test_timeline_algorithm(id: str) -> None:
   new_frame = ui.render_frame_slider(
     'frame-slider',
     cur_frame.value,
-    slots.num_frames(),
+    7000,
     slot_manager.get_loaded_frames(),
   )
   if new_frame is not None:
@@ -187,7 +182,7 @@ def test_timeline_algorithm(id: str) -> None:
   # for i in range(-20, 30):
   for i in range(0, 50):
     frame = cur_frame.value + i
-    if frame in range(slots.num_frames()):
+    if frame >= 0:
       with slot_manager.request_frame(frame) as state:
         values.append(state.slot.content)
   ig.text(str(values))

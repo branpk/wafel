@@ -3,7 +3,7 @@ from typing import *
 from wafel.core.variable import Variable, VariableId
 
 
-# FIXME: Move this somewhere
+# TODO: Move this somewhere
 # Don't edit hidden variables, e.g. buttons instead of A, B, Z, as then
 # the edits won't be visible to the user
 # TODO: Maybe implement Variable#contains(Variable) to handle this case instead?

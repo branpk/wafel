@@ -54,9 +54,6 @@ class StateSlots(AbstractSlots[StateSlot]):
     self.lib.raw_copy_slot(dst, src)
     dst.frame = src.frame
 
-  def num_frames(self) -> int:
-    return len(self.edits)
-
   def execute_frame(self) -> None:
     assert self.base.frame is not None
     assert not self.base.frozen
@@ -101,7 +98,6 @@ class Timeline:
     return self.slot_manager.request_frame(frame, allow_nesting=allow_nesting)
 
   def __len__(self) -> int:
-    # TODO: Handle length better
     return len(self.edits)
 
   def set_hotspot(self, name: str, frame: int) -> None:
@@ -116,6 +112,3 @@ class Timeline:
   def balance_distribution(self, max_run_time: float) -> None:
     """Perform maintenance to maintain a nice distribution of loaded frames."""
     self.slot_manager.balance_distribution(max_run_time)
-
-  def get_loaded_frames(self) -> List[int]:
-    return self.slot_manager.get_loaded_frames()

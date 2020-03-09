@@ -140,7 +140,7 @@ class View:
       'frame-slider',
       self.model.selected_frame,
       len(self.model.timeline),
-      # self.model.timeline.get_loaded_frames(),
+      # self.model.timeline.slot_manager.get_loaded_frames(),
     )
     if new_frame is not None:
       self.model.selected_frame = new_frame.value
