@@ -110,6 +110,9 @@ class GameView:
     )
     self.zoom += self.mouse_tracker.get_wheel_amount() / 5
 
+    # TODO: Extract out needed info for slots one-by-one instead of using nested
+    # lookups
+
     with contextlib.ExitStack() as stack:
       root_state = stack.enter_context(self.model.timeline.get(self.model.selected_frame, allow_nesting=True))
       neighbor_states = [

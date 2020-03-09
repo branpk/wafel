@@ -7,6 +7,7 @@ import traceback
 import tkinter
 import tkinter.filedialog
 import os
+import time
 
 import glfw
 import imgui as ig
@@ -25,6 +26,7 @@ from wafel.format_wafi import load_wafi, save_wafi
 from wafel.tas_metadata import TasMetadata
 from wafel.window import open_window_and_run
 import wafel.ui as ui
+from wafel.local_state import use_state, use_state_with
 
 
 DEFAULT_FRAME_SHEET_VARS = [
@@ -279,6 +281,19 @@ def run() -> None:
       view.file = None
     ig.push_id(id)
     view.render()
+
+    # TODO: Debug menu that shows this
+    last_fps_time = use_state_with('last-fps-time', lambda: time.time())
+    frame_count = use_state('frame-count', 0)
+    fps = use_state('fps', 0)
+
+    frame_count.value += 1
+    if time.time() > last_fps_time.value + 1:
+      last_fps_time.value = time.time()
+      fps.value = frame_count.value
+      frame_count.value = 0
+      print(f'mspf: {int(1000 / fps.value * 10) / 10} ({fps.value} fps)')
+
     ig.pop_id()
 
     model.timeline.balance_distribution(1/120)

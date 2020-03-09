@@ -288,13 +288,12 @@ class FrameSheet:
 
 
   def render(self) -> None:
-    min_frame = int(ig.get_scroll_y()) // self.row_height - 1
-    self.model.timeline.set_hotspot('frame-sheet-min', max(min_frame, 0))
-
     self.render_headers()
     # TODO: Make the vertical scrollbar always visible?
     ig.begin_child('Frame Sheet Rows', flags=ig.WINDOW_ALWAYS_VERTICAL_SCROLLBAR)
     self.update_scolling()
+    min_frame = int(ig.get_scroll_y()) // self.row_height - 1
+    self.model.timeline.set_hotspot('frame-sheet-min', max(min_frame, 0))
     self.render_rows()
     ig.end_child()
 
