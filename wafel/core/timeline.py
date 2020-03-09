@@ -25,6 +25,11 @@ class StateSlots(AbstractSlots[StateSlot]):
     self._non_base = [self.lib.alloc_slot() for _ in range(capacity - 1)]
     self._temp = self._non_base.pop()
 
+    assert self.base.frame == -1
+    self._power_on = self.where(base=False, frozen=False)[0]
+    self.copy(self._power_on, self.base)
+    self._power_on.permafreeze()
+
     # Prevent callback from keeping self alive
     weak_self = weakref.ref(self)
     def invalidate(frame: int) -> None:
@@ -34,6 +39,8 @@ class StateSlots(AbstractSlots[StateSlot]):
     self.edits.on_edit(invalidate)
 
   def __del__(self) -> None:
+    # Restore contents of base slot since a new timeline may be created for this DLL
+    self.copy(self.base, self.power_on)
     for slot in self.non_base + [self.temp]:
       self.lib.dealloc_slot(slot)
 
@@ -48,6 +55,10 @@ class StateSlots(AbstractSlots[StateSlot]):
   @property
   def non_base(self) -> List[StateSlot]:
     return self._non_base
+
+  @property
+  def power_on(self) -> StateSlot:
+    return self._power_on
 
   def copy(self, dst: StateSlot, src: StateSlot) -> None:
     assert not dst.frozen

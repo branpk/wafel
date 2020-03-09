@@ -20,9 +20,6 @@ class AbstractSlot(ABC):
   @abstractmethod
   def frozen(self) -> bool: ...
 
-  @abstractmethod
-  def permafreeze(self) -> None: ...
-
 
 SLOT = TypeVar('SLOT', bound=AbstractSlot)
 
@@ -39,6 +36,10 @@ class AbstractSlots(ABC, Generic[SLOT]):
   @property
   @abstractmethod
   def non_base(self) -> List[SLOT]: ...
+
+  @property
+  @abstractmethod
+  def power_on(self) -> SLOT: ...
 
   @abstractmethod
   def copy(self, dst: SLOT, src: SLOT) -> None: ...
@@ -74,15 +75,6 @@ class AbstractSlots(ABC, Generic[SLOT]):
 class SlotManager(Generic[SLOT]):
   def __init__(self, slots: AbstractSlots[SLOT]) -> None:
     self.slots = slots
-
-    # Keep one slot frozen at power-on (TODO: Move to Slots?)
-    assert self.slots.base.frame == -1
-    self.power_on = self.slots.where(base=False)[0]
-    self.slots.copy(self.power_on, self.slots.base)
-    self.power_on.permafreeze()
-
-    # self.disk_slots = self.slots.where(base=False, frozen=False)[:100]
-
     self.hotspots: Dict[str, int] = {}
 
   def latest_non_base_slot_before(

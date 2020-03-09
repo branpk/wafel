@@ -63,7 +63,6 @@ class GameLib:
     return cast(int, max(r.stop for r in self.state_ranges))
 
   def base_slot(self) -> StateSlot:
-    # TODO: Rename to create_base_slot() and only allow calling once
     base_slot = StateSlot(addr=self.dll._handle, size=self.slot_size(), base_slot=None)
     base_slot.frame = -1
     return base_slot

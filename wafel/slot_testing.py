@@ -75,6 +75,11 @@ class TestSlots(AbstractSlots[TestSlot]):
     self._non_base = [TestSlot(False) for _ in range(capacity - 1)]
     self._temp = self._non_base.pop()
 
+    assert self.base.frame == -1
+    self._power_on = self.where(base=False, frozen=False)[0]
+    self.copy(self._power_on, self.base)
+    self._power_on.permafreeze()
+
     self.edits: Dict[int, str] = {}
 
     self.copies = 0
@@ -91,6 +96,10 @@ class TestSlots(AbstractSlots[TestSlot]):
   @property
   def non_base(self) -> List[TestSlot]:
     return self._non_base
+
+  @property
+  def power_on(self) -> TestSlot:
+    return self._power_on
 
   def copy(self, dst: TestSlot, src: TestSlot) -> None:
     assert not dst.frozen
@@ -130,7 +139,7 @@ class TestSlots(AbstractSlots[TestSlot]):
 def test_timeline_algorithm(id: str) -> None:
   ig.push_id(id)
 
-  slots = use_state_with('slots', lambda: TestSlots(7000, 10)).value
+  slots = use_state_with('slots', lambda: TestSlots(10)).value
   slot_manager = use_state_with('slot-manager', lambda: SlotManager(slots)).value
 
   slots.copies = 0
