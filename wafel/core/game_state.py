@@ -56,18 +56,22 @@ class StateSlot(AbstractSlot):
   future usages of the slot.
   """
 
-  def __init__(self, addr: int, size: int, base_slot: Optional[StateSlot]) -> None:
-    self.addr = addr
-    self.size = size
+  def __init__(self, addr_ranges: List[range], base_slot: Optional[StateSlot]) -> None:
+    self.addr_ranges = addr_ranges
     self.base_slot = base_slot or self
 
     self._frame: Optional[int] = None
     self._owners: List[GameState] = []
     self.disallow_reads = False  # Set to True while being modified
 
-  @property
-  def addr_range(self) -> range:
-    return range(self.addr, self.addr + self.size)
+  def addr_to_offset(self, addr: int) -> Optional[Tuple[int, int]]:
+    for i, addr_range in enumerate(self.addr_ranges):
+      if addr in addr_range:
+        return (i, addr - addr_range.start)
+    return None
+
+  def offset_to_addr(self, offset: Tuple[int, int]) -> int:
+    return self.addr_ranges[offset[0]].start + offset[1]
 
   @property
   def based(self) -> bool:

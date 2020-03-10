@@ -5,7 +5,7 @@ import ctypes as C
 
 from wafel.core.game_lib import GameLib
 from wafel.core.variable_param import VariableParam, VariableArgs
-from wafel.core.game_state import GameState
+from wafel.core.game_state import GameState, StateSlot
 from wafel.util import *
 
 
@@ -106,10 +106,11 @@ class DataPath:
 
       state = dcast(GameState, args[VariableParam.STATE])
 
-      if value in state.slot.base_slot.addr_range:
-        return value - state.slot.base_slot.addr + state.slot.addr
-      else:
-        return value
+      # If the pointer has an address in the base slot, relocate it
+      offset = state.slot.base_slot.addr_to_offset(value)
+      if offset is not None:
+        value = state.slot.offset_to_addr(offset)
+      return value
 
     elif self.concrete_type['kind'] == 'array':
       assert self.concrete_type['length'] is not None
@@ -151,8 +152,8 @@ class _State(DataPath):
   def __init__(self, lib: GameLib) -> None:
     super().__init__(lib, [VariableParam.STATE], { 'kind': 'global' })
 
-  def get_addr(self, args: VariableArgs) -> int:
-    return args[VariableParam.STATE].slot.addr
+  def get_slot(self, args: VariableArgs) -> StateSlot:
+    return args[VariableParam.STATE].slot
 
 
 class _Object(DataPath):
@@ -190,11 +191,16 @@ class _Field(DataPath):
 
     super().__init__(lib, struct.params, field_type)
     self.struct = struct
-    self.offset = field_offset
+    self.offset: Union[Tuple[int, int], int] = field_offset
 
   def get_addr(self, args: VariableArgs) -> int:
-    struct_addr = self.struct.get_addr(args)
-    return 0 if struct_addr == 0 else struct_addr + self.offset
+    if isinstance(self.struct, _State):
+      assert isinstance(self.offset, tuple)
+      return self.struct.get_slot(args).offset_to_addr(self.offset)
+    else:
+      assert isinstance(self.offset, int)
+      struct_addr = self.struct.get_addr(args)
+      return 0 if struct_addr == 0 else struct_addr + self.offset
 
 
 class _Index(DataPath):

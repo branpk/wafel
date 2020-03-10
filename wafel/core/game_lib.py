@@ -20,37 +20,40 @@ class GameLib:
     self.spec = spec
     self.dll = dll
     self._buffers: Dict[int, object] = {}
-    self._symbols_by_offset: Dict[int, str] = self._build_symbols_by_offset()
 
     # TODO: Maybe allow .data and .bss to be stored separately to save memory
     def section_range(name):
       section = self.spec['sections'][name]
-      return range(
-        section['virtual_address'],
-        section['virtual_address'] + section['virtual_size'],
-      )
-    self.state_ranges = [
+      addr = self.dll._handle + section['virtual_address']
+      return range(addr, addr + section['virtual_size'])
+    base_addr_ranges = [
       section_range('.data'),
       section_range('.bss'),
     ]
+    self._base_slot = StateSlot(base_addr_ranges, None)
+    self._base_slot.frame = -1
+
+    self._symbols_by_offset = self._build_symbols_by_offset()
 
     self.dll.sm64_init()
 
-  def _build_symbols_by_offset(self) -> Dict[int, str]:
-    result: Dict[int, str] = {}
+  def _build_symbols_by_offset(self) -> Dict[Tuple[int, int], str]:
+    result: Dict[Tuple[int, int], str] = {}
     for symbol in self.spec['globals']:
       try:
         offset = self.symbol_offset(symbol)
       except ValueError:
         continue
-      assert offset not in result, symbol
-      result[offset] = symbol
+      if offset is not None:
+        result[offset] = symbol
     return result
 
-  def symbol_offset(self, symbol: str) -> int:
-    return C.addressof(C.c_uint32.in_dll(self.dll, symbol)) - self.dll._handle
+  def symbol_offset(self, symbol: str) -> Optional[Tuple[int, int]]:
+    '''Can be None for non-data/bss symbols like functions.'''
+    addr = C.addressof(C.c_uint32.in_dll(self.dll, symbol))
+    return self.base_slot().addr_to_offset(addr)
 
-  def symbol_for_offset(self, offset: int) -> str:
+  def symbol_for_offset(self, offset: Tuple[int, int]) -> str:
     return self._symbols_by_offset[offset]
 
   def concrete_type(self, type_: dict) -> dict:
@@ -59,31 +62,30 @@ class GameLib:
     return type_
 
 
-  def slot_size(self) -> int:
-    return cast(int, max(r.stop for r in self.state_ranges))
-
   def base_slot(self) -> StateSlot:
-    base_slot = StateSlot(addr=self.dll._handle, size=self.slot_size(), base_slot=None)
-    base_slot.frame = -1
-    return base_slot
+    return self._base_slot
 
   def alloc_slot(self) -> StateSlot:
-    contiguous_state_range = range(
-      min(r.start for r in self.state_ranges),
-      max(r.stop for r in self.state_ranges),
-    )
-    buffer = C.create_string_buffer(len(contiguous_state_range))
-    addr = C.addressof(buffer) - contiguous_state_range.start
-    self._buffers[addr] = buffer
-    return StateSlot(addr, self.slot_size(), self.base_slot())
+    base_slot = self.base_slot()
+
+    addr_ranges = []
+    for base_addr_range in base_slot.addr_ranges:
+      buffer = C.create_string_buffer(len(base_addr_range))
+      addr = C.addressof(buffer)
+      self._buffers[addr] = buffer
+      addr_ranges.append(range(addr, addr + len(base_addr_range)))
+
+    return StateSlot(addr_ranges, base_slot)
 
   def dealloc_slot(self, slot: StateSlot) -> None:
     if not slot.based:
-      del self._buffers[slot.addr]
+      for addr_range in slot.addr_ranges:
+        del self._buffers[addr_range.start]
 
   def raw_copy_slot(self, dst: StateSlot, src: StateSlot) -> None:
-    for state_range in self.state_ranges:
-      C.memmove(dst.addr + state_range.start, src.addr + state_range.start, len(state_range))
+    if dst is not src:
+      for dst_range, src_range in zip(dst.addr_ranges, src.addr_ranges):
+        C.memmove(dst_range.start, src_range.start, len(dst_range))
 
   def execute_frame(self) -> None:
     self.dll.sm64_update()
