@@ -1,7 +1,7 @@
 from typing import *
 import random
 
-import imgui as ig
+import wafel.imgui as ig
 
 import wafel.ui as ui
 from wafel.local_state import use_state, use_state_with, local_state

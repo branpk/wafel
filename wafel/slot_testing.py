@@ -4,7 +4,7 @@ from typing import *
 import time
 import random
 
-import imgui as ig
+import wafel.imgui as ig
 
 from wafel.core.slot_manager import AbstractSlot, AbstractSlots, SlotManager
 from wafel.local_state import use_state, use_state_with

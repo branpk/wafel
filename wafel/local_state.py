@@ -1,7 +1,7 @@
 from typing import *
 from enum import Enum
 
-import imgui as ig
+import wafel.imgui as ig
 
 from wafel.util import *
 

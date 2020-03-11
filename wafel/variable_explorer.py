@@ -2,7 +2,7 @@ from typing import *
 from dataclasses import dataclass
 import math
 
-import imgui as ig
+import wafel.imgui as ig
 
 from wafel.model import Model
 from wafel.core import ObjectId, Variable, VariableGroup, VariableParam, \

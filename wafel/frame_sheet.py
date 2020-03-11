@@ -1,7 +1,7 @@
 import sys
 from typing import *
 
-import imgui as ig
+import wafel.imgui as ig
 
 from wafel.core import Variable, ObjectType, VariableParam, VariableId
 from wafel.model import Model

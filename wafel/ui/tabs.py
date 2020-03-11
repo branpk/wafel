@@ -1,6 +1,6 @@
 from typing import *
 
-import imgui as ig
+import wafel.imgui as ig
 
 from wafel.local_state import use_state
 

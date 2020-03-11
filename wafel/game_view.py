@@ -2,7 +2,7 @@ from typing import *
 import math
 import contextlib
 
-import imgui as ig
+import wafel.imgui as ig
 
 from wafel.model import Model
 from wafel.graphics import CameraMode, Renderer, Camera, RotateCamera, \

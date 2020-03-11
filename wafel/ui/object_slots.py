@@ -1,6 +1,6 @@
 from typing import *
 
-import imgui as ig
+import wafel.imgui as ig
 
 from wafel.core import ObjectType
 

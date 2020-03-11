@@ -8,9 +8,10 @@ import tkinter
 import tkinter.filedialog
 import os
 import time
+import traceback
 
 import glfw
-import imgui as ig
+import wafel.imgui as ig
 from imgui.integrations.glfw import GlfwRenderer
 from OpenGL import GL as gl
 
@@ -40,7 +41,7 @@ DEFAULT_FRAME_SHEET_VARS = [
 
 class SequenceFile:
   FILE_TYPES = [
-    ('Wafel TAS', '*.wafi'),
+    # ('Wafel TAS', '*.wafi'),
     ('Mupen64 TAS', '*.m64'),
     ('All files', '*'),
   ]
@@ -171,7 +172,7 @@ class View:
 
   def ask_save_filename(self) -> bool:
     filename = tkinter.filedialog.asksaveasfilename(
-      defaultext='.wafi',
+      defaultext='.m64',
       filetypes=SequenceFile.FILE_TYPES,
     ) or None
     if filename is None:
@@ -270,17 +271,53 @@ class View:
 def run() -> None:
   model = Model()
   view = None
+  error = None
 
   # TODO: Clean up (use local_state)
   def render(id: str):
     nonlocal view
+    nonlocal error
+
+    if error is not None:
+      message = error.strip()
+      ig.text('Wafel has crashed. Cause:')
+      lines = message.split('\n')
+      ig.input_text_multiline(
+        '##error-msg',
+        message,
+        len(message) + 1,
+        max(map(len, lines)) * 10,
+        (len(lines) + 1) * ig.get_text_line_height() + 6,
+      )
+      ig.text('(The horribleness of Mupen may also somehow factor into this.)')
+
+      ig.dummy(10, 10)
+
+      if ig.button('Exit'):
+        sys.stderr.write('Aborted: ' + error + '\n')
+        sys.stderr.flush()
+        sys.exit(1)
+      ig.same_line()
+      if ig.button('Try to save'):
+        if view.ask_save_filename():
+          view.save()
+      # ig.same_line()
+      # if view is not None and ig.button('Try to continue (mad lads only)'):
+      #   view.reload_ui()
+      #   error = None
+      return
+
     if view is None:
       view = View(model)
       view.file = SequenceFile('test_files/1key_j.m64', 'm64')
       view.reload()
       view.file = None
     ig.push_id(id)
-    view.render()
+
+    try:
+      ig.try_render(view.render)
+    except:
+      error = traceback.format_exc()
 
     # TODO: Debug menu that shows this
     last_fps_time = use_state_with('last-fps-time', lambda: time.time())
@@ -292,10 +329,10 @@ def run() -> None:
       last_fps_time.value = time.time()
       fps.value = frame_count.value
       frame_count.value = 0
-      print(
-        f'mspf: {int(1000 / fps.value * 10) / 10} ({fps.value} fps) - ' +
-        f'{model.timeline.slots.copies} copies, {model.timeline.slots.updates} updates'
-      )
+      # print(
+      #   f'mspf: {int(1000 / fps.value * 10) / 10} ({fps.value} fps) - ' +
+      #   f'{model.timeline.slots.copies} copies, {model.timeline.slots.updates} updates'
+      # )
     model.timeline.slots.copies = 0
     model.timeline.slots.updates = 0
 

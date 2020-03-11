@@ -1,7 +1,7 @@
 from typing import *
 
 import glfw
-import imgui as ig
+import wafel.imgui as ig
 from imgui.integrations.glfw import GlfwRenderer
 from OpenGL import GL as gl
 
