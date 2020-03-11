@@ -93,6 +93,7 @@ class View:
 
 
   def reload_ui(self) -> None:
+    self.show_debug_pane = False
     self.formatters = Formatters()
 
     self.frame_sheets: List[FrameSheet] = [FrameSheet(self.model, self.formatters)]
@@ -142,18 +143,38 @@ class View:
       'frame-slider',
       self.model.selected_frame,
       len(self.model.timeline),
-      self.model.timeline.slot_manager.get_loaded_frames(),
+      self.model.timeline.slot_manager.get_loaded_frames() if self.show_debug_pane else [],
     )
     if new_frame is not None:
       self.model.selected_frame = new_frame.value
 
 
   def render_right_column(self) -> None:
+    total_height = ig.get_window_height()
+
+    if self.show_debug_pane:
+      ig.push_id('debug-pane')
+      def init_log() -> List[str]:
+        messages = []
+        log.subscribe(lambda msg: messages.append(str(msg)))
+        return messages
+      messages = use_state_with('messages', init_log).value
+      prev_length = use_state('prev-length', 0)
+      ig.begin_child('##debug-menu', height=int(ig.get_window_height() * 0.1))
+      total_height -= ig.get_window_height()
+      if prev_length.value != len(messages):
+        prev_length.value = len(messages)
+        ig.set_scroll_y(ig.get_scroll_max_y() + ig.get_window_height())
+      for message in messages:
+        ig.text(message)
+      ig.end_child()
+      ig.pop_id()
+
     frame_sheet = self.frame_sheets[0]
     ig.set_next_window_content_size(frame_sheet.get_content_width(), 0)
     ig.begin_child(
       'Frame Sheet##' + str(self.epoch) + '-0',
-      height=int(ig.get_window_height() * 0.7),
+      height=int(total_height * 0.7),
       flags=ig.WINDOW_HORIZONTAL_SCROLLING_BAR,
     )
     frame_sheet.render()
@@ -238,6 +259,9 @@ class View:
         model.selected_frame += 5
       if ig.is_key_pressed(ig.get_key_index(ig.KEY_PAGE_UP)):
         model.selected_frame -= 5
+
+    if self.dbg_is_key_pressed(ord('`')):
+      self.show_debug_pane = not self.show_debug_pane
 
 
     ig.push_id(str(self.epoch))
@@ -327,7 +351,7 @@ def run() -> None:
       ig.dummy(10, 10)
 
       if ig.button('Exit'):
-        log.error('Aborted: ' + error)
+        log.info('Aborted')
         sys.exit(1)
       ig.same_line()
       if ig.button('Try to save'):
@@ -343,5 +367,6 @@ def run() -> None:
       ig.try_render(lambda: do_render(id))
     except:
       error = traceback.format_exc()
+      log.error('Caught: ' + error)
 
   open_window_and_run(render, maximize=True)
