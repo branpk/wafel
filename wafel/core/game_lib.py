@@ -5,7 +5,7 @@ import weakref
 
 from wafel.util import *
 from wafel.core.object_type import ObjectType
-from wafel.core.game_state import StateSlot
+from wafel.core.game_state import StateSlot, RelativeAddr
 
 
 DataSpec = Any
@@ -37,24 +37,22 @@ class GameLib:
 
     self.dll.sm64_init()
 
-  def _build_symbols_by_offset(self) -> Dict[Tuple[int, int], str]:
-    result: Dict[Tuple[int, int], str] = {}
+  def _build_symbols_by_offset(self) -> Dict[RelativeAddr, str]:
+    result = {}
     for symbol in self.spec['globals']:
       try:
-        offset = self.symbol_offset(symbol)
+        offset = self.symbol_addr(symbol)
       except ValueError:
         continue
-      if offset is not None:
-        result[offset] = symbol
+      result[offset] = symbol
     return result
 
-  def symbol_offset(self, symbol: str) -> Optional[Tuple[int, int]]:
-    '''Can be None for non-data/bss symbols like functions.'''
+  def symbol_addr(self, symbol: str) -> RelativeAddr:
     addr = C.addressof(C.c_uint32.in_dll(self.dll, symbol))
-    return self.base_slot().addr_to_offset(addr)
+    return self.base_slot().addr_to_relative(addr)
 
-  def symbol_for_offset(self, offset: Tuple[int, int]) -> str:
-    return self._symbols_by_offset[offset]
+  def symbol_for_addr(self, rel_addr: RelativeAddr) -> str:
+    return self._symbols_by_offset[rel_addr]
 
   def concrete_type(self, type_: dict) -> dict:
     while type_['kind'] == 'symbol':

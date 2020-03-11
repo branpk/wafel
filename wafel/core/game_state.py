@@ -41,6 +41,11 @@ class GameState:
     return self._slot
 
 
+# Either a static address in the DLL's address space, or a slot-independent pair
+# (range index, offset within range)
+RelativeAddr = Union[int, Tuple[int, int]]
+
+
 class StateSlot(AbstractSlot):
   """A memory buffer that can hold an entire game state.
 
@@ -72,6 +77,15 @@ class StateSlot(AbstractSlot):
 
   def offset_to_addr(self, offset: Tuple[int, int]) -> int:
     return self.addr_ranges[offset[0]].start + offset[1]
+
+  def addr_to_relative(self, addr: int) -> RelativeAddr:
+    return self.addr_to_offset(addr) or addr
+
+  def relative_to_addr(self, rel_addr: RelativeAddr) -> int:
+    if isinstance(rel_addr, int):
+      return rel_addr
+    else:
+      return self.offset_to_addr(rel_addr)
 
   @property
   def based(self) -> bool:

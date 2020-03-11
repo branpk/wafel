@@ -29,6 +29,9 @@ class Model:
     self.variables = Variable.create_all(self.lib)
 
   def _set_edits(self, edits: Edits) -> None:
+    self.timeline = None
+    gc.collect() # Force garbage collection of game state slots
+
     self.edits = edits
     self.timeline = Timeline(self.lib, self.variables, self.edits)
 
@@ -39,8 +42,6 @@ class Model:
       self.timeline.set_hotspot('selected-frame', frame)
     self.on_selected_frame_change(set_hotspot)
     set_hotspot(self._selected_frame)
-
-    gc.collect() # Force garbage collection of game state slots
 
   @property
   def selected_frame(self) -> int:
@@ -81,8 +82,8 @@ class Model:
     behavior_addr = self.variables['obj-behavior-ptr'].at_object(object_id).get({
       VariableParam.STATE: state,
     })
-    behavior_offset = behavior_addr - state.slot.addr
+    relative_addr = state.slot.addr_to_relative(behavior_addr)
     return ObjectType(
-      behavior_offset,
-      self.lib.symbol_for_offset(behavior_offset),
+      relative_addr,
+      self.lib.symbol_for_addr(relative_addr),
     )

@@ -5,7 +5,7 @@ import ctypes as C
 
 from wafel.core.game_lib import GameLib
 from wafel.core.variable_param import VariableParam, VariableArgs
-from wafel.core.game_state import GameState, StateSlot
+from wafel.core.game_state import GameState, StateSlot, RelativeAddr
 from wafel.util import *
 
 
@@ -170,7 +170,7 @@ class _Field(DataPath):
 
     if struct_type['kind'] == 'global':
       field_type = lib.spec['globals'][field]['type']
-      field_offset = lib.symbol_offset(field)
+      field_offset = lib.symbol_addr(field)
 
     elif struct_type['kind'] == 'struct':
       if field in struct_type['fields']:
@@ -191,12 +191,11 @@ class _Field(DataPath):
 
     super().__init__(lib, struct.params, field_type)
     self.struct = struct
-    self.offset: Union[Tuple[int, int], int] = field_offset
+    self.offset: Union[RelativeAddr, int] = field_offset
 
   def get_addr(self, args: VariableArgs) -> int:
     if isinstance(self.struct, _State):
-      assert isinstance(self.offset, tuple)
-      return self.struct.get_slot(args).offset_to_addr(self.offset)
+      return self.struct.get_slot(args).relative_to_addr(self.offset)
     else:
       assert isinstance(self.offset, int)
       struct_addr = self.struct.get_addr(args)

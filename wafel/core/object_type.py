@@ -1,5 +1,7 @@
 from typing import *
 
+from wafel.core.game_state import RelativeAddr
+
 
 # TODO: Clean up
 
@@ -7,10 +9,10 @@ from typing import *
 class ObjectType:
   def __init__(
     self,
-    behavior_offset: int,
+    relative_addr: RelativeAddr,
     symbol: str,
   ) -> None:
-    self.behavior_offset = behavior_offset
+    self.relative_addr = relative_addr
     self.symbol = symbol
 
   @property
@@ -24,10 +26,10 @@ class ObjectType:
     return 'ObjectType(' + self.name + ')'
 
   def __eq__(self, other: object) -> bool:
-    return isinstance(other, ObjectType) and self.behavior_offset == other.behavior_offset
+    return isinstance(other, ObjectType) and self.relative_addr == other.relative_addr
 
   def __hash__(self) -> int:
-    return hash(self.behavior_offset)
+    return hash(self.relative_addr)
 
 
 # OBJECT_TYPES = [
