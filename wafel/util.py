@@ -2,6 +2,8 @@ from typing import *
 from enum import Enum
 from dataclasses import dataclass
 
+import wafel.log as log
+
 T = TypeVar('T')
 S = TypeVar('S')
 
@@ -61,6 +63,7 @@ Maybe = Optional[Just[T]]
 
 
 __all__ = [
+  'log',
   'dcast',
   'assert_not_none',
   'align_up',

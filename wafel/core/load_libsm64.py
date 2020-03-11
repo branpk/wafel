@@ -106,7 +106,7 @@ def attr_str(node: DIE, attr_name: str) -> Optional[str]:
 
 def print_die(die: DIE, recurse=True, indent=''):
   ref_offset = die.offset - die.cu.cu_offset
-  print(textwrap.indent(f'[{ref_offset}] {die}', indent))
+  log.debug(textwrap.indent(f'[{ref_offset}] {die}', indent))
   if recurse:
     for child in die.iter_children():
       print_die(child, recurse, indent + '>   ')
@@ -387,7 +387,7 @@ def hash_file(path: str) -> str:
 
 
 def extract_data_spec(path: str) -> DataSpec:
-  print('Parsing library')
+  log.info('Parsing library')
   sections = parse_lib(path)
   compilation_units = read_dwarf_info(sections)
 
@@ -397,7 +397,7 @@ def extract_data_spec(path: str) -> DataSpec:
       if attr_str(unit.get_top_DIE(), 'DW_AT_comp_dir') == sm64_compile_dir
   ]
 
-  print('Extracting definitions')
+  log.info('Extracting definitions')
   spec: DataSpec = {
     'format_version': CURRENT_SPEC_FORMAT_VERSION,
     'library_hash': hash_file(path),
@@ -423,6 +423,7 @@ def extract_data_spec(path: str) -> DataSpec:
 
   populate_sizes_and_alignment(spec)
 
+  log.info('Done')
   return spec
 
 

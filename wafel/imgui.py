@@ -2,6 +2,8 @@ from typing import *
 
 import imgui as ig
 
+from wafel.util import *
+
 _stack: List[Tuple[str, Any]] = []
 
 # TODO: Test exceptions in begin_menu_bar, push_item_width, begin_drag_drop_source, begin_popup_context_item
@@ -29,7 +31,7 @@ def _check_end_call(name: str) -> None:
     return
   if len(_stack) == 0 or _stack[-1][0] != matching:
     for item in _stack:
-      print(' ', item[0], *item[1])
+      log.error(' ', item[0], *item[1])
     assert False, 'Expected ' + matching
   _stack.pop()
 

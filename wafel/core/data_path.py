@@ -183,7 +183,7 @@ class _Field(DataPath):
         field_offset = struct_type['fields']['rawData']['offset'] + field_spec['offset']
       else:
         import json
-        print(json.dumps(struct_type, indent=2))
+        log.error(json.dumps(struct_type, indent=2))
         raise NotImplementedError(struct_type, field)
 
     else:

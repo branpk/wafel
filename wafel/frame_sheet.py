@@ -7,6 +7,7 @@ from wafel.core import Variable, ObjectType, VariableParam, VariableId
 from wafel.model import Model
 from wafel.variable_format import Formatters, EmptyFormatter
 import wafel.ui as ui
+from wafel.util import *
 
 
 class FrameSheetColumn:
@@ -50,7 +51,7 @@ class FrameSheet:
 
   def _insert_variable(self, index: int, variable: Variable) -> None:
     if self.columns != self.next_columns:
-      sys.stderr.write('Multiple frame sheet column mods on same frame\n')
+      log.error('Multiple frame sheet column mods on same frame')
       return
 
     object_id = variable.get_object_id()
@@ -71,7 +72,7 @@ class FrameSheet:
 
   def _move_column(self, source: int, dest: int) -> None:
     if self.columns != self.next_columns:
-      sys.stderr.write('Multiple frame sheet column mods on same frame\n')
+      log.error('Multiple frame sheet column mods on same frame')
       return
 
     column = self.next_columns[source]
@@ -81,7 +82,7 @@ class FrameSheet:
 
   def _remove_column(self, index: int) -> None:
     if self.columns != self.next_columns:
-      sys.stderr.write('Multiple frame sheet column mods on same frame\n')
+      log.error('Multiple frame sheet column mods on same frame')
       return
     del self.next_columns[index]
 

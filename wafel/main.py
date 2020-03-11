@@ -28,6 +28,7 @@ from wafel.tas_metadata import TasMetadata
 from wafel.window import open_window_and_run
 import wafel.ui as ui
 from wafel.local_state import use_state, use_state_with
+from wafel.util import *
 
 
 DEFAULT_FRAME_SHEET_VARS = [
@@ -288,17 +289,17 @@ def run() -> None:
     # TODO: Debug menu that shows this
     last_fps_time = use_state_with('last-fps-time', lambda: time.time())
     frame_count = use_state('frame-count', 0)
-    fps = use_state('fps', 0)
+    fps = use_state('fps', 0.0)
 
     frame_count.value += 1
-    if time.time() > last_fps_time.value + 1:
+    if time.time() > last_fps_time.value + 5:
+      fps.value = frame_count.value / (time.time() - last_fps_time.value)
       last_fps_time.value = time.time()
-      fps.value = frame_count.value
       frame_count.value = 0
-      # print(
-      #   f'mspf: {int(1000 / fps.value * 10) / 10} ({fps.value} fps) - ' +
-      #   f'{model.timeline.slots.copies} copies, {model.timeline.slots.updates} updates'
-      # )
+      log.info(
+        f'mspf: {int(1000 / fps.value * 10) / 10} ({int(fps.value)} fps) - ' +
+        f'{model.timeline.slots.copies} copies, {model.timeline.slots.updates} updates'
+      )
     model.timeline.slots.copies = 0
     model.timeline.slots.updates = 0
 
@@ -326,8 +327,7 @@ def run() -> None:
       ig.dummy(10, 10)
 
       if ig.button('Exit'):
-        sys.stderr.write('Aborted: ' + error + '\n')
-        sys.stderr.flush()
+        log.error('Aborted: ' + error)
         sys.exit(1)
       ig.same_line()
       if ig.button('Try to save'):

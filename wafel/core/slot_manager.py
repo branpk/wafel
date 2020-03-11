@@ -170,7 +170,7 @@ class SlotManager(Generic[SLOT]):
         break
 
       iters += 1
-    # print(iters)
+    # log.debug(iters)
 
   def get_loaded_frames(self) -> List[int]:
     return [assert_not_none(slot.frame) for slot in self.slots.where(valid=True)]

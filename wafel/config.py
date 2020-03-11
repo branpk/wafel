@@ -5,7 +5,7 @@ import sys
 
 from dataclasses import dataclass
 
-from wafel.util import assert_not_none
+from wafel.util import assert_not_none, log
 
 
 VERSION = (0, 1, 0)
@@ -67,8 +67,7 @@ class Config:
       with open(os.path.join(self.cache_directory, filename), 'r') as f:
         return json.load(f)
     except Exception as e:
-      sys.stderr.write(f'Warning: Error while reading from cache: {e}\n')
-      sys.stderr.flush()
+      log.warn(f'Error while reading from cache: {e}')
       return None
 
   def cache_put(self, key: str, value: object, filename='object*') -> None:
@@ -88,8 +87,7 @@ class Config:
       index[key] = filename
       self._save_cache_index(index)
     except Exception as e:
-      sys.stderr.write(f'Warning: Error while writing to cache: {e}')
-      sys.stderr.flush()
+      log.warn(f'Error while writing to cache: {e}')
 
 
 config = Config()

@@ -1,12 +1,4 @@
 import sys
-
-min_python_version = (3, 8)
-if sys.version_info < min_python_version:
-  sys.stderr.write('Python >=%d.%d is required\n' % min_python_version)
-  sys.stderr.flush()
-  sys.exit(1)
-
-
 import os
 
 from wafel.config import config
