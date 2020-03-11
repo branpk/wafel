@@ -9,3 +9,4 @@ lib/libsm64
 imgui.ini
 .mypy_cache
 .wafel_cache
+log.txt

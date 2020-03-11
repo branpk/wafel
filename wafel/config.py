@@ -16,6 +16,7 @@ class Config:
   _assets_directory: Optional[str] = None
   _lib_directory: Optional[str] = None
   _cache_directory: Optional[str] = None
+  _log_file: Optional[str] = None
 
   @property
   def assets_directory(self) -> str:
@@ -28,6 +29,10 @@ class Config:
   @property
   def cache_directory(self) -> str:
     return assert_not_none(self._cache_directory)
+
+  @property
+  def log_file(self) -> str:
+    return assert_not_none(self._log_file)
 
   def _load_cache_index(self) -> Any:
     cache_index = os.path.join(self.cache_directory, 'index.json')
