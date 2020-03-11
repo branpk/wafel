@@ -3,6 +3,7 @@ from typing import *
 import math
 
 from wafel.core import GameState, DataPath, VariableParam, GameLib
+from wafel.config import config
 
 import ext_modules.graphics as ext_graphics
 
@@ -95,7 +96,7 @@ class RenderInfo:
 
 class Renderer:
   def __init__(self):
-    self._addr = ext_graphics.new_renderer()
+    self._addr = ext_graphics.new_renderer(config.assets_directory)
 
   def __del__(self):
     if ext_graphics.delete_renderer is not None:

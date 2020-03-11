@@ -91,9 +91,12 @@ struct PathDot {
 
 class Renderer {
 public:
+  Renderer(const string &assets_directory);
+
   void render(const Viewport &viewport, const Scene &scene);
 
 private:
+  string assets_directory;
   ResourceCache res;
   Viewport viewport;
   mat4 proj_matrix, view_matrix;

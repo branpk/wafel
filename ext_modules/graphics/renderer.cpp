@@ -11,6 +11,11 @@
 using namespace std;
 
 
+Renderer::Renderer(const string &assets_directory)
+  : assets_directory(assets_directory)
+{}
+
+
 void Renderer::render(const Viewport &viewport, const Scene &scene) {
   this->viewport = viewport;
 
@@ -79,8 +84,8 @@ void Renderer::build_transforms(const Viewport &viewport, const Scene &scene) {
 
 void Renderer::render_surfaces(const Scene &scene) {
   Program *program = res.program(
-    "assets/shaders/surface.vert",
-    "assets/shaders/surface.frag");
+    assets_directory + "/shaders/surface.vert",
+    assets_directory + "/shaders/surface.frag");
 
   program->use();
   program->set_uniform("uProjMatrix", proj_matrix);
@@ -120,8 +125,8 @@ void Renderer::render_wall_hitboxes(const Scene &scene) {
 
 void Renderer::render_wall_hitbox_tris(const Scene &scene) {
   Program *program = res.program(
-    "assets/shaders/color.vert",
-    "assets/shaders/color.frag");
+    assets_directory + "/shaders/color.vert",
+    assets_directory + "/shaders/color.frag");
 
   program->use();
   program->set_uniform("uProjMatrix", proj_matrix);
@@ -181,8 +186,8 @@ void Renderer::render_wall_hitbox_tris(const Scene &scene) {
 
 void Renderer::render_wall_hitbox_lines(const Scene &scene) {
   Program *program = res.program(
-    "assets/shaders/color.vert",
-    "assets/shaders/color.frag");
+    assets_directory + "/shaders/color.vert",
+    assets_directory + "/shaders/color.frag");
 
   program->use();
   program->set_uniform("uProjMatrix", proj_matrix);
@@ -232,8 +237,8 @@ void Renderer::render_wall_hitbox_lines(const Scene &scene) {
 
 void Renderer::render_objects(const Scene &scene) {
   Program *program = res.program(
-    "assets/shaders/color.vert",
-    "assets/shaders/color.frag");
+    assets_directory + "/shaders/color.vert",
+    assets_directory + "/shaders/color.frag");
 
   program->use();
   program->set_uniform("uProjMatrix", proj_matrix);
@@ -327,8 +332,8 @@ void Renderer::render_object_paths(const Scene &scene) {
 
 void Renderer::render_object_path_lines(const Scene &scene) {
   Program *program = res.program(
-    "assets/shaders/color.vert",
-    "assets/shaders/color.frag");
+    assets_directory + "/shaders/color.vert",
+    assets_directory + "/shaders/color.frag");
 
   program->use();
   program->set_uniform("uProjMatrix", proj_matrix);
@@ -369,8 +374,8 @@ void Renderer::render_path_dots(const vector<PathDot> &dots) {
   // TODO: Could do triangle fans with indexing
 
   Program *program = res.program(
-    "assets/shaders/path_dot.vert",
-    "assets/shaders/color.frag");
+    assets_directory + "/shaders/path_dot.vert",
+    assets_directory + "/shaders/color.frag");
 
   program->use();
   program->set_uniform("uProjMatrix", proj_matrix);

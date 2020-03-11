@@ -30,7 +30,7 @@ typedef u64 uptr; // integer at least the size of a pointer, for pybind11 conver
 #define VEC3F_TO_VEC3(v) (vec3((v)[0], (v)[1], (v)[2]))
 
 
-static uptr new_renderer() {
+static uptr new_renderer(const string &assets_directory) {
   static bool loaded_gl = false;
 
   if (!loaded_gl) {
@@ -40,7 +40,7 @@ static uptr new_renderer() {
     loaded_gl = true;
   }
 
-  Renderer *renderer = new Renderer;
+  Renderer *renderer = new Renderer(assets_directory);
   return (uptr) renderer;
 }
 

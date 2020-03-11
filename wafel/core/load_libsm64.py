@@ -451,9 +451,9 @@ def load_libsm64(game_version: str) -> GameLib:
   spec = extract_data_spec_cached(path)
 
   # TODO: Hacks until macros/object fields are implemented
-  with open('hack_constants.json', 'r') as f:
+  with open(os.path.join(config.assets_directory, 'hack_constants.json'), 'r') as f:
     spec['constants'].update(json.load(f))
-  with open('hack_object_fields.json', 'r') as f:
+  with open(os.path.join(config.assets_directory, 'hack_object_fields.json'), 'r') as f:
     spec['extra'] = {}
     spec['extra']['object_fields'] = json.load(f)
 

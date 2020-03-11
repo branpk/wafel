@@ -8,10 +8,18 @@ from dataclasses import dataclass
 from wafel.util import assert_not_none
 
 
+VERSION = (0, 1, 0)
+
+
 @dataclass
 class Config:
+  _assets_directory: Optional[str] = None
   _lib_directory: Optional[str] = None
   _cache_directory: Optional[str] = None
+
+  @property
+  def assets_directory(self) -> str:
+    return assert_not_none(self._assets_directory)
 
   @property
   def lib_directory(self) -> str:
