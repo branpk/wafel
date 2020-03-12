@@ -142,6 +142,7 @@ class View:
     total_height = ig.get_window_height() - ig.get_frame_height() # subtract menu bar
     slider_space = 45
 
+    log.timer.begin('gview1')
     ig.begin_child(
       'Game View 1',
       height=int(total_height // 2) - slider_space // 2,
@@ -149,7 +150,9 @@ class View:
     )
     self.game_views[0].render(framebuffer_size)
     ig.end_child()
+    log.timer.end()
 
+    log.timer.begin('gview2')
     ig.begin_child(
       'Game View 2',
       height=int(total_height // 2) - slider_space // 2,
@@ -157,6 +160,7 @@ class View:
     )
     self.game_views[1].render(framebuffer_size)
     ig.end_child()
+    log.timer.end()
 
     new_frame = ui.render_frame_slider(
       'frame-slider',
@@ -173,13 +177,17 @@ class View:
 
     if self.show_debug_pane:
       ig.push_id('debug-pane')
+      ig.begin_child('##pane', height=int(ig.get_window_height() * 0.15))
+      ig.columns(2)
+      ig.set_column_width(-1, ig.get_window_width() - 200)
+
+      ig.begin_child('##log')
       def init_log() -> List[str]:
         messages = []
         log.subscribe(lambda msg: messages.append(str(msg)))
         return messages
       messages = use_state_with('messages', init_log).value
       prev_length = use_state('prev-length', 0)
-      ig.begin_child('##debug-menu', height=int(ig.get_window_height() * 0.1))
       total_height -= ig.get_window_height()
       if prev_length.value != len(messages):
         prev_length.value = len(messages)
@@ -187,8 +195,28 @@ class View:
       for message in messages:
         ig.text(message)
       ig.end_child()
+
+      ig.next_column()
+
+      path_times = log.timer.get_times()
+      def get_label(path: Tuple[str, ...]) -> str:
+        return '  ' * (len(path) - 1) + path[-1]
+      def get_ms_label(ms: float) -> str:
+        return str(int(ms * 10) / 10)
+      max_length = max(len(get_label(path)) for path in path_times)
+      max_ms_length = max(len(get_ms_label(ms)) for ms in path_times.values())
+      for path, ms in sorted(path_times.items()):
+        label = get_label(path)
+        padding = ' ' * (max_length - len(label))
+        ms_label = get_ms_label(ms)
+        ms_padding = ' ' * (max_ms_length - len(ms_label))
+        ig.text(f'{label}{padding}  {ms_padding}{ms_label}ms')
+
+      ig.columns(1)
+      ig.end_child()
       ig.pop_id()
 
+    log.timer.begin('fsheet')
     frame_sheet = self.frame_sheets[0]
     ig.set_next_window_content_size(frame_sheet.get_content_width(), 0)
     ig.begin_child(
@@ -205,10 +233,13 @@ class View:
         variable = self.model.variables[VariableId.from_bytes(payload)]
         frame_sheet.append_variable(variable)
       ig.end_drag_drop_target()
+    log.timer.end()
 
+    log.timer.begin('varexp')
     ig.begin_child('Variable Explorer', border=True)
     self.variable_explorer.render('variable-explorer')
     ig.end_child()
+    log.timer.end()
 
 
   def ask_save_filename(self) -> bool:
@@ -343,7 +374,9 @@ def run() -> None:
       # view.file = None
     ig.push_id(id)
 
+    log.timer.begin('render')
     view.render()
+    log.timer.end()
 
     ig.pop_id()
 
@@ -364,7 +397,10 @@ def run() -> None:
         )
       model.timeline.slots.copies = 0
       model.timeline.slots.updates = 0
+
+      log.timer.begin('balance')
       model.timeline.balance_distribution(1/120)
+      log.timer.end()
 
   # TODO: Clean up (use local_state)
   def render(id: str) -> None:
@@ -399,9 +435,12 @@ def run() -> None:
       return
 
     try:
+      log.timer.begin_frame()
       ig.try_render(lambda: do_render(id))
     except:
       error = traceback.format_exc()
       log.error('Caught: ' + error)
+    finally:
+      log.timer.end_frame()
 
   open_window_and_run(render, maximize=True)
