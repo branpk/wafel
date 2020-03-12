@@ -1,7 +1,6 @@
 from typing import *
 
 import wafel.imgui as ig
-
 from wafel.core import VariableId
 from wafel.variable_format import VariableFormatter
 from wafel.util import *

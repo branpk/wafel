@@ -3,7 +3,6 @@ from dataclasses import dataclass
 import math
 
 import wafel.imgui as ig
-
 from wafel.local_state import use_state
 
 

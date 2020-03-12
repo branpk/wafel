@@ -1,9 +1,10 @@
 from typing import *
 
 import glfw
-import wafel.imgui as ig
 from imgui.integrations.glfw import GlfwRenderer
 from OpenGL import GL as gl
+
+import wafel.imgui as ig
 
 
 def _render_window(window, ig_renderer, render: Callable[[str], None]) -> None:

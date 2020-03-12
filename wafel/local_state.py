@@ -2,7 +2,6 @@ from typing import *
 from enum import Enum
 
 import wafel.imgui as ig
-
 from wafel.util import *
 
 

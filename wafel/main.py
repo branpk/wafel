@@ -11,10 +11,10 @@ import time
 import traceback
 
 import glfw
-import wafel.imgui as ig
 from imgui.integrations.glfw import GlfwRenderer
 from OpenGL import GL as gl
 
+import wafel.imgui as ig
 from wafel.graphics import *
 from wafel.core import *
 from wafel.model import Model
@@ -263,10 +263,19 @@ class View:
   def render(self) -> None:
     if self.loading is not None:
       try:
-        progress = next(self.loading)
-        ig.text(str(progress))
+        progress = None
+        start_time = time.time()
+        while time.time() - start_time < 1/60:
+          progress = next(self.loading)
+          if progress.progress == 0.0:
+            break
       except StopIteration:
         self.loading = None
+      if progress is not None:
+        window_size = ig.get_window_size()
+        width = 500
+        ig.set_cursor_pos((window_size.x / 2 - width / 2, window_size.y / 2 - 60))
+        ui.render_loading_bar('loading-bar', progress, width)
       return
 
 

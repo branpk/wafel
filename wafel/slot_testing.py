@@ -5,7 +5,6 @@ import time
 import random
 
 import wafel.imgui as ig
-
 from wafel.core.slot_manager import AbstractSlot, AbstractSlots, SlotManager
 from wafel.local_state import use_state, use_state_with
 import wafel.ui as ui

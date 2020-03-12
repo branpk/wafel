@@ -7,14 +7,14 @@ import sys
 T = TypeVar('T')
 
 @dataclass(frozen=True)
-class InProgress:
+class Progress:
   progress: float
   status: str
 
-Loading = Generator[InProgress, None, T]
+Loading = Generator[Progress, None, T]
 
-def in_progress(progress: float, status: str = '') -> InProgress:
-  return InProgress(progress, status)
+def in_progress(progress: float, status: str = '') -> Progress:
+  return Progress(progress, status)
 
 def load_scale(start: float, stop: float, child: Loading[T]) -> Loading[T]:
   try:

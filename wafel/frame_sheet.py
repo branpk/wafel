@@ -2,7 +2,6 @@ import sys
 from typing import *
 
 import wafel.imgui as ig
-
 from wafel.core import Variable, ObjectType, VariableParam, VariableId
 from wafel.model import Model
 from wafel.variable_format import Formatters, EmptyFormatter

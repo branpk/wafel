@@ -2,7 +2,6 @@ from typing import *
 import random
 
 import wafel.imgui as ig
-
 import wafel.ui as ui
 from wafel.local_state import use_state, use_state_with, local_state
 from wafel.window import open_window_and_run
@@ -10,6 +9,7 @@ from wafel.core import ObjectType, VariableId
 from wafel.util import *
 from wafel.variable_format import DecimalIntFormatter, CheckboxFormatter
 from wafel.slot_testing import test_timeline_algorithm
+from wafel.loading import in_progress
 
 
 # TODO: Hot reloading?
@@ -219,7 +219,21 @@ def test_variable_cell(id: str) -> None:
   ig.pop_id()
 
 
-DEFAULT_TEST = test_timeline_algorithm
+def test_loading_bar(id: str) -> None:
+  ig.push_id(id)
+
+  status = use_state('status', 'Loading')
+  progress = use_state('progress', 0.0)
+
+  _, status.value = ig.input_text('##status-input', status.value, 100)
+  _, progress.value = ig.slider_float('##progress-input', progress.value, 0, 1)
+
+  ui.render_loading_bar('loading-bar', in_progress(progress.value, status.value), 300)
+
+  ig.pop_id()
+
+
+DEFAULT_TEST = test_loading_bar
 
 TESTS = [
   test_joystick_control,
@@ -230,6 +244,7 @@ TESTS = [
   test_frame_slider,
   test_variable_cell,
   test_timeline_algorithm,
+  test_loading_bar,
 ]
 
 

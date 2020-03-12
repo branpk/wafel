@@ -470,6 +470,8 @@ def load_libsm64(game_version: str) -> Loading[GameLib]:
   dll = ctypes.cdll.LoadLibrary(path)
 
   status = f'Loading {filename}'
+  yield in_progress(0.0, status)
+
   spec = yield from load_child(
     0.0, 0.95, status, extract_data_spec_cached(path),
   )

@@ -3,7 +3,6 @@ import math
 import contextlib
 
 import wafel.imgui as ig
-
 from wafel.model import Model
 from wafel.graphics import CameraMode, Renderer, Camera, RotateCamera, \
   BirdsEyeCamera, RenderInfo, Viewport
