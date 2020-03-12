@@ -16,6 +16,7 @@ from elftools.dwarf.die import DIE
 from wafel.core.game_lib import DataSpec, GameLib
 from wafel.util import *
 from wafel.config import config
+from wafel.loading import Loading, in_progress, load_child, load_prefix, load_scale
 
 
 # TODO: Non-windows
@@ -315,6 +316,18 @@ def extract_definitions(spec: DataSpec, root: DIE) -> None:
       placeholders.append(placeholder)
 
 
+def extract_all_definitions(
+  spec: DataSpec,
+  compilation_units: List[CompileUnit],
+) -> Loading[None]:
+  for i, unit in enumerate(compilation_units):
+    root = unit.get_top_DIE()
+    filename = assert_not_none(attr_str(root, 'DW_AT_name'))
+    yield in_progress(i / len(compilation_units), ' - ' + filename)
+    extract_definitions(spec, root)
+  yield in_progress(1.0)
+
+
 def populate_sizes_and_alignment(spec: DataSpec) -> None:
   type_queue = []
   def get_all_types(node):
@@ -379,6 +392,14 @@ def find_sm64_compile_dir(compilation_units: List[CompileUnit]) -> str:
       return assert_not_none(attr_str(root, 'DW_AT_comp_dir'))
   raise Exception(f'Could not find {EXAMPLE_SM64_SOURCE_FILE} in library')
 
+def find_sm64_units(compilation_units: List[CompileUnit]) -> Loading[List[CompileUnit]]:
+  sm64_compile_dir = find_sm64_compile_dir(compilation_units)
+  sm64_units = []
+  for i, unit in enumerate(compilation_units):
+    yield in_progress(i / len(compilation_units))
+    if attr_str(unit.get_top_DIE(), 'DW_AT_comp_dir') == sm64_compile_dir:
+      sm64_units.append(unit)
+  return sm64_units
 
 def hash_file(path: str) -> str:
   with open(path, 'rb') as f:
@@ -386,18 +407,14 @@ def hash_file(path: str) -> str:
   return hashlib.md5(contents).hexdigest()
 
 
-def extract_data_spec(path: str) -> DataSpec:
-  log.info('Parsing library')
+def extract_data_spec(path: str) -> Loading[DataSpec]:
+  yield in_progress(0.0)
   sections = parse_lib(path)
+
+  yield in_progress(0.2)
   compilation_units = read_dwarf_info(sections)
+  compilation_units = yield from load_scale(0.2, 0.25, find_sm64_units(compilation_units))
 
-  sm64_compile_dir = find_sm64_compile_dir(compilation_units)
-  compilation_units = [
-    unit for unit in compilation_units
-      if attr_str(unit.get_top_DIE(), 'DW_AT_comp_dir') == sm64_compile_dir
-  ]
-
-  log.info('Extracting definitions')
   spec: DataSpec = {
     'format_version': CURRENT_SPEC_FORMAT_VERSION,
     'library_hash': hash_file(path),
@@ -418,16 +435,15 @@ def extract_data_spec(path: str) -> DataSpec:
     'constants': {},
   }
 
-  for unit in compilation_units:
-    extract_definitions(spec, unit.get_top_DIE())
+  yield from load_scale(0.25, 0.9, extract_all_definitions(spec, compilation_units))
 
   populate_sizes_and_alignment(spec)
 
-  log.info('Done')
+  yield in_progress(1.0)
   return spec
 
 
-def extract_data_spec_cached(path: str) -> DataSpec:
+def extract_data_spec_cached(path: str) -> Loading[DataSpec]:
   cache_key = f'libsm64_spec_{path}'
   spec = config.cache_get(cache_key)
 
@@ -435,9 +451,10 @@ def extract_data_spec_cached(path: str) -> DataSpec:
   if spec is not None and \
       spec['format_version'] == CURRENT_SPEC_FORMAT_VERSION and \
       spec['library_hash'] == library_hash:
+    log.info(f'Cache hit for {os.path.basename(path)}')
     return spec
 
-  spec = extract_data_spec(path)
+  spec = yield from extract_data_spec(path)
 
   lib_name = os.path.splitext(os.path.basename(path))[0]
   config.cache_put(cache_key, spec, f'{lib_name}*.json')
@@ -445,11 +462,17 @@ def extract_data_spec_cached(path: str) -> DataSpec:
   return spec
 
 
-def load_libsm64(game_version: str) -> GameLib:
-  path = os.path.join(config.lib_directory, 'libsm64', f'sm64_{game_version}.dll')
+def load_libsm64(game_version: str) -> Loading[GameLib]:
+  filename = f'sm64_{game_version}.dll'
+  log.info('Loading', filename)
+  path = os.path.join(config.lib_directory, 'libsm64', filename)
 
   dll = ctypes.cdll.LoadLibrary(path)
-  spec = extract_data_spec_cached(path)
+
+  status = f'Loading {filename}'
+  spec = yield from load_child(
+    0.0, 0.95, status, extract_data_spec_cached(path),
+  )
 
   # TODO: Hacks until macros/object fields are implemented
   with open(os.path.join(config.assets_directory, 'hack_constants.json'), 'r') as f:
@@ -458,4 +481,6 @@ def load_libsm64(game_version: str) -> GameLib:
     spec['extra'] = {}
     spec['extra']['object_fields'] = json.load(f)
 
+  yield in_progress(1.0, status)
+  log.info('Done loading', filename)
   return GameLib(spec, dll)

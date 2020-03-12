@@ -65,6 +65,7 @@ class SequenceFile:
 class View:
 
   def __init__(self, model: Model) -> None:
+    self.loading: Optional[Loading[None]] = None
     self.model = model
     self.epoch = 0
     self.tkinter_root = tkinter.Tk()
@@ -77,6 +78,12 @@ class View:
 
 
   def reload(self) -> None:
+    if self.loading is not None:
+      return
+    self.loading = self._reload()
+
+
+  def _reload(self) -> Loading[None]:
     if self.file is None:
       metadata = TasMetadata('us', 'Untitled TAS', 'Unknown author(s)', 'Made using Wafel')
       edits = Edits()
@@ -87,8 +94,20 @@ class View:
     else:
       raise NotImplementedError(self.file.type)
     self.metadata = metadata
-    self.model.load(metadata.game_version, edits)
+    yield from self.model.load(metadata.game_version, edits)
 
+    self.reload_ui()
+
+
+  def change_version(self, version: str) -> None:
+    if self.loading is not None:
+      return
+    self.loading = self._change_version(version)
+
+
+  def _change_version(self, version: str) -> Loading[None]:
+    self.metadata.game_version = version
+    yield from self.model.change_version(version)
     self.reload_ui()
 
 
@@ -234,9 +253,7 @@ class View:
           ]
           for label, version in versions:
             if ig.menu_item(label, selected = self.metadata.game_version == version)[0]:
-              self.metadata.game_version = version
-              self.model.change_version(version)
-              self.reload_ui()
+              self.change_version(version)
           ig.end_menu()
 
         ig.end_menu()
@@ -244,6 +261,15 @@ class View:
 
 
   def render(self) -> None:
+    if self.loading is not None:
+      try:
+        progress = next(self.loading)
+        ig.text(str(progress))
+      except StopIteration:
+        self.loading = None
+      return
+
+
     # TODO: Move keyboard handling somewhere else
     # TODO: Make this work when holding down mouse button
     model = self.model
@@ -310,26 +336,26 @@ def run() -> None:
 
     view.render()
 
-    # TODO: Debug menu that shows this
+    ig.pop_id()
+
+
     last_fps_time = use_state_with('last-fps-time', lambda: time.time())
     frame_count = use_state('frame-count', 0)
     fps = use_state('fps', 0.0)
 
-    frame_count.value += 1
-    if time.time() > last_fps_time.value + 5:
-      fps.value = frame_count.value / (time.time() - last_fps_time.value)
-      last_fps_time.value = time.time()
-      frame_count.value = 0
-      log.info(
-        f'mspf: {int(1000 / fps.value * 10) / 10} ({int(fps.value)} fps) - ' +
-        f'{model.timeline.slots.copies} copies, {model.timeline.slots.updates} updates'
-      )
-    model.timeline.slots.copies = 0
-    model.timeline.slots.updates = 0
-
-    ig.pop_id()
-
-    model.timeline.balance_distribution(1/120)
+    if hasattr(model, 'timeline'):
+      frame_count.value += 1
+      if time.time() > last_fps_time.value + 5:
+        fps.value = frame_count.value / (time.time() - last_fps_time.value)
+        last_fps_time.value = time.time()
+        frame_count.value = 0
+        log.info(
+          f'mspf: {int(1000 / fps.value * 10) / 10} ({int(fps.value)} fps) - ' +
+          f'{model.timeline.slots.copies} copies, {model.timeline.slots.updates} updates'
+        )
+      model.timeline.slots.copies = 0
+      model.timeline.slots.updates = 0
+      model.timeline.balance_distribution(1/120)
 
   # TODO: Clean up (use local_state)
   def render(id: str) -> None:

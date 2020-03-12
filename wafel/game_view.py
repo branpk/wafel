@@ -58,7 +58,7 @@ class GameView:
     self.model = model
     self.camera_mode = camera_mode
 
-    self.renderer = Renderer()
+    self.renderer = Renderer.get()
     self.mouse_tracker = MouseTracker()
 
     self.total_drag = [0.0, 0.0]

@@ -7,24 +7,26 @@ import os
 from wafel.config import config
 from wafel.core import GameLib, Variable, Edits, Timeline, GameState, ObjectId, \
   ObjectType, VariableParam, load_libsm64
+from wafel.loading import Loading
 
+
+# TODO: Should create a new Model on every load
 
 class Model:
 
-  def load(self, game_version: str, edits: Edits) -> None:
-    self._load_lib(game_version)
+  def load(self, game_version: str, edits: Edits) -> Loading[None]:
+    yield from self._load_lib(game_version)
     self._set_edits(edits)
 
-  def change_version(self, game_version: str) -> None:
-    self.load(game_version, self.edits)
+  def change_version(self, game_version: str) -> Loading[None]:
+    yield from self.load(game_version, self.edits)
 
-  def _load_lib(self, game_version: str) -> None:
+  def _load_lib(self, game_version: str) -> Loading[None]:
     if hasattr(self, 'game_version') and self.game_version == game_version:
       return
     self.game_version = game_version
 
-    # TODO: Loading bar?
-    self.lib = load_libsm64(game_version)
+    self.lib = yield from load_libsm64(game_version)
 
     self.variables = Variable.create_all(self.lib)
 

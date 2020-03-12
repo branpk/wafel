@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from enum import Enum
 from typing import *
 import math
@@ -95,7 +97,16 @@ class RenderInfo:
 
 
 class Renderer:
+  _instance: Optional[Renderer] = None
+
+  @staticmethod
+  def get() -> Renderer:
+    if Renderer._instance is None:
+      Renderer._instance = Renderer()
+    return Renderer._instance
+
   def __init__(self):
+    assert Renderer._instance is None
     self._addr = ext_graphics.new_renderer(config.assets_directory)
 
   def __del__(self):
