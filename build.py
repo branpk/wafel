@@ -33,7 +33,7 @@ if 'dist' in sys.argv[1:]:
       '--specpath', 'build',
       '--distpath', 'build/dist',
       '--add-binary', glfw._name + os.pathsep + '.',
-      '--name', 'wafel_' + '_'.join(map(str, config.version)),
+      '--name', 'wafel',
       'run.py',
     ],
     check=True,
@@ -41,3 +41,10 @@ if 'dist' in sys.argv[1:]:
 
   shutil.copytree('assets', 'build/dist/assets')
   shutil.copytree('lib/libsm64', 'build/dist/libsm64')
+
+  print('Creating zip file')
+  shutil.make_archive(
+    'build/wafel_' + config.version_str('_'),
+    'zip',
+    'build/dist',
+  )

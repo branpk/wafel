@@ -17,6 +17,9 @@ cache_directory: str
 log_file: str
 
 
+def version_str(delim: str) -> str:
+  return delim.join(map(str, version))
+
 def _load_cache_index() -> Any:
   cache_index = os.path.join(cache_directory, 'index.json')
   if os.path.exists(cache_index):

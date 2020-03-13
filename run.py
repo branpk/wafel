@@ -6,7 +6,7 @@ import wafel.log as log
 import wafel.config as config
 from wafel.main import run
 
-log.info('Wafel', '.'.join(map(str, config.version)))
+log.info('Wafel', config.version_str('.'))
 log.subscribe(print)
 
 if getattr(sys, 'frozen', False):

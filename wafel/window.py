@@ -5,6 +5,7 @@ from imgui.integrations.glfw import GlfwRenderer
 from OpenGL import GL as gl
 
 import wafel.imgui as ig
+import wafel.config as config
 
 
 def _render_window(window, ig_renderer, render: Callable[[str], None]) -> None:
@@ -56,7 +57,7 @@ def open_window_and_run(render: Callable[[str], None], maximize = False) -> None
   glfw.window_hint(glfw.SAMPLES, 4)
 
   glfw.window_hint(glfw.VISIBLE, False)
-  window = glfw.create_window(800, 600, 'Wafel', None, None)
+  window = glfw.create_window(800, 600, 'Wafel ' + config.version_str('.'), None, None)
   glfw.set_window_size_limits(window, 1, 1, glfw.DONT_CARE, glfw.DONT_CARE)
   if maximize:
     glfw.maximize_window(window)
