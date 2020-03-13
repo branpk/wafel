@@ -1,5 +1,4 @@
 from typing import *
-from typing.io import *
 import json
 
 from wafel.core import Edits, VariableId, INPUT_BUTTON_FLAGS
@@ -48,7 +47,7 @@ class Encoder(json.JSONEncoder):
       return key
     return super().default(o)
 
-  def iterencode(self, o: Any) -> Iterator[str]:
+  def iterencode(self, o):
     for s in super().iterencode(o):
       yield self.subst.get(s.strip('"')) or s
 
@@ -88,11 +87,12 @@ def save_wafi(filename: str, metadata: TasMetadata, edits: Edits) -> None:
         else:
           raise NotImplementedError(edit.variable_id)
 
-    button_labels = [
+    stick_inputs: List[object] = [stick_x, stick_y]
+    button_labels: List[object] = [
       label for id, label in INPUT_BUTTON_LABELS.items()
         if buttons & INPUT_BUTTON_FLAGS[id]
     ]
-    input_data.append(NoIndent([stick_x, stick_y] + button_labels))
+    input_data.append(NoIndent(stick_inputs + button_labels))
 
   data = {
     'info': {

@@ -5,7 +5,7 @@ import ctypes as C
 
 from wafel.core.game_lib import GameLib
 from wafel.core.variable_param import VariableParam, VariableArgs
-from wafel.core.game_state import GameState, StateSlot, RelativeAddr
+from wafel.core.game_state import GameState, StateSlot, RelativeAddr, Object
 from wafel.util import *
 
 
@@ -97,12 +97,12 @@ class DataPath:
     if self.concrete_type['kind'] == 'primitive':
       ctype = PRIMITIVE_CTYPES[self.concrete_type['name']]
       pytype = PRIMITIVE_PYTYPES[self.concrete_type['name']]
-      addr = C.cast(self.get_addr(args), C.POINTER(ctype))
+      addr = C.cast(self.get_addr(args), C.POINTER(ctype)) # type: ignore
       return pytype(addr[0] if addr else 0)
 
     elif self.concrete_type['kind'] == 'pointer':
-      addr = C.cast(self.get_addr(args), C.POINTER(C.c_void_p))
-      value = int(addr[0] or 0 if addr else 0)
+      addr = C.cast(self.get_addr(args), C.POINTER(C.c_void_p)) # type: ignore
+      value = int(addr[0] or 0 if addr else 0) # type: ignore
 
       state = dcast(GameState, args[VariableParam.STATE])
 
@@ -127,7 +127,7 @@ class DataPath:
       ctype = PRIMITIVE_CTYPES[self.concrete_type['name']]
       pytype = PRIMITIVE_PYTYPES[self.concrete_type['name']]
       assert isinstance(value, pytype)
-      addr = C.cast(self.get_addr(args), C.POINTER(ctype))
+      addr = C.cast(self.get_addr(args), C.POINTER(ctype)) # type: ignore
       # TODO: Check overflow behavior
       addr[0] = value
 
@@ -153,7 +153,7 @@ class _State(DataPath):
     super().__init__(lib, [VariableParam.STATE], { 'kind': 'global' })
 
   def get_slot(self, args: VariableArgs) -> StateSlot:
-    return args[VariableParam.STATE].slot
+    return dcast(GameState, args[VariableParam.STATE]).slot
 
 
 class _Object(DataPath):
@@ -161,7 +161,7 @@ class _Object(DataPath):
     super().__init__(lib, [VariableParam.OBJECT], lib.spec['types']['struct']['Object'])
 
   def get_addr(self, args: VariableArgs) -> int:
-    return args[VariableParam.OBJECT].addr
+    return dcast(Object, args[VariableParam.OBJECT]).addr
 
 
 class _Field(DataPath):
@@ -227,4 +227,4 @@ class _Deref(DataPath):
     self.pointer = pointer
 
   def get_addr(self, args: VariableArgs) -> int:
-    return self.pointer.get(args)
+    return dcast(int, self.pointer.get(args))

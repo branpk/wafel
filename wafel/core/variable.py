@@ -266,10 +266,11 @@ class _FlagVariable(Variable):
       VariableDataType.BOOL,
     )
     self.flags = flags
-    self.flag = self.flags.lib.spec['constants'][flag]['value']
+    self.flag = dcast(int, self.flags.lib.spec['constants'][flag]['value'])
 
   def get(self, args: VariableArgs) -> bool:
-    return (self.flags.get(args) & self.flag) != 0
+    flags = dcast(int, self.flags.get(args))
+    return (flags & self.flag) != 0
 
   def set(self, value: bool, args: VariableArgs) -> None:
     assert not self.read_only
@@ -327,7 +328,7 @@ class VariableSpec:
     pass
 
   def label(self, label: str) -> 'VariableSpec':
-    self._label = label
+    self._label: Optional[str] = label
     return self
 
   def hidden(self) -> 'VariableSpec':
@@ -399,6 +400,7 @@ def _all_variables(lib: GameLib) -> Variables:
       label = name
       group = VariableGroup.hidden()
 
+    variable: Variable
     if isinstance(spec, DataVariableSpec):
       variable = _DataVariable(
         name,

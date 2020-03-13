@@ -16,10 +16,10 @@ class MouseTracker:
     self.mouse_pos = (0.0, 0.0)
 
   def is_mouse_in_window(self) -> bool:
-    window_x, window_y = ig.get_window_position()
-    window_w, window_h = ig.get_window_size()
+    window_x, window_y = cast(Iterable[float], ig.get_window_position())
+    window_w, window_h = cast(Iterable[float], ig.get_window_size())
     return self.mouse_pos[0] >= window_x and self.mouse_pos[0] < window_x + window_w and \
-        self.mouse_pos[1] >= window_y and self.mouse_pos[1] < window_y + window_h
+      self.mouse_pos[1] >= window_y and self.mouse_pos[1] < window_y + window_h
 
   def get_drag_amount(self) -> Tuple[float, float]:
     mouse_was_down = self.mouse_down
@@ -46,7 +46,7 @@ class MouseTracker:
 
   def get_wheel_amount(self) -> float:
     if self.is_mouse_in_window():
-      return ig.get_io().mouse_wheel
+      return cast(float, ig.get_io().mouse_wheel)
     else:
       return 0
 
@@ -60,8 +60,8 @@ class GameView:
     self.renderer = Renderer.get()
     self.mouse_tracker = MouseTracker()
 
-    self.total_drag = [0.0, 0.0]
-    self.zoom = 0
+    self.total_drag = (0.0, 0.0)
+    self.zoom = 0.0
 
 
   def compute_camera(self) -> Camera:

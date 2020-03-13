@@ -347,7 +347,7 @@ class View:
 
   def dbg_is_key_pressed(self, key: int) -> bool:
     if not hasattr(self, 'dbg_keys_down'):
-      self.dbg_keys_down = set()
+      self.dbg_keys_down: Set[int] = set()
 
     if ig.is_key_down(key):
       pressed = key not in self.dbg_keys_down

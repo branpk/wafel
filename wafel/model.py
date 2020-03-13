@@ -14,6 +14,10 @@ from wafel.loading import Loading
 
 class Model:
 
+  def __init__(self) -> None:
+    self.game_version: str
+    self.timeline: Timeline
+
   def load(self, game_version: str, edits: Edits) -> Loading[None]:
     yield from self._load_lib(game_version)
     self._set_edits(edits)
@@ -31,7 +35,8 @@ class Model:
     self.variables = Variable.create_all(self.lib)
 
   def _set_edits(self, edits: Edits) -> None:
-    self.timeline = None
+    if hasattr(self, 'timeline'):
+      del self.timeline
     gc.collect() # Force garbage collection of game state slots
 
     self.edits = edits

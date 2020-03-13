@@ -7,7 +7,7 @@ import math
 from wafel.core import GameState, DataPath, VariableParam, GameLib
 import wafel.config as config
 
-import ext_modules.graphics as ext_graphics
+import ext_modules.graphics as ext_graphics # type: ignore
 
 
 class GameStateWrapper:
