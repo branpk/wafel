@@ -5,7 +5,7 @@ from typing import *
 import math
 
 from wafel.core import GameState, DataPath, VariableParam, GameLib
-from wafel.config import config
+import wafel.config as config
 
 import ext_modules.graphics as ext_graphics
 

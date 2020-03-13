@@ -4,7 +4,7 @@ import json
 import gc
 import os
 
-from wafel.config import config
+import wafel.config as config
 from wafel.core import GameLib, Variable, Edits, Timeline, GameState, ObjectId, \
   ObjectType, VariableParam, load_libsm64
 from wafel.loading import Loading

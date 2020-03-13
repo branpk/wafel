@@ -1,5 +1,4 @@
 from typing import *
-from ctypes import *
 import json
 import math
 import sys
@@ -29,6 +28,7 @@ from wafel.window import open_window_and_run
 import wafel.ui as ui
 from wafel.local_state import use_state, use_state_with
 from wafel.util import *
+import wafel.config as config
 
 
 DEFAULT_FRAME_SHEET_VARS = [
@@ -112,7 +112,7 @@ class View:
 
 
   def reload_ui(self) -> None:
-    self.show_debug_pane = False
+    self.show_debug_pane = config.dev_mode
     self.formatters = Formatters()
 
     self.frame_sheets: List[FrameSheet] = [FrameSheet(self.model, self.formatters)]
@@ -369,10 +369,10 @@ def run() -> None:
 
     if view is None:
       view = View(model)
-      view.loading = None
-      view.file = SequenceFile('test_files/1key_j.m64', 'm64')
-      view.reload()
-      # view.file = None
+      if config.dev_mode:
+        view.loading = None
+        view.file = SequenceFile('test_files/1key_j.m64', 'm64')
+        view.reload()
     ig.push_id(id)
 
     log.timer.begin('render')

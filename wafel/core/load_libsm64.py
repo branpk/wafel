@@ -15,7 +15,7 @@ from elftools.dwarf.die import DIE
 
 from wafel.core.game_lib import DataSpec, GameLib
 from wafel.util import *
-from wafel.config import config
+import wafel.config as config
 from wafel.loading import Loading, in_progress, load_child, load_prefix, load_scale
 
 

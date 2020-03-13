@@ -4,7 +4,7 @@ import shutil
 import os
 from glob import glob
 
-from wafel.config import VERSION
+import wafel.config as config
 
 if 'clean' in sys.argv[1:]:
   build_files = ['dist', 'ext_modules.egg-info', 'build']
@@ -33,7 +33,7 @@ if 'dist' in sys.argv[1:]:
       '--specpath', 'build',
       '--distpath', 'build/dist',
       '--add-binary', glfw._name + os.pathsep + '.',
-      '--name', 'wafel_' + '_'.join(map(str, VERSION)),
+      '--name', 'wafel_' + '_'.join(map(str, config.version)),
       'run.py',
     ],
     check=True,
