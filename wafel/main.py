@@ -369,8 +369,9 @@ def run() -> None:
 
     if view is None:
       view = View(model)
-      # view.file = SequenceFile('test_files/1key_j.m64', 'm64')
-      # view.reload()
+      view.loading = None
+      view.file = SequenceFile('test_files/1key_j.m64', 'm64')
+      view.reload()
       # view.file = None
     ig.push_id(id)
 

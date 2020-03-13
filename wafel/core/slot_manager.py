@@ -123,12 +123,20 @@ class SlotManager(Generic[SLOT]):
     while assert_not_none(self.slots.base.frame) < frame:
       self.slots.execute_frame()
 
-    if allow_nesting:
-      slot = random.choice(self.slots.where(base=False, frozen=False))
-      self.slots.copy(slot, self.slots.base)
-      return slot
-    else:
+    if not allow_nesting:
       return self.slots.base
+
+    available_slots = self.slots.where(base=False, frozen=False)
+    if len(available_slots) == 0:
+      raise Exception('Ran out of slots')
+
+    # The latest slot is typically easy to recreate
+    selected_slot = max(
+      available_slots,
+      key=lambda slot: float('inf') if slot.frame is None else slot.frame,
+    )
+    self.slots.copy(selected_slot, self.slots.base)
+    return selected_slot
 
   def set_hotspot(self, name: str, frame: int) -> None:
     self.hotspots[name] = frame
@@ -139,38 +147,37 @@ class SlotManager(Generic[SLOT]):
 
   def balance_distribution(self, max_run_time: float) -> None:
     start_time = time.time()
-    iters = 0
-    while time.time() - start_time < max_run_time:
-      if len(self.hotspots) == 0:
+
+    alignments = [1, 15, 40, 145, 410, 1505, 4010, 14005]
+    target_frames = sorted({
+      align_down(hotspot, align)
+        for align in alignments
+          for hotspot in self.hotspots.values()
+    })
+
+    used_slots = []
+    for frame in target_frames:
+      if time.time() - start_time >= max_run_time:
+        return
+
+      matching_slots = [
+        slot for slot in self.slots.where(base=False)
+          if slot.frame == frame
+      ]
+      if len(matching_slots) > 0:
+        used_slots.append(matching_slots[0])
         continue
 
-      hotspot = random.choice(list(self.hotspots.values()))
-      alignments = [1, 15, 40, 145, 410, 1505, 4010, 14005]
-      target_frames = list(sorted(align_down(hotspot, align) for align in alignments))
-
-      used_slots = []
-      for frame in target_frames:
-        matching_slots = [
-          slot for slot in self.slots.where(base=False)
-            if slot.frame == frame
-        ]
-        if len(matching_slots) > 0:
-          used_slots.append(matching_slots[0])
-          continue
-
-        slot = self.request_frame(frame)
-        available_slots = [
-          slot for slot in self.slots.where(base=False, frozen=False)
-            if slot not in used_slots
-        ]
-        if len(available_slots) > 0:
-          selected_slot = random.choice(available_slots)
-          self.slots.copy(selected_slot, slot)
-
-        break
-
-      iters += 1
-    # log.debug(iters)
+      slot = self.request_frame(frame)
+      available_slots = [
+        slot for slot in self.slots.where(base=False, frozen=False)
+          if slot not in used_slots
+      ]
+      if len(available_slots) > 0:
+        selected_slot = random.choice(available_slots)
+        self.slots.copy(selected_slot, slot)
+      else:
+        log.warn('Using a suboptimal number of slots')
 
   def get_loaded_frames(self) -> List[int]:
     return [assert_not_none(slot.frame) for slot in self.slots.where(valid=True)]

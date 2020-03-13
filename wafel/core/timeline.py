@@ -105,7 +105,7 @@ class Timeline:
     edits: Edits,
   ) -> None:
     self.edits = edits
-    self.slots = StateSlots(lib, variables, edits, capacity=200)
+    self.slots = StateSlots(lib, variables, edits, capacity=50)
     self.slot_manager = SlotManager(self.slots)
 
   def __getitem__(self, frame: int) -> StateSlot:
