@@ -22,7 +22,7 @@ config.assets_directory = os.path.join(root_dir, 'assets')
 config.cache_directory = os.path.join(root_dir, '.wafel_cache')
 config.log_file = os.path.join(root_dir, 'log.txt')
 
-with open(config.log_file, 'w') as log_file:
+with open(config.log_file, 'a') as log_file:
   def append_to_log(message: log.LogMessage) -> None:
     log_file.write(str(message) + '\n')
     log_file.flush()
