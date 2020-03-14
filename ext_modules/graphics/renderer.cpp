@@ -66,7 +66,7 @@ void Renderer::build_transforms(const Viewport &viewport, const Scene &scene) {
 
       float top = 1.0f * camera.span_y / 2.0f;
       float right = top * viewport.size.x / viewport.size.y;
-      float y_scale = 1000.0f;
+      float y_scale = 20000.0f;
       proj_matrix = glm::transpose(mat4(
             0,          0, 1/right,  0,
         1/top,          0,       0,  0,
