@@ -54,6 +54,10 @@ class NoArg(Enum):
 class Ref(Generic[T]):
   def __init__(self, value: T) -> None:
     self.value = value
+  def __repr__(self) -> str:
+    return 'Ref(' + repr(self.value) + ')'
+  def __str__(self) -> str:
+    return 'Ref(' + str(self.value) + ')'
 
 @dataclass(frozen=True)
 class Just(Generic[T]):

@@ -7,6 +7,8 @@ from wafel.model import Model
 from wafel.graphics import CameraMode, Renderer, Camera, RotateCamera, \
   BirdsEyeCamera, RenderInfo, Viewport
 from wafel.core import VariableParam
+from wafel.util import *
+from wafel.local_state import use_state
 
 
 class MouseTracker:
@@ -63,6 +65,8 @@ class GameView:
     self.total_drag = (0.0, 0.0)
     self.zoom = 0.0
 
+    self.birds_eye_target: Optional[Tuple[float, float]] = None
+
 
   def compute_camera(self) -> Camera:
     with self.model.timeline[self.model.selected_frame] as state:
@@ -87,7 +91,10 @@ class GameView:
       return camera
 
     elif self.camera_mode == CameraMode.BIRDS_EYE:
-      target = mario_pos
+      if self.birds_eye_target is None:
+        target = mario_pos
+      else:
+        target = [self.birds_eye_target[0], mario_pos[1], self.birds_eye_target[1]]
       return BirdsEyeCamera(
         pos = [target[0], target[1] + 500, target[2]],
         span_y = 200 / math.pow(2, self.zoom),
@@ -98,9 +105,10 @@ class GameView:
 
 
   def render(self, window_size: Tuple[int, int]) -> None:
-    viewport_x, viewport_y = tuple(map(int, ig.get_window_position()))
+    window_pos = tuple(map(int, ig.get_window_position()))
     viewport_w, viewport_h = tuple(map(int, ig.get_window_size()))
-    viewport_y = window_size[1] - viewport_y - viewport_h
+    viewport_x = window_pos[0]
+    viewport_y = window_size[1] - window_pos[1] - viewport_h
 
     drag_amount = self.mouse_tracker.get_drag_amount()
     self.total_drag = (
@@ -108,6 +116,21 @@ class GameView:
       self.total_drag[1] + drag_amount[1],
     )
     self.zoom += self.mouse_tracker.get_wheel_amount() / 5
+
+    camera = self.compute_camera()
+
+    if self.camera_mode == CameraMode.BIRDS_EYE:
+      assert isinstance(camera, BirdsEyeCamera)
+      if drag_amount != (0.0, 0.0):
+        span_y = camera.span_y
+        span_x = span_y * viewport_w / viewport_h
+        self.birds_eye_target = (
+          camera.pos[0] + drag_amount[1] * span_y / viewport_h,
+          camera.pos[2] - drag_amount[0] * span_x / viewport_w,
+        )
+      if self.birds_eye_target is not None:
+        if ig.button('Center'):
+          self.birds_eye_target = None
 
     # TODO: Extract out needed info for slots one-by-one instead of using nested
     # lookups
@@ -123,7 +146,7 @@ class GameView:
       self.renderer.render(RenderInfo(
         self.model.lib,
         Viewport(viewport_x, viewport_y, viewport_w, viewport_h),
-        self.compute_camera(),
+        camera,
         root_state,
         neighbor_states,
       ))
