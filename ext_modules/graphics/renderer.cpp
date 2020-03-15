@@ -41,6 +41,9 @@ void Renderer::render(const Viewport &viewport, const Scene &scene) {
   render_objects(scene);
   render_object_paths(scene);
   render_wall_hitboxes(scene);
+  if (scene.camera.mode == CameraMode::BIRDS_EYE) {
+    render_unit_squares(scene);
+  }
 }
 
 void Renderer::build_transforms(const Viewport &viewport, const Scene &scene) {
@@ -412,5 +415,59 @@ void Renderer::render_path_dots(const vector<PathDot> &dots) {
   vertex_array->set("inRadius", in_radius);
 
   glDrawArrays(GL_TRIANGLES, 0, in_center.size());
+  delete vertex_array;
+}
+
+void Renderer::render_unit_squares(const Scene &scene) {
+  Program *program = res.program(
+    assets_directory + "/shaders/color.vert",
+    assets_directory + "/shaders/color.frag");
+
+  program->use();
+  program->set_uniform("uProjMatrix", proj_matrix);
+  program->set_uniform("uViewMatrix", view_matrix);
+
+  BirdsEyeCamera camera = scene.camera.birds_eye_camera;
+
+  float span_x = camera.span_y;
+  float span_z = span_x * viewport.size.x / viewport.size.y;
+
+  float min_x = camera.pos.x - span_x / 2.0f;
+  float max_x = camera.pos.x + span_x / 2.0f;
+  float min_z = camera.pos.z - span_z / 2.0f;
+  float max_z = camera.pos.z + span_z / 2.0f;
+
+  float density_threshold = 0.1f;
+  float density = fmax(
+    (max_x - min_x) / viewport.size.y,
+    (max_z - min_z) / viewport.size.x);
+  if (density > density_threshold) {
+    return;
+  }
+
+  VertexArray *vertex_array = new VertexArray(program);
+  vertex_array->bind();
+
+  vector<vec3> in_pos;
+
+  for (int x = (int) min_x; x <= (int) max_x; x++) {
+    in_pos.push_back(vec3(x, camera.pos.y - 1, min_z));
+    in_pos.push_back(vec3(x, camera.pos.y - 1, max_z));
+  }
+  for (int z = (int) min_z; z <= (int) max_z; z++) {
+    in_pos.push_back(vec3(min_x, camera.pos.y - 1, z));
+    in_pos.push_back(vec3(max_x, camera.pos.y - 1, z));
+  }
+
+  vector<vec4> in_color;
+  in_color.insert(in_color.end(), in_pos.size(), vec4(0.8f, 0.8f, 1.0f, 0.5f));
+
+  vertex_array->set("inPos", in_pos);
+  vertex_array->set("inColor", in_color);
+
+  glDisable(GL_DEPTH_TEST);
+  glDrawArrays(GL_LINES, 0, in_pos.size());
+  glEnable(GL_DEPTH_TEST);
+
   delete vertex_array;
 }

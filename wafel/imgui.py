@@ -6,12 +6,19 @@ from wafel.util import *
 
 _stack: List[Tuple[str, Any]] = []
 
-# TODO: Test exceptions in begin_menu_bar, push_item_width, begin_drag_drop_source, begin_popup_context_item
+def fixed_begin_child(*args, **kwargs):
+  fixed_args = list(args)
+  fixed_args[0] = str(ig.get_id(fixed_args[0]))
+  return ig.begin_child(*fixed_args, **kwargs)
 
 def _unconditional_begin_call(name: str) -> Any:
   def func(*args, **kwargs):
     _stack.append((name, (args, kwargs)))
-    return getattr(ig, name)(*args, **kwargs)
+    if name == 'begin_child':
+      ig_func = fixed_begin_child
+    else:
+      ig_func = getattr(ig, name)
+    return ig_func(*args, **kwargs)
   return func
 
 def _conditional_begin_call(name: str) -> Any:
