@@ -1,0 +1,249 @@
+from typing import *
+import math
+import contextlib
+
+import wafel.imgui as ig
+from wafel.model import Model
+from wafel.graphics import CameraMode, Renderer, Camera, RotateCamera, \
+  BirdsEyeCamera, RenderInfo, Viewport, Vec3f
+from wafel.core import VariableParam
+from wafel.util import *
+from wafel.local_state import use_state, use_state_with
+
+
+class MouseTracker:
+  def __init__(self) -> None:
+    self.dragging = False
+    self.mouse_down = False
+    self.mouse_pos = (0.0, 0.0)
+
+  def is_mouse_in_window(self) -> bool:
+    window_x, window_y = cast(Iterable[float], ig.get_window_position())
+    window_w, window_h = cast(Iterable[float], ig.get_window_size())
+    return self.mouse_pos[0] >= window_x and self.mouse_pos[0] < window_x + window_w and \
+      self.mouse_pos[1] >= window_y and self.mouse_pos[1] < window_y + window_h
+
+  def get_drag_amount(self) -> Tuple[float, float]:
+    mouse_was_down = self.mouse_down
+    last_mouse_pos = self.mouse_pos
+    self.mouse_down = ig.is_mouse_down()
+    self.mouse_pos = ig.get_mouse_pos()
+
+    if self.dragging:
+      if not self.mouse_down:
+        self.dragging = False
+      return (
+        self.mouse_pos[0] - last_mouse_pos[0],
+        self.mouse_pos[1] - last_mouse_pos[1],
+      )
+
+    elif not mouse_was_down and self.mouse_down and not ig.is_any_item_hovered():
+      window_x, window_y = ig.get_window_position()
+      window_w, window_h = ig.get_window_size()
+      if self.mouse_pos[0] >= window_x and self.mouse_pos[0] < window_x + window_w and \
+          self.mouse_pos[1] >= window_y and self.mouse_pos[1] < window_y + window_h:
+        self.dragging = True
+
+    return (0, 0)
+
+  def get_wheel_amount(self) -> float:
+    if self.is_mouse_in_window():
+      return cast(float, ig.get_io().mouse_wheel)
+    else:
+      return 0
+
+
+def angle_to_direction(pitch: float, yaw: float) -> Vec3f:
+  return (
+    math.cos(pitch) * math.sin(yaw),
+    math.sin(pitch),
+    math.cos(pitch) * math.cos(yaw),
+  )
+
+
+def get_viewport(framebuffer_size: Tuple[int, int]) -> Viewport:
+  window_pos = tuple(map(int, ig.get_window_position()))
+  window_size = tuple(map(int, ig.get_window_size()))
+
+  return Viewport(
+    window_pos[0],
+    framebuffer_size[1] - window_pos[1] - window_size[1],
+    window_size[0],
+    window_size[1],
+  )
+
+
+def get_mario_pos(model: Model) -> Vec3f:
+  with model.timeline[model.selected_frame] as state:
+    args = { VariableParam.STATE: state }
+    return (
+      model.variables['mario-pos-x'].get(args),
+      model.variables['mario-pos-y'].get(args),
+      model.variables['mario-pos-z'].get(args),
+    )
+
+
+def render_game_view_rotate(
+  id: str,
+  framebuffer_size: Tuple[int, int],
+  model: Model,
+) -> None:
+  ig.push_id(id)
+
+  mouse_state = use_state('mouse-state', MouseTracker()).value
+  pitch = use_state('pitch', 0.0)
+  yaw = use_state('yaw', 0.0)
+  zoom = use_state('zoom', 0.0)
+
+  drag_amount = mouse_state.get_drag_amount()
+  pitch.value -= drag_amount[1] / 200
+  yaw.value -= drag_amount[0] / 200
+  zoom.value += mouse_state.get_wheel_amount() / 5
+
+  target = get_mario_pos(model)
+  offset = 1500 * math.pow(0.5, zoom.value)
+  face_direction = angle_to_direction(pitch.value, yaw.value)
+  camera_pos = (
+    target[0] - offset * face_direction[0],
+    target[1] - offset * face_direction[1],
+    target[2] - offset * face_direction[2],
+  )
+
+  camera = RotateCamera(
+    camera_pos,
+    pitch.value,
+    yaw.value,
+    math.radians(45),
+  )
+
+  render_game(model, get_viewport(framebuffer_size), camera)
+
+  ig.pop_id()
+
+
+def render_pos_y_slider(
+  id: str,
+  pos_y: float,
+  mario_pos_y: float,
+) -> Tuple[Optional[float], bool]:
+  ig.push_id(id)
+
+  ig.text('max y = %.f' % pos_y)
+  ig.set_cursor_pos((ig.get_window_width() - 30, ig.get_cursor_pos().y))
+
+  slider_pos = ig.get_cursor_pos()
+  slider_width = 20
+  slider_height = ig.get_content_region_available().y
+  slider_range = range(-8191, 8192)
+
+  mario_icon_x = ig.get_cursor_pos().x
+  t = (mario_pos_y - slider_range.start) / len(slider_range)
+  mario_icon_y = ig.get_cursor_pos().y + (1 - t) * slider_height
+  ig.set_cursor_pos((mario_icon_x, mario_icon_y))
+  reset = ig.button('M', width=slider_width)
+
+  ig.set_cursor_pos(slider_pos)
+  changed, value = ig.v_slider_float(
+    '##slider',
+    width = slider_width,
+    height = slider_height,
+    value = pos_y,
+    min_value = slider_range.start,
+    max_value = slider_range.stop - 1,
+    format = '',
+  )
+  new_y = value if changed else None
+
+  ig.pop_id()
+  return new_y, reset
+
+
+def render_game_view_birds_eye(
+  id: str,
+  framebuffer_size: Tuple[int, int],
+  model: Model,
+) -> None:
+  ig.push_id(id)
+
+  # TODO: Should zoom in on mouse when uncentered
+  mouse_state = use_state('mouse-state', MouseTracker()).value
+  zoom = use_state('zoom', 0.0)
+  target: Ref[Optional[Tuple[float, float]]] = use_state('target', None)
+  pos_y: Ref[Optional[float]] = use_state('pos-y', None)
+
+  drag_amount = mouse_state.get_drag_amount()
+  zoom.value += mouse_state.get_wheel_amount() / 5
+  world_span_x = 200 / math.pow(2, zoom.value)
+
+  viewport = get_viewport(framebuffer_size)
+
+  mario_pos = get_mario_pos(model)
+
+  # Camera xz
+
+  camera_xz = (mario_pos[0], mario_pos[2])
+  if target.value is not None:
+    camera_xz = target.value
+
+  if drag_amount != (0.0, 0.0):
+    world_span_z = world_span_x * viewport.width / viewport.height
+    if target.value is None:
+      target.value = (mario_pos[0], mario_pos[2])
+    target.value = (
+      camera_xz[0] + drag_amount[1] * world_span_x / viewport.height,
+      camera_xz[1] - drag_amount[0] * world_span_z / viewport.width,
+    )
+    camera_xz = target.value
+
+  if target.value is not None:
+    if ig.button('Center'):
+      target.value = None
+
+  # Camera y
+
+  camera_y = mario_pos[1] + 500 if pos_y.value is None else pos_y.value
+
+  ig.set_cursor_pos((viewport.width - 100, 10))
+  ig.begin_child('##y-slider')
+  new_y, reset = render_pos_y_slider('y-slider', camera_y, mario_pos[1])
+  if reset:
+    pos_y.value = None
+  elif new_y is not None:
+    pos_y.value = new_y
+    camera_y = pos_y.value
+  ig.end_child()
+
+  camera = BirdsEyeCamera(
+    (camera_xz[0], camera_y, camera_xz[1]),
+    world_span_x,
+  )
+
+  render_game(model, viewport, camera)
+
+  ig.pop_id()
+
+
+# TODO: Move render_game elsewhere. Keep current file as game_view_overlay and
+# don't have Model dependency
+
+def render_game(model: Model, viewport: Viewport, camera: Camera) -> None:
+  # TODO: Extract out needed info for slots one-by-one instead of using nested
+  # lookups
+  with contextlib.ExitStack() as stack:
+    root_state = stack.enter_context(model.timeline.get(model.selected_frame, allow_nesting=True))
+    neighbor_states = [
+      stack.enter_context(model.timeline.get(model.selected_frame + i, allow_nesting=True))
+        for i in range(-5, 31)
+          if model.selected_frame + i in range(len(model.timeline))
+    ]
+
+    Renderer.get().render(RenderInfo(
+      model.lib,
+      viewport,
+      camera,
+      root_state,
+      neighbor_states,
+    ))
+
+
+__all__ = ['render_game_view_rotate', 'render_game_view_birds_eye']

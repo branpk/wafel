@@ -32,6 +32,9 @@ class GameStateWrapper:
     })
 
 
+Vec3f = Tuple[float, float, float]
+
+
 class CameraMode(Enum):
   ROTATE = 0
   BIRDS_EYE = 1
@@ -52,7 +55,7 @@ class Camera:
 class RotateCamera(Camera):
   def __init__(
     self,
-    pos: List[float],
+    pos: Vec3f,
     pitch: float,
     yaw: float,
     fov_y: float,
@@ -63,17 +66,10 @@ class RotateCamera(Camera):
     self.yaw = yaw
     self.fov_y = fov_y
 
-  def face_dir(self) -> List[float]:
-    return [
-      math.cos(self.pitch) * math.sin(self.yaw),
-      math.sin(self.pitch),
-      math.cos(self.pitch) * math.cos(self.yaw),
-    ]
-
 class BirdsEyeCamera(Camera):
   def __init__(
     self,
-    pos: List[float],
+    pos: Vec3f,
     span_y: float,
   ) -> None:
     super().__init__(CameraMode.BIRDS_EYE)

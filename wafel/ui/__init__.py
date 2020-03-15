@@ -6,3 +6,4 @@ from wafel.ui.tabs import *
 from wafel.ui.frame_slider import *
 from wafel.ui.variable_cell import *
 from wafel.ui.loading_bar import *
+from wafel.ui.game_view import *

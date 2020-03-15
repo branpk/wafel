@@ -37,7 +37,7 @@ class GameState:
 
   @property
   def slot(self) -> StateSlot:
-    assert self._slot is not None
+    assert self._slot is not None, 'Use of state after release'
     return self._slot
 
 

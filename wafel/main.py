@@ -19,7 +19,6 @@ from wafel.core import *
 from wafel.model import Model
 from wafel.frame_sheet import FrameSheet
 from wafel.variable_explorer import VariableExplorer
-from wafel.game_view import GameView
 from wafel.variable_format import Formatters
 from wafel.format_m64 import load_m64, save_m64
 from wafel.format_wafi import load_wafi, save_wafi
@@ -120,10 +119,6 @@ class View:
       self.frame_sheets[0].append_variable(self.model.variables[var_name])
 
     self.variable_explorer = VariableExplorer(self.model, self.formatters)
-    self.game_views: List[GameView] = [
-      GameView(self.model, CameraMode.ROTATE),
-      GameView(self.model, CameraMode.BIRDS_EYE),
-    ]
 
     self.epoch += 1
 
@@ -148,7 +143,11 @@ class View:
       height=int(total_height // 2) - slider_space // 2,
       border=True,
     )
-    self.game_views[0].render(framebuffer_size)
+    ui.render_game_view_rotate(
+      'game-view-1',
+      framebuffer_size,
+      self.model,
+    )
     ig.end_child()
     log.timer.end()
 
@@ -158,7 +157,11 @@ class View:
       height=int(total_height // 2) - slider_space // 2,
       border=True,
     )
-    self.game_views[1].render(framebuffer_size)
+    ui.render_game_view_birds_eye(
+      'game-view-2',
+      framebuffer_size,
+      self.model,
+    )
     ig.end_child()
     log.timer.end()
 
