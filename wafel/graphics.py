@@ -1,113 +1,49 @@
-from __future__ import annotations
-
-from enum import Enum
 from typing import *
-import math
 
-from wafel.core import GameState, DataPath, VariableParam, GameLib
+from ext_modules.graphics import Renderer, init_opengl, Viewport, Camera, Scene, Object, \
+  vec2, vec3, vec4
+
+from wafel.model import Model
 import wafel.config as config
-
-import ext_modules.graphics as c_graphics # type: ignore
-
-
-class GameStateWrapper:
-  def __init__(self, lib: GameLib, state: GameState) -> None:
-    self.lib = lib
-    self.state = state
-
-  @property
-  def frame(self) -> int:
-    return self.state.frame
-
-  def get_data(self, path: str) -> Any:
-    data_path = DataPath.parse(self.lib, path)
-    return data_path.get({
-      VariableParam.STATE: self.state,
-    })
-
-  def get_data_addr(self, path: str) -> int:
-    data_path = DataPath.parse(self.lib, path)
-    return data_path.get_addr({
-      VariableParam.STATE: self.state,
-    })
+from wafel.core import VariableParam
 
 
-Vec3f = Tuple[float, float, float]
+_renderer: Optional[Renderer] = None
+
+def get_renderer() -> Renderer:
+  global _renderer
+  if _renderer is None:
+    init_opengl()
+    _renderer = Renderer(config.assets_directory)
+  return _renderer
 
 
-class CameraMode(Enum):
-  ROTATE = 0
-  BIRDS_EYE = 1
+def build_scene(model: Model, viewport: Viewport, camera: Camera) -> Scene:
+  scene = Scene()
+  scene.viewport = viewport
+  scene.camera = camera
+
+  with model.timeline[model.selected_frame] as state:
+    args = { VariableParam.STATE: state }
+    mario_pos = vec3(
+      model.variables['mario-pos-x'].get(args),
+      model.variables['mario-pos-y'].get(args),
+      model.variables['mario-pos-z'].get(args),
+    )
+
+  obj = Object()
+  obj.pos = mario_pos
+  obj.hitbox_height = 150
+  obj.hitbox_radius = 37
+
+  scene.objects = [obj]
+
+  return scene
 
 
-class Viewport:
-  def __init__(self, x: int, y: int, width: int, height: int):
-    self.x = x
-    self.y = y
-    self.width = width
-    self.height = height
+def render_game(model: Model, viewport: Viewport, camera: Camera) -> None:
+  scene = build_scene(model, viewport, camera)
+  get_renderer().render(scene)
 
 
-class Camera:
-  def __init__(self, mode: CameraMode) -> None:
-    self.mode = mode
-
-class RotateCamera(Camera):
-  def __init__(
-    self,
-    pos: Vec3f,
-    pitch: float,
-    yaw: float,
-    fov_y: float,
-  ) -> None:
-    super().__init__(CameraMode.ROTATE)
-    self.pos = pos
-    self.pitch = pitch
-    self.yaw = yaw
-    self.fov_y = fov_y
-
-class BirdsEyeCamera(Camera):
-  def __init__(
-    self,
-    pos: Vec3f,
-    span_y: float,
-  ) -> None:
-    super().__init__(CameraMode.BIRDS_EYE)
-    self.pos = pos
-    self.span_y = span_y
-
-
-class RenderInfo:
-  def __init__(
-    self,
-    lib: GameLib,
-    viewport: Viewport,
-    camera: Camera,
-    current_state: GameState,
-    path_states: List[GameState],
-  ) -> None:
-    self.viewport = viewport
-    self.camera = camera
-    self.current_state = GameStateWrapper(lib, current_state)
-    self.path_states = [GameStateWrapper(lib, st) for st in path_states]
-
-
-class Renderer:
-  _instance: Optional[Renderer] = None
-
-  @staticmethod
-  def get() -> Renderer:
-    if Renderer._instance is None:
-      Renderer._instance = Renderer()
-    return Renderer._instance
-
-  def __init__(self):
-    assert Renderer._instance is None
-    self._addr = c_graphics.new_renderer(config.assets_directory)
-
-  def __del__(self):
-    if c_graphics.delete_renderer is not None:
-      c_graphics.delete_renderer(self._addr)
-
-  def render(self, info: RenderInfo):
-    c_graphics.render(self._addr, info)
+__all__ = ['render_game']

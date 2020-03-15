@@ -175,6 +175,7 @@ PYBIND11_MODULE(graphics, m) {
 
   py::class_<Scene>(m, "Scene")
     .def(py::init<>())
+    .def_readwrite("viewport", &Scene::viewport)
     .def_readwrite("camera", &Scene::camera)
     .def_readwrite("surfaces", &Scene::surfaces)
     .def_readwrite("objects", &Scene::objects)

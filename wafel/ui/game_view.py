@@ -2,13 +2,17 @@ from typing import *
 import math
 import contextlib
 
-import ext_modules.graphics as c_graphics # type: ignore
+import ext_modules.graphics as c_graphics
 
 import wafel.imgui as ig
 from wafel.model import Model
 from wafel.core import VariableParam
 from wafel.util import *
 from wafel.local_state import use_state, use_state_with
+from wafel.graphics import render_game
+
+
+# TODO: Rename to game_view_overlay. Reduce parameters to minimum (don't require full Model)
 
 
 class MouseTracker:
@@ -220,33 +224,6 @@ def render_game_view_birds_eye(
   render_game(model, viewport, c_graphics.Camera(camera))
 
   ig.pop_id()
-
-
-# TODO: Move render_game elsewhere. Keep current file as game_view_overlay and
-# don't have Model dependency
-
-def render_game(
-  model: Model,
-  viewport: c_graphics.Viewport,
-  camera: c_graphics.Camera,
-) -> None:
-  # TODO: Extract out needed info for slots one-by-one instead of using nested
-  # lookups
-  with contextlib.ExitStack() as stack:
-    root_state = stack.enter_context(model.timeline.get(model.selected_frame, allow_nesting=True))
-    neighbor_states = [
-      stack.enter_context(model.timeline.get(model.selected_frame + i, allow_nesting=True))
-        for i in range(-5, 31)
-          if model.selected_frame + i in range(len(model.timeline))
-    ]
-
-    # Renderer.get().render(RenderInfo(
-    #   model.lib,
-    #   viewport,
-    #   camera,
-    #   root_state,
-    #   neighbor_states,
-    # ))
 
 
 __all__ = ['render_game_view_rotate', 'render_game_view_birds_eye']
