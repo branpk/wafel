@@ -120,6 +120,8 @@ PYBIND11_MODULE(graphics, m) {
   m.def("scene_add_surfaces", scene_add_surfaces);
   m.def("scene_add_objects", scene_add_objects);
 
+  // TODO: Generate these automatically? Could create .pyi then too
+
   py::class_<Renderer>(m, "Renderer")
     .def(py::init<const string &>())
     .def("render", &Renderer::render);
