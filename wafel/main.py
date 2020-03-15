@@ -181,7 +181,7 @@ class View:
       ig.push_id('debug-pane')
       ig.begin_child('##pane', height=int(ig.get_window_height() * 0.15))
       ig.columns(2)
-      ig.set_column_width(-1, ig.get_window_width() - 200)
+      ig.set_column_width(-1, ig.get_window_width() - 220)
 
       ig.begin_child('##log')
       def init_log() -> List[str]:
@@ -200,19 +200,20 @@ class View:
 
       ig.next_column()
 
-      path_times = log.timer.get_times()
-      def get_label(path: Tuple[str, ...]) -> str:
-        return '  ' * (len(path) - 1) + path[-1]
-      def get_ms_label(ms: float) -> str:
-        return str(int(ms * 10) / 10)
-      max_length = max(len(get_label(path)) for path in path_times)
-      max_ms_length = max(len(get_ms_label(ms)) for ms in path_times.values())
-      for path, ms in sorted(path_times.items()):
-        label = get_label(path)
-        padding = ' ' * (max_length - len(label))
-        ms_label = get_ms_label(ms)
-        ms_padding = ' ' * (max_ms_length - len(ms_label))
-        ig.text(f'{label}{padding}  {ms_padding}{ms_label}ms')
+      lines = format_align(
+        '{0}%s%a - %s{1:.1f}%ams  %s{2}%a  %s{3}%a',
+        [
+          (
+            '  ' * (len(path) - 1) + path[-1],
+            s.time,
+            math.ceil(s.copies),
+            math.ceil(s.updates),
+          )
+          for path, s in log.timer.get_summaries().items()
+        ],
+      )
+      for line in lines:
+        ig.text(line)
 
       ig.columns(1)
       ig.end_child()
@@ -394,12 +395,7 @@ def run() -> None:
         fps.value = frame_count.value / (time.time() - last_fps_time.value)
         last_fps_time.value = time.time()
         frame_count.value = 0
-        log.info(
-          f'mspf: {int(1000 / fps.value * 10) / 10} ({int(fps.value)} fps) - ' +
-          f'{model.timeline.slots.copies} copies, {model.timeline.slots.updates} updates'
-        )
-      model.timeline.slots.copies = 0
-      model.timeline.slots.updates = 0
+        log.info(f'mspf: {int(1000 / fps.value * 10) / 10} ({int(fps.value)} fps)')
 
       log.timer.begin('balance')
       model.timeline.balance_distribution(1/120)

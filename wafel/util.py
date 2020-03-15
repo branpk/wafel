@@ -65,6 +65,24 @@ class Just(Generic[T]):
 
 Maybe = Optional[Just[T]]
 
+def format_align(fmt: str, line_args: Iterable[Iterable[object]]) -> List[str]:
+  results = ['' for _ in line_args]
+
+  part_fmts = fmt.split('%a')
+  for k, part_fmt in enumerate(part_fmts):
+    if k != len(part_fmts) - 1:
+      assert part_fmt.count('%s') == 1, part_fmt
+    part_fmt = part_fmt.replace('%s', '{padding}')
+
+    lengths = [len(part_fmt.format(*args, padding='')) for args in line_args]
+    max_length = max(lengths, default=0)
+
+    for i, (args, length) in enumerate(zip(line_args, lengths)):
+      padding = ' ' * (max_length - length)
+      results[i] += part_fmt.format(*args, padding=padding)
+
+  return results
+
 
 __all__ = [
   'log',
@@ -79,4 +97,5 @@ __all__ = [
   'Ref',
   'Just',
   'Maybe',
+  'format_align',
 ]

@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from typing import *
 from enum import Enum, auto
 from datetime import datetime
 import time
+from dataclasses import dataclass
 
 
 class LogLevel(Enum):
@@ -53,30 +56,45 @@ def error(*words: object) -> None:
   log_join(LogLevel.ERROR, *words)
 
 
+
+@dataclass
+class Summary:
+  time: float = 0.0
+  copies: float = 0.0
+  updates: float = 0.0
+
+  @staticmethod
+  def average(samples: List[Summary]) -> Summary:
+    if len(samples) == 0:
+      return Summary(0)
+    return Summary(
+      time = sum(s.time for s in samples) / len(samples),
+      copies = sum(s.copies for s in samples) / len(samples),
+      updates = sum(s.updates for s in samples) / len(samples),
+    )
+
+
 class Timer:
   WINDOW = 30
 
   def __init__(self) -> None:
-    self.times: Dict[Tuple[str, ...], List[float]] = {}
-    self.start_times: Dict[Tuple[str, ...], float] = {}
+    self.samples: Dict[Tuple[str, ...], List[Summary]] = {}
+    self.active: Dict[Tuple[str, ...], Summary] = {}
     self.stack: List[str] = []
 
   def begin(self, name: str) -> None:
     self.stack.append(name)
     path = tuple(self.stack)
-    self.start_times[path] = time.time()
+    self.active[path] = Summary(time=time.time())
 
   def end(self) -> None:
     path = tuple(self.stack)
     self.stack.pop()
-    start_time = self.start_times.pop(path)
-    if path not in self.times:
-      self.times[path] = []
-    self.times[path].append((time.time() - start_time) * 1000)
-
-  def end_begin(self, name: str) -> None:
-    self.end()
-    self.begin(name)
+    if path not in self.samples:
+      self.samples[path] = []
+    sample = self.active.pop(path)
+    sample.time = (time.time() - sample.time) * 1000
+    self.samples[path].append(sample)
 
   def begin_frame(self) -> None:
     assert len(self.stack) == 0
@@ -85,19 +103,27 @@ class Timer:
   def end_frame(self) -> None:
     while len(self.stack) > 0:
       self.end()
-    count = len(self.times[('frame',)])
-    for times in self.times.values():
-      while len(times) < count:
-        times.append(0)
-      while len(times) > Timer.WINDOW:
-        times.pop(0)
+    count = len(self.samples[('frame',)])
+    for samples in self.samples.values():
+      while len(samples) < count:
+        samples.append(Summary())
+      while len(samples) > Timer.WINDOW:
+        samples.pop(0)
 
-  def get_times(self) -> Dict[Tuple[str, ...], float]:
+  def record_copy(self) -> None:
+    for sample in self.active.values():
+      sample.copies += 1
+
+  def record_update(self) -> None:
+    for sample in self.active.values():
+      sample.updates += 1
+
+  def get_summaries(self) -> Dict[Tuple[str, ...], Summary]:
     result = {}
-    min_count = min(map(len, self.times.values()))
-    for path, times in sorted(self.times.items()):
-      times = times[:min_count]
-      result[path] = sum(times) / len(times)
+    min_count = min(map(len, self.samples.values()))
+    for path, samples in sorted(self.samples.items()):
+      samples = samples[:min_count]
+      result[path] = Summary.average(samples)
     return result
 
 

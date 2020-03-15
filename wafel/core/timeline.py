@@ -7,6 +7,7 @@ from wafel.core.game_lib import GameLib
 from wafel.core.edit import Edits
 from wafel.core.variable import Variables
 from wafel.core.variable_param import VariableParam
+from wafel.util import *
 
 
 class StateSlots(AbstractSlots[StateSlot]):
@@ -24,9 +25,6 @@ class StateSlots(AbstractSlots[StateSlot]):
     self._base = self.lib.base_slot()
     self._non_base = [self.lib.alloc_slot() for _ in range(capacity - 1)]
     self._temp = self._non_base.pop()
-
-    self.copies = 0
-    self.updates = 0
 
     assert self.base.frame == -1
     self._power_on = self.where(base=False, frozen=False)[0]
@@ -68,7 +66,7 @@ class StateSlots(AbstractSlots[StateSlot]):
     if dst is not src:
       self.lib.raw_copy_slot(dst, src)
       dst.frame = src.frame
-      self.copies += 1
+      log.timer.record_copy()
 
   def execute_frame(self) -> None:
     assert self.base.frame is not None
@@ -81,7 +79,7 @@ class StateSlots(AbstractSlots[StateSlot]):
 
       if self.base.frame != -1:
         self.lib.execute_frame()
-        self.updates += 1
+        log.timer.record_update()
       self.base.frame += 1
       state.frame += 1
 
