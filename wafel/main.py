@@ -14,7 +14,6 @@ from imgui.integrations.glfw import GlfwRenderer
 from OpenGL import GL as gl
 
 import wafel.imgui as ig
-from wafel.graphics import *
 from wafel.core import *
 from wafel.model import Model
 from wafel.frame_sheet import FrameSheet

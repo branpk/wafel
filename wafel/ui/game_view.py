@@ -2,10 +2,10 @@ from typing import *
 import math
 import contextlib
 
+import ext_modules.graphics as c_graphics # type: ignore
+
 import wafel.imgui as ig
 from wafel.model import Model
-from wafel.graphics import CameraMode, Renderer, Camera, RotateCamera, \
-  BirdsEyeCamera, RenderInfo, Viewport, Vec3f
 from wafel.core import VariableParam
 from wafel.util import *
 from wafel.local_state import use_state, use_state_with
@@ -53,7 +53,7 @@ class MouseTracker:
       return 0
 
 
-def angle_to_direction(pitch: float, yaw: float) -> Vec3f:
+def angle_to_direction(pitch: float, yaw: float) -> Tuple[float, float, float]:
   return (
     math.cos(pitch) * math.sin(yaw),
     math.sin(pitch),
@@ -61,19 +61,20 @@ def angle_to_direction(pitch: float, yaw: float) -> Vec3f:
   )
 
 
-def get_viewport(framebuffer_size: Tuple[int, int]) -> Viewport:
+def get_viewport(framebuffer_size: Tuple[int, int]) -> c_graphics.Viewport:
   window_pos = tuple(map(int, ig.get_window_position()))
   window_size = tuple(map(int, ig.get_window_size()))
 
-  return Viewport(
-    window_pos[0],
-    framebuffer_size[1] - window_pos[1] - window_size[1],
-    window_size[0],
-    window_size[1],
-  )
+  viewport = c_graphics.Viewport()
+  viewport.pos.x = window_pos[0]
+  viewport.pos.y = framebuffer_size[1] - window_pos[1] - window_size[1]
+  viewport.size.x = window_size[0]
+  viewport.size.y = window_size[1]
+
+  return viewport
 
 
-def get_mario_pos(model: Model) -> Vec3f:
+def get_mario_pos(model: Model) -> Tuple[float, float, float]:
   with model.timeline[model.selected_frame] as state:
     args = { VariableParam.STATE: state }
     return (
@@ -109,14 +110,13 @@ def render_game_view_rotate(
     target[2] - offset * face_direction[2],
   )
 
-  camera = RotateCamera(
-    camera_pos,
-    pitch.value,
-    yaw.value,
-    math.radians(45),
-  )
+  camera = c_graphics.RotateCamera()
+  camera.pos = c_graphics.vec3(*camera_pos)
+  camera.pitch = pitch.value
+  camera.yaw = yaw.value
+  camera.fov_y = math.radians(45)
 
-  render_game(model, get_viewport(framebuffer_size), camera)
+  render_game(model, get_viewport(framebuffer_size), c_graphics.Camera(camera))
 
   ig.pop_id()
 
@@ -186,12 +186,12 @@ def render_game_view_birds_eye(
     camera_xz = target.value
 
   if drag_amount != (0.0, 0.0):
-    world_span_z = world_span_x * viewport.width / viewport.height
+    world_span_z = world_span_x * viewport.size.x / viewport.size.y
     if target.value is None:
       target.value = (mario_pos[0], mario_pos[2])
     target.value = (
-      camera_xz[0] + drag_amount[1] * world_span_x / viewport.height,
-      camera_xz[1] - drag_amount[0] * world_span_z / viewport.width,
+      camera_xz[0] + drag_amount[1] * world_span_x / viewport.size.y,
+      camera_xz[1] - drag_amount[0] * world_span_z / viewport.size.x,
     )
     camera_xz = target.value
 
@@ -203,7 +203,7 @@ def render_game_view_birds_eye(
 
   camera_y = mario_pos[1] + 500 if pos_y.value is None else pos_y.value
 
-  ig.set_cursor_pos((viewport.width - 100, 10))
+  ig.set_cursor_pos((viewport.size.x - 100, 10))
   ig.begin_child('##y-slider')
   new_y, reset = render_pos_y_slider('y-slider', camera_y, mario_pos[1])
   if reset:
@@ -213,12 +213,11 @@ def render_game_view_birds_eye(
     camera_y = pos_y.value
   ig.end_child()
 
-  camera = BirdsEyeCamera(
-    (camera_xz[0], camera_y, camera_xz[1]),
-    world_span_x,
-  )
+  camera = c_graphics.BirdsEyeCamera()
+  camera.pos = c_graphics.vec3(camera_xz[0], camera_y, camera_xz[1])
+  camera.span_y = world_span_x
 
-  render_game(model, viewport, camera)
+  render_game(model, viewport, c_graphics.Camera(camera))
 
   ig.pop_id()
 
@@ -226,7 +225,11 @@ def render_game_view_birds_eye(
 # TODO: Move render_game elsewhere. Keep current file as game_view_overlay and
 # don't have Model dependency
 
-def render_game(model: Model, viewport: Viewport, camera: Camera) -> None:
+def render_game(
+  model: Model,
+  viewport: c_graphics.Viewport,
+  camera: c_graphics.Camera,
+) -> None:
   # TODO: Extract out needed info for slots one-by-one instead of using nested
   # lookups
   with contextlib.ExitStack() as stack:
@@ -237,13 +240,13 @@ def render_game(model: Model, viewport: Viewport, camera: Camera) -> None:
           if model.selected_frame + i in range(len(model.timeline))
     ]
 
-    Renderer.get().render(RenderInfo(
-      model.lib,
-      viewport,
-      camera,
-      root_state,
-      neighbor_states,
-    ))
+    # Renderer.get().render(RenderInfo(
+    #   model.lib,
+    #   viewport,
+    #   camera,
+    #   root_state,
+    #   neighbor_states,
+    # ))
 
 
 __all__ = ['render_game_view_rotate', 'render_game_view_birds_eye']

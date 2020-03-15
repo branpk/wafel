@@ -74,6 +74,7 @@ struct ObjectPath {
 
 
 struct Scene {
+  Viewport viewport;
   Camera camera;
   vector<Surface> surfaces;
   vector<Object> objects;

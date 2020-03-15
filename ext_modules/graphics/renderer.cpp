@@ -16,8 +16,8 @@ Renderer::Renderer(const string &assets_directory)
 {}
 
 
-void Renderer::render(const Viewport &viewport, const Scene &scene) {
-  this->viewport = viewport;
+void Renderer::render(const Scene &scene) {
+  const Viewport &viewport = scene.viewport;
 
   glEnable(GL_SCISSOR_TEST);
   glScissor(viewport.pos.x, viewport.pos.y, viewport.size.x, viewport.size.y);
@@ -36,7 +36,7 @@ void Renderer::render(const Viewport &viewport, const Scene &scene) {
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-  build_transforms(viewport, scene);
+  build_transforms(scene);
   render_surfaces(scene);
   render_objects(scene);
   render_object_paths(scene);
@@ -46,7 +46,9 @@ void Renderer::render(const Viewport &viewport, const Scene &scene) {
   }
 }
 
-void Renderer::build_transforms(const Viewport &viewport, const Scene &scene) {
+void Renderer::build_transforms(const Scene &scene) {
+  const Viewport &viewport = scene.viewport;
+
   switch (scene.camera.mode) {
     case CameraMode::ROTATE: {
       const RotateCamera &camera = scene.camera.rotate_camera;
@@ -330,7 +332,7 @@ void Renderer::render_object_paths(const Scene &scene) {
     }
   }
 
-  render_path_dots(path_dots);
+  render_path_dots(scene, path_dots);
 }
 
 void Renderer::render_object_path_lines(const Scene &scene) {
@@ -373,7 +375,7 @@ void Renderer::render_object_path_lines(const Scene &scene) {
   delete vertex_array;
 }
 
-void Renderer::render_path_dots(const vector<PathDot> &dots) {
+void Renderer::render_path_dots(const Scene &scene, const vector<PathDot> &dots) {
   // TODO: Could do triangle fans with indexing
 
   Program *program = res.program(
@@ -394,7 +396,7 @@ void Renderer::render_path_dots(const vector<PathDot> &dots) {
 
     in_center.insert(in_center.end(), 3 * num_edges, dot.pos + vec3(0, 0.01f, 0));
     in_color.insert(in_color.end(), 3 * num_edges, dot.color);
-    float x_radius = dot.radius * viewport.size.y / viewport.size.x;
+    float x_radius = dot.radius * scene.viewport.size.y / scene.viewport.size.x;
     in_radius.insert(in_radius.end(), 3 * num_edges, vec2(x_radius, dot.radius));
 
     for (int i = 0; i < num_edges; i++) {
@@ -430,7 +432,7 @@ void Renderer::render_unit_squares(const Scene &scene) {
   BirdsEyeCamera camera = scene.camera.birds_eye_camera;
 
   float span_x = camera.span_y;
-  float span_z = span_x * viewport.size.x / viewport.size.y;
+  float span_z = span_x * scene.viewport.size.x / scene.viewport.size.y;
 
   float min_x = camera.pos.x - span_x / 2.0f;
   float max_x = camera.pos.x + span_x / 2.0f;
@@ -439,8 +441,8 @@ void Renderer::render_unit_squares(const Scene &scene) {
 
   float density_threshold = 0.1f;
   float density = fmax(
-    (max_x - min_x) / viewport.size.y,
-    (max_z - min_z) / viewport.size.x);
+    (max_x - min_x) / scene.viewport.size.y,
+    (max_z - min_z) / scene.viewport.size.x);
   if (density > density_threshold) {
     return;
   }
