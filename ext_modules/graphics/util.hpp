@@ -8,6 +8,7 @@
 #include <utility>
 #include <map>
 #include <array>
+#include <functional>
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -20,6 +21,7 @@ using std::string;
 using std::pair;
 using std::map;
 using std::array;
+using std::function;
 
 using glm::ivec2;
 using glm::vec2;

@@ -1,33 +1,32 @@
 #include <cstdio>
 #include <algorithm>
+#include <cstdint>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/functional.h>
 #include <glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "renderer.hpp"
 #include "util.hpp"
-#include "sm64.hpp"
 
 namespace py = pybind11;
 
-using sm64::s8;
-using sm64::s16;
-using sm64::s32;
-using sm64::s64;
-using sm64::u8;
-using sm64::u16;
-using sm64::u32;
-using sm64::u64;
-using sm64::f32;
-using sm64::f64;
 
-typedef u64 uptr; // integer at least the size of a pointer, for pybind11 conversions
+typedef int8_t s8;
+typedef int16_t s16;
+typedef int32_t s32;
+typedef int64_t s64;
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+typedef float f32;
+typedef double f64;
 
-
-#define VEC3F_TO_VEC3(v) (vec3((v)[0], (v)[1], (v)[2]))
+#define ACTIVE_FLAG_ACTIVE                 (1 <<  0) // 0x0001
 
 
 static void init_opengl() {
@@ -42,8 +41,84 @@ static void init_opengl() {
 }
 
 
+static void scene_add_surfaces(
+  Scene &scene,
+  uintptr_t surface_pool_ptr,
+  size_t surface_size,
+  s32 num_surfaces,
+  function<size_t(const string &)> get_field_offset)
+{
+  size_t f_normal = get_field_offset("$state.sSurfacePool[].normal");
+  size_t f_vertex1 = get_field_offset("$state.sSurfacePool[].vertex1");
+  size_t f_vertex2 = get_field_offset("$state.sSurfacePool[].vertex2");
+  size_t f_vertex3 = get_field_offset("$state.sSurfacePool[].vertex3");
+
+  for (s32 i = 0; i < num_surfaces; i++) {
+    uintptr_t surface_ptr = surface_pool_ptr + i * surface_size;
+
+    f32 *normal = (f32 *) (surface_ptr + f_normal);
+    s16 *vertex1 = (s16 *) (surface_ptr + f_vertex1);
+    s16 *vertex2 = (s16 *) (surface_ptr + f_vertex2);
+    s16 *vertex3 = (s16 *) (surface_ptr + f_vertex3);
+
+    SurfaceType type;
+    if (normal[1] > 0.01) {
+      type = SurfaceType::FLOOR;
+    } else if (normal[1] < -0.01) {
+      type = SurfaceType::CEILING;
+    } else if (normal[0] < -0.707 || normal[0] > 0.707) {
+      type = SurfaceType::WALL_X_PROJ;
+    } else {
+      type = SurfaceType::WALL_Z_PROJ;
+    }
+
+    scene.surfaces.push_back({
+      type,
+      {
+        vec3(vertex1[0], vertex1[1], vertex1[2]),
+        vec3(vertex2[0], vertex2[1], vertex2[2]),
+        vec3(vertex3[0], vertex3[1], vertex3[2]),
+      },
+      vec3(normal[0], normal[1], normal[2]),
+    });
+  }
+}
+
+
+static void scene_add_objects(
+  Scene &scene,
+  uintptr_t object_pool_ptr,
+  size_t object_size,
+  function<size_t(const string &)> get_field_offset)
+{
+  size_t f_active_flags = get_field_offset("$object.activeFlags");
+  size_t f_pos_x = get_field_offset("$object.oPosX");
+  size_t f_pos_y = get_field_offset("$object.oPosY");
+  size_t f_pos_z = get_field_offset("$object.oPosZ");
+  size_t f_hitbox_height = get_field_offset("$object.hitboxHeight");
+  size_t f_hitbox_radius = get_field_offset("$object.hitboxRadius");
+
+  for (s32 i = 0; i < 240; i++) {
+    uintptr_t object_ptr = object_pool_ptr + i * object_size;
+    s16 active_flags = *(s16 *) (object_ptr + f_active_flags);
+    if (active_flags & ACTIVE_FLAG_ACTIVE) {
+      scene.objects.push_back({
+        vec3(
+          *(f32 *) (object_ptr + f_pos_x),
+          *(f32 *) (object_ptr + f_pos_y),
+          *(f32 *) (object_ptr + f_pos_z)),
+        *(f32 *) (object_ptr + f_hitbox_height),
+        *(f32 *) (object_ptr + f_hitbox_radius),
+      });
+    }
+  }
+}
+
+
 PYBIND11_MODULE(graphics, m) {
   m.def("init_opengl", init_opengl);
+  m.def("scene_add_surfaces", scene_add_surfaces);
+  m.def("scene_add_objects", scene_add_objects);
 
   py::class_<Renderer>(m, "Renderer")
     .def(py::init<const string &>())
