@@ -7,7 +7,7 @@ import math
 from wafel.core import GameState, DataPath, VariableParam, GameLib
 import wafel.config as config
 
-import ext_modules.graphics as ext_graphics # type: ignore
+import ext_modules.graphics as c_graphics # type: ignore
 
 
 class GameStateWrapper:
@@ -103,11 +103,11 @@ class Renderer:
 
   def __init__(self):
     assert Renderer._instance is None
-    self._addr = ext_graphics.new_renderer(config.assets_directory)
+    self._addr = c_graphics.new_renderer(config.assets_directory)
 
   def __del__(self):
-    if ext_graphics.delete_renderer is not None:
-      ext_graphics.delete_renderer(self._addr)
+    if c_graphics.delete_renderer is not None:
+      c_graphics.delete_renderer(self._addr)
 
   def render(self, info: RenderInfo):
-    ext_graphics.render(self._addr, info)
+    c_graphics.render(self._addr, info)

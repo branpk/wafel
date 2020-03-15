@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <map>
+#include <array>
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -18,6 +19,7 @@ using std::vector;
 using std::string;
 using std::pair;
 using std::map;
+using std::array;
 
 using glm::ivec2;
 using glm::vec2;

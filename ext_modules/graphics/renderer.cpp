@@ -252,17 +252,17 @@ void Renderer::render_objects(const Scene &scene) {
 
   for (const Object &object : scene.objects) {
     in_pos.push_back(object.pos);
-    in_pos.push_back(object.pos + vec3(0, object.hitboxHeight, 0));
+    in_pos.push_back(object.pos + vec3(0, object.hitbox_height, 0));
     in_color.insert(in_color.end(), 2, vec4(1, 0, 0, 1));
 
-    if (object.hitboxRadius > 0) {
+    if (object.hitbox_radius > 0) {
       const int num_edges = 64;
       for (int i = 0; i < num_edges; i++) {
         float a0 = (float) i / (float) num_edges * 2 * glm::pi<float>();
         float a1 = (float) (i + 1) / (float) num_edges * 2 * glm::pi<float>();
 
-        vec3 offset0 = object.hitboxRadius * vec3(sinf(a0), 0, cosf(a0));
-        vec3 offset1 = object.hitboxRadius * vec3(sinf(a1), 0, cosf(a1));
+        vec3 offset0 = object.hitbox_radius * vec3(sinf(a0), 0, cosf(a0));
+        vec3 offset1 = object.hitbox_radius * vec3(sinf(a1), 0, cosf(a1));
 
         in_pos.push_back(object.pos + offset0);
         in_pos.push_back(object.pos + offset1);
