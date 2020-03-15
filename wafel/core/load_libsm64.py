@@ -444,7 +444,8 @@ def extract_data_spec(path: str) -> Loading[DataSpec]:
 
 
 def extract_data_spec_cached(path: str) -> Loading[DataSpec]:
-  cache_key = f'libsm64_spec_{path}'
+  rel_path = os.path.relpath(path, config.lib_directory)
+  cache_key = f'libsm64_spec_{rel_path}'
   spec = config.cache_get(cache_key)
 
   library_hash = hash_file(path)
