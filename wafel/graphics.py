@@ -91,7 +91,7 @@ def build_scene(model: Model, viewport: cg.Viewport, camera: cg.Camera) -> cg.Sc
       get_field_offset,
     )
 
-  path_frames = range(max(model.selected_frame - 5, 0), model.selected_frame + 31)
+  path_frames = range(max(model.selected_frame - 5, 0), model.selected_frame + 61)
   scene.object_paths = [build_mario_path(model, path_frames)]
 
   return scene

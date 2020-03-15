@@ -43,6 +43,8 @@ class Model:
     self.timeline = Timeline(self.lib, self.variables, self.edits)
 
     self._selected_frame = 0
+    if config.dev_mode:
+      self._selected_frame = 3211
     self.selected_frame_callbacks: List[Callable[[int], None]] = []
 
     def set_hotspot(frame: int) -> None:
