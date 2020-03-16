@@ -5,7 +5,7 @@ import wafel.imgui as ig
 import wafel.ui as ui
 from wafel.local_state import use_state, use_state_with, local_state
 from wafel.window import open_window_and_run
-from wafel.core import ObjectType, VariableId
+from wafel.core import ObjectType, VariableId, RelativeAddr
 from wafel.util import *
 from wafel.variable_format import DecimalIntFormatter, CheckboxFormatter
 from wafel.slot_testing import test_timeline_algorithm
@@ -20,10 +20,10 @@ def test_object_slots(id: str) -> None:
 
   def initial_object_types() -> List[Optional[ObjectType]]:
     object_types = [
-      ObjectType(1, 'bhvMario'),
-      ObjectType(2, 'bhvGoomba'),
-      ObjectType(3, 'bhvPokeyBodyPart'),
-      ObjectType(4, 'bhvButterflyTriplet'),
+      ObjectType(RelativeAddr.absolute(1), 'bhvMario'),
+      ObjectType(RelativeAddr.absolute(2), 'bhvGoomba'),
+      ObjectType(RelativeAddr.absolute(3), 'bhvPokeyBodyPart'),
+      ObjectType(RelativeAddr.absolute(4), 'bhvButterflyTriplet'),
       None,
       None,
     ] * 40

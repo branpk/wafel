@@ -6,7 +6,7 @@ import os
 
 import wafel.config as config
 from wafel.core import GameLib, Variable, Edits, Timeline, GameState, ObjectId, \
-  ObjectType, load_libsm64
+  ObjectType, load_libsm64, RelativeAddr
 from wafel.loading import Loading
 from wafel.util import *
 
@@ -87,9 +87,9 @@ class Model:
     if not active:
       return None
 
-    behavior_addr = dcast(int, self.variables['obj-behavior-ptr'].at_object(object_id).get(state))
-    relative_addr = state.slot.addr_to_relative(behavior_addr)
+    behavior_addr = self.variables['obj-behavior-ptr'].at_object(object_id).get(state)
+    assert isinstance(behavior_addr, RelativeAddr)
     return ObjectType(
-      relative_addr,
-      self.lib.symbol_for_addr(relative_addr),
+      behavior_addr,
+      self.lib.symbol_for_addr(behavior_addr),
     )

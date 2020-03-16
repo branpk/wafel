@@ -4,7 +4,7 @@ import ext_modules.graphics as cg
 
 from wafel.model import Model
 import wafel.config as config
-from wafel.core import DataPath, Object
+from wafel.core import DataPath, Object, RelativeAddr
 from wafel.util import *
 
 
@@ -83,13 +83,16 @@ def build_scene(model: Model, viewport: cg.Viewport, camera: cg.Camera) -> cg.Sc
     return dcast(int, offset)
 
   with model.timeline[model.selected_frame] as state:
+    surface_pool_addr = DataPath.parse(model.lib, '$state.sSurfacePool').get(state)
+    assert isinstance(surface_pool_addr, RelativeAddr)
     cg.scene_add_surfaces(
       scene,
-      DataPath.parse(model.lib, '$state.sSurfacePool').get(state),
+      state.slot.relative_to_addr(surface_pool_addr),
       model.lib.spec['types']['struct']['Surface']['size'],
       DataPath.parse(model.lib, '$state.gSurfacesAllocated').get(state),
       get_field_offset,
     )
+
     cg.scene_add_objects(
       scene,
       DataPath.parse(model.lib, '$state.gObjectPool').get_addr(state),

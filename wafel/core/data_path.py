@@ -7,7 +7,7 @@ import ctypes as C
 from itertools import takewhile
 
 from wafel.core.game_lib import GameLib
-from wafel.core.game_state import GameState, Object
+from wafel.core.game_state import GameState, Object, AbsoluteAddr, RelativeAddr, OffsetAddr
 from wafel.util import *
 
 
@@ -32,7 +32,7 @@ class Root:
     if self.kind == RootKind.ABSOLUTE:
       return self.value
     elif self.kind == RootKind.RELATIVE:
-      return state.slot.offset_to_addr((self.value, 0))
+      return state.slot.addr_ranges[self.value].start
     else:
       raise NotImplementedError(self.kind)
 
@@ -95,7 +95,6 @@ class AddrPath:
       addr = edge.eval(addr)
 
       # If the pointer has an address in the base slot, relocate it
-      # TODO: Optimize when slot is based
       offset = state.slot.base_slot.addr_to_offset(addr)
       if offset is not None:
         addr = state.slot.offset_to_addr(offset)
@@ -165,13 +164,7 @@ class DataPath:
     elif self.concrete_end_type['kind'] == 'pointer':
       pointer = C.cast(addr, C.POINTER(C.c_void_p)) # type: ignore
       value = int(pointer[0] or 0 if pointer else 0) # type: ignore
-
-      # If the pointer has an address in the base slot, relocate it
-      # TODO: Return offset instead
-      offset = state.slot.base_slot.addr_to_offset(value)
-      if offset is not None:
-        value = state.slot.offset_to_addr(offset)
-      return value
+      return state.slot.base_slot.addr_to_relative(value)
 
     else:
       raise NotImplementedError(self.concrete_end_type['kind'])
@@ -189,10 +182,9 @@ class DataPath:
       pointer[0] = value
 
     elif self.concrete_end_type['kind'] == 'pointer':
-      raise NotImplementedError('pointer')
-      assert isinstance(value, int)
-      # TODO: Accept relative address. Translate to base slot
-      pointer = C.cast(addr, C.POINTER(C.c_void_p))
+      assert isinstance(value, RelativeAddr)
+      value = state.slot.base_slot.relative_to_addr(value)
+      pointer = C.cast(addr, C.POINTER(C.c_void_p)) # type: ignore
       pointer[0] = value
 
     else:
@@ -279,12 +271,12 @@ def resolve_expr(lib: GameLib, expr: Expr) -> DataPath:
   if isinstance(expr, FieldExpr):
     if isinstance(expr.expr, StateExpr):
       field_type = lib.spec['globals'][expr.field]['type']
-      field_addr = lib.symbol_addr(expr.field)
-      if isinstance(field_addr, int):
-        addr_path = AddrPath.root_(Root.absolute(field_addr))
+      field_addr = lib.symbol_addr(expr.field).value
+      if isinstance(field_addr, AbsoluteAddr):
+        addr_path = AddrPath.root_(Root.absolute(field_addr.addr))
       else:
-        addr_path = AddrPath.root_(Root.relative(field_addr[0])) + \
-          AddrPath.edge(Edge.offset(field_addr[1]))
+        addr_path = AddrPath.root_(Root.relative(field_addr.range_index)) + \
+          AddrPath.edge(Edge.offset(field_addr.offset))
       return DataPath(
         start_type = None,
         concrete_start_type = None,

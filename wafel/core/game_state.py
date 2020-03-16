@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import *
+from dataclasses import dataclass
 
 from wafel.core.slot_manager import AbstractSlot, AbstractSlots
 
@@ -41,9 +42,28 @@ class GameState:
     return self._slot
 
 
-# Either a static address in the DLL's address space, or a slot-independent pair
-# (range index, offset within range)
-RelativeAddr = Union[int, Tuple[int, int]]
+@dataclass(frozen=True)
+class AbsoluteAddr:
+  """A static address in the DLL's address space."""
+  addr: int
+
+@dataclass(frozen=True)
+class OffsetAddr:
+  """Slot independent offset."""
+  range_index: int
+  offset: int
+
+@dataclass(frozen=True)
+class RelativeAddr:
+  value: Union[AbsoluteAddr, OffsetAddr]
+
+  @staticmethod
+  def absolute(addr: int) -> RelativeAddr:
+    return RelativeAddr(AbsoluteAddr(addr))
+
+  @staticmethod
+  def offset(range_index: int, offset: int) -> RelativeAddr:
+    return RelativeAddr(OffsetAddr(range_index, offset))
 
 
 class StateSlot(AbstractSlot):
@@ -69,23 +89,23 @@ class StateSlot(AbstractSlot):
     self._owners: List[GameState] = []
     self.disallow_reads = False  # Set to True while being modified
 
-  def addr_to_offset(self, addr: int) -> Optional[Tuple[int, int]]:
+  def addr_to_offset(self, addr: int) -> Optional[OffsetAddr]:
     for i, addr_range in enumerate(self.addr_ranges):
       if addr in addr_range:
-        return (i, addr - addr_range.start)
+        return OffsetAddr(i, addr - addr_range.start)
     return None
 
-  def offset_to_addr(self, offset: Tuple[int, int]) -> int:
-    return self.addr_ranges[offset[0]].start + offset[1]
+  def offset_to_addr(self, offset: OffsetAddr) -> int:
+    return self.addr_ranges[offset.range_index].start + offset.offset
 
   def addr_to_relative(self, addr: int) -> RelativeAddr:
-    return self.addr_to_offset(addr) or addr
+    return RelativeAddr(self.addr_to_offset(addr) or AbsoluteAddr(addr))
 
   def relative_to_addr(self, rel_addr: RelativeAddr) -> int:
-    if isinstance(rel_addr, int):
-      return rel_addr
+    if isinstance(rel_addr.value, AbsoluteAddr):
+      return rel_addr.value.addr
     else:
-      return self.offset_to_addr(rel_addr)
+      return self.offset_to_addr(rel_addr.value)
 
   @property
   def based(self) -> bool:
