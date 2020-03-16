@@ -93,3 +93,21 @@ class Model:
       behavior_addr,
       self.lib.symbol_for_addr(behavior_addr),
     )
+
+  def get_object_type_cached(self, frame: int, object_id: ObjectId) -> Optional[ObjectType]:
+    active = self.timeline.get_cached(
+      frame,
+      self.variables['obj-active-flags-active'].at_object(object_id),
+    )
+    if not active:
+      return None
+
+    behavior_addr = self.timeline.get_cached(
+      frame,
+      self.variables['obj-behavior-ptr'].at_object(object_id),
+    )
+    assert isinstance(behavior_addr, RelativeAddr)
+    return ObjectType(
+      behavior_addr,
+      self.lib.symbol_for_addr(behavior_addr),
+    )

@@ -4,7 +4,7 @@ from typing import *
 import wafel.imgui as ig
 from wafel.core import Variable, ObjectType, VariableId
 from wafel.model import Model
-from wafel.variable_format import Formatters, EmptyFormatter
+from wafel.variable_format import Formatters, EmptyFormatter, VariableFormatter
 import wafel.ui as ui
 from wafel.util import *
 
@@ -103,16 +103,16 @@ class FrameSheet:
     return str(object_id) + ' - ' + column.object_type.name + '\n' + variable.label
 
 
-  def get_data(self, frame: int, column: FrameSheetColumn) -> Any:
+  def get_data(self, frame: int, column: FrameSheetColumn) -> Maybe[object]:
     variable = column.variable
-    with self.model.timeline[frame] as state:
-      object_id = variable.get_object_id()
-      if column.object_type is not None and object_id is not None:
-        row_object_type = self.model.get_object_type(state, object_id)
-        if row_object_type != column.object_type:
-          raise Exception # TODO: Error msg
 
-      return variable.get(state)
+    object_id = variable.get_object_id()
+    if column.object_type is not None and object_id is not None:
+      row_object_type = self.model.get_object_type_cached(frame, object_id)
+      if row_object_type != column.object_type:
+        return None
+
+    return Just(self.model.timeline.get_cached(frame, variable))
 
 
   def set_data(self, frame: int, column: FrameSheetColumn, data: Any) -> None:
@@ -189,12 +189,15 @@ class FrameSheet:
 
 
   def render_cell(self, frame: int, column: FrameSheetColumn) -> None:
-    try:
-      data = self.get_data(frame, column)
-      formatter = self.formatters[column.variable]
-    except: # TODO: Only catch object type mismatch exception
+    data: object
+    formatter: VariableFormatter
+    maybe_data = self.get_data(frame, column)
+    if maybe_data is None:
       data = None
       formatter = EmptyFormatter()
+    else:
+      data = maybe_data.value
+      formatter = self.formatters[column.variable]
 
     changed_data, clear_edit, selected = ui.render_variable_cell(
       f'cell-{frame}-{hash(column)}',
