@@ -132,6 +132,10 @@ PRIMITIVE_PYTYPES = {
 }
 
 
+# TODO: Handle null better? (E.g. return Maybe so that the variable can be greyed
+# out?)
+
+
 @dataclass(frozen=True)
 class DataPath:
   start_type: Optional[dict]
@@ -172,7 +176,8 @@ class DataPath:
 
   def set(self, state: GameState, value: object) -> None:
     addr = self.get_addr(state)
-    assert addr != 0
+    if addr == 0:
+      return
 
     if self.concrete_end_type['kind'] == 'primitive':
       ctype = PRIMITIVE_CTYPES[self.concrete_end_type['name']]
