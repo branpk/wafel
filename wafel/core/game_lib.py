@@ -54,7 +54,15 @@ class GameLib:
   def symbol_for_addr(self, rel_addr: RelativeAddr) -> str:
     return self._symbols_by_offset[rel_addr]
 
+  @overload
+  def concrete_type(self, type_: None) -> None:
+    ...
+  @overload
   def concrete_type(self, type_: dict) -> dict:
+    ...
+  def concrete_type(self, type_):
+    if type_ is None:
+      return None
     while type_['kind'] == 'symbol':
       type_ = self.spec['types'][type_['namespace']][type_['name']]
     return type_

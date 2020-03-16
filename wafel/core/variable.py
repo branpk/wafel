@@ -178,7 +178,6 @@ class Variable:
     group: VariableGroup,
     label: str,
     lib: GameLib,
-    params: List[VariableParam],
     semantics: VariableSemantics,
     read_only: bool,
     data_type: VariableDataType,
@@ -187,7 +186,6 @@ class Variable:
     self.group = group
     self.label = label
     self.lib = lib
-    self.params = params
     self.semantics = semantics
     self.read_only = read_only
     self.data_type = data_type
@@ -231,10 +229,9 @@ class _DataVariable(Variable):
       group,
       label,
       lib,
-      self.path.params,
       semantics,
       read_only,
-      VariableDataType.from_spec(lib, self.path.type),
+      VariableDataType.from_spec(lib, self.path.concrete_end_type),
     )
 
   def get(self, args: VariableArgs) -> Any:
@@ -260,7 +257,6 @@ class _FlagVariable(Variable):
       group,
       label,
       flags.lib,
-      flags.params,
       VariableSemantics.FLAG,
       read_only or flags.read_only,
       VariableDataType.BOOL,
@@ -284,16 +280,11 @@ class _FlagVariable(Variable):
 
 class _ObjectVariable(Variable):
   def __init__(self, variable: Variable, object_id: ObjectId):
-    params = [p for p in variable.params if p != VariableParam.OBJECT]
-    if VariableParam.STATE not in params:
-      params.append(VariableParam.STATE)
-
     super().__init__(
       variable.id.with_object_id(object_id),
       variable.group,
       variable.label,
       variable.lib,
-      params,
       variable.semantics,
       variable.read_only,
       variable.data_type,

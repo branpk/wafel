@@ -42,6 +42,14 @@ def load_child(start: float, stop: float, prefix: str, child: Loading[T]) -> Loa
   return load_prefix(prefix, load_scale(start, stop, child))
 
 
+def finish_loading(loader: Loading[T]) -> T:
+  try:
+    while True:
+      next(loader)
+  except StopIteration as result:
+    return cast(T, result.value)
+
+
 def test_loading_timing(loader: Loading[object]) -> None:
   start_time = time.time()
   progresses = []

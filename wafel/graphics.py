@@ -4,7 +4,7 @@ import ext_modules.graphics as cg
 
 from wafel.model import Model
 import wafel.config as config
-from wafel.core import VariableParam, DataPath, Object
+from wafel.core import VariableParam, DataPath, Object, EdgeKind
 from wafel.util import *
 
 
@@ -19,6 +19,16 @@ def get_renderer() -> cg.Renderer:
 
 
 def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
+  # 87
+  with model.timeline[model.selected_frame] as state:
+    args = { VariableParam.STATE: state }
+    log.timer.begin('test')
+    for _ in range(1000):
+      model.variables['mario-pos-x'].get(args)
+      model.variables['mario-pos-y'].get(args)
+      model.variables['mario-pos-z'].get(args)
+    log.timer.end()
+
   mario_path_nodes = []
   for frame in path_frames:
     with model.timeline[frame] as state:
@@ -72,7 +82,9 @@ def build_scene(model: Model, viewport: cg.Viewport, camera: cg.Camera) -> cg.Sc
   def get_field_offset(path: str) -> int:
     # TODO: Less hacky way to do this?
     data_path = DataPath.parse(model.lib, path)
-    offset = data_path.offset # type: ignore
+    edge = data_path.addr_path.path[-1]
+    assert edge.kind == EdgeKind.OFFSET
+    offset = edge.value
     return dcast(int, offset)
 
   with model.timeline[model.selected_frame] as state:
