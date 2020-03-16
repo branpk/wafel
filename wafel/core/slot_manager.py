@@ -93,6 +93,8 @@ class SlotManager(Generic[SLOT]):
 
     assert not self.slots.base.frozen, 'Nested frame lookups require allow_nesting=True'
 
+    log.timer.record_request()
+
     # TODO: Could compute this automatically by running the computation
     def work_from(slot: SLOT) -> Tuple[int, int]:
       assert slot.frame is not None and slot.frame <= frame

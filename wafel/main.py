@@ -181,7 +181,7 @@ class View:
       ig.push_id('debug-pane')
       ig.begin_child('##pane', height=int(ig.get_window_height() * 0.15))
       ig.columns(2)
-      ig.set_column_width(-1, ig.get_window_width() - 220)
+      ig.set_column_width(-1, ig.get_window_width() - 300)
 
       ig.begin_child('##log')
       def init_log() -> List[str]:
@@ -201,13 +201,14 @@ class View:
       ig.next_column()
 
       lines = format_align(
-        '{0}%s%a - %s{1:.1f}%ams  %s{2}%a  %s{3}%a',
+        '{0}%s%a - %s{1:.1f}%ams  %s{2}%a  %s{3}%a  %s{4}%a',
         [
           (
             '  ' * (len(path) - 1) + path[-1],
             s.time,
             math.ceil(s.copies),
             math.ceil(s.updates),
+            math.ceil(s.requests),
           )
           for path, s in log.timer.get_summaries().items()
         ],

@@ -62,6 +62,7 @@ class Summary:
   time: float = 0.0
   copies: float = 0.0
   updates: float = 0.0
+  requests: float = 0.0
 
   @staticmethod
   def average(samples: List[Summary]) -> Summary:
@@ -71,6 +72,7 @@ class Summary:
       time = sum(s.time for s in samples) / len(samples),
       copies = sum(s.copies for s in samples) / len(samples),
       updates = sum(s.updates for s in samples) / len(samples),
+      requests = sum(s.requests for s in samples) / len(samples),
     )
 
 
@@ -117,6 +119,10 @@ class Timer:
   def record_update(self) -> None:
     for sample in self.active.values():
       sample.updates += 1
+
+  def record_request(self) -> None:
+    for sample in self.active.values():
+      sample.requests += 1
 
   def get_summaries(self) -> Dict[Tuple[str, ...], Summary]:
     result = {}

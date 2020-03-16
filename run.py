@@ -30,7 +30,7 @@ with open(config.log_file, 'a') as log_file:
 
   try:
     # import cProfile
-    # cProfile.run('run()', sort='cumtime')
+    # cProfile.run('run()', sort='tottime')
     run()
   except:
     log.error('Uncaught:', traceback.format_exc())
