@@ -41,7 +41,7 @@ def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
 
   with model.timeline[model.selected_frame + 1] as state:
     def get(path: str) -> Any:
-      return DataPath.parse(model.lib, path).get(state)
+      return DataPath.compile(model.lib, path).get(state)
 
     num_steps = get('$state.gQStepsInfo.numSteps')
     assert num_steps <= 4
@@ -78,24 +78,24 @@ def build_scene(model: Model, viewport: cg.Viewport, camera: cg.Camera) -> cg.Sc
 
   def get_field_offset(path: str) -> int:
     # TODO: Less hacky way to do this?
-    data_path = DataPath.parse(model.lib, path)
+    data_path = DataPath.compile(model.lib, path)
     offset = data_path.addr_path.path[-1].value
     return dcast(int, offset)
 
   with model.timeline[model.selected_frame] as state:
-    surface_pool_addr = DataPath.parse(model.lib, '$state.sSurfacePool').get(state)
+    surface_pool_addr = DataPath.compile(model.lib, '$state.sSurfacePool').get(state)
     assert isinstance(surface_pool_addr, RelativeAddr)
     cg.scene_add_surfaces(
       scene,
       state.slot.relative_to_addr(surface_pool_addr),
       model.lib.spec['types']['struct']['Surface']['size'],
-      DataPath.parse(model.lib, '$state.gSurfacesAllocated').get(state),
+      DataPath.compile(model.lib, '$state.gSurfacesAllocated').get(state),
       get_field_offset,
     )
 
     cg.scene_add_objects(
       scene,
-      DataPath.parse(model.lib, '$state.gObjectPool').get_addr(state),
+      DataPath.compile(model.lib, '$state.gObjectPool').get_addr(state),
       model.lib.spec['types']['struct']['Object']['size'],
       get_field_offset,
     )

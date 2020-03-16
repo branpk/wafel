@@ -250,7 +250,7 @@ class _DataVariable(Variable):
     self.path.set(state, value)
 
   def at_object_slot(self, object_id: ObjectId, slot: int) -> Variable:
-    object_path = DataPath.parse(self.lib, f'$state.gObjectPool[{slot}]')
+    object_path = DataPath.compile(self.lib, f'$state.gObjectPool[{slot}]')
     return _DataVariable(
       self.id.with_object_id(object_id),
       self.group,
@@ -395,7 +395,7 @@ def _all_variables(lib: GameLib) -> Variables:
         label,
         lib,
         VariableSemantics.RAW,
-        DataPath.parse(lib, spec.path),
+        DataPath.compile(lib, spec.path),
       )
     elif isinstance(spec, FlagVariableSpec):
       flags = variables[spec.flags]

@@ -140,10 +140,11 @@ class DataPath:
   concrete_end_type: dict
   addr_path: AddrPath
 
-  # TODO: Remove
   @staticmethod
-  def parse(lib: GameLib, source: str) -> DataPath:
-    return compile_data_path(lib, source)
+  def compile(lib: GameLib, source: str) -> DataPath:
+    expr = parse_expr(source)
+    path = resolve_expr(lib, expr)
+    return path
 
   def get_addr(self, state: GameState) -> int:
     assert self.start_type is None
@@ -351,10 +352,4 @@ def resolve_expr(lib: GameLib, expr: Expr) -> DataPath:
     raise NotImplementedError(expr)
 
 
-def compile_data_path(lib: GameLib, source: str) -> DataPath:
-  expr = parse_expr(source)
-  path = resolve_expr(lib, expr)
-  return path
-
-
-__all__ = ['DataPath', 'compile_data_path']
+__all__ = ['DataPath']
