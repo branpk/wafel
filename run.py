@@ -29,6 +29,8 @@ with open(config.log_file, 'a') as log_file:
   log.subscribe(append_to_log)
 
   try:
+    # import cProfile
+    # cProfile.run('run()', sort='cumtime')
     run()
   except:
     log.error('Uncaught:', traceback.format_exc())

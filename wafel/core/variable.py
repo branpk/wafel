@@ -345,6 +345,9 @@ class FlagVariableSpec(VariableSpec):
 class Variables:
   def __init__(self, variables: List[Variable]) -> None:
     self.variables = variables
+    self.variables_by_id = {
+      var.id: var for var in self.variables
+    }
 
   def __iter__(self) -> Iterator[Variable]:
     return iter(self.variables)
@@ -355,10 +358,7 @@ class Variables:
     if id.object_id is not None:
       return self[VariableId(id.name)].at_object(id.object_id)
     else:
-      matches = [var for var in self.variables if var.id == id]
-      if len(matches) == 0:
-        raise KeyError(id)
-      return matches[0]
+      return self.variables_by_id[id]
 
   def group(self, group: VariableGroup) -> List[Variable]:
     return [var for var in self if var.group.contains(group)]

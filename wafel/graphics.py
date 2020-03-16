@@ -19,15 +19,15 @@ def get_renderer() -> cg.Renderer:
 
 
 def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
-  # 87
-  with model.timeline[model.selected_frame] as state:
-    args = { VariableParam.STATE: state }
-    log.timer.begin('test')
-    for _ in range(1000):
-      model.variables['mario-pos-x'].get(args)
-      model.variables['mario-pos-y'].get(args)
-      model.variables['mario-pos-z'].get(args)
-    log.timer.end()
+  # 87 -> 96 -> 36
+  # with model.timeline[model.selected_frame] as state:
+  #   args = { VariableParam.STATE: state }
+  #   log.timer.begin('test')
+  #   for _ in range(1000):
+  #     model.variables['mario-pos-x'].get(args)
+  #     model.variables['mario-pos-y'].get(args)
+  #     model.variables['mario-pos-z'].get(args)
+  #   log.timer.end()
 
   mario_path_nodes = []
   for frame in path_frames:
