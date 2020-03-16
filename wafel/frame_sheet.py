@@ -2,7 +2,7 @@ import sys
 from typing import *
 
 import wafel.imgui as ig
-from wafel.core import Variable, ObjectType, VariableParam, VariableId
+from wafel.core import Variable, ObjectType, VariableId
 from wafel.model import Model
 from wafel.variable_format import Formatters, EmptyFormatter
 import wafel.ui as ui
@@ -112,8 +112,7 @@ class FrameSheet:
         if row_object_type != column.object_type:
           raise Exception # TODO: Error msg
 
-      args = { VariableParam.STATE: state }
-      return variable.get(args)
+      return variable.get(state)
 
 
   def set_data(self, frame: int, column: FrameSheetColumn, data: Any) -> None:

@@ -6,8 +6,9 @@ import os
 
 import wafel.config as config
 from wafel.core import GameLib, Variable, Edits, Timeline, GameState, ObjectId, \
-  ObjectType, VariableParam, load_libsm64
+  ObjectType, load_libsm64
 from wafel.loading import Loading
+from wafel.util import *
 
 
 # TODO: Should create a new Model on every load
@@ -79,18 +80,14 @@ class Model:
     if frame is None:
       frame = self.selected_frame
     with self.timeline[frame] as state:
-      return variable.get({ VariableParam.STATE: state })
+      return variable.get(state)
 
   def get_object_type(self, state: GameState, object_id: ObjectId) -> Optional[ObjectType]:
-    active = self.variables['obj-active-flags-active'].at_object(object_id).get({
-      VariableParam.STATE: state,
-    })
+    active = self.variables['obj-active-flags-active'].at_object(object_id).get(state)
     if not active:
       return None
 
-    behavior_addr = self.variables['obj-behavior-ptr'].at_object(object_id).get({
-      VariableParam.STATE: state,
-    })
+    behavior_addr = dcast(int, self.variables['obj-behavior-ptr'].at_object(object_id).get(state))
     relative_addr = state.slot.addr_to_relative(behavior_addr)
     return ObjectType(
       relative_addr,

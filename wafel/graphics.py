@@ -4,7 +4,7 @@ import ext_modules.graphics as cg
 
 from wafel.model import Model
 import wafel.config as config
-from wafel.core import VariableParam, DataPath, Object, EdgeKind
+from wafel.core import DataPath, Object, EdgeKind
 from wafel.util import *
 
 
@@ -20,30 +20,29 @@ def get_renderer() -> cg.Renderer:
 
 def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
   # 87 -> 96 -> 36
+  # 112
   # with model.timeline[model.selected_frame] as state:
-  #   args = { VariableParam.STATE: state }
   #   log.timer.begin('test')
-  #   for _ in range(1000):
-  #     model.variables['mario-pos-x'].get(args)
-  #     model.variables['mario-pos-y'].get(args)
-  #     model.variables['mario-pos-z'].get(args)
+  #   for _ in range(3000):
+  #     model.variables['mario-pos-x'].get(state)
+  #     model.variables['mario-pos-y'].get(state)
+  #     model.variables['mario-pos-z'].get(state)
   #   log.timer.end()
 
   mario_path_nodes = []
   for frame in path_frames:
     with model.timeline[frame] as state:
-      args = { VariableParam.STATE: state }
       path_node = cg.ObjectPathNode()
       path_node.pos = cg.vec3(
-        model.variables['mario-pos-x'].get(args),
-        model.variables['mario-pos-y'].get(args),
-        model.variables['mario-pos-z'].get(args),
+        model.variables['mario-pos-x'].get(state),
+        model.variables['mario-pos-y'].get(state),
+        model.variables['mario-pos-z'].get(state),
       )
       mario_path_nodes.append(path_node)
 
   with model.timeline[model.selected_frame + 1] as state:
     def get(path: str) -> Any:
-      return DataPath.parse(model.lib, path).get({ VariableParam.STATE: state })
+      return DataPath.parse(model.lib, path).get(state)
 
     num_steps = get('$state.gQStepsInfo.numSteps')
     assert num_steps <= 4
@@ -78,7 +77,6 @@ def build_scene(model: Model, viewport: cg.Viewport, camera: cg.Camera) -> cg.Sc
   scene.viewport = viewport
   scene.camera = camera
 
-  # TODO: Use for surfaces as well?
   def get_field_offset(path: str) -> int:
     # TODO: Less hacky way to do this?
     data_path = DataPath.parse(model.lib, path)
@@ -88,17 +86,16 @@ def build_scene(model: Model, viewport: cg.Viewport, camera: cg.Camera) -> cg.Sc
     return dcast(int, offset)
 
   with model.timeline[model.selected_frame] as state:
-    args = { VariableParam.STATE: state }
     cg.scene_add_surfaces(
       scene,
-      DataPath.parse(model.lib, '$state.sSurfacePool').get(args),
+      DataPath.parse(model.lib, '$state.sSurfacePool').get(state),
       model.lib.spec['types']['struct']['Surface']['size'],
-      DataPath.parse(model.lib, '$state.gSurfacesAllocated').get(args),
+      DataPath.parse(model.lib, '$state.gSurfacesAllocated').get(state),
       get_field_offset,
     )
     cg.scene_add_objects(
       scene,
-      DataPath.parse(model.lib, '$state.gObjectPool').get_addr(args),
+      DataPath.parse(model.lib, '$state.gObjectPool').get_addr(state),
       model.lib.spec['types']['struct']['Object']['size'],
       get_field_offset,
     )

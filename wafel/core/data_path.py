@@ -8,7 +8,6 @@ from itertools import takewhile
 
 from wafel.core.game_lib import GameLib
 from wafel.core.game_state import GameState, Object
-from wafel.core.variable_param import VariableParam, VariableArgs
 from wafel.util import *
 
 
@@ -66,7 +65,7 @@ class Edge:
       return addr + self.value
     elif self.kind == EdgeKind.DEREF:
       ptr = C.cast(addr, C.POINTER(C.c_void_p)) # type: ignore
-      return int(ptr[0]) # type: ignore
+      return int(ptr[0] or 0) # type: ignore
     else:
       raise NotImplementedError(self.kind)
 
@@ -147,15 +146,15 @@ class DataPath:
   def parse(lib: GameLib, source: str) -> DataPath:
     return compile_data_path(lib, source)
 
-  def get_addr_(self, state: GameState) -> int:
+  def get_addr(self, state: GameState) -> int:
     assert self.start_type is None
     return self.addr_path.eval(state)
 
   # TODO: Structs and arrays
 
-  def get_(self, state: GameState) -> object:
+  def get(self, state: GameState) -> object:
     # TODO: This and set can be made more efficient
-    addr = self.get_addr_(state)
+    addr = self.get_addr(state)
 
     if self.concrete_end_type['kind'] == 'primitive':
       ctype = PRIMITIVE_CTYPES[self.concrete_end_type['name']]
@@ -177,8 +176,8 @@ class DataPath:
     else:
       raise NotImplementedError(self.concrete_end_type['kind'])
 
-  def set_(self, state: GameState, value: object) -> None:
-    addr = self.get_addr_(state)
+  def set(self, state: GameState, value: object) -> None:
+    addr = self.get_addr(state)
     assert addr != 0
 
     if self.concrete_end_type['kind'] == 'primitive':
@@ -208,47 +207,6 @@ class DataPath:
       concrete_end_type = other.concrete_end_type,
       addr_path = self.addr_path + other.addr_path,
     )
-
-  # TODO: Remove below
-
-  def get_addr(self, args: VariableArgs) -> int:
-    obj = args.get(VariableParam.OBJECT)
-    if obj is not None:
-      object_path = DataPath(
-        start_type = None,
-        concrete_start_type = None,
-        end_type = assert_not_none(self.start_type),
-        concrete_end_type = assert_not_none(self.concrete_start_type),
-        addr_path = AddrPath.root_(Root.absolute(obj.addr)),
-      )
-      return (object_path + self).get_addr_(args[VariableParam.STATE])
-    return self.get_addr_(args[VariableParam.STATE])
-
-  def get(self, args: VariableArgs) -> object:
-    obj = args.get(VariableParam.OBJECT)
-    if obj is not None:
-      object_path = DataPath(
-        start_type = None,
-        concrete_start_type = None,
-        end_type = assert_not_none(self.start_type),
-        concrete_end_type = assert_not_none(self.concrete_start_type),
-        addr_path = AddrPath.root_(Root.absolute(obj.addr)),
-      )
-      return (object_path + self).get_(args[VariableParam.STATE])
-    return self.get_(args[VariableParam.STATE])
-
-  def set(self, value: object, args: VariableArgs) -> None:
-    obj = args.get(VariableParam.OBJECT)
-    if obj is not None:
-      object_path = DataPath(
-        start_type = None,
-        concrete_start_type = None,
-        end_type = assert_not_none(self.start_type),
-        concrete_end_type = assert_not_none(self.concrete_start_type),
-        addr_path = AddrPath.root_(Root.absolute(obj.addr)),
-      )
-      return (object_path + self).set_(args[VariableParam.STATE], value)
-    self.set_(args[VariableParam.STATE], value)
 
 
 # TODO: Relative data paths (starting at struct)

@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 from typing import *
 from enum import Enum, auto
 import json
 
 from wafel.util import *
-from wafel.core.variable_param import *
 from wafel.core.data_path import DataPath
-from wafel.core.game_state import ObjectId, Object
+from wafel.core.game_state import ObjectId, Object, GameState
 from wafel.core.game_lib import GameLib
 from wafel.core.object_type import ObjectType
 
@@ -190,14 +191,17 @@ class Variable:
     self.read_only = read_only
     self.data_type = data_type
 
-  def get(self, args: VariableArgs) -> Any:
+  def get(self, state: GameState) -> object:
     raise NotImplementedError
 
-  def set(self, value: Any, args: VariableArgs) -> None:
+  def set(self, state: GameState, value: object) -> None:
     raise NotImplementedError
 
-  def at_object(self, object_id: ObjectId) -> 'Variable':
-    return _ObjectVariable(self, object_id)
+  def at_object_slot(self, object_id: ObjectId, slot: int) -> Variable:
+    raise NotImplementedError
+
+  def at_object(self, object_id: ObjectId) -> Variable:
+    return self.at_object_slot(object_id, object_id)
 
   def get_object_id(self) -> Optional[ObjectId]:
     return self.id.object_id
@@ -215,17 +219,17 @@ class Variable:
 class _DataVariable(Variable):
   def __init__(
     self,
-    name: str,
+    id: VariableId,
     group: VariableGroup,
     label: str,
     lib: GameLib,
     semantics: VariableSemantics,
-    path: str,
+    path: DataPath,
     read_only: bool = False,
   ) -> None:
-    self.path = DataPath.parse(lib, path)
+    self.path = path
     super().__init__(
-      VariableId(name),
+      id,
       group,
       label,
       lib,
@@ -234,12 +238,24 @@ class _DataVariable(Variable):
       VariableDataType.from_spec(lib, self.path.concrete_end_type),
     )
 
-  def get(self, args: VariableArgs) -> Any:
-    return self.path.get(args)
+  def get(self, state: GameState) -> object:
+    return self.path.get(state)
 
-  def set(self, value: Any, args: VariableArgs) -> None:
+  def set(self, state: GameState, value: object) -> None:
     assert not self.read_only
-    self.path.set(value, args)
+    self.path.set(state, value)
+
+  def at_object_slot(self, object_id: ObjectId, slot: int) -> Variable:
+    object_path = DataPath.parse(self.lib, f'$state.gObjectPool[{slot}]')
+    return _DataVariable(
+      self.id.with_object_id(object_id),
+      self.group,
+      self.label,
+      self.lib,
+      self.semantics,
+      object_path + self.path,
+      self.read_only,
+    )
 
 
 class _FlagVariable(Variable):
@@ -262,56 +278,32 @@ class _FlagVariable(Variable):
       VariableDataType.BOOL,
     )
     self.flags = flags
+    self.flag_str = flag
     self.flag = dcast(int, self.flags.lib.spec['constants'][flag]['value'])
 
-  def get(self, args: VariableArgs) -> bool:
-    flags = dcast(int, self.flags.get(args))
+  def get(self, state: GameState) -> bool:
+    flags = dcast(int, self.flags.get(state))
     return (flags & self.flag) != 0
 
-  def set(self, value: bool, args: VariableArgs) -> None:
+  def set(self, state: GameState, value: object) -> None:
     assert not self.read_only
-    flags = self.flags.get(args)
+    assert isinstance(value, bool)
+    flags = dcast(int, self.flags.get(state))
     if value:
       flags |= self.flag
     else:
       flags &= ~self.flag
-    self.flags.set(flags, args)
+    self.flags.set(state, flags)
 
-
-class _ObjectVariable(Variable):
-  def __init__(self, variable: Variable, object_id: ObjectId):
-    super().__init__(
-      variable.id.with_object_id(object_id),
-      variable.group,
-      variable.label,
-      variable.lib,
-      variable.semantics,
-      variable.read_only,
-      variable.data_type,
+  def at_object_slot(self, object_id: ObjectId, slot: int) -> Variable:
+    return _FlagVariable(
+      self.id.name,
+      self.group,
+      self.label,
+      self.flags.at_object_slot(object_id, slot),
+      self.flag_str,
+      self.read_only,
     )
-
-    self.variable = variable
-    self.object_id = object_id
-
-    self.object_pool_path = DataPath.parse(variable.lib, '$state.gObjectPool')
-    self.object_struct_size = self.lib.spec['types']['struct']['Object']['size']
-
-  def _get_args(self, args: VariableArgs) -> VariableArgs:
-    object_pool_index = self.object_id
-    object_addr = self.object_pool_path.get_addr(args) + \
-      object_pool_index * self.object_struct_size
-
-    new_args = {
-      VariableParam.OBJECT: Object(object_addr),
-    }
-    new_args.update(args)
-    return new_args
-
-  def get(self, args: VariableArgs) -> Any:
-    return self.variable.get(self._get_args(args))
-
-  def set(self, value: Any, args: VariableArgs) -> None:
-    self.variable.set(value, self._get_args(args))
 
 
 class VariableSpec:
@@ -394,12 +386,12 @@ def _all_variables(lib: GameLib) -> Variables:
     variable: Variable
     if isinstance(spec, DataVariableSpec):
       variable = _DataVariable(
-        name,
+        VariableId(name),
         group,
         label,
         lib,
         VariableSemantics.RAW,
-        spec.path,
+        DataPath.parse(lib, spec.path),
       )
     elif isinstance(spec, FlagVariableSpec):
       flags = variables[spec.flags]

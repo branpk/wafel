@@ -4,8 +4,7 @@ import math
 
 import wafel.imgui as ig
 from wafel.model import Model
-from wafel.core import ObjectId, Variable, VariableGroup, VariableParam, \
-  ObjectType, VariableId
+from wafel.core import ObjectId, Variable, VariableGroup, ObjectType, VariableId
 from wafel.variable_format import Formatters, VariableFormatter
 import wafel.ui as ui
 from wafel.util import *
@@ -90,7 +89,7 @@ class VariableExplorer:
   def render_variable(self, tab: TabId, variable: Variable) -> None:
     frame = self.model.selected_frame
     with self.model.timeline[frame] as state:
-      value = variable.get({ VariableParam.STATE: state })
+      value = variable.get(state)
 
     changed_data, clear_edit = ui.render_labeled_variable(
       f'var-{hash((tab, variable))}',

@@ -6,5 +6,4 @@ from wafel.core.input_buttons import *
 from wafel.core.load_libsm64 import *
 from wafel.core.object_type import *
 from wafel.core.timeline import *
-from wafel.core.variable_param import *
 from wafel.core.variable import *

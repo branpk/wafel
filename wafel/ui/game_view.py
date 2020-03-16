@@ -6,7 +6,6 @@ import ext_modules.graphics as c_graphics
 
 import wafel.imgui as ig
 from wafel.model import Model
-from wafel.core import VariableParam
 from wafel.util import *
 from wafel.local_state import use_state, use_state_with
 from wafel.graphics import render_game
@@ -80,11 +79,10 @@ def get_viewport(framebuffer_size: Tuple[int, int]) -> c_graphics.Viewport:
 
 def get_mario_pos(model: Model) -> Tuple[float, float, float]:
   with model.timeline[model.selected_frame] as state:
-    args = { VariableParam.STATE: state }
     return (
-      model.variables['mario-pos-x'].get(args),
-      model.variables['mario-pos-y'].get(args),
-      model.variables['mario-pos-z'].get(args),
+      dcast(float, model.variables['mario-pos-x'].get(state)),
+      dcast(float, model.variables['mario-pos-y'].get(state)),
+      dcast(float, model.variables['mario-pos-z'].get(state)),
     )
 
 
