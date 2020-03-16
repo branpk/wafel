@@ -4,7 +4,7 @@ import ext_modules.graphics as cg
 
 from wafel.model import Model
 import wafel.config as config
-from wafel.core import DataPath, Object, EdgeKind
+from wafel.core import DataPath, Object
 from wafel.util import *
 
 
@@ -31,14 +31,13 @@ def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
 
   mario_path_nodes = []
   for frame in path_frames:
-    with model.timeline[frame] as state:
-      path_node = cg.ObjectPathNode()
-      path_node.pos = cg.vec3(
-        model.variables['mario-pos-x'].get(state),
-        model.variables['mario-pos-y'].get(state),
-        model.variables['mario-pos-z'].get(state),
-      )
-      mario_path_nodes.append(path_node)
+    path_node = cg.ObjectPathNode()
+    path_node.pos = cg.vec3(
+      model.timeline.get_cached(frame, model.variables['mario-pos-x']),
+      model.timeline.get_cached(frame, model.variables['mario-pos-y']),
+      model.timeline.get_cached(frame, model.variables['mario-pos-z']),
+    )
+    mario_path_nodes.append(path_node)
 
   with model.timeline[model.selected_frame + 1] as state:
     def get(path: str) -> Any:
@@ -80,9 +79,7 @@ def build_scene(model: Model, viewport: cg.Viewport, camera: cg.Camera) -> cg.Sc
   def get_field_offset(path: str) -> int:
     # TODO: Less hacky way to do this?
     data_path = DataPath.parse(model.lib, path)
-    edge = data_path.addr_path.path[-1]
-    assert edge.kind == EdgeKind.OFFSET
-    offset = edge.value
+    offset = data_path.addr_path.path[-1].value
     return dcast(int, offset)
 
   with model.timeline[model.selected_frame] as state:

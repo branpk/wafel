@@ -395,7 +395,10 @@ def run() -> None:
         fps.value = frame_count.value / (time.time() - last_fps_time.value)
         last_fps_time.value = time.time()
         frame_count.value = 0
-        log.info(f'mspf: {int(1000 / fps.value * 10) / 10} ({int(fps.value)} fps)')
+        log.info(
+          f'mspf: {int(1000 / fps.value * 10) / 10} ({int(fps.value)} fps) - ' +
+          f'cache={model.timeline.data_cache.get_size() // 1024}KB'
+        )
 
       log.timer.begin('balance')
       model.timeline.balance_distribution(1/120)

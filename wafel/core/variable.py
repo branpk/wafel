@@ -191,7 +191,7 @@ class Variable:
     self.read_only = read_only
     self.data_type = data_type
 
-  def get(self, state: GameState) -> object:
+  def get_impl(self, follow: Callable[[DataPath], object]) -> object:
     raise NotImplementedError
 
   def set(self, state: GameState, value: object) -> None:
@@ -199,6 +199,10 @@ class Variable:
 
   def at_object_slot(self, object_id: ObjectId, slot: int) -> Variable:
     raise NotImplementedError
+
+  def get(self, state: GameState) -> object:
+    follow = lambda path: path.get(state)
+    return self.get_impl(follow)
 
   def at_object(self, object_id: ObjectId) -> Variable:
     return self.at_object_slot(object_id, object_id)
@@ -238,8 +242,8 @@ class _DataVariable(Variable):
       VariableDataType.from_spec(lib, self.path.concrete_end_type),
     )
 
-  def get(self, state: GameState) -> object:
-    return self.path.get(state)
+  def get_impl(self, follow: Callable[[DataPath], object]) -> object:
+    return follow(self.path)
 
   def set(self, state: GameState, value: object) -> None:
     assert not self.read_only
@@ -281,8 +285,8 @@ class _FlagVariable(Variable):
     self.flag_str = flag
     self.flag = dcast(int, self.flags.lib.spec['constants'][flag]['value'])
 
-  def get(self, state: GameState) -> bool:
-    flags = dcast(int, self.flags.get(state))
+  def get_impl(self, follow: Callable[[DataPath], object]) -> object:
+    flags = dcast(int, self.flags.get_impl(follow))
     return (flags & self.flag) != 0
 
   def set(self, state: GameState, value: object) -> None:

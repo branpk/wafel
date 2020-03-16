@@ -5,7 +5,9 @@ from wafel.core.slot_manager import SlotManager, AbstractSlots
 from wafel.core.game_state import StateSlot
 from wafel.core.game_lib import GameLib
 from wafel.core.edit import Edits
-from wafel.core.variable import Variables
+from wafel.core.variable import Variables, Variable
+from wafel.core.data_cache import DataCache
+from wafel.core.data_path import DataPath
 from wafel.util import *
 
 
@@ -104,12 +106,33 @@ class Timeline:
     self.edits = edits
     self.slots = StateSlots(lib, variables, edits, capacity=20)
     self.slot_manager = SlotManager(self.slots)
+    self.data_cache = DataCache()
+
+    weak_data_cache = weakref.ref(self.data_cache)
+    def invalidate(frame: int) -> None:
+      data_cache = weak_data_cache()
+      if data_cache is not None:
+        data_cache.invalidate(frame)
+    self.edits.on_edit(invalidate)
 
   def __getitem__(self, frame: int) -> StateSlot:
     return self.slot_manager.request_frame(frame)
 
   def get(self, frame: int, allow_nesting=False) -> StateSlot:
     return self.slot_manager.request_frame(frame, allow_nesting=allow_nesting)
+
+  def get_cached(self, frame: int, path: Union[Variable, DataPath]) -> object:
+    if isinstance(path, Variable):
+      return path.get_impl(lambda p: self.get_cached(frame, p))
+
+    cached = self.data_cache.get(frame, path)
+    if cached is not None:
+      return cached.value
+    with self.get(frame) as state:
+      value = path.get(state)
+    self.data_cache.put(frame, path, value)
+    return value
+
 
   def __len__(self) -> int:
     return len(self.edits)

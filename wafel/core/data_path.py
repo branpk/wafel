@@ -78,15 +78,15 @@ class Edge:
 @dataclass(frozen=True)
 class AddrPath:
   root: Optional[Root]
-  path: List[Edge]
+  path: Tuple[Edge, ...]
 
   @staticmethod
   def root_(root: Root) -> AddrPath:
-    return AddrPath(root, [])
+    return AddrPath(root, ())
 
   @staticmethod
   def edge(edge: Edge) -> AddrPath:
-    return AddrPath(None, [edge])
+    return AddrPath(None, (edge,))
 
   def eval(self, state: GameState) -> int:
     assert self.root is not None
@@ -300,7 +300,7 @@ def resolve_expr(lib: GameLib, expr: Expr) -> DataPath:
         concrete_start_type = lib.concrete_type(object_struct),
         end_type = object_struct,
         concrete_end_type = lib.concrete_type(object_struct),
-        addr_path = AddrPath(root=None, path=[]),
+        addr_path = AddrPath(root=None, path=()),
       )
     else:
       struct_path = resolve_expr(lib, expr.expr)
@@ -363,3 +363,6 @@ def compile_data_path(lib: GameLib, source: str) -> DataPath:
   expr = parse_expr(source)
   path = resolve_expr(lib, expr)
   return path
+
+
+__all__ = ['DataPath', 'compile_data_path']
