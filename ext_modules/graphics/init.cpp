@@ -11,6 +11,8 @@
 
 #include "renderer.hpp"
 #include "util.hpp"
+#include "gfx_rendering_api.h"
+#include "scene.hpp"
 
 namespace py = pybind11;
 
@@ -115,10 +117,41 @@ static void scene_add_objects(
 }
 
 
+typedef void (*p_sm64_update_and_render)(
+  uint32_t width,
+  uint32_t height,
+  struct GfxRenderingAPI *rendering_api);
+
+extern "C" struct GfxRenderingAPI gfx_opengl_api;
+extern "C" struct {
+    uint32_t x;
+    uint32_t y;
+    uint32_t width;
+    uint32_t height;
+} gfx_viewport;
+extern "C" void gfx_opengl_end_frame(void);
+
+static void update_and_render(Viewport viewport, uintptr_t update_and_render_fn) {
+  p_sm64_update_and_render sm64_update_and_render =
+    (p_sm64_update_and_render) update_and_render_fn;
+
+  init_opengl();
+
+  gfx_viewport.x = viewport.pos.x;
+  gfx_viewport.y = viewport.pos.y;
+  gfx_viewport.width = viewport.size.x;
+  gfx_viewport.height = viewport.size.y;
+
+  sm64_update_and_render(viewport.size.x, viewport.size.y, &gfx_opengl_api);
+  gfx_opengl_end_frame();
+}
+
+
 PYBIND11_MODULE(graphics, m) {
   m.def("init_opengl", init_opengl);
   m.def("scene_add_surfaces", scene_add_surfaces);
   m.def("scene_add_objects", scene_add_objects);
+  m.def("update_and_render", update_and_render);
 
   // TODO: Generate these automatically? Could create .pyi then too
 

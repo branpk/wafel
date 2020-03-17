@@ -23,6 +23,8 @@ void Renderer::render(const Scene &scene) {
   glScissor(viewport.pos.x, viewport.pos.y, viewport.size.x, viewport.size.y);
   glViewport(viewport.pos.x, viewport.pos.y, viewport.size.x, viewport.size.y);
 
+  glDepthMask(GL_TRUE);
+
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

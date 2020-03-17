@@ -88,9 +88,11 @@ class SlotManager(Generic[SLOT]):
     ]
     return max(prev_slots, key=lambda s: s[:-1], default=(None,))[-1]
 
-  def request_frame(self, frame: int, allow_nesting=False) -> SLOT:
+  def request_frame(self, frame: int, allow_nesting=False, require_base=False) -> SLOT:
     assert frame >= 0, frame
 
+    if require_base:
+      assert not allow_nesting
     assert not self.slots.base.frozen, 'Nested frame lookups require allow_nesting=True'
 
     log.timer.record_request()
@@ -118,7 +120,9 @@ class SlotManager(Generic[SLOT]):
     ]
     latest_slot = min(prev_slots, key=cost_from)
 
-    if latest_slot.frame == frame and not (allow_nesting and latest_slot.based):
+    if latest_slot.frame == frame and \
+        not (allow_nesting and latest_slot.based) and \
+        not (require_base and not latest_slot.based):
       return latest_slot
 
     self.slots.copy(self.slots.base, latest_slot)

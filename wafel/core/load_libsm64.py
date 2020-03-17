@@ -128,6 +128,7 @@ PRIMITIVES: Dict[str, str] = {
   'long double': 'f128',
   'signed char': 's8',
   'short int': 's16',
+  '_Bool': 's32',
 }
 
 VOID = {

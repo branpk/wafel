@@ -142,11 +142,10 @@ class View:
       height=int(total_height // 2) - slider_space // 2,
       border=True,
     )
-    ui.render_game_view_rotate(
-      'game-view-1',
-      framebuffer_size,
-      self.model,
-    )
+    if config.dev_mode:
+      ui.render_game_view_in_game('game-view-1', framebuffer_size, self.model)
+    else:
+      ui.render_game_view_rotate('game-view-1', framebuffer_size, self.model)
     ig.end_child()
     log.timer.end()
 
@@ -156,11 +155,7 @@ class View:
       height=int(total_height // 2) - slider_space // 2,
       border=True,
     )
-    ui.render_game_view_birds_eye(
-      'game-view-2',
-      framebuffer_size,
-      self.model,
-    )
+    ui.render_game_view_birds_eye('game-view-2', framebuffer_size, self.model)
     ig.end_child()
     log.timer.end()
 

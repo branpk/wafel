@@ -118,8 +118,8 @@ class Timeline:
   def __getitem__(self, frame: int) -> StateSlot:
     return self.slot_manager.request_frame(frame)
 
-  def get(self, frame: int, allow_nesting=False) -> StateSlot:
-    return self.slot_manager.request_frame(frame, allow_nesting=allow_nesting)
+  def get(self, frame: int, allow_nesting=False, require_base=False) -> StateSlot:
+    return self.slot_manager.request_frame(frame, allow_nesting, require_base)
 
   def get_cached(self, frame: int, path: Union[Variable, DataPath]) -> object:
     if isinstance(path, Variable):

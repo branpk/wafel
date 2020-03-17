@@ -123,6 +123,27 @@ def render_game_view_rotate(
   ig.pop_id()
 
 
+def render_game_view_in_game(
+  id: str,
+  framebuffer_size: Tuple[int, int],
+  model: Model,
+) -> None:
+  ig.push_id(id)
+
+  prev_frame = max(model.selected_frame - 1, 0)
+  with model.timeline.get(prev_frame, require_base=True) as state:
+    from wafel.core import AbsoluteAddr, DataPath
+    sm64_update_and_render = \
+      dcast(AbsoluteAddr, model.lib.symbol_addr('sm64_update_and_render').value).addr
+
+    c_graphics.update_and_render(get_viewport(framebuffer_size), sm64_update_and_render)
+
+    # Invalidate frame to ensure no rendering state gets copied to other slots
+    state.slot.frame = None
+
+  ig.pop_id()
+
+
 def render_pos_y_slider(
   id: str,
   pos_y: float,
@@ -224,4 +245,4 @@ def render_game_view_birds_eye(
   ig.pop_id()
 
 
-__all__ = ['render_game_view_rotate', 'render_game_view_birds_eye']
+__all__ = ['render_game_view_rotate', 'render_game_view_in_game', 'render_game_view_birds_eye']
