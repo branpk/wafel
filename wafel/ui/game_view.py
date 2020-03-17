@@ -9,6 +9,7 @@ from wafel.model import Model
 from wafel.util import *
 from wafel.local_state import use_state, use_state_with
 from wafel.graphics import render_game
+from wafel.core import DataPath, AbsoluteAddr
 
 
 # TODO: Rename to game_view_overlay. Reduce parameters to minimum (don't require full Model)
@@ -130,9 +131,36 @@ def render_game_view_in_game(
 ) -> None:
   ig.push_id(id)
 
+  mouse_state = use_state('mouse-state', MouseTracker()).value
+  pitch = use_state('pitch', 0.0)
+  yaw = use_state('yaw', 0.0)
+  zoom = use_state('zoom', 0.0)
+
+  drag_amount = mouse_state.get_drag_amount()
+  pitch.value -= drag_amount[1] / 200
+  yaw.value -= drag_amount[0] / 200
+  zoom.value += mouse_state.get_wheel_amount() / 5
+
+  target = get_mario_pos(model)
+  offset = 1500 * math.pow(0.5, zoom.value)
+  face_direction = angle_to_direction(pitch.value, yaw.value)
+  camera_pos = (
+    target[0] - offset * face_direction[0],
+    target[1] - offset * face_direction[1],
+    target[2] - offset * face_direction[2],
+  )
+
+  # TODO: Move below to graphics.py
   prev_frame = max(model.selected_frame - 1, 0)
   with model.timeline.get(prev_frame, require_base=True) as state:
-    from wafel.core import AbsoluteAddr, DataPath
+    DataPath.compile(model.lib, '$state.gOverrideCamera.enabled').set(state, True)
+    DataPath.compile(model.lib, '$state.gOverrideCamera.pos[0]').set(state, camera_pos[0])
+    DataPath.compile(model.lib, '$state.gOverrideCamera.pos[1]').set(state, camera_pos[1])
+    DataPath.compile(model.lib, '$state.gOverrideCamera.pos[2]').set(state, camera_pos[2])
+    DataPath.compile(model.lib, '$state.gOverrideCamera.focus[0]').set(state, target[0])
+    DataPath.compile(model.lib, '$state.gOverrideCamera.focus[1]').set(state, target[1])
+    DataPath.compile(model.lib, '$state.gOverrideCamera.focus[2]').set(state, target[2])
+
     sm64_update_and_render = \
       dcast(AbsoluteAddr, model.lib.symbol_addr('sm64_update_and_render').value).addr
 
