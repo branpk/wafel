@@ -128,7 +128,7 @@ def render_game_view_rotate(
     mag = math.sqrt(sum(c ** 2 for c in move))
     move = [c / mag for c in move]
 
-    speed = 1.0 * delta_time * offset
+    speed = 50.0 * delta_time * math.sqrt(offset)
 
     f = (math.sin(yaw.value), 0, math.cos(yaw.value))
     u = (0, 1, 0)
@@ -143,6 +143,10 @@ def render_game_view_rotate(
       target_pos[2] + delta[2],
     )
     target_pos = target.value
+
+  if target.value is not None:
+    if ig.button('Center'):
+      target.value = None
 
   camera_pos = (
     target_pos[0] - offset * face_direction[0],
