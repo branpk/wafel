@@ -1,6 +1,9 @@
 from typing import *
 import math
 import contextlib
+import time
+
+import glfw
 
 import ext_modules.graphics as c_graphics
 
@@ -95,22 +98,56 @@ def render_game_view_rotate(
   ig.push_id(id)
 
   mouse_state = use_state('mouse-state', MouseTracker()).value
+  target: Ref[Optional[Tuple[float, float, float]]] = use_state('target', None)
   pitch = use_state('pitch', 0.0)
   yaw = use_state('yaw', 0.0)
   zoom = use_state('zoom', 0.0)
+  prev_frame_time = use_state_with('prev-frame-time', time.time)
+
+  delta_time = time.time() - prev_frame_time.value
+  prev_frame_time.value = time.time()
 
   drag_amount = mouse_state.get_drag_amount()
   pitch.value -= drag_amount[1] / 200
   yaw.value -= drag_amount[0] / 200
   zoom.value += mouse_state.get_wheel_amount() / 5
 
-  target = get_mario_pos(model)
+  target_pos = get_mario_pos(model) if target.value is None else target.value
   offset = 1500 * math.pow(0.5, zoom.value)
   face_direction = angle_to_direction(pitch.value, yaw.value)
+
+  move = [0.0, 0.0, 0.0] # forward, up, right
+  if not ig.get_io().want_capture_keyboard or ig.is_mouse_down(): # TOOD: Weird behavior but probably fine?
+    if ig.is_key_down(ord('W')): move[0] += 1
+    if ig.is_key_down(ord('S')): move[0] -= 1
+    if ig.is_key_down(glfw.KEY_SPACE): move[1] += 1
+    if ig.is_key_down(glfw.KEY_LEFT_SHIFT): move[1] -= 1
+    if ig.is_key_down(ord('A')): move[2] -= 1
+    if ig.is_key_down(ord('D')): move[2] += 1
+  if move != [0.0, 0.0, 0.0]:
+    mag = math.sqrt(sum(c ** 2 for c in move))
+    move = [c / mag for c in move]
+
+    speed = 1.0 * delta_time * offset
+
+    f = (math.sin(yaw.value), 0, math.cos(yaw.value))
+    u = (0, 1, 0)
+    r = (-f[2], 0, f[0])
+    delta = tuple(
+      speed * move[0] * f[i] + speed * move[1] * u[i] + speed * move[2] * r[i]
+        for i in range(3)
+    )
+    target.value = (
+      target_pos[0] + delta[0],
+      target_pos[1] + delta[1],
+      target_pos[2] + delta[2],
+    )
+    target_pos = target.value
+
   camera_pos = (
-    target[0] - offset * face_direction[0],
-    target[1] - offset * face_direction[1],
-    target[2] - offset * face_direction[2],
+    target_pos[0] - offset * face_direction[0],
+    target_pos[1] - offset * face_direction[1],
+    target_pos[2] - offset * face_direction[2],
   )
 
   camera = c_graphics.RotateCamera()
@@ -118,6 +155,9 @@ def render_game_view_rotate(
   camera.pitch = pitch.value
   camera.yaw = yaw.value
   camera.fov_y = math.radians(45)
+  if target.value is not None:
+    camera.has_target = True
+    camera.target = c_graphics.vec3(*target.value)
 
   render_game(model, get_viewport(framebuffer_size), c_graphics.Camera(camera))
 

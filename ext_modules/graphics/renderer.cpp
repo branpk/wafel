@@ -43,6 +43,9 @@ void Renderer::render(const Scene &scene) {
   render_objects(scene);
   render_object_paths(scene);
   render_wall_hitboxes(scene);
+  if (scene.camera.mode == CameraMode::ROTATE) {
+    render_camera_target(scene);
+  }
   if (scene.camera.mode == CameraMode::BIRDS_EYE) {
     render_unit_squares(scene);
   }
@@ -419,6 +422,46 @@ void Renderer::render_path_dots(const Scene &scene, const vector<PathDot> &dots)
   vertex_array->set("inRadius", in_radius);
 
   glDrawArrays(GL_TRIANGLES, 0, in_center.size());
+  delete vertex_array;
+}
+
+void Renderer::render_camera_target(const Scene &scene) {
+  RotateCamera camera = scene.camera.rotate_camera;
+  if (!camera.has_target) {
+    return;
+  }
+
+  vector<PathDot> dots;
+  dots.push_back({
+    camera.target,
+    vec4(0.2, 0.2, 0.2, 0.8),
+    0.01f,
+  });
+
+  render_path_dots(scene, dots);
+
+  Program *program = res.program(
+    assets_directory + "/shaders/color.vert",
+    assets_directory + "/shaders/color.frag");
+
+  program->use();
+  program->set_uniform("uProjMatrix", proj_matrix);
+  program->set_uniform("uViewMatrix", view_matrix);
+
+  vector<vec3> in_pos;
+  in_pos.push_back(camera.target);
+  in_pos.push_back(camera.target + vec3(0, -10000, 0));
+
+  vector<vec4> in_color;
+  in_color.insert(in_color.end(), 2, vec4(0.2, 0.2, 0.2, 0.8));
+
+  VertexArray *vertex_array = new VertexArray(program);
+  vertex_array->bind();
+  vertex_array->set("inPos", in_pos);
+  vertex_array->set("inColor", in_color);
+
+  glDrawArrays(GL_LINES, 0, in_pos.size());
+
   delete vertex_array;
 }
 

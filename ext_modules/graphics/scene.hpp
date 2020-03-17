@@ -21,6 +21,8 @@ struct RotateCamera {
   float pitch;
   float yaw;
   float fov_y;
+  bool has_target;
+  vec3 target;
 };
 
 struct BirdsEyeCamera {

@@ -34,6 +34,7 @@ private:
   void render_object_paths(const Scene &scene);
   void render_object_path_lines(const Scene &scene);
   void render_path_dots(const Scene &scene, const vector<PathDot> &dots);
+  void render_camera_target(const Scene &scene);
   void render_unit_squares(const Scene &scene);
 };
 
