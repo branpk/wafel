@@ -90,6 +90,22 @@ def get_mario_pos(model: Model) -> Tuple[float, float, float]:
     )
 
 
+def move_toward(
+  x: Tuple[float, float, float],
+  target: Tuple[float, float, float],
+  delta: float,
+) -> Tuple[float, float, float]:
+  remaining = (target[0] - x[0], target[1] - x[1], target[2] - x[2])
+  distance = math.sqrt(sum(c ** 2 for c in remaining))
+  if distance < delta:
+    return target
+  return (
+    x[0] + delta * remaining[0] / distance,
+    x[1] + delta * remaining[1] / distance,
+    x[2] + delta * remaining[2] / distance,
+  )
+
+
 def render_game_view_rotate(
   id: str,
   framebuffer_size: Tuple[int, int],
@@ -99,6 +115,7 @@ def render_game_view_rotate(
 
   mouse_state = use_state('mouse-state', MouseTracker()).value
   target: Ref[Optional[Tuple[float, float, float]]] = use_state('target', None)
+  target_vel: Ref[Optional[Tuple[float, float, float]]] = use_state('target-vel', None)
   pitch = use_state('pitch', 0.0)
   yaw = use_state('yaw', 0.0)
   zoom = use_state('zoom', 0.0)
@@ -124,29 +141,37 @@ def render_game_view_rotate(
     if ig.is_key_down(glfw.KEY_LEFT_SHIFT): move[1] -= 1
     if ig.is_key_down(ord('A')): move[2] -= 1
     if ig.is_key_down(ord('D')): move[2] += 1
-  if move != [0.0, 0.0, 0.0]:
+  if move != [0.0, 0.0, 0.0] or target.value is not None:
     mag = math.sqrt(sum(c ** 2 for c in move))
-    move = [c / mag for c in move]
+    if mag != 0:
+      move = [c / mag for c in move]
 
-    speed = 50.0 * delta_time * math.sqrt(offset)
-
+    max_speed = 50.0 * delta_time * math.sqrt(offset)
     f = (math.sin(yaw.value), 0, math.cos(yaw.value))
     u = (0, 1, 0)
     r = (-f[2], 0, f[0])
-    delta = tuple(
-      speed * move[0] * f[i] + speed * move[1] * u[i] + speed * move[2] * r[i]
-        for i in range(3)
+    end_vel = cast(
+      Tuple[float, float, float],
+      tuple(
+        max_speed * move[0] * f[i] + max_speed * move[1] * u[i] + max_speed * move[2] * r[i]
+          for i in range(3)
+      ),
     )
+
+    accel = 10.0 * delta_time * math.sqrt(offset)
+    current_vel = target_vel.value or (0.0, 0.0, 0.0)
+    target_vel.value = move_toward(current_vel, end_vel, accel)
     target.value = (
-      target_pos[0] + delta[0],
-      target_pos[1] + delta[1],
-      target_pos[2] + delta[2],
+      target_pos[0] + target_vel.value[0],
+      target_pos[1] + target_vel.value[1],
+      target_pos[2] + target_vel.value[2],
     )
     target_pos = target.value
 
   if target.value is not None:
     if ig.button('Center'):
       target.value = None
+      target_vel.value = None
 
   camera_pos = (
     target_pos[0] - offset * face_direction[0],
