@@ -133,6 +133,9 @@ void Renderer::render_surfaces(const Scene &scene) {
 }
 
 void Renderer::render_wall_hitboxes(const Scene &scene) {
+  if (scene.wall_hitbox_radius == 0.0f) {
+    return;
+  }
   render_wall_hitbox_tris(scene);
   render_wall_hitbox_lines(scene);
 }
@@ -157,7 +160,7 @@ void Renderer::render_wall_hitbox_tris(const Scene &scene) {
         surface.type == SurfaceType::WALL_X_PROJ
           ? vec3(1, 0, 0)
           : vec3(0, 0, 1);
-      float proj_dist = 50.0f / glm::dot(surface.normal, proj_dir);
+      float proj_dist = scene.wall_hitbox_radius / glm::dot(surface.normal, proj_dir);
 
       vec3 ext_vertices[3] = {
         surface.vertices[0] + proj_dist * proj_dir,
@@ -224,7 +227,7 @@ void Renderer::render_wall_hitbox_lines(const Scene &scene) {
         surface.type == SurfaceType::WALL_X_PROJ
           ? vec3(1, 0, 0)
           : vec3(0, 0, 1);
-      float proj_dist = 50.0f / glm::dot(surface.normal, proj_dir);
+      float proj_dist = scene.wall_hitbox_radius / glm::dot(surface.normal, proj_dir);
 
       vec3 ext_vertices[3] = {
         surface.vertices[0] + proj_dist * proj_dir,

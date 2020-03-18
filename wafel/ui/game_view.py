@@ -110,6 +110,7 @@ def render_game_view_rotate(
   id: str,
   framebuffer_size: Tuple[int, int],
   model: Model,
+  wall_hitbox_radius: float,
 ) -> None:
   ig.push_id(id)
 
@@ -189,7 +190,7 @@ def render_game_view_rotate(
   if target.value is not None:
     camera.render_target = True
 
-  render_game(model, get_viewport(framebuffer_size), c_graphics.Camera(camera))
+  render_game(model, get_viewport(framebuffer_size), c_graphics.Camera(camera), wall_hitbox_radius)
 
   ig.pop_id()
 
@@ -283,6 +284,7 @@ def render_game_view_birds_eye(
   id: str,
   framebuffer_size: Tuple[int, int],
   model: Model,
+  wall_hitbox_radius: float,
 ) -> None:
   ig.push_id(id)
 
@@ -338,7 +340,7 @@ def render_game_view_birds_eye(
   camera.pos = c_graphics.vec3(camera_xz[0], camera_y, camera_xz[1])
   camera.span_y = world_span_x
 
-  render_game(model, viewport, c_graphics.Camera(camera))
+  render_game(model, viewport, c_graphics.Camera(camera), wall_hitbox_radius)
 
   ig.pop_id()
 

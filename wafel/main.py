@@ -136,6 +136,9 @@ class View:
     total_height = ig.get_window_height() - ig.get_frame_height() # subtract menu bar
     slider_space = 45
 
+    wall_hitbox_radius = use_state('wall-hitbox-radius', 50)
+    wall_hitbox_options = [0, 24, 50, 110]
+
     log.timer.begin('gview1')
     ig.begin_child(
       'Game View 1',
@@ -145,7 +148,25 @@ class View:
     # if config.dev_mode:
     #   ui.render_game_view_in_game('game-view-1', framebuffer_size, self.model)
     # else:
-    ui.render_game_view_rotate('game-view-1', framebuffer_size, self.model)
+    ui.render_game_view_rotate(
+      'game-view-1',
+      framebuffer_size,
+      self.model,
+      wall_hitbox_radius.value,
+    )
+
+    ig.set_cursor_pos((10.0, ig.get_window_height() - 30))
+    ig.text('wall radius')
+    ig.same_line()
+    ig.push_item_width(50)
+    _, index = ig.combo(
+      '##wall-hitbox-radius',
+      wall_hitbox_options.index(wall_hitbox_radius.value),
+      list(map(str, wall_hitbox_options)),
+    )
+    wall_hitbox_radius.value = wall_hitbox_options[index]
+    ig.pop_item_width()
+
     ig.end_child()
     log.timer.end()
 
@@ -155,7 +176,12 @@ class View:
       height=int(total_height // 2) - slider_space // 2,
       border=True,
     )
-    ui.render_game_view_birds_eye('game-view-2', framebuffer_size, self.model)
+    ui.render_game_view_birds_eye(
+      'game-view-2',
+      framebuffer_size,
+      self.model,
+      wall_hitbox_radius.value,
+    )
     ig.end_child()
     log.timer.end()
 

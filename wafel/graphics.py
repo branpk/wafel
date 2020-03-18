@@ -106,8 +106,14 @@ def build_scene(model: Model, viewport: cg.Viewport, camera: cg.Camera) -> cg.Sc
   return scene
 
 
-def render_game(model: Model, viewport: cg.Viewport, camera: cg.Camera) -> None:
+def render_game(
+  model: Model,
+  viewport: cg.Viewport,
+  camera: cg.Camera,
+  wall_hitbox_radius: float,
+) -> None:
   scene = build_scene(model, viewport, camera)
+  scene.wall_hitbox_radius = wall_hitbox_radius
   get_renderer().render(scene)
 
 

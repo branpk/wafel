@@ -291,5 +291,6 @@ PYBIND11_MODULE(graphics, m) {
     .def_readwrite("camera", &Scene::camera)
     .def_readwrite("surfaces", &Scene::surfaces)
     .def_readwrite("objects", &Scene::objects)
-    .def_readwrite("object_paths", &Scene::object_paths);
+    .def_readwrite("object_paths", &Scene::object_paths)
+    .def_readwrite("wall_hitbox_radius", &Scene::wall_hitbox_radius);
 }

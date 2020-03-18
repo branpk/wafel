@@ -81,6 +81,7 @@ struct Scene {
   vector<Surface> surfaces;
   vector<Object> objects;
   vector<ObjectPath> object_paths;
+  float wall_hitbox_radius;
 };
 
 
