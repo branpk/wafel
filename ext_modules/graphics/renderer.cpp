@@ -42,10 +42,10 @@ void Renderer::render(const Scene &scene) {
   render_surfaces(scene);
   render_objects(scene);
   render_object_paths(scene);
-  render_wall_hitboxes(scene);
   if (scene.camera.mode == CameraMode::ROTATE) {
     render_camera_target(scene);
   }
+  render_wall_hitboxes(scene); // Writes to z buffer
   if (scene.camera.mode == CameraMode::BIRDS_EYE) {
     render_unit_squares(scene);
   }
@@ -136,8 +136,9 @@ void Renderer::render_wall_hitboxes(const Scene &scene) {
   if (scene.wall_hitbox_radius == 0.0f) {
     return;
   }
-  render_wall_hitbox_tris(scene);
+  // Render lines first since tris write to z buffer
   render_wall_hitbox_lines(scene);
+  render_wall_hitbox_tris(scene);
 }
 
 void Renderer::render_wall_hitbox_tris(const Scene &scene) {
@@ -178,14 +179,35 @@ void Renderer::render_wall_hitbox_tris(const Scene &scene) {
       in_pos.push_back(ext_vertices[1]);
       in_pos.push_back(ext_vertices[2]);
 
+      in_pos.push_back(int_vertices[0]);
+      in_pos.push_back(int_vertices[1]);
+      in_pos.push_back(int_vertices[2]);
+
       for (int i0 = 0; i0 < 3; i0++) {
         int i1 = (i0 + 1) % 3;
-        in_pos.push_back(int_vertices[i0]);
-        in_pos.push_back(int_vertices[i1]);
-        in_pos.push_back(ext_vertices[i0]);
-        in_pos.push_back(ext_vertices[i0]);
-        in_pos.push_back(int_vertices[i1]);
-        in_pos.push_back(ext_vertices[i1]);
+
+        // Bump slightly inward. This prevents flickering with floors and adjacent
+        // walls
+        float bump = 0.01f; // TODO: Account for distance from camera
+        if (surface.type == SurfaceType::WALL_Z_PROJ) {
+          bump *= 2.0f; // Avoid flickering between x and z projected wall hitboxes
+        }
+        {
+          vec3 vertices[] = { int_vertices[i0], int_vertices[i1], ext_vertices[i0] };
+          vec3 normal = glm::normalize(
+            glm::cross(vertices[1] - vertices[0], vertices[2] - vertices[0]));
+          for (int i = 0; i < 3; i++) {
+            in_pos.push_back(vertices[i] - bump * normal);
+          }
+        }
+        {
+          vec3 vertices[] = { ext_vertices[i0], int_vertices[i1], ext_vertices[i1] };
+          vec3 normal = glm::normalize(
+            glm::cross(vertices[1] - vertices[0], vertices[2] - vertices[0]));
+          for (int i = 0; i < 3; i++) {
+            in_pos.push_back(vertices[i] - bump * normal);
+          }
+        }
       }
 
       vec4 color =
@@ -201,9 +223,15 @@ void Renderer::render_wall_hitbox_tris(const Scene &scene) {
   vertex_array->set("inPos", in_pos);
   vertex_array->set("inColor", in_color);
 
-  glDepthMask(GL_FALSE);
+  // When two wall hitboxes overlap, we should not increase the opacity within
+  // their region of overlap (preference).
+  // First pass writes only to depth buffer to ensure that only the closest
+  // hitbox triangles are drawn, then second pass draws them.
+  glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
   glDrawArrays(GL_TRIANGLES, 0, in_pos.size());
-  glDepthMask(GL_TRUE);
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+  glDrawArrays(GL_TRIANGLES, 0, in_pos.size());
+
   delete vertex_array;
 }
 
