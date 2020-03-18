@@ -5,6 +5,7 @@ from enum import Enum, auto
 from datetime import datetime
 import time
 from dataclasses import dataclass
+import math
 
 
 class LogLevel(Enum):
@@ -131,6 +132,32 @@ class Timer:
       samples = samples[:min_count]
       result[path] = Summary.average(samples)
     return result
+
+  def get_frame_summary(self) -> Dict[Tuple[str, ...], Summary]:
+    result = {}
+    min_count = min(map(len, self.samples.values()))
+    if min_count == 0:
+      return {}
+    for path, samples in sorted(self.samples.items()):
+      samples = samples[:min_count]
+      result[path] = samples[-1]
+    return result
+
+  def format(self, summaries: Dict[Tuple[str, ...], Summary]) -> List[str]:
+    from wafel.util import format_align
+    return format_align(
+      '{0}%s%a - %s{1:.1f}%ams  %s{2}%a  %s{3}%a  %s{4}%a',
+      [
+        (
+          '  ' * (len(path) - 1) + path[-1],
+          s.time,
+          math.ceil(s.copies),
+          math.ceil(s.updates),
+          math.ceil(s.requests),
+        )
+        for path, s in summaries.items()
+      ],
+    )
 
 
 timer = Timer()

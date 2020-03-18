@@ -228,20 +228,7 @@ class View:
 
       ig.next_column()
 
-      lines = format_align(
-        '{0}%s%a - %s{1:.1f}%ams  %s{2}%a  %s{3}%a  %s{4}%a',
-        [
-          (
-            '  ' * (len(path) - 1) + path[-1],
-            s.time,
-            math.ceil(s.copies),
-            math.ceil(s.updates),
-            math.ceil(s.requests),
-          )
-          for path, s in log.timer.get_summaries().items()
-        ],
-      )
-      for line in lines:
+      for line in log.timer.format(log.timer.get_summaries()):
         ig.text(line)
 
       ig.columns(1)
@@ -473,5 +460,11 @@ def run() -> None:
       log.error('Caught: ' + error)
     finally:
       log.timer.end_frame()
+
+      # TODO: Should enable in non-dev mode, but should throttle it
+      if config.dev_mode:
+        summary = log.timer.get_frame_summary()
+        if summary[('frame',)].time >= 100:
+          log.warn('Spike:\n' + '\n'.join(log.timer.format(summary)))
 
   open_window_and_run(render, maximize=True)
