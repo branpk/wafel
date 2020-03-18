@@ -128,6 +128,7 @@ def render_game_view_rotate(
   pitch.value -= drag_amount[1] / 200
   yaw.value -= drag_amount[0] / 200
   zoom.value += mouse_state.get_wheel_amount() / 5
+  zoom.value = min(zoom.value, 7.0)
 
   target_pos = get_mario_pos(model) if target.value is None else target.value
   offset = 1500 * math.pow(0.5, zoom.value)
@@ -181,12 +182,12 @@ def render_game_view_rotate(
 
   camera = c_graphics.RotateCamera()
   camera.pos = c_graphics.vec3(*camera_pos)
+  camera.target = c_graphics.vec3(*target_pos)
   camera.pitch = pitch.value
   camera.yaw = yaw.value
   camera.fov_y = math.radians(45)
   if target.value is not None:
-    camera.has_target = True
-    camera.target = c_graphics.vec3(*target.value)
+    camera.render_target = True
 
   render_game(model, get_viewport(framebuffer_size), c_graphics.Camera(camera))
 

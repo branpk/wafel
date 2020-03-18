@@ -18,11 +18,11 @@ enum class CameraMode {
 
 struct RotateCamera {
   vec3 pos;
-  float pitch;
+  vec3 target;
+  float pitch; // TODO: Can compute pitch and yaw from target
   float yaw;
   float fov_y;
-  bool has_target;
-  vec3 target;
+  bool render_target; // TODO: Move out of camera to a config struct?
 };
 
 struct BirdsEyeCamera {

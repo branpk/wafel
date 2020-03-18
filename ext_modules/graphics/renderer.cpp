@@ -58,10 +58,14 @@ void Renderer::build_transforms(const Scene &scene) {
     case CameraMode::ROTATE: {
       const RotateCamera &camera = scene.camera.rotate_camera;
 
-      float near = 10;
+      float dist_to_target = glm::distance(camera.pos, camera.target);
+      float dist_to_far_corner = glm::distance(glm::abs(camera.pos), vec3(-8191, -8191, -8191));
+      float far = dist_to_far_corner * 0.95f;
+      float near = fmin(1000.0f, dist_to_target * 0.1f);
+
       float top = near * tanf(camera.fov_y / 2);
       float right = top * viewport.size.x / viewport.size.y;
-      proj_matrix = glm::frustum<float>(-right, right, -top, top, near, 20000);
+      proj_matrix = glm::frustum<float>(-right, right, -top, top, near, far);
 
       view_matrix = mat4(1.0f);
       view_matrix = glm::rotate(view_matrix, glm::pi<float>(), vec3(0, 1, 0));
@@ -439,7 +443,7 @@ void Renderer::render_path_dots(const Scene &scene, const vector<PathDot> &dots)
 
 void Renderer::render_camera_target(const Scene &scene) {
   RotateCamera camera = scene.camera.rotate_camera;
-  if (!camera.has_target) {
+  if (!camera.render_target) {
     return;
   }
 

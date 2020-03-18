@@ -221,11 +221,11 @@ PYBIND11_MODULE(graphics, m) {
   py::class_<RotateCamera>(m, "RotateCamera")
     .def(py::init<>())
     .def_readwrite("pos", &RotateCamera::pos)
+    .def_readwrite("target", &RotateCamera::target)
     .def_readwrite("pitch", &RotateCamera::pitch)
     .def_readwrite("yaw", &RotateCamera::yaw)
     .def_readwrite("fov_y", &RotateCamera::fov_y)
-    .def_readwrite("has_target", &RotateCamera::has_target)
-    .def_readwrite("target", &RotateCamera::target);
+    .def_readwrite("render_target", &RotateCamera::render_target);
 
   py::class_<BirdsEyeCamera>(m, "BirdsEyeCamera")
     .def(py::init<>())
