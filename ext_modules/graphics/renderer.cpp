@@ -183,12 +183,20 @@ void Renderer::render_wall_hitbox_tris(const Scene &scene) {
       in_pos.push_back(int_vertices[1]);
       in_pos.push_back(int_vertices[2]);
 
+      // TODO: Helper for calculating bump sizes
+      float camera_dist;
+      if (scene.camera.mode == CameraMode::ROTATE) {
+        camera_dist = glm::distance(int_vertices[0], scene.camera.rotate_camera.pos);
+      } else {
+        camera_dist = 1000.0f;
+      }
+
       for (int i0 = 0; i0 < 3; i0++) {
         int i1 = (i0 + 1) % 3;
 
         // Bump slightly inward. This prevents flickering with floors and adjacent
         // walls
-        float bump = 0.01f; // TODO: Account for distance from camera
+        float bump = 0.1f * camera_dist / 1000.0f;
         if (surface.type == SurfaceType::WALL_Z_PROJ) {
           bump *= 2.0f; // Avoid flickering between x and z projected wall hitboxes
         }
