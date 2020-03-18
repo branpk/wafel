@@ -153,26 +153,32 @@ void Renderer::render_wall_hitbox_tris(const Scene &scene) {
         surface.type == SurfaceType::WALL_X_PROJ
           ? vec3(1, 0, 0)
           : vec3(0, 0, 1);
-      float proj50_dist = 50.0f / glm::dot(surface.normal, proj_dir);
+      float proj_dist = 50.0f / glm::dot(surface.normal, proj_dir);
 
-      vec3 ext50_vertices[3] = {
-        surface.vertices[0] + proj50_dist * proj_dir,
-        surface.vertices[1] + proj50_dist * proj_dir,
-        surface.vertices[2] + proj50_dist * proj_dir,
+      vec3 ext_vertices[3] = {
+        surface.vertices[0] + proj_dist * proj_dir,
+        surface.vertices[1] + proj_dist * proj_dir,
+        surface.vertices[2] + proj_dist * proj_dir,
       };
 
-      in_pos.push_back(ext50_vertices[0]);
-      in_pos.push_back(ext50_vertices[1]);
-      in_pos.push_back(ext50_vertices[2]);
+      vec3 int_vertices[3] = {
+        surface.vertices[0] - proj_dist * proj_dir,
+        surface.vertices[1] - proj_dist * proj_dir,
+        surface.vertices[2] - proj_dist * proj_dir,
+      };
+
+      in_pos.push_back(ext_vertices[0]);
+      in_pos.push_back(ext_vertices[1]);
+      in_pos.push_back(ext_vertices[2]);
 
       for (int i0 = 0; i0 < 3; i0++) {
         int i1 = (i0 + 1) % 3;
-        in_pos.push_back(surface.vertices[i0]);
-        in_pos.push_back(surface.vertices[i1]);
-        in_pos.push_back(ext50_vertices[i0]);
-        in_pos.push_back(ext50_vertices[i0]);
-        in_pos.push_back(surface.vertices[i1]);
-        in_pos.push_back(ext50_vertices[i1]);
+        in_pos.push_back(int_vertices[i0]);
+        in_pos.push_back(int_vertices[i1]);
+        in_pos.push_back(ext_vertices[i0]);
+        in_pos.push_back(ext_vertices[i0]);
+        in_pos.push_back(int_vertices[i1]);
+        in_pos.push_back(ext_vertices[i1]);
       }
 
       vec4 color =
@@ -214,22 +220,28 @@ void Renderer::render_wall_hitbox_lines(const Scene &scene) {
         surface.type == SurfaceType::WALL_X_PROJ
           ? vec3(1, 0, 0)
           : vec3(0, 0, 1);
-      float proj50_dist = 50.0f / glm::dot(surface.normal, proj_dir);
+      float proj_dist = 50.0f / glm::dot(surface.normal, proj_dir);
 
-      vec3 ext50_vertices[3] = {
-        surface.vertices[0] + proj50_dist * proj_dir,
-        surface.vertices[1] + proj50_dist * proj_dir,
-        surface.vertices[2] + proj50_dist * proj_dir,
+      vec3 ext_vertices[3] = {
+        surface.vertices[0] + proj_dist * proj_dir,
+        surface.vertices[1] + proj_dist * proj_dir,
+        surface.vertices[2] + proj_dist * proj_dir,
+      };
+
+      vec3 int_vertices[3] = {
+        surface.vertices[0] - proj_dist * proj_dir,
+        surface.vertices[1] - proj_dist * proj_dir,
+        surface.vertices[2] - proj_dist * proj_dir,
       };
 
       for (int i0 = 0; i0 < 3; i0++) {
         int i1 = (i0 + 1) % 3;
-        in_pos.push_back(surface.vertices[i0]);
-        in_pos.push_back(ext50_vertices[i0]);
-        // in_pos.push_back(surface.vertices[i0]);
-        // in_pos.push_back(surface.vertices[i1]);
-        in_pos.push_back(ext50_vertices[i0]);
-        in_pos.push_back(ext50_vertices[i1]);
+        in_pos.push_back(int_vertices[i0]);
+        in_pos.push_back(ext_vertices[i0]);
+        in_pos.push_back(int_vertices[i0]);
+        in_pos.push_back(int_vertices[i1]);
+        in_pos.push_back(ext_vertices[i0]);
+        in_pos.push_back(ext_vertices[i1]);
       }
 
       in_color.insert(in_color.end(), in_pos.size() - in_color.size(), vec4(0, 0, 0, 0.5f));
