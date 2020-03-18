@@ -106,14 +106,10 @@ def move_toward(
   )
 
 
-def render_game_view_rotate(
-  id: str,
+def use_rotational_camera(
   framebuffer_size: Tuple[int, int],
   model: Model,
-  wall_hitbox_radius: float,
-) -> None:
-  ig.push_id(id)
-
+) -> c_graphics.RotateCamera:
   mouse_state = use_state('mouse-state', MouseTracker()).value
   target: Ref[Optional[Tuple[float, float, float]]] = use_state('target', None)
   target_vel: Ref[Optional[Tuple[float, float, float]]] = use_state('target-vel', None)
@@ -188,7 +184,20 @@ def render_game_view_rotate(
   camera.yaw = yaw.value
   camera.fov_y = math.radians(45)
   if target.value is not None:
-    camera.render_target = True
+    camera.render_target = True # TODO: Should be a scene config
+
+  return camera
+
+
+def render_game_view_rotate(
+  id: str,
+  framebuffer_size: Tuple[int, int],
+  model: Model,
+  wall_hitbox_radius: float,
+) -> None:
+  ig.push_id(id)
+
+  camera = use_rotational_camera(framebuffer_size, model)
 
   render_game(model, get_viewport(framebuffer_size), c_graphics.Camera(camera), wall_hitbox_radius)
 
@@ -202,35 +211,18 @@ def render_game_view_in_game(
 ) -> None:
   ig.push_id(id)
 
-  mouse_state = use_state('mouse-state', MouseTracker()).value
-  pitch = use_state('pitch', 0.0)
-  yaw = use_state('yaw', 0.0)
-  zoom = use_state('zoom', 0.0)
-
-  drag_amount = mouse_state.get_drag_amount()
-  pitch.value -= drag_amount[1] / 200
-  yaw.value -= drag_amount[0] / 200
-  zoom.value += mouse_state.get_wheel_amount() / 5
-
-  target = get_mario_pos(model)
-  offset = 1500 * math.pow(0.5, zoom.value)
-  face_direction = angle_to_direction(pitch.value, yaw.value)
-  camera_pos = (
-    target[0] - offset * face_direction[0],
-    target[1] - offset * face_direction[1],
-    target[2] - offset * face_direction[2],
-  )
+  camera = use_rotational_camera(framebuffer_size, model)
 
   # TODO: Move below to graphics.py
   prev_frame = max(model.selected_frame - 1, 0)
   with model.timeline.get(prev_frame, require_base=True) as state:
     DataPath.compile(model.lib, '$state.gOverrideCamera.enabled').set(state, True)
-    DataPath.compile(model.lib, '$state.gOverrideCamera.pos[0]').set(state, camera_pos[0])
-    DataPath.compile(model.lib, '$state.gOverrideCamera.pos[1]').set(state, camera_pos[1])
-    DataPath.compile(model.lib, '$state.gOverrideCamera.pos[2]').set(state, camera_pos[2])
-    DataPath.compile(model.lib, '$state.gOverrideCamera.focus[0]').set(state, target[0])
-    DataPath.compile(model.lib, '$state.gOverrideCamera.focus[1]').set(state, target[1])
-    DataPath.compile(model.lib, '$state.gOverrideCamera.focus[2]').set(state, target[2])
+    DataPath.compile(model.lib, '$state.gOverrideCamera.pos[0]').set(state, camera.pos.x)
+    DataPath.compile(model.lib, '$state.gOverrideCamera.pos[1]').set(state, camera.pos.y)
+    DataPath.compile(model.lib, '$state.gOverrideCamera.pos[2]').set(state, camera.pos.z)
+    DataPath.compile(model.lib, '$state.gOverrideCamera.focus[0]').set(state, camera.target.x)
+    DataPath.compile(model.lib, '$state.gOverrideCamera.focus[1]').set(state, camera.target.y)
+    DataPath.compile(model.lib, '$state.gOverrideCamera.focus[2]').set(state, camera.target.z)
 
     sm64_update_and_render = \
       dcast(AbsoluteAddr, model.lib.symbol_addr('sm64_update_and_render').value).addr
