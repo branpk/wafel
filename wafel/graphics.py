@@ -75,7 +75,12 @@ def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
   return mario_path
 
 
-def build_scene(model: Model, viewport: cg.Viewport, camera: cg.Camera) -> cg.Scene:
+def build_scene(
+  model: Model,
+  viewport: cg.Viewport,
+  camera: cg.Camera,
+  hidden_surfaces: Set[int],
+) -> cg.Scene:
   scene = cg.Scene()
   scene.viewport = viewport
   scene.camera = camera
@@ -96,6 +101,7 @@ def build_scene(model: Model, viewport: cg.Viewport, camera: cg.Camera) -> cg.Sc
       model.lib.spec['types']['struct']['Surface']['size'],
       DataPath.compile(model.lib, '$state.gSurfacesAllocated').get(state),
       get_field_offset,
+      list(hidden_surfaces),
     )
 
     cg.scene_add_objects(
@@ -118,9 +124,10 @@ def render_game(
   camera: cg.Camera,
   wall_hitbox_radius: float,
   hovered_surface: Optional[int] = None,
+  hidden_surfaces: Set[int] = set(),
 ) -> None:
   log.timer.begin('scene')
-  scene = build_scene(model, viewport, camera)
+  scene = build_scene(model, viewport, camera, hidden_surfaces)
   scene.wall_hitbox_radius = wall_hitbox_radius
   scene.hovered_surface = -1 if hovered_surface is None else hovered_surface
   log.timer.end()

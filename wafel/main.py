@@ -141,6 +141,8 @@ class View:
 
     hovered_surface: Ref[Optional[int]] = use_state('hovered-surface', None)
     new_hovered_surface: Optional[int] = None
+    # TODO: This should be depend on the current area
+    hidden_surfaces: Set[int] = use_state('hidden-surfaces', cast(Set[int], set())).value
 
     in_game_view = use_state('in-game-view', False)
 
@@ -159,6 +161,7 @@ class View:
         self.model,
         wall_hitbox_radius.value,
         hovered_surface.value,
+        hidden_surfaces,
       )
 
     ig.set_cursor_pos((10.0, ig.get_window_height() - 30))
@@ -193,11 +196,27 @@ class View:
       self.model,
       wall_hitbox_radius.value,
       hovered_surface.value,
+      hidden_surfaces,
     )
     ig.end_child()
     log.timer.end()
 
-    hovered_surface.value = hovered_surface_1 or hovered_surface_2
+    new_hovered_surface = hovered_surface_1 or hovered_surface_2
+    if new_hovered_surface is not None and ig.is_mouse_clicked(1):
+      ig.open_popup('surface-ctx')
+      hovered_surface.value = new_hovered_surface
+
+    if ig.begin_popup('surface-ctx'):
+      if hovered_surface.value is not None:
+        if hovered_surface.value in hidden_surfaces:
+          if ig.menu_item('Show')[0]:
+            hidden_surfaces.remove(hovered_surface.value)
+        else:
+          if ig.menu_item('Hide')[0]:
+            hidden_surfaces.add(hovered_surface.value)
+      ig.end_popup()
+    else:
+      hovered_surface.value = new_hovered_surface
 
     new_frame = ui.render_frame_slider(
       'frame-slider',

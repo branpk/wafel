@@ -270,6 +270,7 @@ def render_game_view_rotate(
   model: Model,
   wall_hitbox_radius: float,
   hovered_surface: Optional[int],
+  hidden_surfaces: Set[int],
 ) -> Optional[int]:
   ig.push_id(id)
 
@@ -281,8 +282,7 @@ def render_game_view_rotate(
   if mouse_ray is None:
     new_hovered_surface = None
   else:
-    hovered_surface = trace_ray(model, mouse_ray)
-    new_hovered_surface = hovered_surface
+    new_hovered_surface = trace_ray(model, mouse_ray)
 
   render_game(
     model,
@@ -290,6 +290,7 @@ def render_game_view_rotate(
     cg.Camera(camera),
     wall_hitbox_radius,
     hovered_surface=hovered_surface,
+    hidden_surfaces=hidden_surfaces,
   )
 
   ig.pop_id()
@@ -370,6 +371,7 @@ def render_game_view_birds_eye(
   model: Model,
   wall_hitbox_radius: float,
   hovered_surface: Optional[int],
+  hidden_surfaces: Set[int],
 ) -> Optional[int]:
   ig.push_id(id)
 
@@ -438,8 +440,7 @@ def render_game_view_birds_eye(
   if mouse_ray is None:
     new_hovered_surface = None
   else:
-    hovered_surface = trace_ray(model, mouse_ray)
-    new_hovered_surface = hovered_surface
+    new_hovered_surface = trace_ray(model, mouse_ray)
 
   render_game(
     model,
@@ -447,6 +448,7 @@ def render_game_view_birds_eye(
     cg.Camera(camera),
     wall_hitbox_radius,
     hovered_surface=hovered_surface,
+    hidden_surfaces=hidden_surfaces,
   )
 
   ig.pop_id()

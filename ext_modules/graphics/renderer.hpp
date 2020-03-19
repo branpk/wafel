@@ -26,7 +26,7 @@ private:
   mat4 proj_matrix, view_matrix;
 
   void build_transforms(const Scene &scene);
-  void render_surfaces(const Scene &scene);
+  void render_surfaces(const Scene &scene, bool hidden);
   void render_wall_hitboxes(const Scene &scene);
   void render_wall_hitbox_tris(const Scene &scene);
   void render_wall_hitbox_lines(const Scene &scene);

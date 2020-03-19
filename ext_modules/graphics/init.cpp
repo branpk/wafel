@@ -49,7 +49,8 @@ static void scene_add_surfaces(
   uintptr_t surface_pool_ptr,
   size_t surface_size,
   s32 num_surfaces,
-  function<size_t(const string &)> get_field_offset)
+  function<size_t(const string &)> get_field_offset,
+  vector<size_t> hidden_surfaces)
 {
   size_t f_normal = get_field_offset("$state.sSurfacePool[].normal");
   size_t f_vertex1 = get_field_offset("$state.sSurfacePool[].vertex1");
@@ -83,7 +84,14 @@ static void scene_add_surfaces(
         vec3(vertex3[0], vertex3[1], vertex3[2]),
       },
       vec3(normal[0], normal[1], normal[2]),
+      false,
     });
+  }
+
+  for (size_t i : hidden_surfaces) {
+    if (i < scene.surfaces.size()) {
+      scene.surfaces[i].hidden = true;
+    }
   }
 }
 

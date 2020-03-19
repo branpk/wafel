@@ -50,6 +50,7 @@ struct Surface {
   SurfaceType type;
   array<vec3, 3> vertices;
   vec3 normal;
+  bool hidden;
 };
 
 struct Object {

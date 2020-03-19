@@ -20,5 +20,7 @@ void main() {
     clamp(-innerBary.z, 0, 1)));
   t *= -(3*b - 1)/(b - 1) * 0.7;
 
-  outColor = vec4(mix(vColor.rgb * 0.5, vColor.rgb * 0.8, t), vColor.a);
+  vec4 innerColor = vec4(vColor.rgb * 0.5, vColor.a);
+  vec4 outerColor = vec4(vColor.rgb * 0.8, max(vColor.a, 0.8));
+  outColor = mix(innerColor, outerColor, t);
 }

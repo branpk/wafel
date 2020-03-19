@@ -39,13 +39,14 @@ void Renderer::render(const Scene &scene) {
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   build_transforms(scene);
-  render_surfaces(scene);
+  render_surfaces(scene, false);
   render_objects(scene);
   render_object_paths(scene);
   if (scene.camera.mode == CameraMode::ROTATE) {
     render_camera_target(scene);
   }
   render_wall_hitboxes(scene); // Writes to z buffer
+  render_surfaces(scene, true);
   if (scene.camera.mode == CameraMode::BIRDS_EYE) {
     render_unit_squares(scene);
   }
@@ -96,7 +97,7 @@ void Renderer::build_transforms(const Scene &scene) {
   }
 }
 
-void Renderer::render_surfaces(const Scene &scene) {
+void Renderer::render_surfaces(const Scene &scene, bool hidden) {
   Program *program = res.program(
     assets_directory + "/shaders/surface.vert",
     assets_directory + "/shaders/surface.frag");
@@ -111,28 +112,38 @@ void Renderer::render_surfaces(const Scene &scene) {
   for (size_t i = 0; i < scene.surfaces.size(); i++) {
     const Surface &surface = scene.surfaces[i];
     bool hovered = scene.hovered_surface == i;
+    if (surface.hidden != hidden) {
+      continue;
+    }
 
     in_pos.push_back(surface.vertices[0]);
     in_pos.push_back(surface.vertices[1]);
     in_pos.push_back(surface.vertices[2]);
 
-    vec3 color;
+    vec4 color;
     switch (surface.type) {
-    case SurfaceType::FLOOR: color = vec3(0.5f, 0.5f, 1.0f); break;
-    case SurfaceType::CEILING: color = vec3(1.0f, 0.5f, 0.5f); break;
-    case SurfaceType::WALL_X_PROJ: color = vec3(0.3f, 0.8f, 0.3f); break;
-    case SurfaceType::WALL_Z_PROJ: color = vec3(0.15f, 0.4f, 0.15f); break;
+    case SurfaceType::FLOOR: color = vec4(0.5f, 0.5f, 1.0f, 1.0f); break;
+    case SurfaceType::CEILING: color = vec4(1.0f, 0.5f, 0.5f, 1.0f); break;
+    case SurfaceType::WALL_X_PROJ: color = vec4(0.3f, 0.8f, 0.3f, 1.0f); break;
+    case SurfaceType::WALL_Z_PROJ: color = vec4(0.15f, 0.4f, 0.15f, 1.0f); break;
+    }
+
+    if (surface.hidden) {
+      color = vec4(vec3(color) * 1.5f, 0.0f);
+      if (hovered) {
+        color.a = 0.1f;
+      }
     }
 
     if (hovered) {
       if (surface.type == SurfaceType::FLOOR) {
-        color += vec3(0.08f);
+        color += vec4(vec3(0.08f), 0.0f);
       } else {
-        color += vec3(0.2f);
+        color += vec4(vec3(0.2f), 0.0f);
       }
     }
 
-    in_color.insert(in_color.end(), 3, vec4(color, 1));
+    in_color.insert(in_color.end(), 3, color);
   }
 
   VertexArray *vertex_array = new VertexArray(program);
@@ -140,7 +151,14 @@ void Renderer::render_surfaces(const Scene &scene) {
   vertex_array->set("inPos", in_pos);
   vertex_array->set("inColor", in_color);
 
+  if (hidden) {
+    glDepthMask(GL_FALSE);
+  }
   glDrawArrays(GL_TRIANGLES, 0, in_pos.size());
+  if (hidden) {
+    glDepthMask(GL_TRUE);
+  }
+
   delete vertex_array;
 }
 
@@ -166,6 +184,10 @@ void Renderer::render_wall_hitbox_tris(const Scene &scene) {
   vector<vec4> in_color;
 
   for (const Surface &surface : scene.surfaces) {
+    if (surface.hidden) {
+      continue;
+    }
+
     if (surface.type == SurfaceType::WALL_X_PROJ ||
       surface.type == SurfaceType::WALL_Z_PROJ)
     {
@@ -268,6 +290,10 @@ void Renderer::render_wall_hitbox_lines(const Scene &scene) {
   vector<vec4> in_color;
 
   for (const Surface &surface : scene.surfaces) {
+    if (surface.hidden) {
+      continue;
+    }
+
     if (surface.type == SurfaceType::WALL_X_PROJ ||
       surface.type == SurfaceType::WALL_Z_PROJ)
     {
