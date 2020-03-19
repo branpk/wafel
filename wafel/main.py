@@ -139,6 +139,9 @@ class View:
     wall_hitbox_radius = use_state('wall-hitbox-radius', 50)
     wall_hitbox_options = [0, 24, 50, 110]
 
+    hovered_surface: Ref[Optional[int]] = use_state('hovered-surface', None)
+    new_hovered_surface: Optional[int] = None
+
     in_game_view = use_state('in-game-view', False)
 
     log.timer.begin('gview1')
@@ -150,11 +153,12 @@ class View:
     if config.dev_mode and in_game_view.value:
       ui.render_game_view_in_game('game-view-1', framebuffer_size, self.model)
     else:
-      ui.render_game_view_rotate(
+      hovered_surface_1 = ui.render_game_view_rotate(
         'game-view-1',
         framebuffer_size,
         self.model,
         wall_hitbox_radius.value,
+        hovered_surface.value,
       )
 
     ig.set_cursor_pos((10.0, ig.get_window_height() - 30))
@@ -183,14 +187,17 @@ class View:
       height=int(total_height // 2) - slider_space // 2,
       border=True,
     )
-    ui.render_game_view_birds_eye(
+    hovered_surface_2 = ui.render_game_view_birds_eye(
       'game-view-2',
       framebuffer_size,
       self.model,
       wall_hitbox_radius.value,
+      hovered_surface.value,
     )
     ig.end_child()
     log.timer.end()
+
+    hovered_surface.value = hovered_surface_1 or hovered_surface_2
 
     new_frame = ui.render_frame_slider(
       'frame-slider',

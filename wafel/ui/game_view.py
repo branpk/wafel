@@ -269,8 +269,8 @@ def render_game_view_rotate(
   framebuffer_size: Tuple[int, int],
   model: Model,
   wall_hitbox_radius: float,
-  # hovered_surface: Optional[int],
-) -> Maybe[Optional[int]]:
+  hovered_surface: Optional[int],
+) -> Optional[int]:
   ig.push_id(id)
 
   log.timer.begin('overlay')
@@ -279,11 +279,10 @@ def render_game_view_rotate(
 
   mouse_ray = get_mouse_ray(camera)
   if mouse_ray is None:
-    hovered_surface = None # FIXME: Remove
     new_hovered_surface = None
   else:
     hovered_surface = trace_ray(model, mouse_ray)
-    new_hovered_surface = Just(hovered_surface)
+    new_hovered_surface = hovered_surface
 
   render_game(
     model,
@@ -370,7 +369,8 @@ def render_game_view_birds_eye(
   framebuffer_size: Tuple[int, int],
   model: Model,
   wall_hitbox_radius: float,
-) -> None:
+  hovered_surface: Optional[int],
+) -> Optional[int]:
   ig.push_id(id)
 
   # TODO: Should zoom in on mouse when uncentered
@@ -436,11 +436,10 @@ def render_game_view_birds_eye(
     mouse_ray = None
 
   if mouse_ray is None:
-    hovered_surface = None # FIXME: Remove
     new_hovered_surface = None
   else:
     hovered_surface = trace_ray(model, mouse_ray)
-    new_hovered_surface = Just(hovered_surface)
+    new_hovered_surface = hovered_surface
 
   render_game(
     model,
@@ -451,6 +450,7 @@ def render_game_view_birds_eye(
   )
 
   ig.pop_id()
+  return new_hovered_surface
 
 
 __all__ = ['render_game_view_rotate', 'render_game_view_in_game', 'render_game_view_birds_eye']
