@@ -5,14 +5,14 @@ import time
 
 import glfw
 
-import ext_modules.graphics as c_graphics
+import ext_modules.graphics as cg
 
 import wafel.imgui as ig
 from wafel.model import Model
 from wafel.util import *
 from wafel.local_state import use_state, use_state_with
 from wafel.graphics import render_game
-from wafel.core import DataPath, AbsoluteAddr
+from wafel.core import DataPath, AbsoluteAddr, RelativeAddr
 
 
 # TODO: Rename to game_view_overlay. Reduce parameters to minimum (don't require full Model)
@@ -60,7 +60,10 @@ class MouseTracker:
       return 0
 
 
-def angle_to_direction(pitch: float, yaw: float) -> Tuple[float, float, float]:
+Vec3f = Tuple[float, float, float]
+
+
+def angle_to_direction(pitch: float, yaw: float) -> Vec3f:
   return (
     math.cos(pitch) * math.sin(yaw),
     math.sin(pitch),
@@ -68,11 +71,11 @@ def angle_to_direction(pitch: float, yaw: float) -> Tuple[float, float, float]:
   )
 
 
-def get_viewport(framebuffer_size: Tuple[int, int]) -> c_graphics.Viewport:
+def get_viewport(framebuffer_size: Tuple[int, int]) -> cg.Viewport:
   window_pos = tuple(map(int, ig.get_window_position()))
   window_size = tuple(map(int, ig.get_window_size()))
 
-  viewport = c_graphics.Viewport()
+  viewport = cg.Viewport()
   viewport.pos.x = window_pos[0]
   viewport.pos.y = framebuffer_size[1] - window_pos[1] - window_size[1]
   viewport.size.x = window_size[0]
@@ -81,7 +84,7 @@ def get_viewport(framebuffer_size: Tuple[int, int]) -> c_graphics.Viewport:
   return viewport
 
 
-def get_mario_pos(model: Model) -> Tuple[float, float, float]:
+def get_mario_pos(model: Model) -> Vec3f:
   with model.timeline[model.selected_frame] as state:
     return (
       dcast(float, model.variables['mario-pos-x'].get(state)),
@@ -90,11 +93,7 @@ def get_mario_pos(model: Model) -> Tuple[float, float, float]:
     )
 
 
-def move_toward(
-  x: Tuple[float, float, float],
-  target: Tuple[float, float, float],
-  delta: float,
-) -> Tuple[float, float, float]:
+def move_toward(x: Vec3f, target: Vec3f, delta: float) -> Vec3f:
   remaining = (target[0] - x[0], target[1] - x[1], target[2] - x[2])
   distance = math.sqrt(sum(c ** 2 for c in remaining))
   if distance < delta:
@@ -106,13 +105,71 @@ def move_toward(
   )
 
 
+def get_mouse_ray(camera: cg.RotateCamera) -> Optional[Tuple[Vec3f, Vec3f]]:
+  window_pos = tuple(map(int, ig.get_window_position()))
+  window_size = tuple(map(int, ig.get_window_size()))
+  mouse_pos = tuple(map(float, ig.get_mouse_pos()))
+  mouse_pos = (
+    mouse_pos[0] - window_pos[0],
+    window_size[1] - mouse_pos[1] + window_pos[1],
+  )
+  mouse_pos = (
+    2 * mouse_pos[0] / window_size[0] - 1,
+    2 * mouse_pos[1] / window_size[1] - 1,
+  )
+
+  if any(c < -1 or c > 1 for c in mouse_pos):
+    return None
+
+  forward_dir = angle_to_direction(camera.pitch, camera.yaw)
+  up_dir = angle_to_direction(camera.pitch + math.pi / 2, camera.yaw)
+  right_dir = angle_to_direction(0, camera.yaw - math.pi / 2)
+
+  top = math.tan(camera.fov_y / 2)
+  right = top * window_size[0] / window_size[1]
+
+  mouse_dir = tuple(
+    forward_dir[i] +
+      top * mouse_pos[1] * up_dir[i] +
+      right * mouse_pos[0] * right_dir[i]
+        for i in range(3)
+  )
+  mag = math.sqrt(sum(c ** 2 for c in mouse_dir))
+  mouse_dir = (mouse_dir[0] / mag, mouse_dir[1] / mag, mouse_dir[2] / mag)
+
+  return ((camera.pos.x, camera.pos.y, camera.pos.z), mouse_dir)
+
+
+def trace_ray(model: Model, ray: Tuple[Vec3f, Vec3f]) -> Optional[int]:
+  # TODO: Copied and pasted from graphics.py
+  def get_field_offset(path: str) -> int:
+    # TODO: Less hacky way to do this?
+    data_path = DataPath.compile(model.lib, path)
+    offset = data_path.addr_path.path[-1].value
+    return dcast(int, offset)
+
+  with model.timeline[model.selected_frame] as state:
+    surface_pool_addr = DataPath.compile(model.lib, '$state.sSurfacePool').get(state)
+    assert isinstance(surface_pool_addr, RelativeAddr)
+    index = cg.trace_ray_to_surface(
+      cg.vec3(*ray[0]),
+      cg.vec3(*ray[1]),
+      state.slot.relative_to_addr(surface_pool_addr),
+      model.lib.spec['types']['struct']['Surface']['size'],
+      DataPath.compile(model.lib, '$state.gSurfacesAllocated').get(state),
+      get_field_offset,
+    )
+
+  return None if index < 0 else index
+
+
 def use_rotational_camera(
   framebuffer_size: Tuple[int, int],
   model: Model,
-) -> c_graphics.RotateCamera:
+) -> cg.RotateCamera:
   mouse_state = use_state('mouse-state', MouseTracker()).value
-  target: Ref[Optional[Tuple[float, float, float]]] = use_state('target', None)
-  target_vel: Ref[Optional[Tuple[float, float, float]]] = use_state('target-vel', None)
+  target: Ref[Optional[Vec3f]] = use_state('target', None)
+  target_vel: Ref[Optional[Vec3f]] = use_state('target-vel', None)
   pitch = use_state('pitch', 0.0)
   yaw = use_state('yaw', 0.0)
   zoom = use_state('zoom', 0.0)
@@ -148,13 +205,10 @@ def use_rotational_camera(
     f = (math.sin(yaw.value), 0, math.cos(yaw.value))
     u = (0, 1, 0)
     r = (-f[2], 0, f[0])
-    end_vel = cast(
-      Tuple[float, float, float],
-      tuple(
+    end_vel = cast(Vec3f, tuple(
         max_speed * move[0] * f[i] + max_speed * move[1] * u[i] + max_speed * move[2] * r[i]
           for i in range(3)
-      ),
-    )
+      ))
 
     accel = 10.0 * delta_time * math.sqrt(offset)
     current_vel = target_vel.value or (0.0, 0.0, 0.0)
@@ -177,9 +231,9 @@ def use_rotational_camera(
     target_pos[2] - offset * face_direction[2],
   )
 
-  camera = c_graphics.RotateCamera()
-  camera.pos = c_graphics.vec3(*camera_pos)
-  camera.target = c_graphics.vec3(*target_pos)
+  camera = cg.RotateCamera()
+  camera.pos = cg.vec3(*camera_pos)
+  camera.target = cg.vec3(*target_pos)
   camera.pitch = pitch.value
   camera.yaw = yaw.value
   camera.fov_y = math.radians(45)
@@ -201,7 +255,19 @@ def render_game_view_rotate(
   camera = use_rotational_camera(framebuffer_size, model)
   log.timer.end()
 
-  render_game(model, get_viewport(framebuffer_size), c_graphics.Camera(camera), wall_hitbox_radius)
+  mouse_ray = get_mouse_ray(camera)
+  if mouse_ray is None:
+    hovered_surface = None
+  else:
+    hovered_surface = trace_ray(model, mouse_ray)
+
+  render_game(
+    model,
+    get_viewport(framebuffer_size),
+    cg.Camera(camera),
+    wall_hitbox_radius,
+    hovered_surface=hovered_surface,
+  )
 
   ig.pop_id()
 
@@ -229,7 +295,7 @@ def render_game_view_in_game(
     sm64_update_and_render = \
       dcast(AbsoluteAddr, model.lib.symbol_addr('sm64_update_and_render').value).addr
 
-    c_graphics.update_and_render(get_viewport(framebuffer_size), sm64_update_and_render)
+    cg.update_and_render(get_viewport(framebuffer_size), sm64_update_and_render)
 
     # Invalidate frame to ensure no rendering state gets copied to other slots
     state.slot.frame = None
@@ -330,11 +396,11 @@ def render_game_view_birds_eye(
     camera_y = pos_y.value
   ig.end_child()
 
-  camera = c_graphics.BirdsEyeCamera()
-  camera.pos = c_graphics.vec3(camera_xz[0], camera_y, camera_xz[1])
+  camera = cg.BirdsEyeCamera()
+  camera.pos = cg.vec3(camera_xz[0], camera_y, camera_xz[1])
   camera.span_y = world_span_x
 
-  render_game(model, viewport, c_graphics.Camera(camera), wall_hitbox_radius)
+  render_game(model, viewport, cg.Camera(camera), wall_hitbox_radius)
 
   ig.pop_id()
 

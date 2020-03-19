@@ -108,7 +108,10 @@ void Renderer::render_surfaces(const Scene &scene) {
   vector<vec3> in_pos;
   vector<vec4> in_color;
 
-  for (const Surface &surface : scene.surfaces) {
+  for (size_t i = 0; i < scene.surfaces.size(); i++) {
+    const Surface &surface = scene.surfaces[i];
+    bool hovered = scene.hovered_surface == i;
+
     in_pos.push_back(surface.vertices[0]);
     in_pos.push_back(surface.vertices[1]);
     in_pos.push_back(surface.vertices[2]);
@@ -120,6 +123,15 @@ void Renderer::render_surfaces(const Scene &scene) {
     case SurfaceType::WALL_X_PROJ: color = vec3(0.3f, 0.8f, 0.3f); break;
     case SurfaceType::WALL_Z_PROJ: color = vec3(0.15f, 0.4f, 0.15f); break;
     }
+
+    if (hovered) {
+      if (surface.type == SurfaceType::FLOOR) {
+        color += vec3(0.08f);
+      } else {
+        color += vec3(0.2f);
+      }
+    }
+
     in_color.insert(in_color.end(), 3, vec4(color, 1));
   }
 

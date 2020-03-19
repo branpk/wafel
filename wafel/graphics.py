@@ -117,10 +117,12 @@ def render_game(
   viewport: cg.Viewport,
   camera: cg.Camera,
   wall_hitbox_radius: float,
+  hovered_surface: Optional[int] = None,
 ) -> None:
   log.timer.begin('scene')
   scene = build_scene(model, viewport, camera)
   scene.wall_hitbox_radius = wall_hitbox_radius
+  scene.hovered_surface = -1 if hovered_surface is None else hovered_surface
   log.timer.end()
   log.timer.begin('render')
   get_renderer().render(scene)

@@ -82,6 +82,7 @@ struct Scene {
   vector<Object> objects;
   vector<ObjectPath> object_paths;
   float wall_hitbox_radius;
+  int hovered_surface;
 };
 
 

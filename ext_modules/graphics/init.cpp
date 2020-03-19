@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <algorithm>
 #include <cstdint>
+#include <limits>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -117,6 +118,67 @@ static void scene_add_objects(
 }
 
 
+static s32 trace_ray_to_surface(
+  vec3 origin,
+  vec3 direction,
+  uintptr_t surface_pool_ptr,
+  size_t surface_size,
+  s32 num_surfaces,
+  function<size_t(const string &)> get_field_offset)
+{
+  // TODO: Helper function/iterator for extracting Surface / general struct
+  size_t f_normal = get_field_offset("$state.sSurfacePool[].normal");
+  size_t f_vertex1 = get_field_offset("$state.sSurfacePool[].vertex1");
+  size_t f_vertex2 = get_field_offset("$state.sSurfacePool[].vertex2");
+  size_t f_vertex3 = get_field_offset("$state.sSurfacePool[].vertex3");
+
+  f32 min_dist = std::numeric_limits<f32>::infinity();
+  s32 index = -1;
+
+  for (s32 i = 0; i < num_surfaces; i++) {
+    uintptr_t surface_ptr = surface_pool_ptr + i * surface_size;
+
+    f32 *normal_p = (f32 *) (surface_ptr + f_normal);
+    s16 *vertex1_p = (s16 *) (surface_ptr + f_vertex1);
+    s16 *vertex2_p = (s16 *) (surface_ptr + f_vertex2);
+    s16 *vertex3_p = (s16 *) (surface_ptr + f_vertex3);
+
+    vec3 normal = vec3(normal_p[0], normal_p[1], normal_p[2]);
+    vec3 vertices[] = {
+      vec3(vertex1_p[0], vertex1_p[1], vertex1_p[2]),
+      vec3(vertex2_p[0], vertex2_p[1], vertex2_p[2]),
+      vec3(vertex3_p[0], vertex3_p[1], vertex3_p[2]),
+    };
+
+    f32 t = -glm::dot(normal, origin - vertices[0]) / glm::dot(normal, direction);
+    if (t <= 0.0f) {
+      continue;
+    }
+
+    vec3 p = origin + t * direction;
+
+    bool interior = true;
+    for (s32 k = 0; k < 3; k++) {
+      vec3 edge = vertices[(k + 1) % 3] - vertices[k];
+      if (glm::dot(normal, glm::cross(edge, p - vertices[k])) < 0.0f) {
+        interior = false;
+        break;
+      }
+    }
+    if (!interior) {
+      continue;
+    }
+
+    if (t < min_dist) {
+      min_dist = t;
+      index = i;
+    }
+  }
+
+  return index;
+}
+
+
 typedef void (*p_sm64_update_and_render)(
   uint32_t width,
   uint32_t height,
@@ -151,6 +213,7 @@ PYBIND11_MODULE(graphics, m) {
   m.def("init_opengl", init_opengl);
   m.def("scene_add_surfaces", scene_add_surfaces);
   m.def("scene_add_objects", scene_add_objects);
+  m.def("trace_ray_to_surface", trace_ray_to_surface);
   m.def("update_and_render", update_and_render);
 
   // TODO: Generate these automatically? Could create .pyi then too
@@ -292,5 +355,6 @@ PYBIND11_MODULE(graphics, m) {
     .def_readwrite("surfaces", &Scene::surfaces)
     .def_readwrite("objects", &Scene::objects)
     .def_readwrite("object_paths", &Scene::object_paths)
-    .def_readwrite("wall_hitbox_radius", &Scene::wall_hitbox_radius);
+    .def_readwrite("wall_hitbox_radius", &Scene::wall_hitbox_radius)
+    .def_readwrite("hovered_surface", &Scene::hovered_surface);
 }
