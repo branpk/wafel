@@ -105,7 +105,7 @@ def move_toward(x: Vec3f, target: Vec3f, delta: float) -> Vec3f:
   )
 
 
-def get_mouse_ray(camera: cg.RotateCamera) -> Optional[Tuple[Vec3f, Vec3f]]:
+def get_normalized_mouse_pos() -> Optional[Tuple[float, float]]:
   window_pos = tuple(map(int, ig.get_window_position()))
   window_size = tuple(map(int, ig.get_window_size()))
   mouse_pos = tuple(map(float, ig.get_mouse_pos()))
@@ -117,8 +117,15 @@ def get_mouse_ray(camera: cg.RotateCamera) -> Optional[Tuple[Vec3f, Vec3f]]:
     2 * mouse_pos[0] / window_size[0] - 1,
     2 * mouse_pos[1] / window_size[1] - 1,
   )
-
   if any(c < -1 or c > 1 for c in mouse_pos):
+    return None
+  return mouse_pos
+
+
+def get_mouse_ray_rotate(camera: cg.RotateCamera) -> Optional[Tuple[Vec3f, Vec3f]]:
+  window_size = tuple(map(int, ig.get_window_size()))
+  mouse_pos = get_normalized_mouse_pos()
+  if mouse_pos is None:
     return None
 
   forward_dir = angle_to_direction(camera.pitch, camera.yaw)
@@ -138,6 +145,23 @@ def get_mouse_ray(camera: cg.RotateCamera) -> Optional[Tuple[Vec3f, Vec3f]]:
   mouse_dir = (mouse_dir[0] / mag, mouse_dir[1] / mag, mouse_dir[2] / mag)
 
   return ((camera.pos.x, camera.pos.y, camera.pos.z), mouse_dir)
+
+
+# def get_mouse_ray_birds_eye(camera: cg.BirdsEyeCamera) -> Optional[Tuple[Vec3f, Vec3f]]:
+
+
+def get_mouse_world_pos_birds_eye(camera: cg.BirdsEyeCamera) -> Optional[Tuple[float, float]]:
+  window_size = tuple(map(int, ig.get_window_size()))
+  mouse_pos = get_normalized_mouse_pos()
+  if mouse_pos is None:
+    return None
+
+  world_span_x = camera.span_y
+  world_span_z = camera.span_y * window_size[0] / window_size[1]
+  return (
+    camera.pos.x + mouse_pos[1] * world_span_x / 2,
+    camera.pos.z + mouse_pos[0] * world_span_z / 2,
+  )
 
 
 def trace_ray(model: Model, ray: Tuple[Vec3f, Vec3f]) -> Optional[int]:
@@ -248,18 +272,21 @@ def render_game_view_rotate(
   framebuffer_size: Tuple[int, int],
   model: Model,
   wall_hitbox_radius: float,
-) -> None:
+  # hovered_surface: Optional[int],
+) -> Maybe[Optional[int]]:
   ig.push_id(id)
 
   log.timer.begin('overlay')
   camera = use_rotational_camera(framebuffer_size, model)
   log.timer.end()
 
-  mouse_ray = get_mouse_ray(camera)
+  mouse_ray = get_mouse_ray_rotate(camera)
   if mouse_ray is None:
-    hovered_surface = None
+    hovered_surface = None # FIXME: Remove
+    new_hovered_surface = None
   else:
     hovered_surface = trace_ray(model, mouse_ray)
+    new_hovered_surface = Just(hovered_surface)
 
   render_game(
     model,
@@ -270,6 +297,7 @@ def render_game_view_rotate(
   )
 
   ig.pop_id()
+  return new_hovered_surface
 
 
 def render_game_view_in_game(
@@ -399,6 +427,12 @@ def render_game_view_birds_eye(
   camera = cg.BirdsEyeCamera()
   camera.pos = cg.vec3(camera_xz[0], camera_y, camera_xz[1])
   camera.span_y = world_span_x
+
+  # Mouse xz
+  mouse_world_pos = get_mouse_world_pos_birds_eye(camera)
+  if mouse_world_pos is not None:
+    ig.set_cursor_pos((10, viewport.size.y - 25))
+    ig.text('(x, z) = (%.3f, %.3f)' % mouse_world_pos)
 
   render_game(model, viewport, cg.Camera(camera), wall_hitbox_radius)
 
