@@ -197,7 +197,9 @@ def render_game_view_rotate(
 ) -> None:
   ig.push_id(id)
 
+  log.timer.begin('overlay')
   camera = use_rotational_camera(framebuffer_size, model)
+  log.timer.end()
 
   render_game(model, get_viewport(framebuffer_size), c_graphics.Camera(camera), wall_hitbox_radius)
 

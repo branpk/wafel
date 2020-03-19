@@ -29,6 +29,7 @@ def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
   #     model.variables['mario-pos-z'].get(state)
   #   log.timer.end()
 
+  log.timer.begin('nodes')
   mario_path_nodes = []
   for frame in path_frames:
     path_node = cg.ObjectPathNode()
@@ -38,7 +39,9 @@ def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
       model.timeline.get_cached(frame, model.variables['mario-pos-z']),
     )
     mario_path_nodes.append(path_node)
+  log.timer.end()
 
+  log.timer.begin('qsteps')
   with model.timeline[model.selected_frame + 1] as state:
     def get(path: str) -> Any:
       return DataPath.compile(model.lib, path).get(state)
@@ -63,6 +66,7 @@ def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
 
     root_node = mario_path_nodes[path_frames.index(model.selected_frame)]
     root_node.quarter_steps = quarter_steps
+  log.timer.end()
 
   mario_path = cg.ObjectPath()
   mario_path.nodes = mario_path_nodes
@@ -82,6 +86,7 @@ def build_scene(model: Model, viewport: cg.Viewport, camera: cg.Camera) -> cg.Sc
     offset = data_path.addr_path.path[-1].value
     return dcast(int, offset)
 
+  log.timer.begin('so')
   with model.timeline[model.selected_frame] as state:
     surface_pool_addr = DataPath.compile(model.lib, '$state.sSurfacePool').get(state)
     assert isinstance(surface_pool_addr, RelativeAddr)
@@ -99,6 +104,7 @@ def build_scene(model: Model, viewport: cg.Viewport, camera: cg.Camera) -> cg.Sc
       model.lib.spec['types']['struct']['Object']['size'],
       get_field_offset,
     )
+  log.timer.end()
 
   path_frames = range(max(model.selected_frame - 5, 0), model.selected_frame + 61)
   scene.object_paths = [build_mario_path(model, path_frames)]
@@ -112,9 +118,13 @@ def render_game(
   camera: cg.Camera,
   wall_hitbox_radius: float,
 ) -> None:
+  log.timer.begin('scene')
   scene = build_scene(model, viewport, camera)
   scene.wall_hitbox_radius = wall_hitbox_radius
+  log.timer.end()
+  log.timer.begin('render')
   get_renderer().render(scene)
+  log.timer.end()
 
 
 __all__ = ['render_game']
