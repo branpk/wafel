@@ -18,6 +18,14 @@ class TabId:
   surface: Optional[int] = None
 
 
+FIXED_TABS = [
+  TabId('Input'),
+  TabId('Mario'),
+  TabId('Misc'),
+  TabId('Objects'),
+]
+
+
 class VariableExplorer:
 
   def __init__(self, model: Model, formatters: Formatters) -> None:
@@ -25,13 +33,7 @@ class VariableExplorer:
     self.formatters = formatters
     self.open_tabs: List[TabId] = []
 
-    fixed_tabs = [
-      TabId('Input'),
-      TabId('Mario'),
-      TabId('Misc'),
-      TabId('Objects'),
-    ]
-    for tab in fixed_tabs:
+    for tab in FIXED_TABS:
       self.open_tab(tab)
 
 
@@ -248,12 +250,19 @@ class VariableExplorer:
     def render_tab(tab: TabId) -> Callable[[str], None]:
       return lambda id: self.render_tab_contents(id, tab)
 
-    ui.render_tabs(
+    closed_tab = ui.render_tabs(
       'tabs',
       [
-        (f'tab-{hash(tab)}', self.get_tab_label(tab), render_tab(tab))
+        ui.TabInfo(
+          id = f'tab-{hash(tab)}',
+          label = self.get_tab_label(tab),
+          closable = tab not in FIXED_TABS,
+          render = render_tab(tab),
+        )
           for tab in self.open_tabs
       ]
     )
+    if closed_tab is not None:
+      del self.open_tabs[closed_tab]
 
     ig.pop_id()

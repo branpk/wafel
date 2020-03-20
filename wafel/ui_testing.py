@@ -157,13 +157,20 @@ def test_tabs(id: str) -> None:
   def tab_render(id: str) -> None:
     ig.text(f'Tab id = {id}')
 
-  ui.render_tabs(
+  closed_tab = ui.render_tabs(
     'tabs',
     [
-      (f'tab-{i}', f'Tab {i}', tab_render)
+      ui.TabInfo(
+        id = f'tab-{i}',
+        label = f'Tab {i}',
+        closable = True,
+        render = tab_render,
+      )
         for i in sorted(open_tabs)
     ],
   )
+  if closed_tab is not None:
+    open_tabs.remove(sorted(open_tabs)[closed_tab])
 
   ig.pop_id()
 
@@ -233,7 +240,7 @@ def test_loading_bar(id: str) -> None:
   ig.pop_id()
 
 
-DEFAULT_TEST = test_loading_bar
+DEFAULT_TEST = test_tabs
 
 TESTS = [
   test_joystick_control,
