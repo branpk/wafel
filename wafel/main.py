@@ -225,6 +225,12 @@ class View:
     else:
       hovered_surface.value = new_hovered_surface
 
+    if hovered_surface.value is not None and ig.is_mouse_clicked(2):
+      if hovered_surface.value in hidden_surfaces:
+        hidden_surfaces.remove(hovered_surface.value)
+      else:
+        hidden_surfaces.add(hovered_surface.value)
+
     new_frame = ui.render_frame_slider(
       'frame-slider',
       self.model.selected_frame,
