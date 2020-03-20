@@ -221,6 +221,8 @@ class View:
         else:
           if ig.menu_item('Hide')[0]:
             hidden_surfaces.add(hovered_surface.value)
+        if ig.menu_item('Properties')[0]:
+          self.variable_explorer.open_surface_tab(hovered_surface.value)
       ig.end_popup()
     else:
       hovered_surface.value = new_hovered_surface

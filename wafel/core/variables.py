@@ -56,4 +56,18 @@ VARIABLES = {
     'obj-vel-y': data('$object.oVelY').label('vel y'),
     'obj-vel-z': data('$object.oVelZ').label('vel z'),
   },
+  VariableGroup('Surface'): {
+    'surface-normal-x': data('$surface.normal.x').label('normal x'),
+    'surface-normal-y': data('$surface.normal.y').label('normal y'),
+    'surface-normal-z': data('$surface.normal.z').label('normal z'),
+    'surface-vertex1-x': data('$surface.vertex1[0]').label('x1'),
+    'surface-vertex1-y': data('$surface.vertex1[1]').label('y1'),
+    'surface-vertex1-z': data('$surface.vertex1[2]').label('z1'),
+    'surface-vertex2-x': data('$surface.vertex2[0]').label('x2'),
+    'surface-vertex2-y': data('$surface.vertex2[1]').label('y2'),
+    'surface-vertex2-z': data('$surface.vertex2[2]').label('z2'),
+    'surface-vertex3-x': data('$surface.vertex3[0]').label('x3'),
+    'surface-vertex3-y': data('$surface.vertex3[1]').label('y3'),
+    'surface-vertex3-z': data('$surface.vertex3[2]').label('z3'),
+  }
 }

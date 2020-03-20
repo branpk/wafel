@@ -135,18 +135,23 @@ class VariableId:
     self,
     name: str,
     object_id: Optional[ObjectId] = None,
+    surface: Optional[int] = None,
   ) -> None:
     self.name = name
     self.object_id = object_id
+    self.surface = surface
 
-  def with_name(self, name: str) -> 'VariableId':
+  def with_name(self, name: str) -> VariableId:
     return VariableId(name, self.object_id)
 
-  def with_object_id(self, object_id: ObjectId) -> 'VariableId':
-    return VariableId(self.name, object_id)
+  def with_object_id(self, object_id: ObjectId) -> VariableId:
+    return VariableId(self.name, object_id=object_id)
+
+  def with_surface(self, surface: int) -> VariableId:
+    return VariableId(self.name, surface=surface)
 
   def _args(self) -> Tuple[Any, ...]:
-    return (self.name, self.object_id)
+    return (self.name, self.object_id, self.surface)
 
   def to_bytes(self) -> bytes:
     return json.dumps(self._args()).encode('utf-8')
@@ -165,6 +170,8 @@ class VariableId:
     args = [self.name]
     if self.object_id is not None:
       args.append('obj=' + str(self.object_id))
+    if self.surface is not None:
+      args.append('surf=' + str(self.surface))
     return 'Variable(' + ', '.join(args) + ')'
 
 
@@ -198,6 +205,9 @@ class Variable:
     raise NotImplementedError
 
   def at_object_slot(self, object_id: ObjectId, slot: int) -> Variable:
+    raise NotImplementedError
+
+  def at_surface(self, surface: int) -> Variable:
     raise NotImplementedError
 
   def get(self, state: GameState) -> object:
@@ -261,6 +271,18 @@ class _DataVariable(Variable):
       self.read_only,
     )
 
+  def at_surface(self, surface: int) -> Variable:
+    surface_path = DataPath.compile(self.lib, f'$state.sSurfacePool[{surface}]')
+    return _DataVariable(
+      self.id.with_surface(surface),
+      self.group,
+      self.label,
+      self.lib,
+      self.semantics,
+      surface_path + self.path,
+      self.read_only,
+    )
+
 
 class _FlagVariable(Variable):
   def __init__(
@@ -309,6 +331,16 @@ class _FlagVariable(Variable):
       self.read_only,
     )
 
+  def at_surface(self, surface: int) -> Variable:
+    return _FlagVariable(
+      self.id.name,
+      self.group,
+      self.label,
+      self.flags.at_surface(surface),
+      self.flag_str,
+      self.read_only,
+    )
+
 
 class VariableSpec:
   def __init__(self) -> None:
@@ -353,6 +385,8 @@ class Variables:
       id = VariableId(id)
     if id.object_id is not None:
       return self[VariableId(id.name)].at_object(id.object_id)
+    elif id.surface is not None:
+      return self[VariableId(id.name)].at_surface(id.surface)
     else:
       return self.variables_by_id[id]
 

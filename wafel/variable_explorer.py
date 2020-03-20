@@ -4,7 +4,7 @@ import math
 
 import wafel.imgui as ig
 from wafel.model import Model
-from wafel.core import ObjectId, Variable, VariableGroup, ObjectType, VariableId
+from wafel.core import ObjectId, Variable, VariableGroup, ObjectType, VariableId, DataPath
 from wafel.variable_format import Formatters, VariableFormatter
 import wafel.ui as ui
 from wafel.util import *
@@ -15,6 +15,7 @@ import wafel.joystick_util as joystick_util
 class TabId:
   name: str
   object_id: Optional[ObjectId] = None
+  surface: Optional[int] = None
 
 
 class VariableExplorer:
@@ -37,7 +38,11 @@ class VariableExplorer:
   def open_tab(self, tab: TabId) -> None:
     if tab not in self.open_tabs:
       self.open_tabs.append(tab)
-    self.current_tab = tab
+    self.current_tab = tab # TODO: This does nothing
+
+
+  def open_surface_tab(self, surface: int) -> None:
+    self.open_tab(TabId('_surface', surface=surface))
 
 
   def close_tab(self, tab: TabId) -> None:
@@ -53,6 +58,9 @@ class VariableExplorer:
         return str(tab.object_id)
       else:
         return str(tab.object_id) + ': ' + object_type.name
+
+    elif tab.surface is not None:
+      return f'Surface {tab.surface}'
 
     return tab.name
 
@@ -72,18 +80,30 @@ class VariableExplorer:
 
 
   def get_variables_for_tab(self, tab: TabId) -> List[Variable]:
-    if tab.object_id is None:
+    if tab.object_id is not None:
+      with self.model.timeline[self.model.selected_frame] as state:
+        object_type = self.model.get_object_type(state, tab.object_id)
+      if object_type is None:
+        return []
+
+      return [
+        var.at_object(tab.object_id)
+          for var in self.model.variables.group(VariableGroup.object(object_type.name))
+      ]
+
+    elif tab.surface is not None:
+      with self.model.timeline[self.model.selected_frame] as state:
+        num_surfaces = DataPath.compile(self.model.lib, '$state.gSurfacesAllocated').get(state)
+        if tab.surface >= dcast(int, num_surfaces):
+          return []
+
+        return [
+          var.at_surface(tab.surface)
+            for var in self.model.variables.group(VariableGroup('Surface'))
+        ]
+
+    else:
       return self.model.variables.group(VariableGroup(tab.name))
-
-    with self.model.timeline[self.model.selected_frame] as state:
-      object_type = self.model.get_object_type(state, tab.object_id)
-    if object_type is None:
-      return []
-
-    return [
-      var.at_object(tab.object_id)
-        for var in self.model.variables.group(VariableGroup.object(object_type.name))
-    ]
 
 
   def render_variable(self, tab: TabId, variable: Variable) -> None:

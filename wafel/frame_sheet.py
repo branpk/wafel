@@ -2,7 +2,7 @@ import sys
 from typing import *
 
 import wafel.imgui as ig
-from wafel.core import Variable, ObjectType, VariableId
+from wafel.core import Variable, ObjectType, VariableId, DataPath
 from wafel.model import Model
 from wafel.variable_format import Formatters, EmptyFormatter, VariableFormatter
 import wafel.ui as ui
@@ -93,14 +93,19 @@ class FrameSheet:
   def get_header_label(self, column: FrameSheetColumn) -> str:
     variable = column.variable
     object_id = variable.get_object_id()
+    surface = variable.id.surface
 
-    if object_id is None:
+    if object_id is not None:
+      if column.object_type is None:
+        return str(object_id) + '\n' + variable.label
+      else:
+        return str(object_id) + ' - ' + column.object_type.name + '\n' + variable.label
+
+    elif surface is not None:
+      return f'Surface {surface}\n{variable.label}'
+
+    else:
       return variable.label
-
-    if column.object_type is None:
-      return str(object_id) + '\n' + variable.label
-
-    return str(object_id) + ' - ' + column.object_type.name + '\n' + variable.label
 
 
   def get_data(self, frame: int, column: FrameSheetColumn) -> Maybe[object]:
@@ -111,6 +116,12 @@ class FrameSheet:
       row_object_type = self.model.get_object_type_cached(frame, object_id)
       if row_object_type != column.object_type:
         return None
+
+    if variable.id.surface is not None:
+      with self.model.timeline[frame] as state:
+        num_surfaces = DataPath.compile(self.model.lib, '$state.gSurfacesAllocated').get(state)
+        if variable.id.surface >= dcast(int, num_surfaces):
+          return None
 
     return Just(self.model.timeline.get_cached(frame, variable))
 
@@ -124,6 +135,12 @@ class FrameSheet:
         row_object_type = self.model.get_object_type(state, object_id)
         if row_object_type != column.object_type:
           raise Exception # TODO: Error message
+
+    if variable.id.surface is not None:
+      with self.model.timeline[frame] as state:
+        num_surfaces = DataPath.compile(self.model.lib, '$state.gSurfacesAllocated').get(state)
+        if variable.id.surface >= dcast(int, num_surfaces):
+          raise Exception
 
     self.model.edits.edit(frame, variable, data)
 

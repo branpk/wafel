@@ -218,6 +218,10 @@ class ObjectExpr:
   pass
 
 @dataclass(frozen=True)
+class SurfaceExpr:
+  pass
+
+@dataclass(frozen=True)
 class FieldExpr:
   expr: Expr
   field: str
@@ -231,7 +235,7 @@ class IndexExpr:
   expr: Expr
   index: int
 
-Expr = Union[StateExpr, ObjectExpr, FieldExpr, DerefExpr, IndexExpr]
+Expr = Union[StateExpr, ObjectExpr, SurfaceExpr, FieldExpr, DerefExpr, IndexExpr]
 
 
 def parse_expr(source: str) -> Expr:
@@ -244,6 +248,9 @@ def parse_expr(source: str) -> Expr:
   elif source.startswith('$object'):
     source = source[len('$object'):]
     result = ObjectExpr()
+  elif source.startswith('$surface'):
+    source = source[len('$surface'):]
+    result = SurfaceExpr()
   else:
     raise NotImplementedError(source)
 
@@ -300,6 +307,15 @@ def resolve_expr(lib: GameLib, expr: Expr) -> DataPath:
         concrete_end_type = lib.concrete_type(object_struct),
         addr_path = AddrPath(root=None, path=()),
       )
+    elif isinstance(expr.expr, SurfaceExpr):
+      surface_struct = lib.spec['types']['struct']['Surface']
+      struct_path = DataPath(
+        start_type = surface_struct,
+        concrete_start_type = lib.concrete_type(surface_struct),
+        end_type = surface_struct,
+        concrete_end_type = lib.concrete_type(surface_struct),
+        addr_path = AddrPath(root=None, path=()),
+      )
     else:
       struct_path = resolve_expr(lib, expr.expr)
 
@@ -339,11 +355,17 @@ def resolve_expr(lib: GameLib, expr: Expr) -> DataPath:
   elif isinstance(expr, IndexExpr):
     array_path = resolve_expr(lib, expr.expr)
     array_type = array_path.concrete_end_type
-    assert array_type['kind'] == 'array', expr.expr
     assert expr.index >= 0
-    if array_type['length'] is not None:
-      assert expr.index < array_type['length']
-    element_type = array_type['base']
+    if array_type['kind'] == 'array':
+      if array_type['length'] is not None:
+        assert expr.index < array_type['length']
+      element_type = array_type['base']
+    elif array_type['kind'] == 'pointer':
+      element_type = array_type['base']
+      array_path = resolve_expr(lib, DerefExpr(expr.expr))
+    else:
+      assert False, expr.expr
+
     stride = align_up(element_type['size'], element_type['align'])
     return DataPath(
       start_type = array_path.start_type,
