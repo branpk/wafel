@@ -157,7 +157,7 @@ def test_tabs(id: str) -> None:
   def tab_render(id: str) -> None:
     ig.text(f'Tab id = {id}')
 
-  closed_tab = ui.render_tabs(
+  _, closed_tab = ui.render_tabs(
     'tabs',
     [
       ui.TabInfo(
@@ -168,6 +168,7 @@ def test_tabs(id: str) -> None:
       )
         for i in sorted(open_tabs)
     ],
+    None,
   )
   if closed_tab is not None:
     open_tabs.remove(sorted(open_tabs)[closed_tab])

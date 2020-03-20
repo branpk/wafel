@@ -36,11 +36,13 @@ class VariableExplorer:
     for tab in FIXED_TABS:
       self.open_tab(tab)
 
+    self.current_tab = self.open_tabs[0]
+
 
   def open_tab(self, tab: TabId) -> None:
     if tab not in self.open_tabs:
       self.open_tabs.append(tab)
-    self.current_tab = tab # TODO: This does nothing
+    self.current_tab = tab
 
 
   def open_surface_tab(self, surface: int) -> None:
@@ -250,7 +252,11 @@ class VariableExplorer:
     def render_tab(tab: TabId) -> Callable[[str], None]:
       return lambda id: self.render_tab_contents(id, tab)
 
-    closed_tab = ui.render_tabs(
+    open_tab_index = None
+    if self.current_tab in self.open_tabs:
+      open_tab_index = self.open_tabs.index(self.current_tab)
+
+    open_tab, closed_tab = ui.render_tabs(
       'tabs',
       [
         ui.TabInfo(
@@ -260,8 +266,11 @@ class VariableExplorer:
           render = render_tab(tab),
         )
           for tab in self.open_tabs
-      ]
+      ],
+      open_tab_index,
     )
+    if open_tab is not None:
+      self.current_tab = self.open_tabs[open_tab]
     if closed_tab is not None:
       del self.open_tabs[closed_tab]
 

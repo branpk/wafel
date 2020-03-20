@@ -2,7 +2,7 @@ from typing import *
 from dataclasses import dataclass
 
 import wafel.imgui as ig
-from wafel.local_state import use_state
+from wafel.local_state import use_state, use_state_with
 
 
 @dataclass(frozen=True)
@@ -12,7 +12,11 @@ class TabInfo:
   closable: bool
   render: Callable[[str], None]
 
-def render_tabs(id: str, tabs: List[TabInfo]) -> Optional[int]:
+def render_tabs(
+  id: str,
+  tabs: List[TabInfo],
+  open_tab_index: Optional[int],
+) -> Tuple[Optional[int], Optional[int]]:
   ig.push_id(id)
   ig.columns(2)
 
@@ -25,10 +29,14 @@ def render_tabs(id: str, tabs: List[TabInfo]) -> Optional[int]:
 
   if len(tabs) == 0:
     ig.pop_id()
-    return closed_tab
+    return None, closed_tab
 
-  selected_tab_index = use_state('selected-tab-index', 0)
-  selected_tab_id = use_state('selected-tab', tabs[0].id)
+  selected_tab_index = use_state_with('selected-tab-index', lambda: open_tab_index or 0)
+  selected_tab_id = use_state_with('selected-tab', lambda: tabs[selected_tab_index.value].id)
+
+  if open_tab_index is not None:
+    selected_tab_index.value = open_tab_index
+    selected_tab_id.value = tabs[open_tab_index].id
 
   # Handle deletion/insertion
   if selected_tab_index.value >= len(tabs):
@@ -68,7 +76,10 @@ def render_tabs(id: str, tabs: List[TabInfo]) -> Optional[int]:
   ig.columns(1)
   ig.pop_id()
 
-  return closed_tab
+  return (
+    None if open_tab_index == selected_tab_index.value else selected_tab_index.value,
+    closed_tab,
+  )
 
 
 __all__ = ['TabInfo', 'render_tabs']
