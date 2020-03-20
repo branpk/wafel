@@ -39,6 +39,8 @@ VARIABLES = {
   VariableGroup('Misc'): {
     'global-timer': data('$state.gGlobalTimer').label('global timer'),
     'camera-yaw': data('$state.gMarioState[].area[].camera[].yaw').label('camera yaw'),
+    'level-num': data('$state.gCurrLevelNum').label('level'),
+    'area-index': data('$state.gCurrAreaIndex').label('area'),
   },
   VariableGroup.all_objects(): {
     'obj-active-flags': data('$object.activeFlags').hidden(),

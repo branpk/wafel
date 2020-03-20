@@ -141,8 +141,15 @@ class View:
 
     hovered_surface: Ref[Optional[int]] = use_state('hovered-surface', None)
     new_hovered_surface: Optional[int] = None
-    # TODO: This should be depend on the current area
-    hidden_surfaces: Set[int] = use_state('hidden-surfaces', cast(Set[int], set())).value
+    hidden_surfaces_by_area = \
+      use_state('hidden-surfaces', cast(Dict[Tuple[int, int], Set[int]], {})).value
+
+    with self.model.timeline[self.model.selected_frame] as state:
+      current_area = (
+        dcast(int, self.model.variables['level-num'].get(state)),
+        dcast(int, self.model.variables['area-index'].get(state)),
+      )
+    hidden_surfaces = hidden_surfaces_by_area.setdefault(current_area, set())
 
     in_game_view = use_state('in-game-view', False)
 
