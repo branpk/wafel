@@ -210,7 +210,7 @@ def use_rotational_camera(
   face_direction = angle_to_direction(pitch.value, yaw.value)
 
   move = [0.0, 0.0, 0.0] # forward, up, right
-  if not ig.get_io().want_capture_keyboard or ig.is_mouse_down(): # TOOD: Weird behavior but probably fine?
+  if ig.global_keyboard_capture():
     if ig.is_key_down(ord('W')): move[0] += 1
     if ig.is_key_down(ord('S')): move[0] -= 1
     if ig.is_key_down(glfw.KEY_SPACE): move[1] += 1

@@ -371,10 +371,9 @@ class View:
 
 
     # TODO: Move keyboard handling somewhere else
-    # TODO: Make this work when holding down mouse button
     model = self.model
     ig.get_io().key_repeat_rate = 1/30
-    if not ig.get_io().want_capture_keyboard:
+    if ig.global_keyboard_capture():
       if ig.is_key_pressed(ig.get_key_index(ig.KEY_DOWN_ARROW)) or \
           ig.is_key_pressed(ig.get_key_index(ig.KEY_RIGHT_ARROW)):
         model.selected_frame += 1

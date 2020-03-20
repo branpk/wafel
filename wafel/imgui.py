@@ -71,3 +71,7 @@ def try_render(render: Callable[[], None]) -> None:
         assert False, begin_call
       __getattr__(end_call)()
     raise
+
+def global_keyboard_capture() -> bool:
+  # TOOD: Mouse thing is weird behavior but probably fine?
+  return not ig.get_io().want_capture_keyboard or ig.is_mouse_down()
