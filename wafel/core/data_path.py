@@ -136,8 +136,43 @@ PRIMITIVE_PYTYPES = {
 # out?)
 
 
+def get_data(lib: GameLib, state: GameState, type_: dict, addr: int) -> object:
+  concrete_type = lib.concrete_type(type_)
+
+  if concrete_type['kind'] == 'primitive':
+    ctype = PRIMITIVE_CTYPES[concrete_type['name']]
+    pytype = PRIMITIVE_PYTYPES[concrete_type['name']]
+    pointer = C.cast(addr, C.POINTER(ctype)) # type: ignore
+    return pytype(pointer[0] if pointer else 0)
+
+  elif concrete_type['kind'] == 'pointer':
+    pointer = C.cast(addr, C.POINTER(C.c_void_p)) # type: ignore
+    value = int(pointer[0] or 0 if pointer else 0) # type: ignore
+    return state.slot.base_slot.addr_to_relative(value)
+
+  elif concrete_type['kind'] == 'array':
+    length = concrete_type['length']
+    assert length is not None, concrete_type
+    element_type = concrete_type['base']
+    stride = align_up(element_type['size'], element_type['align'])
+    return [
+      get_data(lib, state, element_type, addr + stride * i)
+        for i in range(length)
+    ]
+
+  elif concrete_type['kind'] == 'struct':
+    result = {}
+    for field_name, field in concrete_type['fields'].items():
+      result[field_name] = get_data(lib, state, field['type'], addr + field['offset'])
+    return result
+
+  else:
+    raise NotImplementedError(concrete_type['kind'])
+
+
 @dataclass(frozen=True)
 class DataPath:
+  lib: GameLib
   start_type: Optional[dict]
   concrete_start_type: Optional[dict]
   end_type: dict
@@ -157,22 +192,8 @@ class DataPath:
   # TODO: Structs and arrays
 
   def get(self, state: GameState) -> object:
-    # TODO: This and set can be made more efficient
     addr = self.get_addr(state)
-
-    if self.concrete_end_type['kind'] == 'primitive':
-      ctype = PRIMITIVE_CTYPES[self.concrete_end_type['name']]
-      pytype = PRIMITIVE_PYTYPES[self.concrete_end_type['name']]
-      pointer = C.cast(addr, C.POINTER(ctype)) # type: ignore
-      return pytype(pointer[0] if pointer else 0)
-
-    elif self.concrete_end_type['kind'] == 'pointer':
-      pointer = C.cast(addr, C.POINTER(C.c_void_p)) # type: ignore
-      value = int(pointer[0] or 0 if pointer else 0) # type: ignore
-      return state.slot.base_slot.addr_to_relative(value)
-
-    else:
-      raise NotImplementedError(self.concrete_end_type['kind'])
+    return get_data(self.lib, state, self.concrete_end_type, addr)
 
   def set(self, state: GameState, value: object) -> None:
     addr = self.get_addr(state)
@@ -197,8 +218,10 @@ class DataPath:
       raise NotImplementedError(self.concrete_end_type['kind'])
 
   def __add__(self, other: DataPath) -> DataPath:
+    assert self.lib is other.lib
     assert self.concrete_end_type == other.concrete_start_type
     return DataPath(
+      lib = self.lib,
       start_type = self.start_type,
       concrete_start_type = self.concrete_start_type,
       end_type = other.end_type,
@@ -291,6 +314,7 @@ def resolve_expr(lib: GameLib, expr: Expr) -> DataPath:
         addr_path = AddrPath.root_(Root.relative(field_addr.range_index)) + \
           AddrPath.edge(Edge.offset(field_addr.offset))
       return DataPath(
+        lib = lib,
         start_type = None,
         concrete_start_type = None,
         end_type = field_type,
@@ -301,6 +325,7 @@ def resolve_expr(lib: GameLib, expr: Expr) -> DataPath:
     if isinstance(expr.expr, ObjectExpr):
       object_struct = lib.spec['types']['struct']['Object']
       struct_path = DataPath(
+        lib = lib,
         start_type = object_struct,
         concrete_start_type = lib.concrete_type(object_struct),
         end_type = object_struct,
@@ -310,6 +335,7 @@ def resolve_expr(lib: GameLib, expr: Expr) -> DataPath:
     elif isinstance(expr.expr, SurfaceExpr):
       surface_struct = lib.spec['types']['struct']['Surface']
       struct_path = DataPath(
+        lib = lib,
         start_type = surface_struct,
         concrete_start_type = lib.concrete_type(surface_struct),
         end_type = surface_struct,
@@ -320,7 +346,7 @@ def resolve_expr(lib: GameLib, expr: Expr) -> DataPath:
       struct_path = resolve_expr(lib, expr.expr)
 
     struct_type = struct_path.concrete_end_type
-    assert struct_type['kind'] == 'struct', expr.expr
+    assert struct_type['kind'] in ['struct', 'union'], expr.expr
 
     if expr.field in lib.spec['extra']['object_fields']:
       field_spec = lib.spec['extra']['object_fields'][expr.field]
@@ -328,11 +354,13 @@ def resolve_expr(lib: GameLib, expr: Expr) -> DataPath:
       field_offset = struct_type['fields']['rawData']['offset'] + field_spec['offset']
     else:
       field_spec = struct_type['fields'].get(expr.field)
+      # TODO: Handle anonymous fields
       assert field_spec is not None, expr.field
       field_type = field_spec['type']
       field_offset = field_spec['offset']
 
     return DataPath(
+      lib = lib,
       start_type = struct_path.start_type,
       concrete_start_type = lib.concrete_type(struct_path.start_type),
       end_type = field_type,
@@ -345,6 +373,7 @@ def resolve_expr(lib: GameLib, expr: Expr) -> DataPath:
     pointer_type = pointer_path.concrete_end_type
     assert pointer_type['kind'] == 'pointer', expr.expr
     return DataPath(
+      lib = lib,
       start_type = pointer_path.start_type,
       concrete_start_type = lib.concrete_type(pointer_path.start_type),
       end_type = pointer_type['base'],
@@ -368,6 +397,7 @@ def resolve_expr(lib: GameLib, expr: Expr) -> DataPath:
 
     stride = align_up(element_type['size'], element_type['align'])
     return DataPath(
+      lib = lib,
       start_type = array_path.start_type,
       concrete_start_type = lib.concrete_type(array_path.start_type),
       end_type = element_type,

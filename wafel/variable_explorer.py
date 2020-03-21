@@ -9,6 +9,8 @@ from wafel.variable_format import Formatters, VariableFormatter
 import wafel.ui as ui
 from wafel.util import *
 import wafel.joystick_util as joystick_util
+import wafel.config as config
+from wafel.local_state import use_state
 
 
 @dataclass(frozen=True)
@@ -24,6 +26,8 @@ FIXED_TABS = [
   TabId('Misc'),
   TabId('Objects'),
 ]
+if config.dev_mode:
+  FIXED_TABS.insert(3, TabId('Subframe'))
 
 
 class VariableExplorer:
@@ -37,6 +41,8 @@ class VariableExplorer:
       self.open_tab(tab)
 
     self.current_tab = self.open_tabs[0]
+    if config.dev_mode:
+      self.current_tab = TabId('Subframe')
 
 
   def open_tab(self, tab: TabId) -> None:
@@ -229,6 +235,75 @@ class VariableExplorer:
     ig.columns(1)
 
 
+  def get_event_variant(self, event_type: str) -> str:
+    variant = event_type.lower()
+    if variant.startswith('flt_'):
+      variant = variant[len('flt_'):]
+    if variant.startswith('m_'):
+      variant = variant[len('m_'):]
+    parts = variant.split('_')
+    variant = parts[0] + ''.join(map(str.capitalize, parts[1:]))
+    return variant
+
+
+  def get_frame_log_events(self, frame: int) -> List[Dict[str, Any]]:
+    # TODO: Move/cache event_types
+    event_types: Dict[int, str] = {
+      constant['value']: constant_name
+        for constant_name, constant in self.model.lib.spec['constants'].items()
+          if constant['source'] == 'enum' and constant['enum_name'] == 'FrameLogEventType'
+    }
+
+    with self.model.timeline[frame] as state:
+      events: List[Dict[str, object]] = []
+
+      log_length = dcast(int, DataPath.compile(self.model.lib, '$state.gFrameLogLength').get(state))
+      for i in range(log_length):
+        event_type_value = dcast(int, DataPath.compile(self.model.lib, f'$state.gFrameLog[{i}].type').get(state))
+        event_type = event_types[event_type_value]
+        variant_name = self.get_event_variant(event_type)
+        event_data = dcast(dict, DataPath.compile(self.model.lib, f'$state.gFrameLog[{i}].__anon.{variant_name}').get(state))
+
+        event: Dict[str, object] = { 'type': event_type }
+        event.update(event_data)
+        events.append(event)
+
+    return events
+
+
+  # TODO: Move/cache
+  def mario_action_name(self, action: int) -> str:
+    for constant_name, constant in self.model.lib.spec['constants'].items():
+      if constant['value'] == action and constant_name.startswith('ACT_'):
+        assert isinstance(constant_name, str)
+        return constant_name.lower()[len('act_'):].replace('_', ' ')
+    assert False, '0x%08X' % action
+
+
+  def render_frame_log_tab(self) -> None:
+    frame_offset = use_state('frame-offset', 1)
+
+    ig.push_item_width(210)
+    _, frame_offset.value = ig.combo(
+      '##wall-hitbox-radius',
+      frame_offset.value,
+      ['previous -> current frame', 'current -> next frame'],
+    )
+    ig.pop_item_width()
+    ig.dummy(1, 10)
+
+    events = self.get_frame_log_events(self.model.selected_frame + frame_offset.value)
+
+    for event in events:
+      if event['type'] == 'FLT_M_CHANGE_ACTION':
+        from_action = self.mario_action_name(event['from'])
+        to_action = self.mario_action_name(event['to'])
+        text = f'change action: {from_action} -> {to_action}'
+      else:
+        text = str(event)
+      ig.text(text)
+
+
   def render_variable_tab(self, tab: TabId) -> None:
     variables = self.get_variables_for_tab(tab)
     for variable in variables:
@@ -241,6 +316,8 @@ class VariableExplorer:
       self.render_objects_tab()
     elif tab.name == 'Input':
       self.render_input_tab(tab)
+    elif tab.name == 'Subframe':
+      self.render_frame_log_tab()
     else:
       self.render_variable_tab(tab)
     ig.pop_id()

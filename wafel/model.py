@@ -45,7 +45,7 @@ class Model:
 
     self._selected_frame = 0
     if config.dev_mode:
-      self._selected_frame = 3211
+      self._selected_frame = 3222
     self.selected_frame_callbacks: List[Callable[[int], None]] = []
 
     def set_hotspot(frame: int) -> None:

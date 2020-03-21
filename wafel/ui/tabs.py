@@ -69,7 +69,7 @@ def render_tabs(
 
   ig.next_column()
 
-  ig.begin_child('content')
+  ig.begin_child('content', flags=ig.WINDOW_HORIZONTAL_SCROLLING_BAR)
   tabs[selected_tab_index.value].render(selected_tab_id.value) # type: ignore
   ig.end_child()
 

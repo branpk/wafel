@@ -4,7 +4,6 @@ import traceback
 
 import wafel.log as log
 import wafel.config as config
-from wafel.main import run
 
 log.info('Wafel', config.version_str('.'))
 log.subscribe(print)
@@ -29,6 +28,7 @@ with open(config.log_file, 'a') as log_file:
   log.subscribe(append_to_log)
 
   try:
+    from wafel.main import run
     # import cProfile
     # cProfile.run('run()', sort='tottime')
     run()
