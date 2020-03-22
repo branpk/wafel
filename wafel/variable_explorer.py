@@ -2,13 +2,14 @@ from typing import *
 from dataclasses import dataclass
 import math
 
+import ext_modules.util as c_util
+
 import wafel.imgui as ig
 from wafel.model import Model
 from wafel.core import ObjectId, Variable, VariableGroup, ObjectType, VariableId, DataPath, AbsoluteAddr, RelativeAddr
 from wafel.variable_format import Formatters, VariableFormatter
 import wafel.ui as ui
 from wafel.util import *
-import wafel.joystick_util as joystick_util
 import wafel.config as config
 from wafel.local_state import use_state
 
@@ -138,6 +139,8 @@ class VariableExplorer:
 
 
   def render_stick_control(self, id: str) -> None:
+    ig.text('Raw')
+
     stick_x_var = self.model.variables['input-stick-x']
     stick_y_var = self.model.variables['input-stick-y']
 
@@ -156,60 +159,62 @@ class VariableExplorer:
       self.model.edits.edit(self.model.selected_frame, stick_y_var, new_stick_y)
 
 
-  def render_adjusted_stick_control(self, id: str) -> None:
+  def render_intended_stick_control(self, id: str) -> None:
+    up_options = ['mario yaw', 'stick y', 'world x']
+    up_option = use_state('up-option', 0)
+
+    ig.text('Intended')
+    ig.spacing()
+
+    ig.text('up =')
+    ig.same_line()
+    ig.push_item_width(100)
+    _, up_option.value = ig.combo('##up-option', up_option.value, up_options)
+    ig.pop_item_width()
+
     stick_x_var = self.model.variables['input-stick-x']
     stick_y_var = self.model.variables['input-stick-y']
+
+    with self.model.timeline[self.model.selected_frame] as state:
+      face_yaw = dcast(int, self.model.variables['mario-face-yaw'].get(state))
+      camera_yaw = dcast(int, self.model.variables['camera-yaw'].get(state))
+      squish_timer = DataPath.compile(self.model.lib, '$state.gMarioState[].squishTimer').get(state)
+
+    up_angle = {
+      'mario yaw': face_yaw, # TODO: Use accurate yaw
+      'stick y': camera_yaw + 0x8000,
+      'world x': 0x4000,
+    }[up_options[up_option.value]]
 
     raw_stick_x = self.model.get(stick_x_var)
     raw_stick_y = self.model.get(stick_y_var)
 
-    stick_x, stick_y = joystick_util.raw_to_adjusted(raw_stick_x, raw_stick_y)
-    new_n = ui.render_joystick_control(id, stick_x / 64, stick_y / 64, 'circle')
-
-    if new_n is not None:
-      new_stick_x = new_n[0] * 64
-      new_stick_y = new_n[1] * 64
-
-      new_raw_stick_x, new_raw_stick_y = \
-        joystick_util.adjusted_to_raw(new_stick_x, new_stick_y)
-
-      self.model.edits.edit(self.model.selected_frame, stick_x_var, new_raw_stick_x)
-      self.model.edits.edit(self.model.selected_frame, stick_y_var, new_raw_stick_y)
-
-
-  def render_dyaw_stick_control(self, id: str) -> None:
-    stick_x_var = self.model.variables['input-stick-x']
-    stick_y_var = self.model.variables['input-stick-y']
-    face_yaw = self.model.get(self.model.variables['mario-face-yaw'])
-    camera_yaw = self.model.get(self.model.variables['camera-yaw'])
-    squish_timer = 0 # TODO
-
-    raw_stick_x = self.model.get(stick_x_var)
-    raw_stick_y = self.model.get(stick_y_var)
-
-    int_yaw, int_mag = joystick_util.raw_to_intended(
-      raw_stick_x,
-      raw_stick_y,
+    adjusted = c_util.stick_raw_to_adjusted(raw_stick_x, raw_stick_y)
+    intended_yaw, intended_mag = c_util.stick_adjusted_to_intended(
+      adjusted,
       face_yaw,
       camera_yaw,
-      squish_timer,
+      squish_timer != 0,
     )
-    int_dyaw = int_yaw - face_yaw
-    n_x = int_mag / 32 * math.sin(-int_dyaw * math.pi / 0x8000)
-    n_y = int_mag / 32 * math.cos(int_dyaw * math.pi / 0x8000)
+
+    n_a = intended_yaw - up_angle
+    n_x = intended_mag / 32 * math.sin(-n_a * math.pi / 0x8000)
+    n_y = intended_mag / 32 * math.cos(n_a * math.pi / 0x8000)
+
+    ig.set_cursor_pos((ig.get_cursor_pos().x + 150, 0))
     new_n = ui.render_joystick_control(id, n_x, n_y, 'circle')
 
     if new_n is not None:
-      new_int_dyaw = int(math.atan2(-new_n[0], new_n[1]) * 0x8000 / math.pi)
-      new_int_mag = 32 * math.sqrt(new_n[0]**2 + new_n[1]**2)
-      new_int_yaw = face_yaw + new_int_dyaw
+      new_n_a = int(math.atan2(-new_n[0], new_n[1]) * 0x8000 / math.pi)
+      new_intended_yaw = up_angle + new_n_a
+      new_intended_mag = 32 * math.sqrt(new_n[0]**2 + new_n[1]**2)
 
-      new_raw_stick_x, new_raw_stick_y = joystick_util.intended_to_raw(
-        new_int_yaw,
-        new_int_mag,
+      new_raw_stick_x, new_raw_stick_y = c_util.stick_intended_to_raw_visual(
+        trunc_signed(new_intended_yaw, 16),
+        new_intended_mag,
         face_yaw,
         camera_yaw,
-        squish_timer,
+        squish_timer != 0,
       )
 
       self.model.edits.edit(self.model.selected_frame, stick_x_var, new_raw_stick_x)
@@ -219,18 +224,16 @@ class VariableExplorer:
   def render_input_tab(self, tab: TabId) -> None:
     ig.columns(3)
     ig.set_column_width(-1, 160)
-    ig.set_column_width(-2, 160)
 
     variables = self.get_variables_for_tab(tab)
     for variable in variables:
       self.render_variable(tab, variable)
 
     ig.next_column()
-    self.render_stick_control('joystick')
-    # ig.next_column()
-    # self.render_adjusted_stick_control('adjusted')
+    ig.set_column_width(-1, 400)
+    self.render_intended_stick_control('intended')
     ig.next_column()
-    self.render_dyaw_stick_control('intended')
+    self.render_stick_control('joystick')
 
     ig.columns(1)
 
