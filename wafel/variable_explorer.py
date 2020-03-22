@@ -4,7 +4,7 @@ import math
 
 import wafel.imgui as ig
 from wafel.model import Model
-from wafel.core import ObjectId, Variable, VariableGroup, ObjectType, VariableId, DataPath
+from wafel.core import ObjectId, Variable, VariableGroup, ObjectType, VariableId, DataPath, AbsoluteAddr, RelativeAddr
 from wafel.variable_format import Formatters, VariableFormatter
 import wafel.ui as ui
 from wafel.util import *
@@ -282,23 +282,38 @@ class VariableExplorer:
 
   def render_frame_log_tab(self) -> None:
     frame_offset = use_state('frame-offset', 1)
+    round_numbers = use_state('round-numbers', True)
 
     ig.push_item_width(210)
     _, frame_offset.value = ig.combo(
-      '##wall-hitbox-radius',
+      '##frame-offset',
       frame_offset.value,
       ['previous -> current frame', 'current -> next frame'],
     )
     ig.pop_item_width()
+    _, round_numbers.value = ig.checkbox('Round##round-numbers', round_numbers.value)
     ig.dummy(1, 10)
 
     events = self.get_frame_log_events(self.model.selected_frame + frame_offset.value)
+
+    def string(addr: object) -> str:
+      abs_addr = dcast(AbsoluteAddr, dcast(RelativeAddr, addr).value)
+      return self.model.lib.string(abs_addr)
+
+    def round(number: object) -> str:
+      assert isinstance(number, float)
+      if round_numbers.value:
+        return '%.3f' % number
+      else:
+        return str(number)
 
     for event in events:
       if event['type'] == 'FLT_M_CHANGE_ACTION':
         from_action = self.mario_action_name(event['from'])
         to_action = self.mario_action_name(event['to'])
         text = f'change action: {from_action} -> {to_action}'
+      elif event['type'] == 'FLT_M_CHANGE_FORWARD_VEL':
+        text = f'change f vel: {round(event["from"])} -> {round(event["to"])} ({string(event["reason"])})'
       else:
         text = str(event)
       ig.text(text)

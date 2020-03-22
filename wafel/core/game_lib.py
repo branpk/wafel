@@ -5,7 +5,7 @@ import weakref
 
 from wafel.util import *
 from wafel.core.object_type import ObjectType
-from wafel.core.game_state import StateSlot, RelativeAddr
+from wafel.core.game_state import StateSlot, RelativeAddr, AbsoluteAddr
 
 
 DataSpec = Any
@@ -53,6 +53,9 @@ class GameLib:
 
   def symbol_for_addr(self, rel_addr: RelativeAddr) -> str:
     return self._symbols_by_offset[rel_addr]
+
+  def string(self, addr: AbsoluteAddr) -> str:
+    return C.string_at(addr.addr).decode('utf-8')
 
   @overload
   def concrete_type(self, type_: None) -> None:
