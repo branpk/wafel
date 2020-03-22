@@ -7,7 +7,7 @@ import ext_modules.util as c_util
 import wafel.imgui as ig
 from wafel.model import Model
 from wafel.core import ObjectId, Variable, VariableGroup, ObjectType, VariableId, DataPath, AbsoluteAddr, RelativeAddr
-from wafel.variable_format import Formatters, VariableFormatter
+from wafel.variable_format import Formatters, VariableFormatter, DecimalIntFormatter, FloatFormatter
 import wafel.ui as ui
 from wafel.util import *
 import wafel.config as config
@@ -139,7 +139,7 @@ class VariableExplorer:
 
 
   def render_stick_control(self, id: str) -> None:
-    ig.text('Raw')
+    ig.text('Raw joystick')
 
     stick_x_var = self.model.variables['input-stick-x']
     stick_y_var = self.model.variables['input-stick-y']
@@ -163,14 +163,15 @@ class VariableExplorer:
     up_options = ['mario yaw', 'stick y', 'world x']
     up_option = use_state('up-option', 0)
 
-    ig.text('Intended')
-    ig.spacing()
+    ig.text('Intended joystick')
+    ig.dummy(1, 5)
 
     ig.text('up =')
     ig.same_line()
     ig.push_item_width(100)
     _, up_option.value = ig.combo('##up-option', up_option.value, up_options)
     ig.pop_item_width()
+    ig.dummy(1, 10)
 
     stick_x_var = self.model.variables['input-stick-x']
     stick_y_var = self.model.variables['input-stick-y']
@@ -179,9 +180,10 @@ class VariableExplorer:
       face_yaw = dcast(int, self.model.variables['mario-face-yaw'].get(state))
       camera_yaw = dcast(int, self.model.variables['camera-yaw'].get(state))
       squish_timer = DataPath.compile(self.model.lib, '$state.gMarioState[].squishTimer').get(state)
+      used_face_yaw = dcast(int, face_yaw) # TODO: Use accurate yaw
 
     up_angle = {
-      'mario yaw': face_yaw, # TODO: Use accurate yaw
+      'mario yaw': used_face_yaw,
       'stick y': camera_yaw + 0x8000,
       'world x': 0x4000,
     }[up_options[up_option.value]]
@@ -196,6 +198,49 @@ class VariableExplorer:
       camera_yaw,
       squish_timer != 0,
     )
+
+    def render_value(label: str, value: object, formatter: VariableFormatter) -> Optional[Any]:
+      label_width = 60
+      value_size = (80, ig.get_text_line_height() + 2 * ig.get_style().frame_padding[1])
+      ig.push_item_width(label_width)
+      ig.selectable(label, width=label_width)
+      ig.pop_item_width()
+      ig.same_line()
+      new_value, _ = ui.render_variable_value(
+        'value-' + label, value, formatter, value_size
+      )
+      return None if new_value is None else new_value.value
+
+    target_yaw: Optional[int] = None
+    target_dyaw: Optional[int] = None
+    target_mag: Optional[float] = None
+
+    target_mag = render_value('int mag', intended_mag, FloatFormatter())
+    target_yaw = render_value('int yaw', intended_yaw, DecimalIntFormatter())
+    dyaw = intended_yaw - used_face_yaw
+    target_dyaw = render_value('dyaw', dyaw, DecimalIntFormatter())
+    if dyaw not in range(0, 16):
+      if ig.button('dyaw = 0'):
+        target_dyaw = 0
+
+    if target_yaw is not None or target_dyaw is not None or target_mag is not None:
+      relative_to = 0 if target_yaw is not None else used_face_yaw
+      if target_dyaw is not None:
+        target_yaw = used_face_yaw + target_dyaw
+      if target_yaw is None:
+        target_yaw = intended_yaw
+      if target_mag is None:
+        target_mag = intended_mag
+      new_raw_stick_x, new_raw_stick_y = c_util.stick_intended_to_raw_exact(
+        trunc_signed(target_yaw, 16),
+        target_mag,
+        face_yaw,
+        camera_yaw,
+        squish_timer != 0,
+        relative_to,
+      )
+      self.model.edits.edit(self.model.selected_frame, stick_x_var, new_raw_stick_x)
+      self.model.edits.edit(self.model.selected_frame, stick_y_var, new_raw_stick_y)
 
     n_a = intended_yaw - up_angle
     n_x = intended_mag / 32 * math.sin(-n_a * math.pi / 0x8000)
@@ -223,11 +268,13 @@ class VariableExplorer:
 
   def render_input_tab(self, tab: TabId) -> None:
     ig.columns(3)
-    ig.set_column_width(-1, 160)
 
+    ig.set_column_width(-1, 170)
+    ig.begin_child('##vars', width=160)
     variables = self.get_variables_for_tab(tab)
     for variable in variables:
       self.render_variable(tab, variable)
+    ig.end_child()
 
     ig.next_column()
     ig.set_column_width(-1, 400)

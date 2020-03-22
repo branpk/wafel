@@ -119,7 +119,12 @@ static pair<s16, s16> stick_adjusted_to_raw(f32 target_x, f32 target_y) {
 
 
 static pair<s16, s16> stick_intended_to_raw_exact(
-  s16 target_yaw, f32 target_mag, s16 face_yaw, s16 camera_yaw, bool squished)
+  s16 target_yaw,
+  f32 target_mag,
+  s16 face_yaw,
+  s16 camera_yaw,
+  bool squished,
+  s16 relative_to)
 {
   return raw_joystick_min<pair<s32, f32>>([&](s16 x, s16 y) {
     pair<s16, f32> intended = stick_adjusted_to_intended(
@@ -131,7 +136,7 @@ static pair<s16, s16> stick_intended_to_raw_exact(
     f32 intended_mag = intended.second;
 
     return make_pair(
-      abs(target_yaw - intended_yaw),
+      abs((u16) (target_yaw - relative_to) / 16 - (u16) (intended_yaw - relative_to) / 16),
       fabs(target_mag - intended_mag));
   });
 }
