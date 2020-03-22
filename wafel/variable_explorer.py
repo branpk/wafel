@@ -239,8 +239,6 @@ class VariableExplorer:
     variant = event_type.lower()
     if variant.startswith('flt_'):
       variant = variant[len('flt_'):]
-    if variant.startswith('m_'):
-      variant = variant[len('m_'):]
     parts = variant.split('_')
     variant = parts[0] + ''.join(map(str.capitalize, parts[1:]))
     return variant
@@ -307,16 +305,30 @@ class VariableExplorer:
       else:
         return str(number)
 
+    indent = 0
+
+    def show_text(text: str) -> None:
+      ig.text('    ' * indent + text)
+
     for event in events:
-      if event['type'] == 'FLT_M_CHANGE_ACTION':
+      if event['type'] == 'FLT_CHANGE_ACTION':
         from_action = self.mario_action_name(event['from'])
         to_action = self.mario_action_name(event['to'])
-        text = f'change action: {from_action} -> {to_action}'
-      elif event['type'] == 'FLT_M_CHANGE_FORWARD_VEL':
-        text = f'change f vel: {round(event["from"])} -> {round(event["to"])} ({string(event["reason"])})'
+        show_text(f'change action: {from_action} -> {to_action}')
+      elif event['type'] == 'FLT_CHANGE_FORWARD_VEL':
+        show_text(f'change f vel: {round(event["from"])} -> {round(event["to"])} ({string(event["reason"])})')
+      elif event['type'] == 'FLT_WALL_PUSH':
+        from_pos = ', '.join(map(round, event['from']))
+        to_pos = ', '.join(map(round, event['to']))
+        show_text(f'wall push: ({from_pos}) -> ({to_pos}) (surface {event["surface"]})')
+      elif event['type'] == 'FLT_BEGIN_MOVEMENT_STEP':
+        type_ = { 1: 'Air', 2: 'Ground', 3: 'Water' }[event['stepType']]
+        show_text(f'{type_} step {event["stepNum"]}:')
+        indent += 1
+      elif event['type'] == 'FLT_END_MOVEMENT_STEP':
+        indent -= 1
       else:
-        text = str(event)
-      ig.text(text)
+        show_text(str(event))
 
 
   def render_variable_tab(self, tab: TabId) -> None:
