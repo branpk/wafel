@@ -322,7 +322,7 @@ class VariableExplorer:
         to_pos = ', '.join(map(round, event['to']))
         show_text(f'wall push: ({from_pos}) -> ({to_pos}) (surface {event["surface"]})')
       elif event['type'] == 'FLT_BEGIN_MOVEMENT_STEP':
-        type_ = { 1: 'Air', 2: 'Ground', 3: 'Water' }[event['stepType']]
+        type_ = { 1: 'air', 2: 'ground', 3: 'water' }[event['stepType']]
         show_text(f'{type_} step {event["stepNum"]}:')
         indent += 1
       elif event['type'] == 'FLT_END_MOVEMENT_STEP':
