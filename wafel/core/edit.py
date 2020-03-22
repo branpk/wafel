@@ -52,12 +52,15 @@ class Edits:
     return self._frames[frame]
 
   def edit(self, frame: int, variable: Union[Variable, VariableId, str], value: Any) -> None:
-    # TODO: Remove overwritten edits
     if isinstance(variable, Variable):
       variable = variable.id
     elif isinstance(variable, str):
       variable = VariableId(variable)
-    self.get_edits(frame).append(Edit(variable, value))
+    edits = self.get_edits(frame)
+    for edit in list(edits):
+      if edit.variable_id == variable:
+        edits.remove(edit)
+    edits.append(Edit(variable, value))
     self._invalidate(frame)
 
   def is_edited(self, frame: int, variable_id: VariableId) -> bool:

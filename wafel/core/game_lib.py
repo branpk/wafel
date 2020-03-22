@@ -54,6 +54,10 @@ class GameLib:
   def symbol_for_addr(self, rel_addr: RelativeAddr) -> str:
     return self._symbols_by_offset[rel_addr]
 
+  def static_addr(self, symbol: str) -> int:
+    addr = self.symbol_addr(symbol)
+    return self.base_slot().relative_to_addr(addr)
+
   def string(self, addr: AbsoluteAddr) -> str:
     return C.string_at(addr.addr).decode('utf-8')
 

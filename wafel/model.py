@@ -4,6 +4,8 @@ import json
 import gc
 import os
 
+import ext_modules.util as c_util
+
 import wafel.config as config
 from wafel.core import GameLib, Variable, Edits, Timeline, GameState, ObjectId, \
   ObjectType, load_libsm64, RelativeAddr
@@ -32,6 +34,7 @@ class Model:
     self.game_version = game_version
 
     self.lib = yield from load_libsm64(game_version)
+    c_util.init(self.lib.static_addr)
 
     self.variables = Variable.create_all(self.lib)
 
@@ -45,7 +48,7 @@ class Model:
 
     self._selected_frame = 0
     if config.dev_mode:
-      self._selected_frame = 3322
+      self._selected_frame = 3126
     self.selected_frame_callbacks: List[Callable[[int], None]] = []
 
     def set_hotspot(frame: int) -> None:

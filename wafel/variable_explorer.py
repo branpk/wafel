@@ -41,8 +41,8 @@ class VariableExplorer:
       self.open_tab(tab)
 
     self.current_tab = self.open_tabs[0]
-    if config.dev_mode:
-      self.current_tab = TabId('Subframe')
+    # if config.dev_mode:
+    #   self.current_tab = TabId('Subframe')
 
 
   def open_tab(self, tab: TabId) -> None:
@@ -200,7 +200,7 @@ class VariableExplorer:
     new_n = ui.render_joystick_control(id, n_x, n_y, 'circle')
 
     if new_n is not None:
-      new_int_dyaw = math.atan2(-new_n[0], new_n[1]) * 0x8000 / math.pi
+      new_int_dyaw = int(math.atan2(-new_n[0], new_n[1]) * 0x8000 / math.pi)
       new_int_mag = 32 * math.sqrt(new_n[0]**2 + new_n[1]**2)
       new_int_yaw = face_yaw + new_int_dyaw
 

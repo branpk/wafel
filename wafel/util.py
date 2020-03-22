@@ -25,6 +25,14 @@ def align_up(value: int, align: int) -> int:
 def align_down(value: int, align: int) -> int:
   return value - (value % align)
 
+def trunc_signed(n: int, bits: int) -> int:
+  d = 1 << bits
+  m = n % d
+  if m >= 1 << (bits - 1):
+    return m - d
+  else:
+    return m
+
 def topological_sort(dependencies: Dict[T, List[T]]) -> List[T]:
   deps = [(v, list(e)) for v, e in dependencies.items()]
   deps.reverse()
@@ -90,6 +98,7 @@ __all__ = [
   'assert_not_none',
   'align_up',
   'align_down',
+  'trunc_signed',
   'topological_sort',
   'bytes_to_buffer',
   'dict_inverse',
