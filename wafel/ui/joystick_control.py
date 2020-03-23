@@ -37,7 +37,7 @@ def render_joystick_control(
 
   dl = ig.get_window_draw_list()
 
-  padding = 20
+  padding = 10
   content_region = ig.get_content_region_available()
   size = min(
     content_region.x - ig.get_style().scrollbar_size - 2 * padding,
@@ -48,7 +48,7 @@ def render_joystick_control(
 
   initial_cursor_pos = ig.get_cursor_pos()
   top_left = (
-    initial_cursor_pos[0] + ig.get_window_position()[0] + padding,
+    initial_cursor_pos[0] + ig.get_window_position()[0] - ig.get_scroll_x() + padding,
     initial_cursor_pos[1] + ig.get_window_position()[1] - ig.get_scroll_y() + padding,
   )
 

@@ -16,10 +16,12 @@ def render_labeled_variable(
   value: T,
   formatter: VariableFormatter,
   is_edited: bool,
+  label_width = 80,
+  value_width = 80,
 ) -> Tuple[Maybe[T], bool]:
   ig.push_id(id)
 
-  ig.selectable(label + '##label', width=80)
+  ig.selectable(label + '##label', width=label_width)
 
   if ig.begin_drag_drop_source():
     ig.text(label)
@@ -28,12 +30,12 @@ def render_labeled_variable(
 
   ig.same_line()
 
-  cell_width = 80
+  cell_width = value_width
   cell_height = ig.get_text_line_height() + 2 * ig.get_style().frame_padding[1]
 
   cell_cursor_pos = ig.get_cursor_pos()
   cell_cursor_pos = (
-    cell_cursor_pos[0] + ig.get_window_position()[0],
+    cell_cursor_pos[0] + ig.get_window_position()[0] - ig.get_scroll_x(),
     cell_cursor_pos[1] + ig.get_window_position()[1] - ig.get_scroll_y(),
   )
 

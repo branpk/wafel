@@ -117,7 +117,13 @@ class VariableExplorer:
       return self.model.variables.group(VariableGroup(tab.name))
 
 
-  def render_variable(self, tab: TabId, variable: Variable) -> None:
+  def render_variable(
+    self,
+    tab: TabId,
+    variable: Variable,
+    label_width = 80,
+    value_width = 80,
+  ) -> None:
     frame = self.model.selected_frame
     with self.model.timeline[frame] as state:
       value = variable.get(state)
@@ -129,6 +135,8 @@ class VariableExplorer:
       value,
       self.formatters[variable],
       self.model.edits.is_edited(frame, variable.id),
+      label_width = label_width,
+      value_width = value_width,
     )
 
     if changed_data is not None:
@@ -138,11 +146,12 @@ class VariableExplorer:
       self.model.edits.reset(frame, variable.id)
 
 
-  def render_stick_control(self, id: str) -> None:
-    ig.text('Raw joystick')
-
+  def render_stick_control(self, id: str, tab: TabId) -> None:
     stick_x_var = self.model.variables['input-stick-x']
     stick_y_var = self.model.variables['input-stick-y']
+
+    self.render_variable(tab, stick_x_var, 60, 50)
+    self.render_variable(tab, stick_y_var, 60, 50)
 
     stick_x = self.model.get(stick_x_var)
     stick_y = self.model.get(stick_y_var)
@@ -162,9 +171,6 @@ class VariableExplorer:
   def render_intended_stick_control(self, id: str) -> None:
     up_options = ['mario yaw', 'stick y', 'world x']
     up_option = use_state('up-option', 0)
-
-    ig.text('Intended joystick')
-    ig.dummy(1, 5)
 
     ig.text('up =')
     ig.same_line()
@@ -246,7 +252,7 @@ class VariableExplorer:
     n_x = intended_mag / 32 * math.sin(-n_a * math.pi / 0x8000)
     n_y = intended_mag / 32 * math.cos(n_a * math.pi / 0x8000)
 
-    ig.set_cursor_pos((ig.get_cursor_pos().x + 150, 0))
+    ig.set_cursor_pos((ig.get_cursor_pos().x + 155, 0))
     new_n = ui.render_joystick_control(id, n_x, n_y, 'circle')
 
     if new_n is not None:
@@ -267,22 +273,30 @@ class VariableExplorer:
 
 
   def render_input_tab(self, tab: TabId) -> None:
+    ig.set_next_window_content_size(170 + 370 + 150, 0)
+    ig.begin_child('##input', flags=ig.WINDOW_HORIZONTAL_SCROLLING_BAR)
     ig.columns(3)
 
+    def render_button(button: str) -> None:
+      self.render_variable(tab, self.model.variables['input-button-' + button], 10, 25)
     ig.set_column_width(-1, 170)
-    ig.begin_child('##vars', width=160)
-    variables = self.get_variables_for_tab(tab)
-    for variable in variables:
-      self.render_variable(tab, variable)
-    ig.end_child()
+    ig.dummy(1, 3)
+    render_button('a'); ig.same_line(); render_button('b'); ig.same_line(); render_button('z')
+    ig.dummy(1, 5)
+    render_button('s'); ig.same_line(); ig.dummy(43, 1); ig.same_line(); render_button('r')
+    ig.dummy(1, 5)
+    ig.dummy(43, 1); ig.same_line(); render_button('cu')
+    ig.dummy(17, 1); ig.same_line(); render_button('cl'); ig.same_line(); render_button('cr')
+    ig.dummy(43, 1); ig.same_line(); render_button('cd')
 
     ig.next_column()
-    ig.set_column_width(-1, 400)
+    ig.set_column_width(-1, 370)
     self.render_intended_stick_control('intended')
     ig.next_column()
-    self.render_stick_control('joystick')
+    self.render_stick_control('joystick', tab)
 
     ig.columns(1)
+    ig.end_child()
 
 
   def get_event_variant(self, event_type: str) -> str:
