@@ -13,7 +13,7 @@ if getattr(sys, 'frozen', False):
   root_dir = os.path.dirname(sys.executable)
   config.lib_directory = root_dir
 else:
-  config.dev_mode = True
+  config.dev_mode = '--nodev' not in sys.argv
   root_dir = os.path.dirname(os.path.abspath(__file__))
   config.lib_directory = os.path.join(root_dir, 'lib')
 

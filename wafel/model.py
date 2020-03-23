@@ -20,6 +20,7 @@ class Model:
   def __init__(self) -> None:
     self.game_version: str
     self.timeline: Timeline
+    self.rotational_camera_yaw = 0
 
   def load(self, game_version: str, edits: Edits) -> Loading[None]:
     yield from self._load_lib(game_version)

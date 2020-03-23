@@ -276,6 +276,7 @@ def render_game_view_rotate(
 
   log.timer.begin('overlay')
   camera = use_rotational_camera(framebuffer_size, model)
+  model.rotational_camera_yaw = int(camera.yaw * 0x8000 / math.pi)
   log.timer.end()
 
   mouse_ray = get_mouse_ray(camera)

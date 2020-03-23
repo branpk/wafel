@@ -169,7 +169,7 @@ class VariableExplorer:
 
 
   def render_intended_stick_control(self, id: str) -> None:
-    up_options = ['mario yaw', 'stick y', 'world x']
+    up_options = ['mario yaw', 'stick y', 'world x', '3d view']
     up_option = use_state('up-option', 0)
 
     ig.text('up =')
@@ -192,6 +192,7 @@ class VariableExplorer:
       'mario yaw': used_face_yaw,
       'stick y': camera_yaw + 0x8000,
       'world x': 0x4000,
+      '3d view': self.model.rotational_camera_yaw,
     }[up_options[up_option.value]]
 
     raw_stick_x = self.model.get(stick_x_var)
@@ -273,13 +274,17 @@ class VariableExplorer:
 
 
   def render_input_tab(self, tab: TabId) -> None:
-    ig.set_next_window_content_size(170 + 370 + 150, 0)
+    column_sizes = [170, 370, 200]
+
+    ig.set_next_window_content_size(sum(column_sizes), 0)
     ig.begin_child('##input', flags=ig.WINDOW_HORIZONTAL_SCROLLING_BAR)
     ig.columns(3)
 
+    for i, w in enumerate(column_sizes):
+      ig.set_column_width(i, w)
+
     def render_button(button: str) -> None:
       self.render_variable(tab, self.model.variables['input-button-' + button], 10, 25)
-    ig.set_column_width(-1, 170)
     ig.dummy(1, 3)
     render_button('a'); ig.same_line(); render_button('b'); ig.same_line(); render_button('z')
     ig.dummy(1, 5)
@@ -290,7 +295,6 @@ class VariableExplorer:
     ig.dummy(43, 1); ig.same_line(); render_button('cd')
 
     ig.next_column()
-    ig.set_column_width(-1, 370)
     self.render_intended_stick_control('intended')
     ig.next_column()
     self.render_stick_control('joystick', tab)
