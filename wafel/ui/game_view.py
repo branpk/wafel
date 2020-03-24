@@ -96,7 +96,7 @@ def get_mario_pos(model: Model) -> Vec3f:
 def move_toward(x: Vec3f, target: Vec3f, delta: float) -> Vec3f:
   remaining = (target[0] - x[0], target[1] - x[1], target[2] - x[2])
   distance = math.sqrt(sum(c ** 2 for c in remaining))
-  if distance < delta:
+  if distance <= delta + 0.0001:
     return target
   return (
     x[0] + delta * remaining[0] / distance,
