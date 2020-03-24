@@ -337,15 +337,6 @@ class VariableExplorer:
     return events
 
 
-  # TODO: Move/cache
-  def mario_action_name(self, action: int) -> str:
-    for constant_name, constant in self.model.lib.spec['constants'].items():
-      if constant['value'] == action and constant_name.startswith('ACT_'):
-        assert isinstance(constant_name, str)
-        return constant_name.lower()[len('act_'):].replace('_', ' ')
-    assert False, '0x%08X' % action
-
-
   def render_frame_log_tab(self) -> None:
     frame_offset = use_state('frame-offset', 1)
     round_numbers = use_state('round-numbers', True)
@@ -380,8 +371,8 @@ class VariableExplorer:
 
     for event in events:
       if event['type'] == 'FLT_CHANGE_ACTION':
-        from_action = self.mario_action_name(event['from'])
-        to_action = self.mario_action_name(event['to'])
+        from_action = self.model.action_names[event['from']]
+        to_action = self.model.action_names[event['to']]
         show_text(f'change action: {from_action} -> {to_action}')
       elif event['type'] == 'FLT_CHANGE_FORWARD_VEL':
         show_text(f'change f vel: {round(event["from"])} -> {round(event["to"])} ({string(event["reason"])})')

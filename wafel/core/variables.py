@@ -35,6 +35,7 @@ VARIABLES = {
     'mario-face-pitch': data('$state.gMarioState[].faceAngle[0]').label('face pitch'),
     'mario-face-yaw': data('$state.gMarioState[].faceAngle[1]').label('face yaw'),
     'mario-face-roll': data('$state.gMarioState[].faceAngle[2]').label('face roll'),
+    'mario-action': data('$state.gMarioState[].action').label('action'),
   },
   VariableGroup('Misc'): {
     'global-timer': data('$state.gGlobalTimer').label('global timer'),

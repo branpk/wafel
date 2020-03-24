@@ -57,7 +57,27 @@ class CheckboxFormatter(VariableFormatter):
     return rep
 
 
+class EnumFormatter(TextFormatter):
+  def __init__(self, id_to_name: Dict[int, str]) -> None:
+    self.id_to_name = id_to_name
+    self.name_to_id = { v: k for k, v in id_to_name.items() }
+
+  def output(self, data: object) -> object:
+    assert isinstance(data, int)
+    return self.id_to_name[data]
+
+  def input(self, rep: object) -> object:
+    assert isinstance(rep, str)
+    try:
+      return int(rep, base=0)
+    except:
+      return self.name_to_id[rep]
+
+
 class Formatters:
+  def __init__(self) -> None:
+    self.overrides: Dict[Variable, VariableFormatter] = {}
+
   def _get_default(self, variable: Variable) -> VariableFormatter:
     if variable.data_type == VariableDataType.BOOL:
       return CheckboxFormatter()
@@ -83,4 +103,7 @@ class Formatters:
     raise NotImplementedError(variable, variable.data_type)
 
   def __getitem__(self, variable: Variable) -> VariableFormatter:
-    return self._get_default(variable)
+    return self.overrides.get(variable) or self._get_default(variable)
+
+  def __setitem__(self, variable: Variable, formatter: VariableFormatter) -> None:
+    self.overrides[variable] = formatter

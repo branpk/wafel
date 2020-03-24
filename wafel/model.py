@@ -39,6 +39,13 @@ class Model:
 
     self.variables = Variable.create_all(self.lib)
 
+    self.action_names: Dict[int, str] = {}
+    for constant_name, constant in self.lib.spec['constants'].items():
+      if constant_name.startswith('ACT_') and \
+          not any(constant_name.startswith(s) for s in ['ACT_FLAG_', 'ACT_GROUP_', 'ACT_ID_']):
+        action_name = constant_name.lower()[len('act_'):].replace('_', ' ')
+        self.action_names[constant['value']] = action_name
+
   def _set_edits(self, edits: Edits) -> None:
     if hasattr(self, 'timeline'):
       del self.timeline
@@ -49,7 +56,7 @@ class Model:
 
     self._selected_frame = 0
     if config.dev_mode:
-      self._selected_frame = 3126
+      self._selected_frame = 3299
     self.selected_frame_callbacks: List[Callable[[int], None]] = []
 
     def set_hotspot(frame: int) -> None:
