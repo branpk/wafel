@@ -186,10 +186,17 @@ class VariableExplorer:
       face_yaw = dcast(int, self.model.variables['mario-face-yaw'].get(state))
       camera_yaw = dcast(int, self.model.variables['camera-yaw'].get(state))
       squish_timer = DataPath.compile(self.model.lib, '$state.gMarioState[].squishTimer').get(state)
-      used_face_yaw = dcast(int, face_yaw) # TODO: Use accurate yaw
+      active_face_yaw = dcast(int, face_yaw)
+
+    events = self.get_frame_log_events(self.model.selected_frame + 1)
+    active_face_yaw_action = None
+    for event in events:
+      if event['type'] == 'FLT_EXECUTE_ACTION':
+        active_face_yaw = event['faceAngle'][1]
+        active_face_yaw_action = self.model.action_names[event['action']]
 
     up_angle = {
-      'mario yaw': used_face_yaw,
+      'mario yaw': active_face_yaw,
       'stick y': camera_yaw + 0x8000,
       'world x': 0x4000,
       '3d view': self.model.rotational_camera_yaw,
@@ -208,7 +215,10 @@ class VariableExplorer:
 
     def render_value(label: str, value: object, formatter: VariableFormatter) -> Optional[Any]:
       label_width = 60
-      value_size = (80, ig.get_text_line_height() + 2 * ig.get_style().frame_padding[1])
+      value_size = (
+        60 if label == 'dyaw' else 80,
+        ig.get_text_line_height() + 2 * ig.get_style().frame_padding[1],
+      )
       ig.push_item_width(label_width)
       ig.selectable(label, width=label_width)
       ig.pop_item_width()
@@ -224,16 +234,30 @@ class VariableExplorer:
 
     target_mag = render_value('int mag', intended_mag, FloatFormatter())
     target_yaw = render_value('int yaw', intended_yaw, DecimalIntFormatter())
-    dyaw = intended_yaw - used_face_yaw
+    dyaw = intended_yaw - active_face_yaw
     target_dyaw = render_value('dyaw', dyaw, DecimalIntFormatter())
+
+    ig.same_line()
+    if ig.button('?'):
+      ig.open_popup('active-yaw-expl')
+    if ig.begin_popup('active-yaw-expl'):
+      ig.text(f'{intended_yaw} - {active_face_yaw} = {dyaw}')
+      ig.text(f'intended yaw = {intended_yaw}')
+      if active_face_yaw == face_yaw:
+        ig.text(f'face yaw = {face_yaw}')
+      if active_face_yaw != face_yaw:
+        ig.text(f'face yaw = {active_face_yaw} at start of {active_face_yaw_action} action')
+        ig.text(f'(face yaw = {face_yaw} at start of frame)')
+      ig.end_popup()
+
     if dyaw not in range(0, 16):
       if ig.button('dyaw = 0'):
         target_dyaw = 0
 
     if target_yaw is not None or target_dyaw is not None or target_mag is not None:
-      relative_to = 0 if target_yaw is not None else used_face_yaw
+      relative_to = 0 if target_yaw is not None else active_face_yaw
       if target_dyaw is not None:
-        target_yaw = used_face_yaw + target_dyaw
+        target_yaw = active_face_yaw + target_dyaw
       if target_yaw is None:
         target_yaw = intended_yaw
       if target_mag is None:
@@ -313,7 +337,6 @@ class VariableExplorer:
 
 
   def get_frame_log_events(self, frame: int) -> List[Dict[str, Any]]:
-    # TODO: Move/cache event_types
     event_types: Dict[int, str] = {
       constant['value']: constant_name
         for constant_name, constant in self.model.lib.spec['constants'].items()
