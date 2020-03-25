@@ -27,6 +27,7 @@ import wafel.ui as ui
 from wafel.local_state import use_state, use_state_with
 from wafel.util import *
 import wafel.config as config
+from wafel.bindings import *
 
 
 DEFAULT_FRAME_SHEET_VARS = [
@@ -315,6 +316,8 @@ class View:
 
 
   def render_menu_bar(self) -> None:
+    open_popup = None
+
     if ig.begin_menu_bar():
       if ig.begin_menu('File'):
         if ig.menu_item('New')[0]:
@@ -349,7 +352,16 @@ class View:
           ig.end_menu()
 
         ig.end_menu()
+
+      if ig.begin_menu('Settings'):
+        if ig.menu_item('Controller')[0]:
+          open_popup = 'Controller##settings-controller'
+        ig.end_menu()
+
       ig.end_menu_bar()
+
+    if open_popup is not None:
+      ig.open_popup(open_popup)
 
 
   def render(self) -> None:
@@ -395,6 +407,10 @@ class View:
     ig_window_size = ig.get_window_size()
     window_size = (int(ig_window_size.x), int(ig_window_size.y))
     self.render_menu_bar()
+
+    if ig.begin_popup_modal('Controller##settings-controller', True, ig.WINDOW_NO_RESIZE)[0]:
+      render_binding_settings('bindings')
+      ig.end_popup_modal()
 
     ig.columns(2)
     self.render_left_column(window_size)

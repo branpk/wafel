@@ -10,6 +10,7 @@ from wafel.util import *
 from wafel.variable_format import DecimalIntFormatter, CheckboxFormatter
 from wafel.slot_testing import test_timeline_algorithm
 from wafel.loading import in_progress
+from wafel.bindings import render_binding_settings
 
 
 # TODO: Hot reloading?
@@ -241,7 +242,15 @@ def test_loading_bar(id: str) -> None:
   ig.pop_id()
 
 
-DEFAULT_TEST = test_tabs
+def test_bindings(id: str) -> None:
+  ig.push_id(id)
+
+  render_binding_settings('bindings')
+
+  ig.pop_id()
+
+
+DEFAULT_TEST = test_bindings
 
 TESTS = [
   test_joystick_control,
@@ -253,6 +262,7 @@ TESTS = [
   test_variable_cell,
   test_timeline_algorithm,
   test_loading_bar,
+  test_bindings,
 ]
 
 
