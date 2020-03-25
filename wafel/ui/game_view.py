@@ -25,6 +25,8 @@ class MouseTracker:
     self.mouse_pos = (0.0, 0.0)
 
   def is_mouse_in_window(self) -> bool:
+    if not ig.global_mouse_capture():
+      return False
     window_x, window_y = cast(Iterable[float], ig.get_window_position())
     window_w, window_h = cast(Iterable[float], ig.get_window_size())
     return self.mouse_pos[0] >= window_x and self.mouse_pos[0] < window_x + window_w and \
@@ -33,7 +35,7 @@ class MouseTracker:
   def get_drag_amount(self) -> Tuple[float, float]:
     mouse_was_down = self.mouse_down
     last_mouse_pos = self.mouse_pos
-    self.mouse_down = ig.is_mouse_down()
+    self.mouse_down = ig.is_mouse_down() and ig.global_mouse_capture()
     self.mouse_pos = ig.get_mouse_pos()
 
     if self.dragging:
@@ -106,6 +108,8 @@ def move_toward(x: Vec3f, target: Vec3f, delta: float) -> Vec3f:
 
 
 def get_normalized_mouse_pos() -> Optional[Tuple[float, float]]:
+  if not ig.global_mouse_capture():
+    return None
   window_pos = tuple(map(int, ig.get_window_position()))
   window_size = tuple(map(int, ig.get_window_size()))
   mouse_pos = tuple(map(float, ig.get_mouse_pos()))

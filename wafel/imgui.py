@@ -5,6 +5,7 @@ import imgui as ig
 from wafel.util import *
 
 _stack: List[Tuple[str, Any]] = []
+_frames_without_modal: int = 0
 
 def fixed_begin_child(*args, **kwargs):
   fixed_args = list(args)
@@ -23,13 +24,20 @@ def _unconditional_begin_call(name: str) -> Any:
 
 def _conditional_begin_call(name: str) -> Any:
   def func(*args, **kwargs):
+    global _frames_without_modal
     result = getattr(ig, name)(*args, **kwargs)
-    if result:
+    opened = result[0] if name == 'begin_popup_modal' else result
+    if opened:
+      if name == 'begin_popup_modal':
+        _frames_without_modal = 0
       _stack.append((name, (args, kwargs)))
     return result
   return func
 
 def _check_end_call(name: str) -> None:
+  global _frames_without_modal
+  if name == 'end':
+    _frames_without_modal += 1
   if name.startswith('end'):
     matching = 'begin' + name[len('end'):]
   elif name.startswith('pop'):
@@ -54,6 +62,8 @@ def __getattr__(name: str) -> Any:
 
   if name == 'end_popup_context_item':
     name = 'end_popup'
+  elif name == 'end_popup_modal':
+    name = 'end_popup'
   return getattr(ig, name)
 
 def try_render(render: Callable[[], None]) -> None:
@@ -74,4 +84,9 @@ def try_render(render: Callable[[], None]) -> None:
 
 def global_keyboard_capture() -> bool:
   # TOOD: Mouse thing is weird behavior but probably fine?
+  if _frames_without_modal < 2:
+    return False
   return not ig.get_io().want_capture_keyboard or ig.is_mouse_down()
+
+def global_mouse_capture() -> bool:
+  return _frames_without_modal >= 2
