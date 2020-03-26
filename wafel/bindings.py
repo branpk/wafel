@@ -10,6 +10,26 @@ from wafel.util import *
 import wafel.config as config
 
 
+KEY_NAMES: Dict[int, str] = {
+  getattr(glfw, var):
+    var[len('KEY_'):]
+      .replace('RIGHT', 'R')
+      .replace('LEFT', 'L')
+      .replace('MULTIPLY', 'MUL')
+      .replace('SUBTRACT', 'SUB')
+      .replace('GRAVE_ACCENT', 'ACCENT')
+      .replace('SCROLL_LOCK', 'SCR_LOCK')
+      .replace('APOSTROPHE', 'APOS')
+      .replace('DECIMAL', 'DEC')
+      .replace('PRINT_SCREEN', 'PRINT_SCR')
+    for var in dir(glfw)
+      if var.startswith('KEY_')
+}
+
+for name in sorted(KEY_NAMES.values(), key=len):
+  print(name)
+
+
 # TODO: Keyboard (along w/ program hotkeys)
 
 @dataclass(frozen=True)
@@ -30,12 +50,20 @@ class JoystickAxis:
     sign = '+' if self.direction > 0 else '-'
     return f'Axis {self.index + 1}{sign}'
 
-Input = Union[JoystickButton, JoystickAxis]
+@dataclass(frozen=True)
+class KeyboardKey:
+  key: int
+
+  def __str__(self) -> str:
+    return KEY_NAMES[self.key]
+
+Input = Union[JoystickButton, JoystickAxis, KeyboardKey]
 
 def input_to_json(input: Input) -> object:
   type_ = {
     JoystickButton: 'button',
     JoystickAxis: 'axis',
+    KeyboardKey: 'key',
   }[type(input)]
   return dict(type=type_, **input.__dict__)
 
@@ -44,6 +72,7 @@ def input_from_json(json: object) -> Input:
   type_ = {
     'button': JoystickButton,
     'axis': JoystickAxis,
+    'key': KeyboardKey,
   }[json['type']]
   args = dict(**json)
   del args['type']
@@ -77,6 +106,10 @@ def get_joysticks_by_id(joystick_id: str) -> List[int]:
 
 
 def detect_input() -> Optional[Input]:
+  for key in KEY_NAMES:
+    if ig.is_key_down(key):
+      return KeyboardKey(key)
+
   for joystick_index, joystick_id in get_joysticks():
     axes_ptr, length = glfw.get_joystick_axes(joystick_index)
     axes = tuple(axes_ptr[i] for i in range(length))
@@ -118,6 +151,9 @@ def check_input(input: Optional[Input]) -> float:
       if input.index < len(buttons) and buttons[input.index]:
         return 1.0
     return 0.0
+
+  elif isinstance(input, KeyboardKey):
+    return 1.0 if ig.is_key_down(input.key) else 0.0
 
 
 bindings = bindings_from_json(config.settings.get('bindings') or {})
