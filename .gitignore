@@ -10,3 +10,4 @@ imgui.ini
 .mypy_cache
 .wafel_cache
 log.txt
+settings.json

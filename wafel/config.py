@@ -15,6 +15,7 @@ assets_directory: str
 lib_directory: str
 cache_directory: str
 log_file: str
+settings_file: str
 
 
 def version_str(delim: str) -> str:
@@ -79,3 +80,25 @@ def cache_put(key: str, value: object, filename='object*') -> None:
     _save_cache_index(index)
   except Exception as e:
     log.warn(f'Error while writing to cache: {e}')
+
+class _Settings:
+  def _read_settings(self) -> Dict[str, Any]:
+    if os.path.exists(settings_file):
+      with open(settings_file, 'r') as f:
+        return cast(Dict[str, Any], json.load(f))
+    else:
+      return {}
+
+  def _save_settings(self, settings: Dict[str, Any]) -> None:
+    with open(settings_file, 'w') as f:
+      json.dump(settings, f, indent=2)
+
+  def get(self, key: str) -> Optional[Any]:
+    return self._read_settings().get(key)
+
+  def __setitem__(self, key: str, value: Any) -> None:
+    settings = self._read_settings()
+    settings[key] = value
+    self._save_settings(settings)
+
+settings = _Settings()

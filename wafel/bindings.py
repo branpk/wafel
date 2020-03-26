@@ -7,12 +7,14 @@ import glfw
 import wafel.imgui as ig
 from wafel.local_state import use_state
 from wafel.util import *
+import wafel.config as config
 
 
 # TODO: Keyboard (along w/ program hotkeys)
 
 @dataclass(frozen=True)
 class JoystickButton:
+  joystick: str
   index: int
 
   def __str__(self) -> str:
@@ -20,6 +22,7 @@ class JoystickButton:
 
 @dataclass(frozen=True)
 class JoystickAxis:
+  joystick: str
   index: int
   direction: int
 
@@ -27,121 +30,148 @@ class JoystickAxis:
     sign = '+' if self.direction > 0 else '-'
     return f'Axis {self.index + 1}{sign}'
 
-JoystickControl = Union[JoystickButton, JoystickAxis]
+Input = Union[JoystickButton, JoystickAxis]
+
+def input_to_json(input: Input) -> object:
+  type_ = {
+    JoystickButton: 'button',
+    JoystickAxis: 'axis',
+  }[type(input)]
+  return dict(type=type_, **input.__dict__)
+
+def input_from_json(json: object) -> Input:
+  assert isinstance(json, dict)
+  type_ = {
+    'button': JoystickButton,
+    'axis': JoystickAxis,
+  }[json['type']]
+  args = dict(**json)
+  del args['type']
+  return cast(Input, type_(**args))
 
 
-@dataclass
-class Controller:
-  bound: Dict[str, JoystickControl]
+Bindings = Dict[str, Input]
+
+def bindings_to_json(bindings: Bindings) -> object:
+  return {
+    control: input_to_json(input)
+      for control, input in bindings.items()
+  }
+
+def bindings_from_json(json: object) -> Bindings:
+  assert isinstance(json, dict)
+  return {
+    control: input_from_json(input)
+      for control, input in json.items()
+  }
 
 
-def detect_control(joystick: int) -> Optional[JoystickControl]:
-  axes_ptr, length = glfw.get_joystick_axes(glfw.JOYSTICK_1)
-  axes = tuple(axes_ptr[i] for i in range(length))
+def get_joysticks() -> List[Tuple[int, str]]:
+  joysticks = [glfw.JOYSTICK_1 + i for i in range(16)]
+  joysticks = [j for j in joysticks if glfw.joystick_present(j)]
+  return [(j, glfw.get_joystick_guid(j).decode('utf-8')) for j in joysticks]
 
-  if len(axes) > 0:
-    max_axis = max(range(len(axes)), key=lambda i: abs(axes[i]))
-    if abs(axes[max_axis]) > 0.5:
-      return JoystickAxis(max_axis, 1 if axes[max_axis] > 0 else -1)
 
-  buttons_ptr, length = glfw.get_joystick_buttons(glfw.JOYSTICK_1)
-  buttons = tuple(buttons_ptr[i] for i in range(length))
+def get_joysticks_by_id(joystick_id: str) -> List[int]:
+  return [index for index, id in get_joysticks() if id == joystick_id]
 
-  for i, pressed in enumerate(buttons):
-    if pressed:
-      return JoystickButton(i)
+
+def detect_input() -> Optional[Input]:
+  for joystick_index, joystick_id in get_joysticks():
+    axes_ptr, length = glfw.get_joystick_axes(joystick_index)
+    axes = tuple(axes_ptr[i] for i in range(length))
+
+    if len(axes) > 0:
+      max_axis = max(range(len(axes)), key=lambda i: abs(axes[i]))
+      if abs(axes[max_axis]) > 0.5:
+        return JoystickAxis(joystick_id, max_axis, 1 if axes[max_axis] > 0 else -1)
+
+    buttons_ptr, length = glfw.get_joystick_buttons(joystick_index)
+    buttons = tuple(buttons_ptr[i] for i in range(length))
+
+    for i, pressed in enumerate(buttons):
+      if pressed:
+        return JoystickButton(joystick_id, i)
 
   return None
 
 
-def check_control(joystick: int, control: Optional[JoystickControl]) -> float:
-  if control is None:
+def check_input(input: Optional[Input]) -> float:
+  if input is None:
     return 0.0
 
-  elif isinstance(control, JoystickAxis):
-    axes_ptr, length = glfw.get_joystick_axes(glfw.JOYSTICK_1)
-    axes = tuple(axes_ptr[i] for i in range(length))
-    if control.index < len(axes):
-      axis_value = float(axes[control.index])
-      return max(axis_value * control.direction, 0.0)
-    else:
-      return 0.0
+  elif isinstance(input, JoystickAxis):
+    for joystick in get_joysticks_by_id(input.joystick):
+      axes_ptr, length = glfw.get_joystick_axes(joystick)
+      axes = tuple(axes_ptr[i] for i in range(length))
+      if input.index < len(axes):
+        axis_value = float(axes[input.index])
+        axis_value = min(max(axis_value * input.direction, 0.0), 1.0) # TODO: Dead zone
+        if axis_value > 0.0:
+          return axis_value
+    return 0.0
 
-  elif isinstance(control, JoystickButton):
-    buttons_ptr, length = glfw.get_joystick_buttons(glfw.JOYSTICK_1)
-    buttons = tuple(buttons_ptr[i] for i in range(length))
-    if control.index < len(buttons) and buttons[control.index]:
-      return 1.0
-    else:
-      return 0.0
+  elif isinstance(input, JoystickButton):
+    for joystick in get_joysticks_by_id(input.joystick):
+      buttons_ptr, length = glfw.get_joystick_buttons(joystick)
+      buttons = tuple(buttons_ptr[i] for i in range(length))
+      if input.index < len(buttons) and buttons[input.index]:
+        return 1.0
+    return 0.0
+
+
+bindings = bindings_from_json(config.settings.get('bindings') or {})
 
 
 def render_binding_settings(id: str) -> None:
   ig.push_id(id)
 
-  # TODO: Controller mappings should be saved between sessions and should try
-  # to pick the correct mapping based on joystick index and name
-
-  used_joystick: Ref[Optional[int]] = use_state('used-joystick', None)
-  controller = use_state('controller', Controller(bound={})).value
-
-  joysticks = [glfw.JOYSTICK_1 + i for i in range(16)]
-  joysticks = [j for j in joysticks if glfw.joystick_present(j)]
-  joystick_labels = [
-    str(i + 1) + ': ' + glfw.get_joystick_name(j).decode('utf-8')
-      for i, j in enumerate(joysticks)
-  ]
-
-  # TODO: Check if joysticks is empty
-
-  if used_joystick.value in joysticks:
-    joystick_index = joysticks.index(used_joystick.value)
-  else:
-    joystick_index = 0
-
-  used_joystick.value = joysticks[ig.combo('##used-joystick', joystick_index, joystick_labels)[1]]
-
-  if used_joystick.value is None:
-    ig.pop_id()
-    return
-
   n64_controls = [
-    'A', 'B', 'S',
-    'Z', 'L', 'R',
-    '^', '<', '>', 'v',
-    'C^', 'C<', 'C>', 'Cv',
-    'D^', 'D<', 'D>', 'Dv',
+    'n64-' + label for label in [
+      'A', 'B', 'S',
+      'Z', 'L', 'R',
+      '^', '<', '>', 'v',
+      'C^', 'C<', 'C>', 'Cv',
+      'D^', 'D<', 'D>', 'Dv',
+    ]
   ]
 
   listening_for: Ref[Optional[str]] = use_state('listening-for', None)
   waiting_for_release: Ref[bool] = use_state('waiting-for-release', False)
 
   if listening_for.value is not None:
-    control = detect_control(used_joystick.value)
-    if control is not None and not waiting_for_release.value:
-      controller.bound[listening_for.value] = control
+    input = detect_input()
+
+    if input is not None and not waiting_for_release.value:
+      bindings[listening_for.value] = input
+      config.settings['bindings'] = bindings_to_json(bindings)
+
       index = n64_controls.index(listening_for.value) + 1
       listening_for.value = n64_controls[index] if index < len(n64_controls) else None
       waiting_for_release.value = True
+
     elif ig.is_key_pressed(ig.get_key_index(ig.KEY_ESCAPE)):
-      # if listening_for.value in controller.bound:
-      #   del controller.bound[listening_for.value]
       listening_for.value = None
-    if control is None:
+
+    if input is None:
       waiting_for_release.value = False
 
-  def button(name: str) -> None:
-    value = check_control(assert_not_none(used_joystick.value), controller.bound.get(name))
+  def button(label: str) -> None:
+    name = 'n64-' + label
+
+    value = check_input(bindings.get(name))
     color = (0.26 + value * 0.7, 0.59 + value * 0.41, 0.98, 0.4)
     if listening_for.value == name:
       color = (0.86, 0.59, 0.98, 0.4)
+
     ig.push_style_color(ig.COLOR_BUTTON, *color)
-    if ig.button(name):
+    if ig.button(label):
       listening_for.value = name
     ig.pop_style_color()
+
     ig.same_line()
-    if name in controller.bound:
-      text = str(controller.bound[name])
+    if name in bindings:
+      text = str(bindings[name])
     else:
       text = 'Unbound'
     if listening_for.value == name:
@@ -160,7 +190,6 @@ def render_binding_settings(id: str) -> None:
     ig.same_line()
     button(prefix + 'v')
 
-  ig.dummy(1, 5)
   button('A')
   button('B')
   button('S')
