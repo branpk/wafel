@@ -26,11 +26,6 @@ KEY_NAMES: Dict[int, str] = {
       if var.startswith('KEY_')
 }
 
-for name in sorted(KEY_NAMES.values(), key=len):
-  print(name)
-
-
-# TODO: Keyboard (along w/ program hotkeys)
 
 @dataclass(frozen=True)
 class JoystickButton:
@@ -247,3 +242,10 @@ def render_binding_settings(id: str) -> None:
   ig.dummy(200, 1)
 
   ig.pop_id()
+
+
+def input_value(name: str) -> float:
+  return check_input(bindings.get(name))
+
+
+__all__ = ['render_binding_settings', 'input_value']

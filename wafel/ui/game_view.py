@@ -223,7 +223,7 @@ def use_rotational_camera(
     if ig.is_key_down(ord('D')): move[2] += 1
   if move != [0.0, 0.0, 0.0] or target.value is not None:
     mag = math.sqrt(sum(c ** 2 for c in move))
-    if mag != 0:
+    if mag > 1:
       move = [c / mag for c in move]
 
     max_speed = 50.0 * delta_time * math.sqrt(offset)
