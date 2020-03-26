@@ -163,6 +163,7 @@ class View:
     )
     if config.dev_mode and in_game_view.value:
       ui.render_game_view_in_game('game-view-1', framebuffer_size, self.model)
+      hovered_surface_1 = None
     else:
       hovered_surface_1 = ui.render_game_view_rotate(
         'game-view-1',
@@ -364,7 +365,71 @@ class View:
       ig.open_popup(open_popup)
 
 
+  def handle_controller(self) -> None:
+    ig.push_id('controller-inputs')
+
+    buttons_enabled = use_state('buttons-enabled', False)
+    stick_enabled = use_state('stick-enabled', False)
+
+    def add_callbacks() -> Ref[bool]:
+      input_edit = Ref(False)
+      def disable_controller(*args, **kwargs) -> None:
+        if not input_edit.value:
+          buttons_enabled.value = False
+          stick_enabled.value = False
+      self.model.edits.on_edit(disable_controller)
+      self.model.on_selected_frame_change(disable_controller)
+      return input_edit
+    input_edit = use_state_with('initialize', add_callbacks).value
+
+    controller_button_values = {
+      var: bool(round(input_value(input)))
+        for var, input in {
+          'input-button-a': 'n64-A',
+          'input-button-b': 'n64-B',
+          'input-button-z': 'n64-Z',
+          'input-button-s': 'n64-S',
+          'input-button-l': 'n64-L',
+          'input-button-r': 'n64-R',
+          'input-button-cu': 'n64-C^',
+          'input-button-cl': 'n64-C<',
+          'input-button-cr': 'n64-C>',
+          'input-button-cd': 'n64-Cv',
+          'input-button-du': 'n64-D^',
+          'input-button-dl': 'n64-D<',
+          'input-button-dr': 'n64-D>',
+          'input-button-dd': 'n64-Dv',
+        }.items()
+    }
+    if any(controller_button_values.values()):
+      buttons_enabled.value = True
+    for variable_id, new_button_value in controller_button_values.items():
+      variable = self.model.variables[variable_id]
+      button_value = bool(self.model.get(variable))
+      if buttons_enabled.value and button_value != new_button_value:
+        input_edit.value = True
+        self.model.edits.edit(self.model.selected_frame, variable, new_button_value)
+        input_edit.value = False
+
+    controller_stick_values = {
+      'input-stick-x': int(127 * input_value('n64->') - 128 * input_value('n64-<')),
+      'input-stick-y': int(127 * input_value('n64-^') - 128 * input_value('n64-v')),
+    }
+    if any(controller_stick_values.values()):
+      stick_enabled.value = True
+    for variable_id, new_stick_value in controller_stick_values.items():
+      variable = self.model.variables[variable_id]
+      stick_value = int(self.model.get(variable))
+      if stick_enabled.value and stick_value != new_stick_value:
+        input_edit.value = True
+        self.model.edits.edit(self.model.selected_frame, variable, new_stick_value)
+        input_edit.value = False
+
+    ig.pop_id()
+
   def render(self) -> None:
+    ig.push_id(str(self.epoch))
+
     if self.loading is not None:
       try:
         progress = None
@@ -380,6 +445,7 @@ class View:
         width = 500
         ig.set_cursor_pos((window_size.x / 2 - width / 2, window_size.y / 2 - 60))
         ui.render_loading_bar('loading-bar', progress, width)
+      ig.pop_id()
       return
 
 
@@ -401,8 +467,8 @@ class View:
     if self.dbg_is_key_pressed(ord('`')):
       self.show_debug_pane = not self.show_debug_pane
 
+    self.handle_controller()
 
-    ig.push_id(str(self.epoch))
 
     ig_window_size = ig.get_window_size()
     window_size = (int(ig_window_size.x), int(ig_window_size.y))

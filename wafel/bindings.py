@@ -134,7 +134,9 @@ def check_input(input: Optional[Input]) -> float:
       axes = tuple(axes_ptr[i] for i in range(length))
       if input.index < len(axes):
         axis_value = float(axes[input.index])
-        axis_value = min(max(axis_value * input.direction, 0.0), 1.0) # TODO: Dead zone
+        axis_value = min(max(axis_value * input.direction, 0.0), 1.0)
+        if axis_value < 0.001: # TODO: Allow dead zone configuration
+          axis_value = 0.0
         if axis_value > 0.0:
           return axis_value
     return 0.0
