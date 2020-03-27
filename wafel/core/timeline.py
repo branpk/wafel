@@ -129,7 +129,7 @@ class Timeline:
   def get_cached_path(self, frame: int, path: DataPath) -> object:
     cached = self.data_cache.get(frame, path)
     if cached is not None:
-      return cached.value
+      return cached
     with self.get(frame) as state:
       value = path.get(state)
     self.data_cache.put(frame, path, value)

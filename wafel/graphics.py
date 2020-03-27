@@ -22,16 +22,21 @@ def render_scene(scene: cg.Scene) -> None:
 
 
 def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
+  mario_path = cg.ObjectPath()
+
   log.timer.begin('nodes')
-  mario_path_nodes = []
-  for frame in path_frames:
-    path_node = cg.ObjectPathNode()
-    path_node.pos = cg.vec3(
-      model.timeline.get_cached(frame, model.variables['mario-pos-x']),
-      model.timeline.get_cached(frame, model.variables['mario-pos-y']),
-      model.timeline.get_cached(frame, model.variables['mario-pos-z']),
-    )
-    mario_path_nodes.append(path_node)
+  pos_x = DataPath.compile(model.lib, '$state.gMarioState[].pos[0]')
+  pos_y = DataPath.compile(model.lib, '$state.gMarioState[].pos[1]')
+  pos_z = DataPath.compile(model.lib, '$state.gMarioState[].pos[2]')
+  cg.object_path_add_nodes(
+    mario_path,
+    path_frames.start,
+    path_frames.stop,
+    lambda frame: model.timeline.get_cached_path(frame, pos_x),
+    lambda frame: model.timeline.get_cached_path(frame, pos_y),
+    lambda frame: model.timeline.get_cached_path(frame, pos_z),
+  )
+  mario_path.root_index = path_frames.index(model.selected_frame)
   log.timer.end()
 
   log.timer.begin('qsteps')
@@ -56,13 +61,10 @@ def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
       )
       quarter_steps.append(quarter_step)
 
-    root_node = mario_path_nodes[path_frames.index(model.selected_frame)]
-    root_node.quarter_steps = quarter_steps
+    cg.object_path_set_qsteps(
+      mario_path, path_frames.index(model.selected_frame), quarter_steps
+    )
   log.timer.end()
-
-  mario_path = cg.ObjectPath()
-  mario_path.nodes = mario_path_nodes
-  mario_path.root_index = path_frames.index(model.selected_frame)
 
   return mario_path
 

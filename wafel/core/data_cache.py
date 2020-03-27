@@ -35,11 +35,11 @@ class DataCache:
     self.paths[key] = path
     return key
 
-  def get(self, frame: int, path: DataPath) -> Maybe[object]:
+  def get(self, frame: int, path: DataPath) -> Optional[object]:
     try:
       row = self.rows[frame]
       key = self.path_key(path)
-      return Just(row[key])
+      return row[key]
     except KeyError:
       return None
 

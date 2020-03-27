@@ -4,6 +4,7 @@ from typing import *
 from enum import Enum, auto
 import json
 from dataclasses import dataclass
+import functools
 
 from wafel.util import *
 from wafel.core.data_path import DataPath
@@ -367,6 +368,7 @@ class Variables:
   def __iter__(self) -> Iterator[Variable]:
     return iter(self.variables)
 
+  @functools.lru_cache(maxsize=None)
   def __getitem__(self, id: Union[str, VariableId]) -> Variable:
     if isinstance(id, str):
       id = VariableId(id)

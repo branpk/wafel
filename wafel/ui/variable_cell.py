@@ -19,10 +19,13 @@ def render_variable_cell(
 ) -> Tuple[Maybe[T], bool, bool]:
   ig.push_id(id)
 
+  window_pos = ig.get_window_position()
+  item_spacing = ig.get_style().item_spacing
+
   cell_cursor_pos = ig.get_cursor_pos()
   cell_cursor_pos = (
-    cell_cursor_pos[0] + ig.get_window_position()[0] - ig.get_style().item_spacing[0],
-    cell_cursor_pos[1] + ig.get_window_position()[1] - ig.get_scroll_y() - ig.get_style().item_spacing[1],
+    cell_cursor_pos.x + window_pos.x - item_spacing.x,
+    cell_cursor_pos.y + window_pos.y - ig.get_scroll_y() - item_spacing.y,
   )
 
   changed_data, selected = render_variable_value(
@@ -30,8 +33,8 @@ def render_variable_cell(
     value,
     formatter,
     (
-      cell_size[0] - 2 * ig.get_style().item_spacing[0],
-      cell_size[1] - 2 * ig.get_style().item_spacing[1],
+      cell_size[0] - 2 * item_spacing.x,
+      cell_size[1] - 2 * item_spacing.y,
     ),
     highlight = is_selected,
   )

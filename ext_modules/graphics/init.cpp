@@ -116,6 +116,29 @@ static void scene_add_objects(
 }
 
 
+static void object_path_add_nodes(
+  ObjectPath &path,
+  int frame_start,
+  int frame_stop,
+  function<f32(int)> get_x,
+  function<f32(int)> get_y,
+  function<f32(int)> get_z)
+{
+  for (int frame = frame_start; frame < frame_stop; frame++) {
+    ObjectPathNode node = {};
+    node.pos = vec3(get_x(frame), get_y(frame), get_z(frame));
+    path.nodes.push_back(node);
+  }
+}
+
+
+static void object_path_set_qsteps(
+  ObjectPath &path, int index, vector<QuarterStep> quarter_steps)
+{
+  path.nodes[index].quarter_steps = quarter_steps;
+}
+
+
 static s32 trace_ray_to_surface(
   vec3 origin,
   vec3 direction,
@@ -211,6 +234,8 @@ PYBIND11_MODULE(graphics, m) {
   m.def("init_opengl", init_opengl);
   m.def("scene_add_surfaces", scene_add_surfaces);
   m.def("scene_add_objects", scene_add_objects);
+  m.def("object_path_add_nodes", object_path_add_nodes);
+  m.def("object_path_set_qsteps", object_path_set_qsteps);
   m.def("trace_ray_to_surface", trace_ray_to_surface);
   m.def("update_and_render", update_and_render);
 
