@@ -90,10 +90,23 @@ def bindings_from_json(json: object) -> Bindings:
   }
 
 
-def get_joysticks() -> List[Tuple[int, str]]:
+def get_joysticks_impl() -> List[Tuple[int, str]]:
   joysticks = [glfw.JOYSTICK_1 + i for i in range(16)]
   joysticks = [j for j in joysticks if glfw.joystick_present(j)]
   return [(j, glfw.get_joystick_guid(j).decode('utf-8')) for j in joysticks]
+
+
+_cached_joysticks: List[Tuple[int, str]]
+_joystick_valid_time = float('-inf')
+
+def get_joysticks() -> List[Tuple[int, str]]:
+  global _cached_joysticks, _joystick_valid_time
+  if time.time() - _joystick_valid_time < 1.0:
+    return _cached_joysticks
+  else:
+    _cached_joysticks = get_joysticks_impl()
+    _joystick_valid_time = time.time()
+    return _cached_joysticks
 
 
 def get_joysticks_by_id(joystick_id: str) -> List[int]:
@@ -131,9 +144,8 @@ def check_input(input: Optional[Input]) -> float:
   elif isinstance(input, JoystickAxis):
     for joystick in get_joysticks_by_id(input.joystick):
       axes_ptr, length = glfw.get_joystick_axes(joystick)
-      axes = tuple(axes_ptr[i] for i in range(length))
-      if input.index < len(axes):
-        axis_value = float(axes[input.index])
+      if input.index < length:
+        axis_value = float(axes_ptr[input.index])
         axis_value = min(max(axis_value * input.direction, 0.0), 1.0)
         if axis_value < 0.001: # TODO: Allow dead zone configuration
           axis_value = 0.0
@@ -144,8 +156,7 @@ def check_input(input: Optional[Input]) -> float:
   elif isinstance(input, JoystickButton):
     for joystick in get_joysticks_by_id(input.joystick):
       buttons_ptr, length = glfw.get_joystick_buttons(joystick)
-      buttons = tuple(buttons_ptr[i] for i in range(length))
-      if input.index < len(buttons) and buttons[input.index]:
+      if input.index < length and buttons_ptr[input.index]:
         return 1.0
     return 0.0
 

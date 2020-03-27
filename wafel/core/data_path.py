@@ -5,6 +5,7 @@ from enum import Enum, auto
 from dataclasses import dataclass
 import ctypes as C
 from itertools import takewhile
+import functools
 
 from wafel.core.game_lib import GameLib
 from wafel.core.game_state import GameState, Object, AbsoluteAddr, RelativeAddr, OffsetAddr
@@ -170,7 +171,7 @@ def get_data(lib: GameLib, state: GameState, type_: dict, addr: int) -> object:
     raise NotImplementedError(concrete_type['kind'])
 
 
-@dataclass(frozen=True)
+@dataclass
 class DataPath:
   lib: GameLib
   start_type: Optional[dict]
@@ -178,11 +179,16 @@ class DataPath:
   end_type: dict
   concrete_end_type: dict
   addr_path: AddrPath
+  _cache_key: Optional[object] = None
 
   @staticmethod
   def compile(lib: GameLib, source: str) -> DataPath:
+    path = lib._data_path_cache.get(source)
+    if path is not None:
+      return cast(DataPath, path)
     expr = parse_expr(source)
     path = resolve_expr(lib, expr)
+    lib._data_path_cache[source] = path
     return path
 
   def get_addr(self, state: GameState) -> int:

@@ -9,9 +9,7 @@ from wafel.util import *
 
 
 class AbstractSlot(ABC):
-  @property
-  @abstractmethod
-  def frame(self) -> Optional[int]: ...
+  frame: Optional[int]
 
   @property
   def based(self) -> bool: ...
@@ -99,13 +97,15 @@ class SlotManager(Generic[SLOT]):
 
     # TODO: Could compute this automatically by running the computation
     def work_from(slot: SLOT) -> Tuple[int, int]:
-      assert slot.frame is not None and slot.frame <= frame
-      if slot.frame == frame and not (allow_nesting and slot.based):
+      slot_frame = slot.frame
+      slot_based = slot.based
+      assert slot_frame is not None and slot_frame <= frame
+      if slot_frame == frame and not (allow_nesting and slot_based):
         return 0, 0
       copies = 0
-      if not slot.based:
+      if not slot_based:
         copies += 1
-      updates = frame - slot.frame
+      updates = frame - slot_frame
       if allow_nesting:
         copies += 1
       return copies, updates

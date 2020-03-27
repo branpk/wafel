@@ -34,6 +34,7 @@ class GameLib:
     self._base_slot.frame = -1
 
     self._symbols_by_offset = self._build_symbols_by_offset()
+    self._data_path_cache: Dict[str, object] = {}
 
     self.dll.sm64_init()
 

@@ -8,32 +8,40 @@ from wafel.util import *
 class DataCache:
   def __init__(self) -> None:
     self.rows: Dict[int, Dict[object, object]] = {}
-    self.max_num_rows = 100
+    self.path_ids: Dict[object, int] = {}
+    self.paths: Dict[object, DataPath] = {}
+    self.max_num_rows = 200
     self.warned = False
 
   def path_key(self, path: DataPath) -> Optional[object]:
+    key = path._cache_key
+    if key is not None:
+      return key
+
     type_ = path.concrete_end_type
     if type_['kind'] == 'primitive':
-      return (path.addr_path, type_['name'])
+      info = (path.addr_path, type_['name'])
     elif type_['kind'] == 'pointer':
-      return (path.addr_path, 'pointer')
+      info = (path.addr_path, 'pointer')
     else:
       if not self.warned:
         log.warn('Cache could not save:', type_)
         self.warned = True
       return None
 
+    key = self.path_ids.setdefault(info, max(self.path_ids.values(), default=0) + 1)
+
+    path._cache_key = key
+    self.paths[key] = path
+    return key
+
   def get(self, frame: int, path: DataPath) -> Maybe[object]:
-    row = self.rows.get(frame)
-    if row is None:
+    try:
+      row = self.rows[frame]
+      key = self.path_key(path)
+      return Just(row[key])
+    except KeyError:
       return None
-    key = self.path_key(path)
-    if key is None:
-      return None
-    value = row.get(key)
-    if value is None:
-      return None
-    return Just(value)
 
   def put(self, frame: int, path: DataPath, value: object) -> None:
     key = self.path_key(path)
@@ -47,6 +55,12 @@ class DataCache:
     self.rows[frame] = row
     row[key] = value
     self.shrink_if_necessary()
+
+  def __contains__(self, frame: int) -> bool:
+    return frame in self.rows
+
+  def get_paths_to_prime(self) -> Iterable[DataPath]:
+    return self.paths.values()
 
   def get_size(self) -> int:
     return sys.getsizeof(self.rows)

@@ -28,17 +28,9 @@ class TestSlot(AbstractSlot):
   def __init__(self, based: bool) -> None:
     self.content = ('<uninit>', 0)
 
-    self._frame: Optional[int] = None
+    self.frame: Optional[int] = None
     self._based = based
     self._owners: List[TestState] = []
-
-  @property
-  def frame(self) -> Optional[int]:
-    return self._frame
-
-  @frame.setter
-  def frame(self, frame: Optional[int]) -> None:
-    self._frame = frame
 
   @property
   def based(self) -> bool:

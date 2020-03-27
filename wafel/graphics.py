@@ -17,18 +17,11 @@ def get_renderer() -> cg.Renderer:
     _renderer = cg.Renderer(config.assets_directory)
   return _renderer
 
+def render_scene(scene: cg.Scene) -> None:
+  get_renderer().render(scene)
+
 
 def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
-  # 87 -> 96 -> 36
-  # 112
-  # with model.timeline[model.selected_frame] as state:
-  #   log.timer.begin('test')
-  #   for _ in range(3000):
-  #     model.variables['mario-pos-x'].get(state)
-  #     model.variables['mario-pos-y'].get(state)
-  #     model.variables['mario-pos-z'].get(state)
-  #   log.timer.end()
-
   log.timer.begin('nodes')
   mario_path_nodes = []
   for frame in path_frames:
@@ -43,24 +36,23 @@ def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
 
   log.timer.begin('qsteps')
   with model.timeline[model.selected_frame + 1] as state:
-    def get(path: str) -> Any:
-      return DataPath.compile(model.lib, path).get(state)
-
-    num_steps = get('$state.gQStepsInfo.numSteps')
+    num_steps = dcast(int, DataPath.compile(model.lib, '$state.gQStepsInfo.numSteps').get(state))
     assert num_steps <= 4
 
     quarter_steps = []
     for i in range(num_steps):
+      quarter_step_value = \
+        dcast(dict, DataPath.compile(model.lib, f'$state.gQStepsInfo.steps[{i}]').get(state))
       quarter_step = cg.QuarterStep()
       quarter_step.intended_pos = cg.vec3(
-        get(f'$state.gQStepsInfo.steps[{i}].intendedPos[0]'),
-        get(f'$state.gQStepsInfo.steps[{i}].intendedPos[1]'),
-        get(f'$state.gQStepsInfo.steps[{i}].intendedPos[2]'),
+        quarter_step_value['intendedPos'][0],
+        quarter_step_value['intendedPos'][1],
+        quarter_step_value['intendedPos'][2],
       )
       quarter_step.result_pos = cg.vec3(
-        get(f'$state.gQStepsInfo.steps[{i}].resultPos[0]'),
-        get(f'$state.gQStepsInfo.steps[{i}].resultPos[1]'),
-        get(f'$state.gQStepsInfo.steps[{i}].resultPos[2]'),
+        quarter_step_value['resultPos'][0],
+        quarter_step_value['resultPos'][1],
+        quarter_step_value['resultPos'][2],
       )
       quarter_steps.append(quarter_step)
 
@@ -112,7 +104,10 @@ def build_scene(
     )
   log.timer.end()
 
-  path_frames = range(max(model.selected_frame - 5, 0), model.selected_frame + 61)
+  if model.play_speed <= 0:
+    path_frames = range(max(model.selected_frame - 5, 0), model.selected_frame + 61)
+  else:
+    path_frames = range(max(model.selected_frame - 60, 0), model.selected_frame + 6)
   scene.object_paths = [build_mario_path(model, path_frames)]
 
   return scene
@@ -132,7 +127,7 @@ def render_game(
   scene.hovered_surface = -1 if hovered_surface is None else hovered_surface
   log.timer.end()
   log.timer.begin('render')
-  get_renderer().render(scene)
+  render_scene(scene)
   log.timer.end()
 
 

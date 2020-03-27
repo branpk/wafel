@@ -406,6 +406,7 @@ class View:
     if not ig.global_input_capture():
       return
 
+    log.timer.begin('controller')
     ig.push_id('controller-inputs')
 
     buttons_enabled = use_state('buttons-enabled', False)
@@ -451,7 +452,7 @@ class View:
       buttons_enabled.value = True
     for variable_id, new_button_value in controller_button_values.items():
       variable = self.model.variables[variable_id]
-      button_value = bool(self.model.get(variable))
+      button_value = self.model.timeline.get_cached(self.model.selected_frame, variable)
       if buttons_enabled.value and button_value != new_button_value:
         input_edit.value = True
         self.model.edits.edit(self.model.selected_frame, variable, new_button_value)
@@ -465,13 +466,14 @@ class View:
       stick_enabled.value = True
     for variable_id, new_stick_value in controller_stick_values.items():
       variable = self.model.variables[variable_id]
-      stick_value = int(self.model.get(variable))
+      stick_value = self.model.timeline.get_cached(self.model.selected_frame, variable)
       if stick_enabled.value and stick_value != new_stick_value:
         input_edit.value = True
         self.model.edits.edit(self.model.selected_frame, variable, new_stick_value)
         input_edit.value = False
 
     ig.pop_id()
+    log.timer.end()
 
   def render(self) -> None:
     ig.push_id(str(self.epoch))

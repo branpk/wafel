@@ -85,7 +85,7 @@ class StateSlot(AbstractSlot):
     self.addr_ranges = addr_ranges
     self.base_slot = base_slot or self
 
-    self._frame: Optional[int] = None
+    self.frame: Optional[int] = None
     self._owners: List[GameState] = []
     self.disallow_reads = False  # Set to True while being modified
 
@@ -110,14 +110,6 @@ class StateSlot(AbstractSlot):
   @property
   def based(self) -> bool:
     return self is self.base_slot
-
-  @property
-  def frame(self) -> Optional[int]:
-    return self._frame
-
-  @frame.setter
-  def frame(self, frame: Optional[int]) -> None:
-    self._frame = frame
 
   @property
   def frozen(self) -> bool:

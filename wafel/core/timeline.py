@@ -116,15 +116,17 @@ class Timeline:
     self.edits.on_edit(invalidate)
 
   def __getitem__(self, frame: int) -> StateSlot:
-    return self.slot_manager.request_frame(frame)
+    return self.get(frame)
 
   def get(self, frame: int, allow_nesting=False, require_base=False) -> StateSlot:
-    return self.slot_manager.request_frame(frame, allow_nesting, require_base)
+    slot = self.slot_manager.request_frame(frame, allow_nesting, require_base)
+    # if frame not in self.data_cache:
+    #   with slot as state:
+    #     for path in self.data_cache.get_paths_to_prime():
+    #       self.data_cache.put(frame, path, path.get(state))
+    return slot
 
-  def get_cached(self, frame: int, path: Union[Variable, DataPath]) -> object:
-    if isinstance(path, Variable):
-      return path.get_impl(lambda p: self.get_cached(frame, p))
-
+  def get_cached_path(self, frame: int, path: DataPath) -> object:
     cached = self.data_cache.get(frame, path)
     if cached is not None:
       return cached.value
@@ -132,6 +134,9 @@ class Timeline:
       value = path.get(state)
     self.data_cache.put(frame, path, value)
     return value
+
+  def get_cached(self, frame: int, variable: Variable) -> object:
+    return variable.get_impl(lambda p: self.get_cached_path(frame, p))
 
 
   def __len__(self) -> int:

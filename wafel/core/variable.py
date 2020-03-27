@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import *
 from enum import Enum, auto
 import json
+from dataclasses import dataclass
 
 from wafel.util import *
 from wafel.core.data_path import DataPath
@@ -130,19 +131,14 @@ class VariableDataType(Enum):
       raise NotImplementedError(type_['kind'])
 
 
+@dataclass(frozen=True)
 class VariableId:
-  def __init__(
-    self,
-    name: str,
-    object_id: Optional[ObjectId] = None,
-    surface: Optional[int] = None,
-  ) -> None:
-    self.name = name
-    self.object_id = object_id
-    self.surface = surface
+  name: str
+  object_id: Optional[ObjectId] = None
+  surface: Optional[int] = None
 
   def with_name(self, name: str) -> VariableId:
-    return VariableId(name, self.object_id)
+    return VariableId(name, self.object_id, self.surface)
 
   def with_object_id(self, object_id: ObjectId) -> VariableId:
     return VariableId(self.name, object_id=object_id)
@@ -150,21 +146,12 @@ class VariableId:
   def with_surface(self, surface: int) -> VariableId:
     return VariableId(self.name, surface=surface)
 
-  def _args(self) -> Tuple[Any, ...]:
-    return (self.name, self.object_id, self.surface)
-
   def to_bytes(self) -> bytes:
-    return json.dumps(self._args()).encode('utf-8')
+    return json.dumps(self.__dict__).encode('utf-8')
 
   @staticmethod
   def from_bytes(b: bytes) -> 'VariableId':
-    return VariableId(*json.loads(b.decode('utf-8')))
-
-  def __eq__(self, other) -> bool:
-    return isinstance(other, VariableId) and self._args() == other._args()
-
-  def __hash__(self) -> int:
-    return hash(self._args())
+    return VariableId(**json.loads(b.decode('utf-8')))
 
   def __repr__(self) -> str:
     args = [self.name]
