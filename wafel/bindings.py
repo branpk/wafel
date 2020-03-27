@@ -246,8 +246,11 @@ def render_binding_settings(id: str) -> None:
   ig.pop_id()
 
 
-def input_value(name: str) -> float:
+def input_float(name: str) -> float:
   return check_input(bindings.get(name))
 
+def input_bool(name: str) -> bool:
+  return bool(round(input_float(name)))
 
-__all__ = ['render_binding_settings', 'input_value']
+
+__all__ = ['render_binding_settings', 'input_float', 'input_bool']

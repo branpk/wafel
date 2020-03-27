@@ -90,3 +90,6 @@ def global_keyboard_capture() -> bool:
 
 def global_mouse_capture() -> bool:
   return _frames_without_modal >= 2
+
+def global_input_capture() -> bool:
+  return global_keyboard_capture()

@@ -366,6 +366,9 @@ class View:
 
 
   def handle_controller(self) -> None:
+    if not ig.global_input_capture():
+      return
+
     ig.push_id('controller-inputs')
 
     buttons_enabled = use_state('buttons-enabled', False)
@@ -383,23 +386,20 @@ class View:
     input_edit = use_state_with('initialize', add_callbacks).value
 
     controller_button_values = {
-      var: bool(round(input_value(input)))
-        for var, input in {
-          'input-button-a': 'n64-A',
-          'input-button-b': 'n64-B',
-          'input-button-z': 'n64-Z',
-          'input-button-s': 'n64-S',
-          'input-button-l': 'n64-L',
-          'input-button-r': 'n64-R',
-          'input-button-cu': 'n64-C^',
-          'input-button-cl': 'n64-C<',
-          'input-button-cr': 'n64-C>',
-          'input-button-cd': 'n64-Cv',
-          'input-button-du': 'n64-D^',
-          'input-button-dl': 'n64-D<',
-          'input-button-dr': 'n64-D>',
-          'input-button-dd': 'n64-Dv',
-        }.items()
+      'input-button-a': input_bool('n64-A'),
+      'input-button-b': input_bool('n64-B'),
+      'input-button-z': input_bool('n64-Z'),
+      'input-button-s': input_bool('n64-S'),
+      'input-button-l': input_bool('n64-L'),
+      'input-button-r': input_bool('n64-R'),
+      'input-button-cu': input_bool('n64-C^'),
+      'input-button-cl': input_bool('n64-C<'),
+      'input-button-cr': input_bool('n64-C>'),
+      'input-button-cd': input_bool('n64-Cv'),
+      'input-button-du': input_bool('n64-D^'),
+      'input-button-dl': input_bool('n64-D<'),
+      'input-button-dr': input_bool('n64-D>'),
+      'input-button-dd': input_bool('n64-Dv'),
     }
     if any(controller_button_values.values()):
       buttons_enabled.value = True
@@ -412,8 +412,8 @@ class View:
         input_edit.value = False
 
     controller_stick_values = {
-      'input-stick-x': int(127 * input_value('n64->') - 128 * input_value('n64-<')),
-      'input-stick-y': int(127 * input_value('n64-^') - 128 * input_value('n64-v')),
+      'input-stick-x': int(127 * input_float('n64->') - 128 * input_float('n64-<')),
+      'input-stick-y': int(127 * input_float('n64-^') - 128 * input_float('n64-v')),
     }
     if any(controller_stick_values.values()):
       stick_enabled.value = True
