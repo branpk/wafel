@@ -273,23 +273,6 @@ class View:
     ig.same_line()
 
 
-    prev_frame_time = use_state_with('prev-frame-time', time.time)
-    accum_time = use_state('accum-time', 0.0)
-    now = time.time()
-    accum_time.value += now - prev_frame_time.value
-    prev_frame_time.value = now
-
-    play_speed = self.model.play_speed
-    if play_speed == 0.0:
-      accum_time.value = 0
-    else:
-      target_fps = 30 * abs(play_speed)
-      target_dt = 1 / target_fps
-      while accum_time.value >= target_dt:
-        accum_time.value -= target_dt
-        self.model.selected_frame += 1 if play_speed > 0 else -1
-
-
     new_frame = ui.render_frame_slider(
       'frame-slider',
       self.model.selected_frame,
@@ -435,7 +418,10 @@ class View:
           buttons_enabled.value = False
           stick_enabled.value = False
       self.model.edits.on_edit(disable_controller)
-      self.model.on_selected_frame_change(disable_controller)
+      def frame_change(*args, **kwargs) -> None:
+        if self.model.play_speed == 0.0:
+          disable_controller()
+      self.model.on_selected_frame_change(frame_change)
       return input_edit
     input_edit = use_state_with('initialize', add_callbacks).value
 
@@ -522,6 +508,24 @@ class View:
       self.show_debug_pane = not self.show_debug_pane
 
     self.handle_controller()
+
+
+    prev_frame_time = use_state_with('prev-frame-time', time.time)
+    accum_time = use_state('accum-time', 0.0)
+    now = time.time()
+    accum_time.value += now - prev_frame_time.value
+    prev_frame_time.value = now
+
+    play_speed = self.model.play_speed
+    if play_speed == 0.0:
+      accum_time.value = 0
+    else:
+      target_fps = 30 * abs(play_speed)
+      target_dt = 1 / target_fps
+      while accum_time.value >= target_dt:
+        accum_time.value -= target_dt
+        self.model.selected_frame += 1 if play_speed > 0 else -1
+        self.handle_controller()
 
 
     ig_window_size = ig.get_window_size()

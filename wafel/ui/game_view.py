@@ -314,13 +314,13 @@ def render_game_view_in_game(
   # TODO: Move below to graphics.py
   prev_frame = max(model.selected_frame - 1, 0)
   with model.timeline.get(prev_frame, require_base=True) as state:
-    DataPath.compile(model.lib, '$state.gOverrideCamera.enabled').set(state, True)
-    DataPath.compile(model.lib, '$state.gOverrideCamera.pos[0]').set(state, camera.pos.x)
-    DataPath.compile(model.lib, '$state.gOverrideCamera.pos[1]').set(state, camera.pos.y)
-    DataPath.compile(model.lib, '$state.gOverrideCamera.pos[2]').set(state, camera.pos.z)
-    DataPath.compile(model.lib, '$state.gOverrideCamera.focus[0]').set(state, camera.target.x)
-    DataPath.compile(model.lib, '$state.gOverrideCamera.focus[1]').set(state, camera.target.y)
-    DataPath.compile(model.lib, '$state.gOverrideCamera.focus[2]').set(state, camera.target.z)
+    # DataPath.compile(model.lib, '$state.gOverrideCamera.enabled').set(state, True)
+    # DataPath.compile(model.lib, '$state.gOverrideCamera.pos[0]').set(state, camera.pos.x)
+    # DataPath.compile(model.lib, '$state.gOverrideCamera.pos[1]').set(state, camera.pos.y)
+    # DataPath.compile(model.lib, '$state.gOverrideCamera.pos[2]').set(state, camera.pos.z)
+    # DataPath.compile(model.lib, '$state.gOverrideCamera.focus[0]').set(state, camera.target.x)
+    # DataPath.compile(model.lib, '$state.gOverrideCamera.focus[1]').set(state, camera.target.y)
+    # DataPath.compile(model.lib, '$state.gOverrideCamera.focus[2]').set(state, camera.target.z)
 
     sm64_update_and_render = \
       dcast(AbsoluteAddr, model.lib.symbol_addr('sm64_update_and_render').value).addr

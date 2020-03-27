@@ -56,7 +56,7 @@ class Model:
 
     self._selected_frame = 0
     if config.dev_mode:
-      self._selected_frame = 3299
+      self._selected_frame = 1500
     self.selected_frame_callbacks: List[Callable[[int], None]] = []
 
     self.play_speed = 0.0
