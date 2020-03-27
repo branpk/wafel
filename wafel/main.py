@@ -273,6 +273,23 @@ class View:
     ig.same_line()
 
 
+    prev_frame_time = use_state_with('prev-frame-time', time.time)
+    accum_time = use_state('accum-time', 0.0)
+    now = time.time()
+    accum_time.value += now - prev_frame_time.value
+    prev_frame_time.value = now
+
+    play_speed = self.model.play_speed
+    if play_speed == 0.0:
+      accum_time.value = 0
+    else:
+      target_fps = 30 * abs(play_speed)
+      target_dt = 1 / target_fps
+      while accum_time.value >= target_dt:
+        accum_time.value -= target_dt
+        self.model.selected_frame += 1 if play_speed > 0 else -1
+
+
     new_frame = ui.render_frame_slider(
       'frame-slider',
       self.model.selected_frame,
