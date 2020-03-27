@@ -59,6 +59,8 @@ class Model:
       self._selected_frame = 3299
     self.selected_frame_callbacks: List[Callable[[int], None]] = []
 
+    self.play_speed = 0.0
+
     def set_hotspot(frame: int) -> None:
       self.timeline.set_hotspot('selected-frame', frame)
     self.on_selected_frame_change(set_hotspot)

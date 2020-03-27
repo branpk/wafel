@@ -236,6 +236,43 @@ class View:
       else:
         hidden_surfaces.add(hovered_surface.value)
 
+
+    play_direction = use_state('play-direction', 0)
+    speed_options = [0.25, 0.5, 1, 2, 4]
+    speed_index = use_state('speed-options', 2)
+
+    self.model.play_speed = play_direction.value * speed_options[speed_index.value]
+
+    def play_button(label: str, direction: int) -> None:
+      disabled = play_direction.value == direction
+      if disabled:
+        ig.push_style_var(ig.STYLE_ALPHA, 0.5)
+        ig.push_style_color(ig.COLOR_BUTTON_HOVERED, *ig.get_style().colors[ig.COLOR_BUTTON])
+        ig.push_style_color(ig.COLOR_BUTTON_ACTIVE, *ig.get_style().colors[ig.COLOR_BUTTON])
+      if ig.button(label):
+        play_direction.value = direction
+      if disabled:
+        ig.pop_style_color()
+        ig.pop_style_color()
+        ig.pop_style_var()
+
+    play_button('<|', -1)
+    ig.same_line()
+    play_button('||', 0)
+    ig.same_line()
+    play_button('|>', 1)
+    ig.same_line()
+
+    ig.push_item_width(60)
+    _, speed_index.value = ig.combo(
+      '##speed-option',
+      speed_index.value,
+      [str(s) + 'x' for s in speed_options],
+    )
+    ig.pop_item_width()
+    ig.same_line()
+
+
     new_frame = ui.render_frame_slider(
       'frame-slider',
       self.model.selected_frame,
