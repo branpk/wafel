@@ -425,6 +425,12 @@ class View:
       return input_edit
     input_edit = use_state_with('initialize', add_callbacks).value
 
+    prev_play_speed = use_state('prev-play-speed', 0.0)
+    if self.model.play_speed != prev_play_speed.value:
+      buttons_enabled.value = False
+      stick_enabled.value = False
+    prev_play_speed.value = self.model.play_speed
+
     controller_button_values = {
       'input-button-a': input_bool('n64-A'),
       'input-button-b': input_bool('n64-B'),
