@@ -262,13 +262,14 @@ class VariableExplorer:
         target_yaw = intended_yaw
       if target_mag is None:
         target_mag = intended_mag
-      new_raw_stick_x, new_raw_stick_y = c_util.stick_intended_to_raw_exact(
+      # TODO: Use exact and then fall back to visual if mag is too far?
+      new_raw_stick_x, new_raw_stick_y = c_util.stick_intended_to_raw_visual(
         trunc_signed(target_yaw, 16),
         target_mag,
         face_yaw,
         camera_yaw,
         squish_timer != 0,
-        relative_to,
+        # relative_to,
       )
       self.model.edits.edit(self.model.selected_frame, stick_x_var, new_raw_stick_x)
       self.model.edits.edit(self.model.selected_frame, stick_y_var, new_raw_stick_y)
