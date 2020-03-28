@@ -1,5 +1,6 @@
 from typing import *
 import sys
+import weakref
 
 from wafel.core.data_path import DataPath
 from wafel.util import *
@@ -14,9 +15,9 @@ class DataCache:
     self.warned = False
 
   def path_key(self, path: DataPath) -> Optional[object]:
-    key = path._cache_key
-    if key is not None:
-      return key
+    cache_key = path._cache_key
+    if cache_key is not None and cast(weakref.ref, cache_key[0])() is self:
+      return cache_key[1]
 
     type_ = path.concrete_end_type
     if type_['kind'] == 'primitive':
@@ -31,7 +32,7 @@ class DataCache:
 
     key = self.path_ids.setdefault(info, max(self.path_ids.values(), default=0) + 1)
 
-    path._cache_key = key
+    path._cache_key = (weakref.ref(self), key)
     self.paths[key] = path
     return key
 

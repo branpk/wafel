@@ -179,7 +179,7 @@ class DataPath:
   end_type: dict
   concrete_end_type: dict
   addr_path: AddrPath
-  _cache_key: Optional[object] = None
+  _cache_key: Optional[Tuple[object, object]] = None
 
   @staticmethod
   def compile(lib: GameLib, source: str) -> DataPath:
