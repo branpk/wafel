@@ -1,6 +1,7 @@
 from typing import *
 from abc import ABC, abstractmethod
 import traceback
+from dataclasses import dataclass
 
 from wafel.core.game_state import GameState
 from wafel.core.game_lib import GameLib
@@ -8,7 +9,10 @@ from wafel.core.data_path import DataPath
 from wafel.util import *
 
 
-Script = str
+@dataclass(frozen=True)
+class Script:
+  frame: int
+  source: str
 
 
 class ScriptContext:
@@ -25,7 +29,7 @@ class ScriptContext:
     script_locals: dict = {}
 
     try:
-      exec(script, script_globals, script_locals)
+      exec(script.source, script_globals, script_locals)
 
       stick_x = script_locals.get('stick_x')
       stick_y = script_locals.get('stick_y')
@@ -47,7 +51,7 @@ class ScriptContext:
 class Scripts:
   def __init__(self, context: ScriptContext) -> None:
     self._context = context
-    self._post_edit: Dict[int, Script] = {}
+    self._post_edit: Dict[int, Script] = { 0: Script(0, '') }
     self._invalidation_callbacks: List[Callable[[int], None]] = []
 
   def on_invalidation(self, callback: Callable[[int], None]) -> None:
@@ -58,17 +62,19 @@ class Scripts:
       callback(frame)
 
   def post_edit(self, frame: int) -> Script:
-    return self._post_edit.get(frame, '')
+    for prior_frame in range(frame, -1, -1):
+      script = self._post_edit.get(prior_frame)
+      if script is not None:
+        return script
+    assert False
 
-  def set_post_edit(self, frame: int, script: Script) -> None:
-    if self.post_edit(frame) != script:
-      if script == '':
-        del self._post_edit[frame]
-      else:
-        self._post_edit[frame] = script
+  def set_post_edit_source(self, frame: int, source: str) -> None:
+    current = self.post_edit(frame)
+    self._post_edit[frame] = Script(frame, source)
+    if current.source != source:
       self._invalidate(frame)
 
   def run_post_edit(self, state: GameState) -> None:
-    script = self._post_edit.get(state.frame)
+    script = self.post_edit(state.frame)
     if script is not None:
       self._context.run_state_script(state, script)

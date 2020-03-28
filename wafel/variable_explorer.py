@@ -330,16 +330,19 @@ class VariableExplorer:
 
 
   def render_script_tab(self) -> None:
-    source = self.model.timeline.scripts.post_edit(self.model.selected_frame)
+    script = self.model.timeline.scripts.post_edit(self.model.selected_frame)
 
     changed, new_source = ig.input_text_multiline(
       '##script',
-      source,
-      len(source) + ig.get_clipboard_length() + 10000,
+      script.source,
+      len(script.source) + ig.get_clipboard_length() + 10000,
     )
 
+    if script.frame != self.model.selected_frame:
+      ig.text(f'Inherited from frame {script.frame}')
+
     if changed:
-      self.model.timeline.scripts.set_post_edit(self.model.selected_frame, new_source)
+      self.model.timeline.scripts.set_post_edit_source(self.model.selected_frame, new_source)
 
 
   def render_frame_log_tab(self) -> None:
