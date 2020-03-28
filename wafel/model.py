@@ -58,8 +58,6 @@ class Model:
       self.edits,
       SM64ScriptContext(self),
     )
-    for frame in range(1581, 1630):
-      self.timeline.scripts.set_post_edit(frame, 'stick_x, stick_y = from_dyaw(0)')
 
     self._selected_frame = 0
     if config.dev_mode:

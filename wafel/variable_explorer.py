@@ -29,7 +29,8 @@ FIXED_TABS = [
   TabId('Objects'),
 ]
 if config.dev_mode:
-  FIXED_TABS.insert(3, TabId('Subframe'))
+  FIXED_TABS.insert(1, TabId('Script'))
+  FIXED_TABS.insert(4, TabId('Subframe'))
 
 
 class VariableExplorer:
@@ -328,6 +329,19 @@ class VariableExplorer:
     ig.end_child()
 
 
+  def render_script_tab(self) -> None:
+    source = self.model.timeline.scripts.post_edit(self.model.selected_frame)
+
+    changed, new_source = ig.input_text_multiline(
+      '##script',
+      source,
+      len(source) + ig.get_clipboard_length() + 10000,
+    )
+
+    if changed:
+      self.model.timeline.scripts.set_post_edit(self.model.selected_frame, new_source)
+
+
   def render_frame_log_tab(self) -> None:
     frame_offset = use_state('frame-offset', 1)
     round_numbers = use_state('round-numbers', True)
@@ -394,6 +408,8 @@ class VariableExplorer:
       self.render_objects_tab()
     elif tab.name == 'Input':
       self.render_input_tab(tab)
+    elif tab.name == 'Script':
+      self.render_script_tab()
     elif tab.name == 'Subframe':
       self.render_frame_log_tab()
     else:

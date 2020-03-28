@@ -6,6 +6,7 @@ from OpenGL import GL as gl
 
 import wafel.imgui as ig
 import wafel.config as config
+from wafel.util import *
 
 
 def _render_window(window, ig_renderer, render: Callable[[str], None]) -> None:
@@ -15,6 +16,8 @@ def _render_window(window, ig_renderer, render: Callable[[str], None]) -> None:
   # if view.dbg_frame_advance and not view.dbg_is_key_pressed(ord('\\')):
   #   glfw.swap_buffers(window)
   #   return
+
+  ig.set_clipboard_length(len(glfw.get_clipboard_string(window)))
 
   style = ig.get_style()
   style.window_rounding = 0

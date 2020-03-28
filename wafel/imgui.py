@@ -119,3 +119,12 @@ def global_mouse_capture() -> bool:
 
 def global_input_capture() -> bool:
   return global_keyboard_capture()
+
+_clipboard_length: int
+
+def get_clipboard_length() -> int:
+  return _clipboard_length
+
+def set_clipboard_length(length: int) -> None:
+  global _clipboard_length
+  _clipboard_length = length
