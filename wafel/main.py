@@ -418,7 +418,7 @@ class View:
         if not input_edit.value:
           buttons_enabled.value = False
           stick_enabled.value = False
-      self.model.edits.on_edit(disable_controller)
+      self.model.timeline.on_invalidation(disable_controller)
       def frame_change(*args, **kwargs) -> None:
         if self.model.play_speed == 0.0:
           disable_controller()
@@ -579,7 +579,7 @@ def run() -> None:
       view = View(model)
       if config.dev_mode:
         view.loading = None
-        view.file = SequenceFile('test_files/1key_j.m64', 'm64')
+        view.file = SequenceFile('test_files/22stars.m64', 'm64')
         view.reload()
     ig.push_id(id)
 

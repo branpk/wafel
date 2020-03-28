@@ -8,6 +8,7 @@ from wafel.core.edit import Edits
 from wafel.core.variable import Variables, Variable
 from wafel.core.data_cache import DataCache
 from wafel.core.data_path import DataPath
+from wafel.core.script import Scripts, ScriptContext
 from wafel.util import *
 
 
@@ -17,11 +18,13 @@ class StateSlots(AbstractSlots[StateSlot]):
     lib: GameLib,
     variables: Variables,
     edits: Edits,
+    scripts: Scripts,
     capacity: int,
   ) -> None:
     self.lib = lib
     self.variables = variables
     self.edits = edits
+    self.scripts = scripts
 
     self._base = self.lib.base_slot()
     self._non_base = [self.lib.alloc_slot() for _ in range(capacity - 1)]
@@ -38,7 +41,7 @@ class StateSlots(AbstractSlots[StateSlot]):
       self_ref = weak_self()
       if self_ref is not None:
         self_ref.invalidate_frame(frame)
-    self.edits.on_edit(invalidate)
+    self.on_invalidation(invalidate)
 
   def __del__(self) -> None:
     # Restore contents of base slot since a new timeline may be created for this DLL
@@ -88,12 +91,18 @@ class StateSlots(AbstractSlots[StateSlot]):
         variable = self.variables[edit.variable_id]
         variable.set(state, edit.value)
 
+      self.scripts.run_post_edit(state)
+
       self.base.disallow_reads = False
 
   def invalidate_frame(self, frame: int) -> None:
     for slot in self.where():
       if slot.frame is not None and slot.frame >= frame:
         slot.frame = None
+
+  def on_invalidation(self, callback: Callable[[int], None]) -> None:
+    self.edits.on_edit(callback)
+    self.scripts.on_invalidation(callback)
 
 
 class Timeline:
@@ -102,9 +111,11 @@ class Timeline:
     lib: GameLib,
     variables: Variables,
     edits: Edits,
+    script_context: ScriptContext,
   ) -> None:
     self.edits = edits
-    self.slots = StateSlots(lib, variables, edits, capacity=20)
+    self.scripts = Scripts(script_context)
+    self.slots = StateSlots(lib, variables, edits, self.scripts, capacity=20)
     self.slot_manager = SlotManager(self.slots)
     self.data_cache = DataCache()
 
@@ -113,7 +124,7 @@ class Timeline:
       data_cache = weak_data_cache()
       if data_cache is not None:
         data_cache.invalidate(frame)
-    self.edits.on_edit(invalidate)
+    self.on_invalidation(invalidate)
 
   def __getitem__(self, frame: int) -> StateSlot:
     return self.get(frame)
@@ -154,3 +165,6 @@ class Timeline:
   def balance_distribution(self, max_run_time: float) -> None:
     """Perform maintenance to maintain a nice distribution of loaded frames."""
     self.slot_manager.balance_distribution(max_run_time)
+
+  def on_invalidation(self, callback: Callable[[int], None]) -> None:
+    self.slots.on_invalidation(callback)

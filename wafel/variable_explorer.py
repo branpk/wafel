@@ -192,8 +192,11 @@ class VariableExplorer:
     active_face_yaw_action = None
     for event in events:
       if event['type'] == 'FLT_EXECUTE_ACTION':
+        action_name = self.model.action_names[event['action']]
         active_face_yaw = event['faceAngle'][1]
-        active_face_yaw_action = self.model.action_names[event['action']]
+        active_face_yaw_action = action_name
+        if action_name == 'idle':
+          break
 
     up_angle = {
       'mario yaw': active_face_yaw,
