@@ -31,7 +31,7 @@ with open(config.log_file, 'a') as log_file:
   try:
     from wafel.main import run
     # import cProfile
-    # cProfile.run('run()', sort='tottime')
+    # cProfile.run('run()', sort='cumtime')
     run()
   except:
     log.error('Uncaught:', traceback.format_exc())

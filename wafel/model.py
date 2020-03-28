@@ -13,8 +13,6 @@ from wafel.loading import Loading
 from wafel.util import *
 
 
-# TODO: Should create a new Model on every load
-
 class Model:
 
   def __init__(self) -> None:
@@ -47,12 +45,21 @@ class Model:
         self.action_names[constant['value']] = action_name
 
   def _set_edits(self, edits: Edits) -> None:
+    from wafel.script_context import SM64ScriptContext
+
     if hasattr(self, 'timeline'):
       del self.timeline
     gc.collect() # Force garbage collection of game state slots
 
     self.edits = edits
-    self.timeline = Timeline(self.lib, self.variables, self.edits)
+    self.timeline = Timeline(
+      self.lib,
+      self.variables,
+      self.edits,
+      SM64ScriptContext(self),
+    )
+    for frame in range(1581, 1630):
+      self.timeline.scripts.set_post_edit(frame, 'stick_x, stick_y = from_dyaw(0)')
 
     self._selected_frame = 0
     if config.dev_mode:

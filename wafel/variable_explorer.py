@@ -12,6 +12,7 @@ import wafel.ui as ui
 from wafel.util import *
 import wafel.config as config
 from wafel.local_state import use_state
+from wafel.sm64_util import *
 
 
 @dataclass(frozen=True)
@@ -188,7 +189,9 @@ class VariableExplorer:
       squish_timer = DataPath.compile(self.model.lib, '$state.gMarioState[].squishTimer').get(state)
       active_face_yaw = dcast(int, face_yaw)
 
-    events = self.get_frame_log_events(self.model.selected_frame + 1)
+    with self.model.timeline[self.model.selected_frame + 1] as state:
+      events = get_frame_log(self.model.lib, state)
+
     active_face_yaw_action = None
     for event in events:
       if event['type'] == 'FLT_EXECUTE_ACTION':
@@ -265,15 +268,12 @@ class VariableExplorer:
         target_yaw = intended_yaw
       if target_mag is None:
         target_mag = intended_mag
-      # TODO: Use exact and then fall back to visual if mag is too far?
-      new_raw_stick_x, new_raw_stick_y = c_util.stick_intended_to_raw_visual(
-        trunc_signed(target_yaw, 16),
-        target_mag,
-        face_yaw,
-        camera_yaw,
-        squish_timer != 0,
-        # relative_to,
-      )
+
+      with self.model.timeline[self.model.selected_frame] as state:
+        new_raw_stick_x, new_raw_stick_y = intended_to_raw(
+          self.model.lib, state, target_yaw, target_mag, relative_to
+        )
+
       self.model.edits.edit(self.model.selected_frame, stick_x_var, new_raw_stick_x)
       self.model.edits.edit(self.model.selected_frame, stick_y_var, new_raw_stick_y)
 
@@ -289,13 +289,10 @@ class VariableExplorer:
       new_intended_yaw = up_angle + new_n_a
       new_intended_mag = 32 * math.sqrt(new_n[0]**2 + new_n[1]**2)
 
-      new_raw_stick_x, new_raw_stick_y = c_util.stick_intended_to_raw_visual(
-        trunc_signed(new_intended_yaw, 16),
-        new_intended_mag,
-        face_yaw,
-        camera_yaw,
-        squish_timer != 0,
-      )
+      with self.model.timeline[self.model.selected_frame] as state:
+        new_raw_stick_x, new_raw_stick_y = intended_to_raw(
+          self.model.lib, state, new_intended_yaw, new_intended_mag, relative_to=0
+        )
 
       self.model.edits.edit(self.model.selected_frame, stick_x_var, new_raw_stick_x)
       self.model.edits.edit(self.model.selected_frame, stick_y_var, new_raw_stick_y)
@@ -331,39 +328,6 @@ class VariableExplorer:
     ig.end_child()
 
 
-  def get_event_variant(self, event_type: str) -> str:
-    variant = event_type.lower()
-    if variant.startswith('flt_'):
-      variant = variant[len('flt_'):]
-    parts = variant.split('_')
-    variant = parts[0] + ''.join(map(str.capitalize, parts[1:]))
-    return variant
-
-
-  def get_frame_log_events(self, frame: int) -> List[Dict[str, Any]]:
-    event_types: Dict[int, str] = {
-      constant['value']: constant_name
-        for constant_name, constant in self.model.lib.spec['constants'].items()
-          if constant['source'] == 'enum' and constant['enum_name'] == 'FrameLogEventType'
-    }
-
-    with self.model.timeline[frame] as state:
-      events: List[Dict[str, object]] = []
-
-      log_length = dcast(int, DataPath.compile(self.model.lib, '$state.gFrameLogLength').get(state))
-      for i in range(log_length):
-        event_type_value = dcast(int, DataPath.compile(self.model.lib, f'$state.gFrameLog[{i}].type').get(state))
-        event_type = event_types[event_type_value]
-        variant_name = self.get_event_variant(event_type)
-        event_data = dcast(dict, DataPath.compile(self.model.lib, f'$state.gFrameLog[{i}].__anon.{variant_name}').get(state))
-
-        event: Dict[str, object] = { 'type': event_type }
-        event.update(event_data)
-        events.append(event)
-
-    return events
-
-
   def render_frame_log_tab(self) -> None:
     frame_offset = use_state('frame-offset', 1)
     round_numbers = use_state('round-numbers', True)
@@ -378,7 +342,8 @@ class VariableExplorer:
     _, round_numbers.value = ig.checkbox('Round##round-numbers', round_numbers.value)
     ig.dummy(1, 10)
 
-    events = self.get_frame_log_events(self.model.selected_frame + frame_offset.value)
+    with self.model.timeline[self.model.selected_frame + frame_offset.value] as state:
+      events = get_frame_log(self.model.lib, state)
 
     def string(addr: object) -> str:
       abs_addr = dcast(AbsoluteAddr, dcast(RelativeAddr, addr).value)
