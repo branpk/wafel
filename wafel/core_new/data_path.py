@@ -3,12 +3,14 @@ from __future__ import annotations
 from typing import *
 from enum import Enum, auto
 from dataclasses import dataclass
-import ctypes as C
 import re
 
 from wafel.util import *
-from wafel.core_new.game import Game, AddressType, Address, Slot, DataSpec
-from wafel.core_new.data_spec_util import spec_get_concrete_type
+from wafel.core_new.memory import AddressType, Address, VirtualAddress, Memory, Slot
+from wafel.core_new.data_spec import DataSpec, spec_get_concrete_type
+
+
+_Memory = Memory[VirtualAddress, Slot]
 
 
 class EdgeType(Enum):
@@ -30,61 +32,55 @@ class Edge:
     return Edge(EdgeType.DEREF, 0)
 
 
-# TODO: Move deref implementations somewhere else?
-def deref_pointer(game: Game, slot: Slot, addr: Address) -> Address:
-  if addr.type == AddressType.NULL:
-    return addr
-  elif addr.type == AddressType.ABSOLUTE:
-    ptr = C.cast(addr.absolute, C.POINTER(C.c_void_p)) # type: ignore
-    ptr_value = int(ptr[0] or 0) # type: ignore
-    return Address.new_absolute(ptr_value)
-  elif addr.type == AddressType.VIRTUAL:
-    return game.memory.get_pointer(slot, addr.virtual)
-  else:
-    raise NotImplementedError(addr.type)
-
-
 @dataclass(frozen=True)
 class DataPath:
-  game: Game
+  memory: _Memory
   start_type: Optional[dict]
   end_type: dict
   start_addr: Optional[Address]
   edges: List[Edge]
 
   @staticmethod
-  def compile(game: Game, source: str) -> DataPath:
-    return compile_data_path(game, source)
+  def compile(memory: Memory[Any, Any], source: str) -> DataPath:
+    return compile_data_path(memory, source)
 
   def get_addr(self, slot: Slot) -> Address:
     assert self.start_addr is not None
     addr = self.start_addr
 
     for edge in self.edges:
+      if addr.type == AddressType.NULL:
+        return Address.new_null()
+
       if edge.type == EdgeType.OFFSET:
         addr += edge.value
       elif edge.type == EdgeType.DEREF:
-        addr = deref_pointer(self.game, slot, addr)
+        # get_pointer returns None if addr is null
+        addr = assert_not_none(self.memory.get_pointer(slot, addr))
       else:
         raise NotImplementedError(edge.type)
 
     return addr
 
+  def get(self, slot: Slot) -> object:
+    addr = self.get_addr(slot)
+    return self.memory.get(slot, addr, self.end_type)
+
   def append(self, edge: Edge, end_type: dict) -> DataPath:
     return DataPath(
-      game = self.game,
+      memory = self.memory,
       start_type = self.start_type,
-      end_type = spec_get_concrete_type(self.game.data_spec, end_type),
+      end_type = spec_get_concrete_type(self.memory.data_spec, end_type),
       start_addr = self.start_addr,
       edges = self.edges + [edge],
     )
 
   def __add__(self, other: DataPath) -> DataPath:
-    assert self.game == other.game
+    assert self.memory == other.memory
     if self.end_type != other.start_type:
       raise Exception('Mismatched types: ' + str(self.end_type) + ' and ' + str(other.start_type))
     return DataPath(
-      game = self.game,
+      memory = self.memory,
       start_type = self.start_type,
       end_type = other.end_type,
       start_addr = self.start_addr,
@@ -146,21 +142,21 @@ class DataPathContext:
 
 
 class NamespaceContext:
-  def __init__(self, game: Game, namespace: str) -> None:
-    self.game = game
+  def __init__(self, memory: _Memory, namespace: str) -> None:
+    self.memory = memory
     self.namespace = namespace
 
   def __getattribute__(self, name: str) -> DataPathContext:
-    game = cast(Game, super().__getattribute__('game'))
+    memory = cast(_Memory, super().__getattribute__('memory'))
     namespace = cast(str, super().__getattribute__('namespace'))
 
-    type_ = game.data_spec['types'][namespace].get(name)
+    type_ = memory.data_spec['types'][namespace].get(name)
     if type_ is None:
       raise Exception('Undefined type: ' + namespace + ' ' + name)
-    type_ = spec_get_concrete_type(game.data_spec, type_)
+    type_ = spec_get_concrete_type(memory.data_spec, type_)
 
     return DataPathContext(DataPath(
-      game = game,
+      memory = memory,
       start_type = type_,
       end_type = type_,
       start_addr = None,
@@ -169,26 +165,26 @@ class NamespaceContext:
 
 
 class GlobalContext:
-  def __init__(self, game: Game) -> None:
-    self.game = game
+  def __init__(self, memory: Memory) -> None:
+    self.memory = memory
 
   def __getattribute__(self, name: str) -> Union[NamespaceContext, DataPathContext]:
-    game = cast(Game, super().__getattribute__('game'))
+    memory = cast(Memory, super().__getattribute__('memory'))
 
     if name in ['struct', 'union', 'typedef']:
-      return NamespaceContext(game, name)
+      return NamespaceContext(memory, name)
 
-    global_var = game.data_spec['globals'].get(name)
+    global_var = memory.data_spec['globals'].get(name)
     if global_var is None:
       raise Exception('Global variable not defined: ' + name)
 
-    type_ = spec_get_concrete_type(game.data_spec, global_var['type'])
+    type_ = spec_get_concrete_type(memory.data_spec, global_var['type'])
 
-    addr = game.symbol(name)
+    addr = memory.symbol(name)
     assert addr.type != AddressType.NULL, name
 
     return DataPathContext(DataPath(
-      game = game,
+      memory = memory,
       start_type = None,
       end_type = type_,
       start_addr = addr,
@@ -196,7 +192,7 @@ class GlobalContext:
     ))
 
 
-def compile_data_path(game: Game, source: str) -> DataPath:
+def compile_data_path(memory: Memory[Any, Any], source: str) -> DataPath:
   original_source = source
 
   source = source.strip()
@@ -207,7 +203,7 @@ def compile_data_path(game: Game, source: str) -> DataPath:
   source = source.replace('->', '[0].')
   source = 'context.' + source
 
-  result = eval(source, {}, { 'context': GlobalContext(game) })
+  result = eval(source, {}, { 'context': GlobalContext(memory) })
 
   if object.__getattribute__(result, '__class__') is not DataPathContext:
     raise Exception('Invalid path: ' + original_source + ' (returned ' + str(result) + ')')

@@ -1,7 +1,9 @@
 from typing import *
 
-from wafel.core_new.game import DataSpec
 from wafel.util import align_up
+
+
+DataSpec = dict
 
 
 def spec_populate_sizes_and_alignment(spec: DataSpec, populate_offsets = False) -> None:
@@ -75,6 +77,7 @@ def spec_get_concrete_type(spec: DataSpec, type_: dict) -> dict:
 
 
 __all__ = [
+  'DataSpec',
   'spec_populate_sizes_and_alignment',
   'spec_get_concrete_type',
 ]
