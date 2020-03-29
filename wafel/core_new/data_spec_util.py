@@ -66,3 +66,15 @@ def spec_populate_sizes_and_alignment(spec: DataSpec, populate_offsets = False) 
 
     else:
       raise NotImplementedError(type_['kind'])
+
+
+def spec_get_concrete_type(spec: DataSpec, type_: dict) -> dict:
+  while type_['kind'] == 'symbol':
+    type_ = spec['types'][type_['namespace']][type_['name']]
+  return type_
+
+
+__all__ = [
+  'spec_populate_sizes_and_alignment',
+  'spec_get_concrete_type',
+]

@@ -21,7 +21,7 @@ class TestVirtual(VirtualAddress):
 
 
 @dataclass
-class TestSlot:
+class TestSlot(Slot):
   name: str
   memory: Dict[Tuple[str, int], object] = field(default_factory=dict)
 
@@ -122,19 +122,22 @@ DATA_SPEC: DataSpec = {
   'types': {
     'struct': {
       'Player': struct({
-        'pos': array(prim('f32'), 2),
-        'vel': array(prim('f32'), 2),
+        'pos': symbol('typedef', 'Vec2f'),
+        'vel': symbol('typedef', 'Vec2f'),
       }),
       'Controller': struct({
         'stick_x': prim('s8'),
         'stick_y': prim('s8'),
       }),
+      'Object': struct({
+        'pos': symbol('typedef', 'Vec2f'),
+        'raw_data': array(prim('u8'), 100),
+      })
     },
     'union': {
-
     },
     'typedef': {
-
+      'Vec2f': array(prim('f32'), 2),
     },
   },
   'globals': global_vars({
@@ -144,18 +147,25 @@ DATA_SPEC: DataSpec = {
     '.bss': {
       'player_pool': array(symbol('struct', 'Player')),
       'player': pointer(symbol('struct', 'Player')),
-      'controller': pointer(symbol('struct', 'Controller')),
+      'controller': symbol('struct', 'Controller'),
     },
   }),
   'constants': {
 
   },
+  'extra': {
+    'object_fields': {
+      'o_health': { 'type': prim('f32'), 'offset': 10 },
+    },
+  },
 }
 
 spec_populate_sizes_and_alignment(DATA_SPEC, populate_offsets=True)
 
+DATA_SPEC['types']['struct']['Object']['fields'].update(DATA_SPEC['extra']['object_fields'])
 
-class TestGame(Game[TestVirtual, TestSlot]):
+
+class TestGame(GameImpl[TestVirtual, TestSlot]):
   def __init__(self) -> None:
     self._memory = TestMemoryAccess()
     self._slots: Dict[str, TestSlot] = {
@@ -203,6 +213,6 @@ class TestGame(Game[TestVirtual, TestSlot]):
     pass
 
 
-game = TestGame()
-addr = game.symbol('player')
-print(game.memory.get_pointer(game.base_slot, addr.virtual))
+game: Game = TestGame().build()
+
+print(DataPath.compile(game, 'struct Object.o_health'))

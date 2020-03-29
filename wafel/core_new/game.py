@@ -49,6 +49,16 @@ class Address(Generic[VADDR]):
     assert self._virtual is not None
     return self._virtual
 
+  def __add__(self, offset: int) -> Address[VADDR]:
+    if self.type == AddressType.NULL:
+      return self
+    elif self.type == AddressType.ABSOLUTE:
+      return Address.new_absolute(self.absolute + offset)
+    elif self.type == AddressType.VIRTUAL:
+      return Address.new_virtual(cast(VADDR, self.virtual + offset))
+    else:
+      raise NotImplementedError(self.type)
+
   def __str__(self) -> str:
     if self.type == AddressType.NULL:
       return 'null'
@@ -57,10 +67,14 @@ class Address(Generic[VADDR]):
     elif self.type == AddressType.VIRTUAL:
       return f'virtual({self.virtual})'
     else:
-      assert False, self.type
+      raise NotImplementedError(self.type)
 
 
-SLOT = TypeVar('SLOT')
+class Slot:
+  pass
+
+
+SLOT = TypeVar('SLOT', bound=Slot)
 
 
 DataSpec = dict
@@ -114,7 +128,9 @@ class MemoryAccess(ABC, Generic[VADDR, SLOT]):
   def set_pointer(self, slot: SLOT, addr: VADDR, value: Address[VADDR]) -> None: ...
 
 
-class Game(ABC, Generic[VADDR, SLOT]):
+class GameImpl(ABC, Generic[VADDR, SLOT]):
+  def build(self) -> Game:
+    return cast(Game, self)
 
   # Slot management
 
@@ -148,3 +164,18 @@ class Game(ABC, Generic[VADDR, SLOT]):
 
   @abstractmethod
   def run_frame(self) -> None: ...
+
+
+Game = GameImpl[VirtualAddress, Slot]
+
+
+__all__ = [
+  'VirtualAddress',
+  'AddressType',
+  'Address',
+  'Slot',
+  'DataSpec',
+  'MemoryAccess',
+  'GameImpl',
+  'Game',
+]
