@@ -41,19 +41,14 @@ class TestMemory(Memory[TestVirtual, TestSlot]):
     else:
       return Address.new_virtual(TestVirtual(addr[0], addr[1]))
 
+  def _location_to_virtual(self, location: int) -> Optional[TestVirtual]:
+    return None
+
   def get_object(self, slot: TestSlot, addr: TestVirtual) -> Optional[Any]:
     return slot.memory.get((addr.section, addr.offset))
 
-  def get_s8_virtual(self, slot: TestSlot, addr: TestVirtual) -> int: return self.get_object(slot, addr) or 0
-  def get_s16_virtual(self, slot: TestSlot, addr: TestVirtual) -> int: return self.get_object(slot, addr) or 0
-  def get_s32_virtual(self, slot: TestSlot, addr: TestVirtual) -> int: return self.get_object(slot, addr) or 0
-  def get_s64_virtual(self, slot: TestSlot, addr: TestVirtual) -> int: return self.get_object(slot, addr) or 0
-  def get_u8_virtual(self, slot: TestSlot, addr: TestVirtual) -> int: return self.get_object(slot, addr) or 0
-  def get_u16_virtual(self, slot: TestSlot, addr: TestVirtual) -> int: return self.get_object(slot, addr) or 0
-  def get_u32_virtual(self, slot: TestSlot, addr: TestVirtual) -> int: return self.get_object(slot, addr) or 0
-  def get_u64_virtual(self, slot: TestSlot, addr: TestVirtual) -> int: return self.get_object(slot, addr) or 0
-  def get_f32_virtual(self, slot: TestSlot, addr: TestVirtual) -> float: return self.get_object(slot, addr) or 0.0
-  def get_f64_virtual(self, slot: TestSlot, addr: TestVirtual) -> float: return self.get_object(slot, addr) or 0.0
+  def get_primitive_virtual(self, slot: TestSlot, addr: TestVirtual, type_: str) -> object:
+    return self.get_object(slot, addr)
 
   def get_pointer_virtual(self, slot: TestSlot, addr: TestVirtual) -> Address[TestVirtual]:
     pointer = self.get_object(slot, addr) or 0
@@ -68,16 +63,8 @@ class TestMemory(Memory[TestVirtual, TestSlot]):
   def set_object(self, slot: TestSlot, addr: TestVirtual, value: object) -> None:
     slot.memory[(addr.section, addr.offset)] = value
 
-  def set_s8_virtual(self, slot: TestSlot, addr: TestVirtual, value: int) -> None: self.set_object(slot, addr, value)
-  def set_s16_virtual(self, slot: TestSlot, addr: TestVirtual, value: int) -> None: self.set_object(slot, addr, value)
-  def set_s32_virtual(self, slot: TestSlot, addr: TestVirtual, value: int) -> None: self.set_object(slot, addr, value)
-  def set_s64_virtual(self, slot: TestSlot, addr: TestVirtual, value: int) -> None: self.set_object(slot, addr, value)
-  def set_u8_virtual(self, slot: TestSlot, addr: TestVirtual, value: int) -> None: self.set_object(slot, addr, value)
-  def set_u16_virtual(self, slot: TestSlot, addr: TestVirtual, value: int) -> None: self.set_object(slot, addr, value)
-  def set_u32_virtual(self, slot: TestSlot, addr: TestVirtual, value: int) -> None: self.set_object(slot, addr, value)
-  def set_u64_virtual(self, slot: TestSlot, addr: TestVirtual, value: int) -> None: self.set_object(slot, addr, value)
-  def set_f32_virtual(self, slot: TestSlot, addr: TestVirtual, value: float) -> None: self.set_object(slot, addr, value)
-  def set_f64_virtual(self, slot: TestSlot, addr: TestVirtual, value: float) -> None: self.set_object(slot, addr, value)
+  def set_primitive_virtual(self, slot: TestSlot, addr: TestVirtual, value: object, type_: str) -> None:
+    return self.set_object(slot, addr, value)
 
   def set_pointer_virtual(self, slot: TestSlot, addr: TestVirtual, value: Address[TestVirtual]) -> None:
     pointer: object
