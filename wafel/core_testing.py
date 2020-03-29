@@ -157,8 +157,10 @@ DATA_SPEC: DataSpec = {
   'globals': global_vars({
     '.bss': {
       'player_pool': array(symbol('struct', 'Player')),
-      'player': pointer(symbol('struct', 'Player')),
       'controller': symbol('struct', 'Controller'),
+    },
+    '.data': {
+      'player': pointer(symbol('struct', 'Player')),
     },
   }),
   'constants': {
@@ -184,11 +186,8 @@ class TestGame(GameImpl[TestVirtual, TestSlot]):
     }
 
     # Initialize game
-    self.memory.set_pointer_virtual(
-      self.base_slot,
-      self.memory.symbol('player').virtual,
-      self.memory.symbol('player_pool'),
-    )
+    player_pool = self.path('player_pool').get_addr(self.base_slot)
+    self.path('player').set(self.base_slot, player_pool)
 
   @property
   def base_slot(self) -> TestSlot:
@@ -216,4 +215,5 @@ class TestGame(GameImpl[TestVirtual, TestSlot]):
 
 game = TestGame().remove_type_vars()
 
-print(DataPath.compile(game.memory, 'player.pos[1]').get(game.base_slot))
+game.path('player.pos[1]').set(game.base_slot, 32.0)
+print(game.path('player.pos[1]').get(game.base_slot))

@@ -66,6 +66,10 @@ class DataPath:
     addr = self.get_addr(slot)
     return self.memory.get(slot, addr, self.end_type)
 
+  def set(self, slot: Slot, value: object) -> None:
+    addr = self.get_addr(slot)
+    self.memory.set(slot, addr, value, self.end_type)
+
   def append(self, edge: Edge, end_type: dict) -> DataPath:
     return DataPath(
       memory = self.memory,

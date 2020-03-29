@@ -74,6 +74,13 @@ class Address(Generic[VADDR]):
       raise NotImplementedError(self.type)
 
 
+class Slot:
+  pass
+
+
+SLOT = TypeVar('SLOT', bound=Slot)
+
+
 PRIMITIVE_C_TYPES = {
   'u8': C.c_uint8,
   's8': C.c_int8,
@@ -99,14 +106,6 @@ PRIMITIVE_PY_TYPES = {
   'f32': float,
   'f64': float,
 }
-
-
-# TODO: Move?
-class Slot:
-  pass
-
-
-SLOT = TypeVar('SLOT', bound=Slot)
 
 
 class Memory(ABC, Generic[VADDR, SLOT]):
@@ -258,7 +257,7 @@ class Memory(ABC, Generic[VADDR, SLOT]):
     else:
       raise NotImplementedError(type_['kind'])
 
-  def get(self, slot: SLOT, addr: Address, type_: dict) -> object:
+  def get(self, slot: SLOT, addr: Address[VADDR], type_: dict) -> object:
     if addr.type == AddressType.NULL:
       return None
     elif addr.type == AddressType.ABSOLUTE:
@@ -267,6 +266,62 @@ class Memory(ABC, Generic[VADDR, SLOT]):
       return self.get_virtual(slot, addr.virtual, type_)
     else:
       raise NotImplementedError(addr.type)
+
+  def set_absolute(self, addr: int, value: object, type_: dict) -> None:
+    type_ = spec_get_concrete_type(self.data_spec, type_)
+
+    if type_['kind'] == 'primitive':
+      if type_['name'] == 'void':
+        raise Exception('Dereferencing void at ' + str(addr))
+      ctype = PRIMITIVE_C_TYPES[type_['name']]
+      pytype = PRIMITIVE_PY_TYPES[type_['name']]
+      if not isinstance(value, pytype):
+        raise Exception('Cannot set ' + type_['name'] + ' to value ' + str(value))
+      pointer = C.cast(addr, C.POINTER(ctype)) # type: ignore
+      # TODO: Check overflow behavior
+      pointer[0] = value
+
+    else:
+      raise NotImplementedError(type_['kind'])
+
+  def set_virtual(self, slot: SLOT, addr: VADDR, value: object, type_: dict) -> None:
+    type_ = spec_get_concrete_type(self.data_spec, type_)
+
+    if type_['kind'] == 'primitive':
+      if type_['name'] == 'void':
+        raise Exception('Dereferencing void at ' + str(addr))
+      pytype = PRIMITIVE_PY_TYPES[type_['name']]
+      if not isinstance(value, pytype):
+        raise Exception('Cannot set ' + type_['name'] + ' to value ' + str(value))
+      method = {
+        's8': self.set_s8_virtual,
+        's16': self.set_s16_virtual,
+        's32': self.set_s32_virtual,
+        's64': self.set_s64_virtual,
+        'u8': self.set_u8_virtual,
+        'u16': self.set_u16_virtual,
+        'u32': self.set_u32_virtual,
+        'u64': self.set_u64_virtual,
+        'f32': self.set_f32_virtual,
+        'f64': self.set_f64_virtual,
+      }[type_['name']]
+      method(slot, addr, cast(Any, value))
+
+    elif type_['kind'] == 'pointer':
+      if not isinstance(value, Address):
+        raise Exception('Cannot set pointer to ' + str(value))
+      self.set_pointer_virtual(slot, addr, value)
+
+    else:
+      raise NotImplementedError(type_['kind'])
+
+  def set(self, slot: SLOT, addr: Address[VADDR], value: object, type_: dict) -> None:
+    if addr.type == AddressType.NULL:
+      pass
+    elif addr.type == AddressType.ABSOLUTE:
+      self.set_absolute(addr.absolute, value, type_)
+    elif addr.type == AddressType.VIRTUAL:
+      self.set_virtual(slot, addr.virtual, value, type_)
 
 
 __all__ = [

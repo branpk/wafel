@@ -4,8 +4,10 @@ from typing import *
 from dataclasses import dataclass
 from enum import Enum, auto
 from abc import ABC, abstractmethod
+from functools import lru_cache
 
 from wafel.core_new.memory import Memory, VirtualAddress, Slot
+from wafel.core_new.data_path import DataPath
 
 
 VADDR = TypeVar('VADDR', bound=VirtualAddress)
@@ -32,6 +34,10 @@ class GameImpl(ABC, Generic[VADDR, SLOT]):
   @property
   @abstractmethod
   def memory(self) -> Memory[VADDR, SLOT]: ...
+
+  @lru_cache(maxsize=None)
+  def path(self, source: str) -> DataPath:
+    return DataPath.compile(self.memory, source)
 
   @abstractmethod
   def run_frame(self) -> None: ...
