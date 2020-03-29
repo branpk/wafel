@@ -91,7 +91,7 @@ class StateSlots(AbstractSlots[StateSlot]):
         variable = self.variables[edit.variable_id]
         variable.set(state, edit.value)
 
-      self.scripts.run_post_edit(state)
+      self.scripts.run(state)
 
       self.base.disallow_reads = False
 

@@ -91,6 +91,12 @@ def format_align(fmt: str, line_args: Iterable[Iterable[object]]) -> List[str]:
 
   return results
 
+def truncate_str(s: str, max_length: int, end: str = '') -> str:
+  if len(s) > max_length:
+    return s[:max_length - len(end)] + end
+  else:
+    return s
+
 
 __all__ = [
   'log',
@@ -107,4 +113,5 @@ __all__ = [
   'Just',
   'Maybe',
   'format_align',
+  'truncate_str',
 ]

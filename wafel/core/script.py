@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import *
 from abc import ABC, abstractmethod
 import traceback
@@ -11,8 +13,28 @@ from wafel.util import *
 
 @dataclass(frozen=True)
 class Script:
-  frame: int
   source: str
+
+
+@dataclass
+class ScriptedSegment:
+  frame_start: int
+  frame_stop: Optional[int]
+  script: Script
+
+  def __contains__(self, frame: int) -> bool:
+    return frame >= self.frame_start and \
+      (self.frame_stop is None or frame < self.frame_stop)
+
+  def split(self, frame: int) -> List[ScriptedSegment]:
+    if frame <= self.frame_start:
+      return [self]
+    if self.frame_stop is not None and frame >= self.frame_stop:
+      return [self]
+    return [
+      ScriptedSegment(self.frame_start, frame, self.script),
+      ScriptedSegment(frame, self.frame_stop, self.script),
+    ]
 
 
 class ScriptContext:
@@ -31,8 +53,17 @@ class ScriptContext:
     try:
       exec(script.source, script_globals, script_locals)
 
+      stick = script_locals.get('stick')
       stick_x = script_locals.get('stick_x')
       stick_y = script_locals.get('stick_y')
+
+      if stick is not None:
+        assert isinstance(stick, tuple)
+        assert len(stick) == 2
+        if stick_x is None:
+          stick_x = stick[0]
+        if stick_y is None:
+          stick_y = stick[1]
 
       if stick_x is not None:
         assert isinstance(stick_x, float) or isinstance(stick_x, int)
@@ -51,7 +82,7 @@ class ScriptContext:
 class Scripts:
   def __init__(self, context: ScriptContext) -> None:
     self._context = context
-    self._post_edit: Dict[int, Script] = { 0: Script(0, '') }
+    self._segments = [ScriptedSegment(0, None, Script(''))]
     self._invalidation_callbacks: List[Callable[[int], None]] = []
 
   def on_invalidation(self, callback: Callable[[int], None]) -> None:
@@ -61,20 +92,41 @@ class Scripts:
     for callback in list(self._invalidation_callbacks):
       callback(frame)
 
-  def post_edit(self, frame: int) -> Script:
-    for prior_frame in range(frame, -1, -1):
-      script = self._post_edit.get(prior_frame)
-      if script is not None:
-        return script
+  def get(self, frame: int) -> Script:
+    for segment in self._segments:
+      if frame in segment:
+        return segment.script
     assert False
 
-  def set_post_edit_source(self, frame: int, source: str) -> None:
-    current = self.post_edit(frame)
-    self._post_edit[frame] = Script(frame, source)
-    if current.source != source:
-      self._invalidate(frame)
+  @property
+  def segments(self) -> List[ScriptedSegment]:
+    return self._segments
 
-  def run_post_edit(self, state: GameState) -> None:
-    script = self.post_edit(state.frame)
-    if script is not None:
-      self._context.run_state_script(state, script)
+  def split_segment(self, frame: int) -> None:
+    new_segments: List[ScriptedSegment] = []
+    for segment in self._segments:
+      if frame in segment:
+        new_segments += segment.split(frame)
+      else:
+        new_segments.append(segment)
+    self._segments = new_segments
+
+  def delete_segment(self, segment: ScriptedSegment, merge_upward: bool) -> None:
+    i = self._segments.index(segment)
+    if merge_upward:
+      assert i > 0
+      self._segments[i - 1].frame_stop = segment.frame_stop
+    else:
+      assert i < len(self._segments) - 1
+      self._segments[i + 1].frame_start = segment.frame_start
+    del self._segments[i]
+    self._invalidate(segment.frame_start)
+
+  def set_segment_source(self, segment: ScriptedSegment, source: str) -> None:
+    if source != segment.script:
+      segment.script = Script(source)
+      self._invalidate(segment.frame_start)
+
+  def run(self, state: GameState) -> None:
+    script = self.get(state.frame)
+    self._context.run_state_script(state, script)

@@ -29,7 +29,7 @@ FIXED_TABS = [
   TabId('Objects'),
 ]
 if config.dev_mode:
-  FIXED_TABS.insert(1, TabId('Script'))
+  FIXED_TABS.insert(1, TabId('Scripting'))
   FIXED_TABS.insert(4, TabId('Subframe'))
 
 
@@ -330,19 +330,64 @@ class VariableExplorer:
 
 
   def render_script_tab(self) -> None:
-    script = self.model.timeline.scripts.post_edit(self.model.selected_frame)
+    scripts = self.model.timeline.scripts
 
-    changed, new_source = ig.input_text_multiline(
-      '##script',
-      script.source,
-      len(script.source) + ig.get_clipboard_length() + 10000,
+    if ig.button('Split'):
+      scripts.split_segment(self.model.selected_frame)
+    ig.dummy(1, 5)
+
+    frame_ranges = format_align(
+      '%s{0}%a - %s{1}%a',
+      [
+        (seg.frame_start, '...' if seg.frame_stop is None else seg.frame_stop - 1)
+          for seg in scripts.segments
+      ]
     )
+    frame_range_width = max(map(len, frame_ranges)) * 7
 
-    if script.frame != self.model.selected_frame:
-      ig.text(f'Inherited from frame {script.frame}')
+    segments = list(scripts.segments)
+    for i, segment in enumerate(segments):
+      ig.push_id('segment-' + str(id(segment)))
 
-    if changed:
-      self.model.timeline.scripts.set_post_edit_source(self.model.selected_frame, new_source)
+      clicked, _ = ig.selectable(
+        frame_ranges[i] + '##frame-range',
+        width = frame_range_width,
+        selected = self.model.selected_frame in segment,
+      )
+      if clicked:
+        self.model.selected_frame = segment.frame_start
+
+      if ig.begin_popup_context_item('##context'):
+        if i != 0:
+          prev_source = segments[i - 1].script.source
+          if not prev_source.strip():
+            prev_source = 'none'
+          if ig.selectable(f'Delete, use previous ({truncate_str(prev_source, 32, "...")})')[0]:
+            scripts.delete_segment(segment, merge_upward=True)
+        if i < len(segments) - 1:
+          next_source = segments[i + 1].script.source
+          if not next_source.strip():
+            next_source = 'none'
+          if ig.selectable(f'Delete, use next ({truncate_str(next_source, 32, "...")})')[0]:
+            scripts.delete_segment(segment, merge_upward=False)
+        ig.end_popup_context_item()
+
+      ig.same_line()
+
+      pending_source: Ref[Optional[str]] = use_state('pending-source', None)
+      changed, new_source = ig.input_text(
+        '##script',
+        segment.script.source if pending_source.value is None else pending_source.value,
+        len(segment.script.source) + ig.get_clipboard_length() + 1000,
+      )
+
+      if changed:
+        pending_source.value = new_source
+      if pending_source.value is not None and not ig.is_item_active():
+        scripts.set_segment_source(segment, pending_source.value)
+        pending_source.value = None
+
+      ig.pop_id()
 
 
   def render_frame_log_tab(self) -> None:
@@ -411,7 +456,7 @@ class VariableExplorer:
       self.render_objects_tab()
     elif tab.name == 'Input':
       self.render_input_tab(tab)
-    elif tab.name == 'Script':
+    elif tab.name == 'Scripting':
       self.render_script_tab()
     elif tab.name == 'Subframe':
       self.render_frame_log_tab()
