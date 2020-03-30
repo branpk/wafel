@@ -48,7 +48,8 @@ class TestMemory(Memory[TestVirtual, TestSlot]):
     return slot.memory.get((addr.section, addr.offset))
 
   def get_primitive_virtual(self, slot: TestSlot, addr: TestVirtual, type_: str) -> object:
-    return self.get_object(slot, addr)
+    default = 0.0 if type_.startswith('f') else 0
+    return self.get_object(slot, addr) or default
 
   def get_pointer_virtual(self, slot: TestSlot, addr: TestVirtual) -> Address[TestVirtual]:
     pointer = self.get_object(slot, addr) or 0
@@ -197,7 +198,25 @@ class TestGame(GameImpl[TestVirtual, TestSlot]):
     return self._memory
 
   def run_frame(self) -> None:
-    pass
+    stick_x = self.path('controller.stick_x').get(self.base_slot)
+    stick_y = self.path('controller.stick_y').get(self.base_slot)
+
+    move_x = dcast(int, stick_x) / 128
+    move_y = dcast(int, stick_y) / 128
+
+    accel = 10.0
+
+    player = dcast(dict, self.path('player[]').get(self.base_slot))
+
+    player['vel'][0] += accel * move_x
+    player['vel'][1] += accel * move_y
+    player['pos'][0] += player['vel'][0]
+    player['pos'][1] += player['vel'][1]
+
+    self.path('player.pos[0]').set(self.base_slot, player['pos'][0])
+    self.path('player.pos[1]').set(self.base_slot, player['pos'][1])
+    self.path('player.vel[0]').set(self.base_slot, player['vel'][0])
+    self.path('player.vel[1]').set(self.base_slot, player['vel'][1])
 
 
 class TestController(Controller):
