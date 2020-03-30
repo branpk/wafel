@@ -200,7 +200,28 @@ class TestGame(GameImpl[TestVirtual, TestSlot]):
     pass
 
 
-game = TestGame().remove_type_vars()
+class TestController(Controller):
+  def __init__(self) -> None:
+    super().__init__()
+    self._stick: Dict[int, Tuple[int, int]] = {}
 
-game.path('player.pos[1]').set(game.base_slot, 32.0)
-print(game.path('player.pos[1]').get(game.base_slot))
+  def get_stick(self, frame: int) -> Tuple[int, int]:
+    for f in range(frame, -1, -1):
+      stick = self._stick.get(f)
+      if stick is not None:
+        return stick
+    return (0, 0)
+
+  def set_stick(self, frame: int, stick: Tuple[int, int]):
+    self._stick[frame] = stick
+    self.notify(frame)
+
+  def apply(self, game: Game, frame: int, slot: Slot) -> None:
+    stick_x, stick_y = self.get_stick(frame)
+    game.path('controller.stick_x').set(slot, stick_x)
+    game.path('controller.stick_y').set(slot, stick_y)
+
+
+game = TestGame().remove_type_vars()
+controller = TestController()
+timeline = Timeline(game, controller, 20)

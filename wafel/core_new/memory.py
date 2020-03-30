@@ -10,8 +10,13 @@ from wafel.core_new.data_spec import DataSpec, spec_get_concrete_type
 from wafel.util import *
 
 
+class Slot(ABC):
+  """An abstract memory buffer that can hold all mutable game state."""
+  pass
+
+
 class VirtualAddress(ABC):
-  """Abstract address that represents a location in slot memory.
+  """An abstract address that represents a location in slot memory.
 
   This should be indepedent of any single slot. For example, it could be an offset
   from the base address of a slot.
@@ -21,6 +26,7 @@ class VirtualAddress(ABC):
   def __add__(self, offset: int) -> VirtualAddress: ...
 
 
+SLOT = TypeVar('SLOT', bound=Slot)
 VADDR = TypeVar('VADDR', bound=VirtualAddress)
 
 
@@ -85,13 +91,6 @@ class Address(Generic[VADDR]):
       return f'virtual({self.virtual})'
     else:
       raise NotImplementedError(self.type)
-
-
-class Slot:
-  pass
-
-
-SLOT = TypeVar('SLOT', bound=Slot)
 
 
 PRIMITIVE_C_TYPES = {
@@ -364,9 +363,10 @@ class AccessibleMemory(Memory[VADDR, SLOT]):
 
 
 __all__ = [
+  'Slot',
   'VirtualAddress',
   'AddressType',
   'Address',
-  'Slot',
   'Memory',
+  'AccessibleMemory',
 ]
