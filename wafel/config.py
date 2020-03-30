@@ -30,7 +30,7 @@ def init() -> None:
     lib_directory = root_dir
   else:
     dev_mode = '--nodev' not in sys.argv
-    root_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.getcwd()
     lib_directory = os.path.join(root_dir, 'lib')
 
   assets_directory = os.path.join(root_dir, 'assets')

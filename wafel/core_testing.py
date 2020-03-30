@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from typing import *
-from dataclasses import dataclass, field
+import dataclasses
+from dataclasses import dataclass
 import json
+import os
 
 from wafel.core_new import *
 from wafel.util import *
@@ -23,7 +25,7 @@ class TestVirtual(VirtualAddress):
 @dataclass
 class TestSlot(Slot):
   name: str
-  memory: Dict[Tuple[str, int], object] = field(default_factory=dict)
+  memory: Dict[Tuple[str, int], object] = dataclasses.field(default_factory=dict)
 
 
 class TestMemory(Memory[TestVirtual, TestSlot]):
@@ -246,14 +248,27 @@ class TestController(Controller):
 # timeline = Timeline(game, controller, 20)
 
 
-
 import wafel.config as config
 from wafel.loading import finish_loading
+from wafel.core_new import *
 
 config.init()
 
 game = finish_loading(load_dll_game('lib/libsm64/sm64_us.dll', 'sm64_init', 'sm64_update'))
+
+# TODO: Hacks until macros/object fields are implemented
+with open(os.path.join(config.assets_directory, 'hack_constants.json'), 'r') as f:
+  game.memory.data_spec['constants'].update(json.load(f))
+with open(os.path.join(config.assets_directory, 'hack_object_fields.json'), 'r') as f:
+  object_fields = json.load(f)
+  object_struct = game.memory.data_spec['types']['struct']['Object']
+  for name, field in object_fields.items():
+    object_struct['fields'][name] = {
+      'offset': object_struct['fields']['rawData']['offset'] + field['offset'],
+      'type': field['type'],
+    }
+
 controller = NoOpController()
 timeline = Timeline(game, controller, 20)
 
-print(timeline.get(1000, 'gGlobalTimer'))
+print(game.path('struct Object.oPosX'))
