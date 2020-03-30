@@ -23,6 +23,11 @@ class Controller(ABC):
   def apply(self, game: Game, frame: int, slot: Slot) -> None: ...
 
 
+class NoOpController(Controller):
+  def apply(self, game: Game, frame: int, slot: Slot) -> None:
+    pass
+
+
 class BaseSlotInvalidator:
   def __init__(self, game: Game, slot_manager: SlotManager) -> None:
     self.game = game
@@ -87,4 +92,4 @@ class Timeline:
     self.controller.on_change(callback)
 
 
-__all__ = ['Controller', 'Timeline']
+__all__ = ['Controller', 'NoOpController', 'Timeline']

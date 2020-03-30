@@ -129,7 +129,7 @@ class Memory(ABC, Generic[VADDR, SLOT]):
   def symbol(self, name: str) -> Address[VADDR]: ...
 
   @abstractmethod
-  def _location_to_virtual(self, location: int) -> Optional[VADDR]:
+  def stored_location_to_virtual(self, location: int) -> Optional[VADDR]:
     """Given an arbitrary address, return its virtual address if applicable.
 
     location is an address that may either be in slot memory or in static memory.
@@ -219,7 +219,7 @@ class Memory(ABC, Generic[VADDR, SLOT]):
     if location == 0:
       return Address.new_null()
     else:
-      virtual = self._location_to_virtual(location)
+      virtual = self.stored_location_to_virtual(location)
       if virtual is None:
         return Address.new_absolute(location)
       else:

@@ -3,7 +3,7 @@ from typing import *
 from wafel.util import align_up
 
 
-DataSpec = dict
+DataSpec = Any
 
 
 def spec_populate_sizes_and_alignment(spec: DataSpec, populate_offsets = False) -> None:

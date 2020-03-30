@@ -41,7 +41,7 @@ class TestMemory(Memory[TestVirtual, TestSlot]):
     else:
       return Address.new_virtual(TestVirtual(addr[0], addr[1]))
 
-  def _location_to_virtual(self, location: int) -> Optional[TestVirtual]:
+  def stored_location_to_virtual(self, location: int) -> Optional[TestVirtual]:
     return None
 
   def get_object(self, slot: TestSlot, addr: TestVirtual) -> Optional[Any]:
@@ -241,6 +241,19 @@ class TestController(Controller):
     game.path('controller.stick_y').set(slot, stick_y)
 
 
-game = TestGame().remove_type_vars()
-controller = TestController()
+# game = TestGame().remove_type_vars()
+# controller = TestController()
+# timeline = Timeline(game, controller, 20)
+
+
+
+import wafel.config as config
+from wafel.loading import finish_loading
+
+config.init()
+
+game = finish_loading(load_dll_game('lib/libsm64/sm64_us.dll', 'sm64_init', 'sm64_update'))
+controller = NoOpController()
 timeline = Timeline(game, controller, 20)
+
+print(timeline.get(1000, 'gGlobalTimer'))

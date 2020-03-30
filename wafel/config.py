@@ -21,6 +21,23 @@ settings_file: str
 def version_str(delim: str) -> str:
   return delim.join(map(str, version))
 
+def init() -> None:
+  global dev_mode, assets_directory, lib_directory, cache_directory, log_file, \
+    settings_file
+  if getattr(sys, 'frozen', False):
+    dev_mode = False
+    root_dir = os.path.dirname(sys.executable)
+    lib_directory = root_dir
+  else:
+    dev_mode = '--nodev' not in sys.argv
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    lib_directory = os.path.join(root_dir, 'lib')
+
+  assets_directory = os.path.join(root_dir, 'assets')
+  cache_directory = os.path.join(root_dir, '.wafel_cache')
+  log_file = os.path.join(root_dir, 'log.txt')
+  settings_file = os.path.join(root_dir, 'settings.json')
+
 def _load_cache_index() -> Any:
   cache_index = os.path.join(cache_directory, 'index.json')
   if os.path.exists(cache_index):

@@ -26,7 +26,7 @@ class LogMessage:
 
 
 history: List[LogMessage] = []
-subscribers: List[Callable[[LogMessage], None]] = []
+subscribers: List[Callable[[LogMessage], None]] = [print]
 
 def subscribe(callback: Callable[[LogMessage], None]) -> None:
   for message in history:
