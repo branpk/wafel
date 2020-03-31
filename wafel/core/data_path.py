@@ -38,7 +38,7 @@ class DataPath:
   start_type: Optional[dict]
   end_type: dict
   start_addr: Optional[Address]
-  edges: List[Edge]
+  edges: Tuple[Edge, ...]
 
   @staticmethod
   def compile(memory: Memory[Any, Any], source: str) -> DataPath:
@@ -76,7 +76,7 @@ class DataPath:
       start_type = self.start_type,
       end_type = spec_get_concrete_type(self.memory.data_spec, end_type),
       start_addr = self.start_addr,
-      edges = self.edges + [edge],
+      edges = self.edges + (edge,),
     )
 
   def __add__(self, other: DataPath) -> DataPath:
@@ -164,7 +164,7 @@ class NamespaceContext:
       start_type = type_,
       end_type = type_,
       start_addr = None,
-      edges = [],
+      edges = (),
     ))
 
 
@@ -192,7 +192,7 @@ class GlobalContext:
       start_type = None,
       end_type = type_,
       start_addr = addr,
-      edges = [],
+      edges = (),
     ))
 
 

@@ -8,6 +8,7 @@ from wafel.core.game import Game
 from wafel.core.memory import Slot
 from wafel.core.data_path import DataPath
 from wafel.core.slot_manager import SlotManager
+from wafel.core.data_cache import DataCache
 
 
 class Controller(ABC):
@@ -76,6 +77,7 @@ class Timeline:
     self.game = game
     self.controller = controller
     self.slot_manager = SlotManager(game, self.run_frame, slot_capacity)
+    self.data_cache = DataCache()
 
     weak_self_ref = weakref.ref(self)
     def invalidate(frame: int) -> None:
@@ -86,6 +88,7 @@ class Timeline:
 
   def invalidate(self, frame: int) -> None:
     self.slot_manager.invalidate(frame)
+    self.data_cache.invalidate(frame)
 
   def run_frame(self, frame: int) -> None:
     if frame != -1:
@@ -95,8 +98,17 @@ class Timeline:
   def get(self, frame: int, path: Union[DataPath, str]) -> object:
     if isinstance(path, str):
       path = self.game.path(path)
+
+    value = self.data_cache.get(frame, path)
+    if value is not None:
+      return value
+
     with self.slot_manager.request_frame(frame) as slot:
-      return path.get(slot)
+      value = path.get(slot)
+
+    if value is not None:
+      self.data_cache.put(frame, path, value)
+    return value
 
   def request_base(self, frame: int, invalidate=False) -> ContextManager[Slot]:
     return BaseSlotContextManager(

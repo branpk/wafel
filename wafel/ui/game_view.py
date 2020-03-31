@@ -379,7 +379,7 @@ def render_game_view_birds_eye(
 
   # TODO: Should zoom in on mouse when uncentered
   mouse_state = use_state('mouse-state', MouseTracker()).value
-  zoom = use_state('zoom', 0.0)
+  zoom = use_state('zoom', -4.5)
   target: Ref[Optional[Tuple[float, float]]] = use_state('target', None)
   pos_y: Ref[Optional[float]] = use_state('pos-y', None)
 
