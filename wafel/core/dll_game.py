@@ -5,10 +5,10 @@ import ctypes as C
 import os
 from dataclasses import dataclass
 
-from wafel.core_new.data_spec import DataSpec
-from wafel.core_new.dll_data_spec import load_dll_data_spec
-from wafel.core_new.game import Game, GameImpl
-from wafel.core_new.memory import AccessibleMemory, Slot, VirtualAddress, Address
+from wafel.core.data_spec import DataSpec
+from wafel.core.dll_data_spec import load_dll_data_spec
+from wafel.core.game import Game, GameImpl
+from wafel.core.memory import AccessibleMemory, Slot, VirtualAddress, Address
 from wafel.loading import Loading, in_progress, load_child
 from wafel.util import *
 
@@ -38,7 +38,10 @@ class DLLMemory(AccessibleMemory[DLLVirtual, DLLSlot]):
     return self._data_spec
 
   def symbol(self, name: str) -> Address[DLLVirtual]:
-    location = C.addressof(C.c_uint32.in_dll(self._dll, name)) # TODO: Return NULL if not found
+    try:
+      location = C.addressof(C.c_uint32.in_dll(self._dll, name))
+    except ValueError:
+      return Address.new_null()
     virtual = self.stored_location_to_virtual(location)
     if virtual is not None:
       return Address.new_virtual(virtual)

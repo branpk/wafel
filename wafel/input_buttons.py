@@ -1,4 +1,4 @@
-from wafel.core.variable import VariableId
+from wafel.variable import VariableId
 
 
 INPUT_BUTTON_FLAGS = {

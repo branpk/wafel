@@ -12,7 +12,7 @@ from wafel.model import Model
 from wafel.util import *
 from wafel.local_state import use_state, use_state_with
 from wafel.graphics import render_game
-from wafel.core import DataPath, AbsoluteAddr, RelativeAddr
+from wafel.core import DataPath, Address, AccessibleMemory
 
 
 # TODO: Rename to game_view_overlay. Reduce parameters to minimum (don't require full Model)
@@ -87,12 +87,11 @@ def get_viewport(framebuffer_size: Tuple[int, int]) -> cg.Viewport:
 
 
 def get_mario_pos(model: Model) -> Vec3f:
-  with model.timeline[model.selected_frame] as state:
-    return (
-      dcast(float, model.variables['mario-pos-x'].get(state)),
-      dcast(float, model.variables['mario-pos-y'].get(state)),
-      dcast(float, model.variables['mario-pos-z'].get(state)),
-    )
+  return (
+    dcast(float, model.get(model.variables['mario-pos-x'])),
+    dcast(float, model.get(model.variables['mario-pos-y'])),
+    dcast(float, model.get(model.variables['mario-pos-z'])),
+  )
 
 
 def move_toward(x: Vec3f, target: Vec3f, delta: float) -> Vec3f:
@@ -166,22 +165,23 @@ def get_mouse_world_pos_birds_eye(camera: cg.BirdsEyeCamera) -> Optional[Tuple[f
 
 
 def trace_ray(model: Model, ray: Tuple[Vec3f, Vec3f]) -> Optional[int]:
-  # TODO: Copied and pasted from graphics.py
   def get_field_offset(path: str) -> int:
-    # TODO: Less hacky way to do this?
-    data_path = DataPath.compile(model.lib, path)
-    offset = data_path.addr_path.path[-1].value
-    return dcast(int, offset)
+    return model.game.path(path).edges[-1].value
 
-  with model.timeline[model.selected_frame] as state:
-    surface_pool_addr = DataPath.compile(model.lib, '$state.sSurfacePool').get(state)
-    assert isinstance(surface_pool_addr, RelativeAddr)
+  memory = model.game.memory
+  assert isinstance(memory, AccessibleMemory)
+
+  with model.timeline.request_base(model.selected_frame) as slot:
+    surface_pool_addr = dcast(Address, model.game.path('sSurfacePool').get(slot))
+    if surface_pool_addr.is_null:
+      return None
+
     index = cg.trace_ray_to_surface(
       cg.vec3(*ray[0]),
       cg.vec3(*ray[1]),
-      state.slot.relative_to_addr(surface_pool_addr),
-      model.lib.spec['types']['struct']['Surface']['size'],
-      DataPath.compile(model.lib, '$state.gSurfacesAllocated').get(state),
+      memory.address_to_location(slot, surface_pool_addr),
+      memory.data_spec['types']['struct']['Surface']['size'],
+      model.game.path('gSurfacesAllocated').get(slot),
       get_field_offset,
     )
 
@@ -312,23 +312,20 @@ def render_game_view_in_game(
   camera = use_rotational_camera(framebuffer_size, model)
 
   # TODO: Move below to graphics.py
+
+  # Invalidate frame to ensure no rendering state gets copied to other slots
   prev_frame = max(model.selected_frame - 1, 0)
-  with model.timeline.get(prev_frame, require_base=True) as state:
-    # DataPath.compile(model.lib, '$state.gOverrideCamera.enabled').set(state, True)
-    # DataPath.compile(model.lib, '$state.gOverrideCamera.pos[0]').set(state, camera.pos.x)
-    # DataPath.compile(model.lib, '$state.gOverrideCamera.pos[1]').set(state, camera.pos.y)
-    # DataPath.compile(model.lib, '$state.gOverrideCamera.pos[2]').set(state, camera.pos.z)
-    # DataPath.compile(model.lib, '$state.gOverrideCamera.focus[0]').set(state, camera.target.x)
-    # DataPath.compile(model.lib, '$state.gOverrideCamera.focus[1]').set(state, camera.target.y)
-    # DataPath.compile(model.lib, '$state.gOverrideCamera.focus[2]').set(state, camera.target.z)
+  with model.timeline.request_base(prev_frame, invalidate=True) as slot:
+    # DataPath.compile(model.lib, 'gOverrideCamera.enabled').set(state, True)
+    # DataPath.compile(model.lib, 'gOverrideCamera.pos[0]').set(state, camera.pos.x)
+    # DataPath.compile(model.lib, 'gOverrideCamera.pos[1]').set(state, camera.pos.y)
+    # DataPath.compile(model.lib, 'gOverrideCamera.pos[2]').set(state, camera.pos.z)
+    # DataPath.compile(model.lib, 'gOverrideCamera.focus[0]').set(state, camera.target.x)
+    # DataPath.compile(model.lib, 'gOverrideCamera.focus[1]').set(state, camera.target.y)
+    # DataPath.compile(model.lib, 'gOverrideCamera.focus[2]').set(state, camera.target.z)
 
-    sm64_update_and_render = \
-      dcast(AbsoluteAddr, model.lib.symbol_addr('sm64_update_and_render').value).addr
-
+    sm64_update_and_render = model.game.memory.symbol('sm64_update_and_render').absolute
     cg.update_and_render(get_viewport(framebuffer_size), sm64_update_and_render)
-
-    # Invalidate frame to ensure no rendering state gets copied to other slots
-    state.slot.frame = None
 
   ig.pop_id()
 

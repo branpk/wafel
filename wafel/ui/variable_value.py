@@ -1,10 +1,9 @@
 from typing import *
 
-import imgui as ig
-
 from wafel.variable_format import VariableFormatter, TextFormatter, CheckboxFormatter
 from wafel.util import *
 from wafel.local_state import use_state
+import wafel.imgui as ig
 
 
 T = TypeVar('T')

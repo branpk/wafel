@@ -1,7 +1,7 @@
 from typing import *
 
 import wafel.imgui as ig
-from wafel.core import ObjectType
+from wafel.object_type import ObjectType
 
 
 def render_object_slots(id: str, object_types: List[Optional[ObjectType]]) -> Optional[int]:

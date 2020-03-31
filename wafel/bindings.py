@@ -164,7 +164,12 @@ def check_input(input: Optional[Input]) -> float:
     return 1.0 if ig.is_key_down(input.key) else 0.0
 
 
-bindings = bindings_from_json(config.settings.get('bindings') or {})
+bindings: Bindings
+
+
+def init() -> None:
+  global bindings
+  bindings = bindings_from_json(config.settings.get('bindings') or {})
 
 
 def render_binding_settings(id: str) -> None:

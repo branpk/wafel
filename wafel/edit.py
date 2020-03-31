@@ -1,6 +1,6 @@
 from typing import *
 
-from wafel.core.variable import Variable, VariableId
+from wafel.variable import Variable, VariableId
 
 
 # TODO: Move this somewhere

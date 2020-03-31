@@ -5,12 +5,15 @@ import wafel.imgui as ig
 import wafel.ui as ui
 from wafel.local_state import use_state, use_state_with, local_state
 from wafel.window import open_window_and_run
-from wafel.core import ObjectType, VariableId, RelativeAddr
+from wafel.object_type import ObjectType
+from wafel.variable import VariableId
+from wafel.core import Address
 from wafel.util import *
 from wafel.variable_format import DecimalIntFormatter, CheckboxFormatter
 from wafel.slot_testing import test_timeline_algorithm
 from wafel.loading import in_progress
 from wafel.bindings import render_binding_settings
+import wafel.config as config
 
 
 # TODO: Hot reloading?
@@ -21,10 +24,10 @@ def test_object_slots(id: str) -> None:
 
   def initial_object_types() -> List[Optional[ObjectType]]:
     object_types = [
-      ObjectType(RelativeAddr.absolute(1), 'bhvMario'),
-      ObjectType(RelativeAddr.absolute(2), 'bhvGoomba'),
-      ObjectType(RelativeAddr.absolute(3), 'bhvPokeyBodyPart'),
-      ObjectType(RelativeAddr.absolute(4), 'bhvButterflyTriplet'),
+      ObjectType(Address.new_absolute(1), 'bhvMario'),
+      ObjectType(Address.new_absolute(2), 'bhvGoomba'),
+      ObjectType(Address.new_absolute(3), 'bhvPokeyBodyPart'),
+      ObjectType(Address.new_absolute(4), 'bhvButterflyTriplet'),
       None,
       None,
     ] * 40
@@ -301,4 +304,5 @@ def render_tests(id: str) -> None:
   ig.pop_id()
 
 
+config.init()
 open_window_and_run(render_tests)

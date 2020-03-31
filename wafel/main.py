@@ -17,6 +17,7 @@ import wafel.imgui as ig
 from wafel.core import *
 from wafel.model import Model
 from wafel.frame_sheet import FrameSheet
+from wafel.variable import Variable, VariableId
 from wafel.variable_explorer import VariableExplorer
 from wafel.variable_format import Formatters, EnumFormatter
 from wafel.format_m64 import load_m64, save_m64
@@ -28,6 +29,8 @@ from wafel.local_state import use_state, use_state_with
 from wafel.util import *
 import wafel.config as config
 from wafel.bindings import *
+from wafel.loading import *
+from wafel.edit import Edits
 
 
 DEFAULT_FRAME_SHEET_VARS = [
@@ -146,11 +149,10 @@ class View:
     hidden_surfaces_by_area = \
       use_state('hidden-surfaces', cast(Dict[Tuple[int, int], Set[int]], {})).value
 
-    with self.model.timeline[self.model.selected_frame] as state:
-      current_area = (
-        dcast(int, self.model.variables['level-num'].get(state)),
-        dcast(int, self.model.variables['area-index'].get(state)),
-      )
+    current_area = (
+      dcast(int, self.model.get(self.model.variables['level-num'])),
+      dcast(int, self.model.get(self.model.variables['area-index'])),
+    )
     hidden_surfaces = hidden_surfaces_by_area.setdefault(current_area, set())
 
     in_game_view = use_state('in-game-view', False)
@@ -276,7 +278,7 @@ class View:
     new_frame = ui.render_frame_slider(
       'frame-slider',
       self.model.selected_frame,
-      len(self.model.timeline),
+      len(self.model.edits),
       self.model.timeline.slot_manager.get_loaded_frames() if self.show_debug_pane else [],
     )
     if new_frame is not None:
@@ -452,7 +454,7 @@ class View:
       buttons_enabled.value = True
     for variable_id, new_button_value in controller_button_values.items():
       variable = self.model.variables[variable_id]
-      button_value = self.model.timeline.get_cached(self.model.selected_frame, variable)
+      button_value = self.model.get(variable)
       if buttons_enabled.value and button_value != new_button_value:
         input_edit.value = True
         self.model.edits.edit(self.model.selected_frame, variable, new_button_value)
@@ -466,7 +468,7 @@ class View:
       stick_enabled.value = True
     for variable_id, new_stick_value in controller_stick_values.items():
       variable = self.model.variables[variable_id]
-      stick_value = self.model.timeline.get_cached(self.model.selected_frame, variable)
+      stick_value = self.model.get(variable)
       if stick_enabled.value and stick_value != new_stick_value:
         input_edit.value = True
         self.model.edits.edit(self.model.selected_frame, variable, new_stick_value)
@@ -600,10 +602,11 @@ def run() -> None:
         fps.value = frame_count.value / (time.time() - last_fps_time.value)
         last_fps_time.value = time.time()
         frame_count.value = 0
-        log.info(
-          f'mspf: {int(1000 / fps.value * 10) / 10} ({int(fps.value)} fps) - ' +
-          f'cache={model.timeline.data_cache.get_size() // 1024}KB'
-        )
+        # TODO
+        # log.info(
+        #   f'mspf: {int(1000 / fps.value * 10) / 10} ({int(fps.value)} fps) - ' +
+        #   f'cache={model.timeline.data_cache.get_size() // 1024}KB'
+        # )
 
       log.timer.begin('balance')
       model.timeline.balance_distribution(1/120)

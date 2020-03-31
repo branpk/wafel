@@ -42,10 +42,10 @@ static void scene_add_surfaces(
   function<size_t(const string &)> get_field_offset,
   vector<size_t> hidden_surfaces)
 {
-  size_t f_normal = get_field_offset("$state.sSurfacePool[].normal");
-  size_t f_vertex1 = get_field_offset("$state.sSurfacePool[].vertex1");
-  size_t f_vertex2 = get_field_offset("$state.sSurfacePool[].vertex2");
-  size_t f_vertex3 = get_field_offset("$state.sSurfacePool[].vertex3");
+  size_t f_normal = get_field_offset("struct Surface.normal");
+  size_t f_vertex1 = get_field_offset("struct Surface.vertex1");
+  size_t f_vertex2 = get_field_offset("struct Surface.vertex2");
+  size_t f_vertex3 = get_field_offset("struct Surface.vertex3");
 
   for (s32 i = 0; i < num_surfaces; i++) {
     uintptr_t surface_ptr = surface_pool_ptr + i * surface_size;
@@ -92,12 +92,12 @@ static void scene_add_objects(
   size_t object_size,
   function<size_t(const string &)> get_field_offset)
 {
-  size_t f_active_flags = get_field_offset("$object.activeFlags");
-  size_t f_pos_x = get_field_offset("$object.oPosX");
-  size_t f_pos_y = get_field_offset("$object.oPosY");
-  size_t f_pos_z = get_field_offset("$object.oPosZ");
-  size_t f_hitbox_height = get_field_offset("$object.hitboxHeight");
-  size_t f_hitbox_radius = get_field_offset("$object.hitboxRadius");
+  size_t f_active_flags = get_field_offset("struct Object.activeFlags");
+  size_t f_pos_x = get_field_offset("struct Object.oPosX");
+  size_t f_pos_y = get_field_offset("struct Object.oPosY");
+  size_t f_pos_z = get_field_offset("struct Object.oPosZ");
+  size_t f_hitbox_height = get_field_offset("struct Object.hitboxHeight");
+  size_t f_hitbox_radius = get_field_offset("struct Object.hitboxRadius");
 
   for (s32 i = 0; i < 240; i++) {
     uintptr_t object_ptr = object_pool_ptr + i * object_size;
@@ -148,10 +148,10 @@ static s32 trace_ray_to_surface(
   function<size_t(const string &)> get_field_offset)
 {
   // TODO: Helper function/iterator for extracting Surface / general struct
-  size_t f_normal = get_field_offset("$state.sSurfacePool[].normal");
-  size_t f_vertex1 = get_field_offset("$state.sSurfacePool[].vertex1");
-  size_t f_vertex2 = get_field_offset("$state.sSurfacePool[].vertex2");
-  size_t f_vertex3 = get_field_offset("$state.sSurfacePool[].vertex3");
+  size_t f_normal = get_field_offset("sSurfacePool[].normal");
+  size_t f_vertex1 = get_field_offset("sSurfacePool[].vertex1");
+  size_t f_vertex2 = get_field_offset("sSurfacePool[].vertex2");
+  size_t f_vertex3 = get_field_offset("sSurfacePool[].vertex3");
 
   f32 min_dist = std::numeric_limits<f32>::infinity();
   s32 index = -1;

@@ -6,8 +6,8 @@ from enum import Enum, auto
 from abc import ABC, abstractmethod
 from functools import lru_cache
 
-from wafel.core_new.memory import Memory, VirtualAddress, Slot
-from wafel.core_new.data_path import DataPath
+from wafel.core.memory import Memory, VirtualAddress, Slot
+from wafel.core.data_path import DataPath
 
 
 VADDR = TypeVar('VADDR', bound=VirtualAddress)

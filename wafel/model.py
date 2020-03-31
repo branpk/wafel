@@ -3,14 +3,38 @@ from ctypes import cdll
 import json
 import gc
 import os
+import weakref
 
 import ext_modules.util as c_util
 
 import wafel.config as config
-from wafel.core import GameLib, Variable, Edits, Timeline, GameState, ObjectId, \
-  ObjectType, load_libsm64, RelativeAddr
+from wafel.core import Game, Timeline, load_dll_game, Controller, Address, DataPath, \
+  AccessibleMemory, Slot
+from wafel.variable import Variable, ObjectId, Variables
+from wafel.edit import Edits
+from wafel.object_type import ObjectType
 from wafel.loading import Loading
 from wafel.util import *
+from wafel.script import Scripts
+
+
+class EditController(Controller):
+  def __init__(self, variables: Variables, edits: Edits) -> None:
+    super().__init__()
+    self.variables = variables
+    self.edits = edits
+
+    weak_self_ref = weakref.ref(self)
+    def notify(frame: int) -> None:
+      weak_self = weak_self_ref()
+      if weak_self is not None:
+        self.notify(frame)
+    self.edits.on_edit(notify)
+
+  def apply(self, game: Game, frame: int, slot: Slot) -> None:
+    for edit in self.edits.get_edits(frame):
+      variable = self.variables[edit.variable_id]
+      variable.set(slot, edit.value)
 
 
 class Model:
@@ -21,28 +45,53 @@ class Model:
     self.rotational_camera_yaw = 0
 
   def load(self, game_version: str, edits: Edits) -> Loading[None]:
-    yield from self._load_lib(game_version)
+    yield from self._load_game(game_version)
     self._set_edits(edits)
 
   def change_version(self, game_version: str) -> Loading[None]:
     yield from self.load(game_version, self.edits)
 
-  def _load_lib(self, game_version: str) -> Loading[None]:
+  def _load_game(self, game_version: str) -> Loading[None]:
     if hasattr(self, 'game_version') and self.game_version == game_version:
       return
     self.game_version = game_version
 
-    self.lib = yield from load_libsm64(game_version)
-    c_util.init(self.lib.static_addr)
+    self.game = yield from load_dll_game(
+      os.path.join(config.lib_directory, 'libsm64', 'sm64_' + game_version + '.dll'),
+      'sm64_init',
+      'sm64_update',
+    )
 
-    self.variables = Variable.create_all(self.lib)
+    # TODO: Hacks until macros/object fields are implemented
+    with open(os.path.join(config.assets_directory, 'hack_constants.json'), 'r') as f:
+      self.game.memory.data_spec['constants'].update(json.load(f))
+    with open(os.path.join(config.assets_directory, 'hack_object_fields.json'), 'r') as f:
+      object_fields = json.load(f)
+      object_struct = self.game.memory.data_spec['types']['struct']['Object']
+      for name, field in object_fields.items():
+        object_struct['fields'][name] = {
+          'offset': object_struct['fields']['rawData']['offset'] + field['offset'],
+          'type': field['type'],
+        }
+
+    memory = self.game.memory
+    assert isinstance(memory, AccessibleMemory)
+    c_util.init(lambda name: memory.address_to_location(self.game.base_slot, memory.symbol(name)))
+
+    self.variables = Variable.create_all(self.game)
 
     self.action_names: Dict[int, str] = {}
-    for constant_name, constant in self.lib.spec['constants'].items():
+    for constant_name, constant in self.game.memory.data_spec['constants'].items():
       if constant_name.startswith('ACT_') and \
           not any(constant_name.startswith(s) for s in ['ACT_FLAG_', 'ACT_GROUP_', 'ACT_ID_']):
         action_name = constant_name.lower()[len('act_'):].replace('_', ' ')
         self.action_names[constant['value']] = action_name
+
+    self.addr_to_symbol = {}
+    for symbol in self.game.memory.data_spec['globals']:
+      addr = self.game.memory.symbol(symbol)
+      if not addr.is_null:
+        self.addr_to_symbol[addr] = symbol
 
   def _set_edits(self, edits: Edits) -> None:
     from wafel.script_context import SM64ScriptContext
@@ -52,11 +101,13 @@ class Model:
     gc.collect() # Force garbage collection of game state slots
 
     self.edits = edits
+    self.scripts = Scripts(SM64ScriptContext(self))
+    self.controller = Controller.sequence(EditController(self.variables, self.edits), self.scripts)
+
     self.timeline = Timeline(
-      self.lib,
-      self.variables,
-      self.edits,
-      SM64ScriptContext(self),
+      self.game,
+      self.controller,
+      slot_capacity = 20,
     )
 
     self._selected_frame = 0
@@ -77,7 +128,7 @@ class Model:
 
   @selected_frame.setter
   def selected_frame(self, frame: int) -> None:
-    self._selected_frame = min(max(frame, 0), len(self.timeline) - 1)
+    self._selected_frame = min(max(frame, 0), len(self.edits) - 1)
     for callback in list(self.selected_frame_callbacks):
       callback(self._selected_frame)
 
@@ -91,41 +142,31 @@ class Model:
 
   def delete_frame(self, index: int) -> None:
     self.edits.delete_frame(index)
-    if self.selected_frame > index or self.selected_frame >= len(self.timeline):
+    if self.selected_frame > index or self.selected_frame >= len(self.edits):
       self.selected_frame -= 1
 
-  def get(self, variable: Variable, frame: Optional[int] = None) -> Any:
-    if frame is None:
+  @overload
+  def get(self, data: Union[str, DataPath, Variable]) -> object:
+    ...
+  @overload
+  def get(self, frame: int, data: Union[str, DataPath, Variable]) -> object:
+    ...
+  def get(self, frame, data = None):
+    if data is None:
+      data = frame
       frame = self.selected_frame
-    with self.timeline[frame] as state:
-      return variable.get(state)
+    if isinstance(data, Variable):
+      return data.get(self.timeline, frame)
+    else:
+      return self.timeline.get(frame, data)
 
-  def get_object_type(self, state: GameState, object_id: ObjectId) -> Optional[ObjectType]:
-    active = self.variables['obj-active-flags-active'].at_object(object_id).get(state)
+  def get_object_type(self, frame: int, object_id: ObjectId) -> Optional[ObjectType]:
+    active_variable = self.variables['obj-active-flags-active'].at_object(object_id)
+    active = active_variable.get(self.timeline, frame)
     if not active:
       return None
 
-    behavior_addr = self.variables['obj-behavior-ptr'].at_object(object_id).get(state)
-    assert isinstance(behavior_addr, RelativeAddr)
-    return ObjectType(
-      behavior_addr,
-      self.lib.symbol_for_addr(behavior_addr),
-    )
-
-  def get_object_type_cached(self, frame: int, object_id: ObjectId) -> Optional[ObjectType]:
-    active = self.timeline.get_cached(
-      frame,
-      self.variables['obj-active-flags-active'].at_object(object_id),
-    )
-    if not active:
-      return None
-
-    behavior_addr = self.timeline.get_cached(
-      frame,
-      self.variables['obj-behavior-ptr'].at_object(object_id),
-    )
-    assert isinstance(behavior_addr, RelativeAddr)
-    return ObjectType(
-      behavior_addr,
-      self.lib.symbol_for_addr(behavior_addr),
-    )
+    behavior_addr =\
+      self.variables['obj-behavior-ptr'].at_object(object_id).get(self.timeline, frame)
+    assert isinstance(behavior_addr, Address)
+    return ObjectType(behavior_addr, self.addr_to_symbol[behavior_addr])

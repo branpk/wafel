@@ -2,7 +2,9 @@ from typing import *
 import struct
 import os
 
-from wafel.core import INPUT_BUTTON_FLAGS, VariableId, Edits
+from wafel.input_buttons import INPUT_BUTTON_FLAGS
+from wafel.variable import VariableId
+from wafel.edit import Edits
 from wafel.util import *
 from wafel.tas_metadata import TasMetadata
 

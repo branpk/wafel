@@ -2,7 +2,9 @@ import sys
 from typing import *
 
 import wafel.imgui as ig
-from wafel.core import Variable, ObjectType, VariableId, DataPath
+from wafel.object_type import ObjectType
+from wafel.variable import Variable, VariableId
+from wafel.core import DataPath
 from wafel.model import Model
 from wafel.variable_format import Formatters, EmptyFormatter, VariableFormatter
 import wafel.ui as ui
@@ -58,8 +60,10 @@ class FrameSheet:
       column = FrameSheetColumn(variable)
     else:
       # TODO: This should use the state that the drop began
-      with self.model.timeline[self.model.selected_frame] as state:
-        column = FrameSheetColumn(variable, self.model.get_object_type(state, object_id))
+      column = FrameSheetColumn(
+        variable,
+        self.model.get_object_type(self.model.selected_frame, object_id),
+      )
     if column not in self.columns:
       self.next_columns.insert(index, column)
 
@@ -87,7 +91,7 @@ class FrameSheet:
 
 
   def get_row_count(self) -> int:
-    return len(self.model.timeline)
+    return len(self.model.edits)
 
 
   def get_header_label(self, column: FrameSheetColumn) -> str:
@@ -113,17 +117,16 @@ class FrameSheet:
 
     object_id = variable.get_object_id()
     if column.object_type is not None and object_id is not None:
-      row_object_type = self.model.get_object_type_cached(frame, object_id)
+      row_object_type = self.model.get_object_type(frame, object_id)
       if row_object_type != column.object_type:
         return None
 
     if variable.id.surface is not None:
-      with self.model.timeline[frame] as state:
-        num_surfaces = DataPath.compile(self.model.lib, '$state.gSurfacesAllocated').get(state)
-        if variable.id.surface >= dcast(int, num_surfaces):
-          return None
+      num_surfaces = dcast(int, self.model.timeline.get(frame, 'gSurfacesAllocated'))
+      if variable.id.surface >= num_surfaces:
+        return None
 
-    return Just(self.model.timeline.get_cached(frame, variable))
+    return Just(variable.get(self.model.timeline, frame))
 
 
   def set_data(self, frame: int, column: FrameSheetColumn, data: Any) -> None:
@@ -131,16 +134,14 @@ class FrameSheet:
 
     object_id = variable.get_object_id()
     if column.object_type is not None and object_id is not None:
-      with self.model.timeline[frame] as state:
-        row_object_type = self.model.get_object_type(state, object_id)
-        if row_object_type != column.object_type:
-          raise Exception # TODO: Error message
+      row_object_type = self.model.get_object_type(frame, object_id)
+      if row_object_type != column.object_type:
+        raise Exception # TODO: Error message
 
     if variable.id.surface is not None:
-      with self.model.timeline[frame] as state:
-        num_surfaces = DataPath.compile(self.model.lib, '$state.gSurfacesAllocated').get(state)
-        if variable.id.surface >= dcast(int, num_surfaces):
-          raise Exception
+      num_surfaces = dcast(int, self.model.timeline.get(frame, 'gSurfacesAllocated'))
+      if variable.id.surface >= num_surfaces:
+        raise Exception
 
     self.model.edits.edit(frame, variable, data)
 
@@ -214,7 +215,7 @@ class FrameSheet:
       formatter = EmptyFormatter()
     else:
       data = maybe_data.value
-      formatter = self.formatters[column.variable]
+      formatter = EmptyFormatter() if data is None else self.formatters[column.variable]
 
     changed_data, clear_edit, selected = ui.render_variable_cell(
       f'cell-{frame}-{hash(column)}',

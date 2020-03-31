@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import json
 import os
 
-from wafel.core_new import *
+from wafel.core import *
 from wafel.util import *
 
 
@@ -250,7 +250,7 @@ class TestController(Controller):
 
 import wafel.config as config
 from wafel.loading import finish_loading
-from wafel.core_new import *
+from wafel.core import *
 
 config.init()
 
@@ -268,7 +268,7 @@ with open(os.path.join(config.assets_directory, 'hack_object_fields.json'), 'r')
       'type': field['type'],
     }
 
-controller = NoOpController()
+controller = Controller.no_op()
 timeline = Timeline(game, controller, 20)
 
 print(game.path('struct Object.oPosX'))

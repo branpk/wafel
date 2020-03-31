@@ -1,7 +1,9 @@
 from typing import *
 import json
 
-from wafel.core import Edits, VariableId, INPUT_BUTTON_FLAGS
+from wafel.edit import Edits
+from wafel.variable import VariableId
+from wafel.input_buttons import INPUT_BUTTON_FLAGS
 from wafel.tas_metadata import TasMetadata
 
 

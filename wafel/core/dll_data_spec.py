@@ -13,10 +13,10 @@ from elftools.dwarf.dwarfinfo import DWARFInfo, DwarfConfig, DebugSectionDescrip
 from elftools.dwarf.compileunit import CompileUnit
 from elftools.dwarf.die import DIE
 
-from wafel.core.game_lib import DataSpec, GameLib
+from wafel.core.data_spec import DataSpec, spec_populate_sizes_and_alignment
 from wafel.util import *
-import wafel.config as config
 from wafel.loading import Loading, in_progress, load_child, load_prefix, load_scale
+import wafel.config as config
 
 
 # TODO: Non-windows
@@ -25,6 +25,10 @@ from wafel.loading import Loading, in_progress, load_child, load_prefix, load_sc
 
 
 CURRENT_SPEC_FORMAT_VERSION = 1
+
+EXCLUDED_SOURCE_DIRS = [
+  'E:/mingwbuild/mingw-w64-crt-git',
+]
 
 
 @dataclass(frozen=True)
@@ -324,83 +328,12 @@ def extract_all_definitions(
   for i, unit in enumerate(compilation_units):
     root = unit.get_top_DIE()
     filename = assert_not_none(attr_str(root, 'DW_AT_name'))
+    if any(filename.startswith(dir) for dir in EXCLUDED_SOURCE_DIRS):
+      continue
     yield in_progress(i / len(compilation_units), ' - ' + filename)
     extract_definitions(spec, root)
   yield in_progress(1.0)
 
-
-def populate_sizes_and_alignment(spec: DataSpec) -> None:
-  type_queue = []
-  def get_all_types(node):
-    if isinstance(node.get('kind'), str):
-      type_queue.append(node)
-    for child in node.values():
-      if isinstance(child, dict):
-        get_all_types(child)
-  get_all_types(spec)
-
-  while len(type_queue) > 0:
-    type_ = type_queue.pop(0)
-    if 'size' in type_ and 'align' in type_:
-      continue
-
-    if type_['kind'] == 'struct':
-      if any('size' not in f['type'] for f in type_['fields'].values()):
-        type_queue.append(type_)
-        continue
-      type_['align'] = max((f['type']['align'] for f in type_['fields'].values()), default=1)
-      type_['size'] = align_up(
-        max((f['offset'] + f['type']['size'] for f in type_['fields'].values()), default=0),
-        type_['align'],
-      )
-
-    elif type_['kind'] == 'union':
-      if any('size' not in f['type'] for f in type_['fields'].values()):
-        type_queue.append(type_)
-        continue
-      type_['align'] = max(f['type']['align'] for f in type_['fields'].values())
-      type_['size'] = align_up(
-        max(f['type']['size'] for f in type_['fields'].values()),
-        type_['align'],
-      )
-
-    elif type_['kind'] == 'array':
-      if 'size' not in type_['base']:
-        type_queue.append(type_)
-        continue
-      type_['stride'] = align_up(type_['base']['size'], type_['base']['align'])
-      type_['align'] = type_['base']['align']
-      type_['size'] = None if type_['length'] is None else type_['length'] * type_['stride']
-
-    elif type_['kind'] == 'symbol':
-      concrete_type = spec['types'][type_['namespace']][type_['name']]
-      if 'size' not in concrete_type:
-        type_queue.append(type_)
-        continue
-      type_['size'] = concrete_type['size']
-      type_['align'] = concrete_type['align']
-
-    else:
-      raise NotImplementedError(type_['kind'])
-
-
-EXAMPLE_SM64_SOURCE_FILE = 'src/game/level_update.c'
-
-def find_sm64_compile_dir(compilation_units: List[CompileUnit]) -> str:
-  for unit in compilation_units:
-    root = unit.get_top_DIE()
-    if attr_str(root, 'DW_AT_name') == EXAMPLE_SM64_SOURCE_FILE:
-      return assert_not_none(attr_str(root, 'DW_AT_comp_dir'))
-  raise Exception(f'Could not find {EXAMPLE_SM64_SOURCE_FILE} in library')
-
-def find_sm64_units(compilation_units: List[CompileUnit]) -> Loading[List[CompileUnit]]:
-  sm64_compile_dir = find_sm64_compile_dir(compilation_units)
-  sm64_units = []
-  for i, unit in enumerate(compilation_units):
-    yield in_progress(i / len(compilation_units))
-    if attr_str(unit.get_top_DIE(), 'DW_AT_comp_dir') == sm64_compile_dir:
-      sm64_units.append(unit)
-  return sm64_units
 
 def hash_file(path: str) -> str:
   with open(path, 'rb') as f:
@@ -414,7 +347,6 @@ def extract_data_spec(path: str) -> Loading[DataSpec]:
 
   yield in_progress(0.2)
   compilation_units = read_dwarf_info(sections)
-  compilation_units = yield from load_scale(0.2, 0.25, find_sm64_units(compilation_units))
 
   spec: DataSpec = {
     'format_version': CURRENT_SPEC_FORMAT_VERSION,
@@ -436,55 +368,30 @@ def extract_data_spec(path: str) -> Loading[DataSpec]:
     'constants': {},
   }
 
-  yield from load_scale(0.25, 0.9, extract_all_definitions(spec, compilation_units))
+  yield from load_scale(0.2, 0.9, extract_all_definitions(spec, compilation_units))
 
-  populate_sizes_and_alignment(spec)
+  spec_populate_sizes_and_alignment(spec)
 
   yield in_progress(1.0)
   return spec
 
 
-def extract_data_spec_cached(path: str) -> Loading[DataSpec]:
-  rel_path = os.path.relpath(path, config.lib_directory)
-  cache_key = f'libsm64_spec_{rel_path}'
+def load_dll_data_spec(path: str) -> Loading[DataSpec]:
+  lib_name = os.path.splitext(os.path.basename(path))[0]
+  cache_key = f'dll_data_spec_{lib_name}'
   spec = config.cache_get(cache_key)
 
   library_hash = hash_file(path)
   if spec is not None and \
       spec['format_version'] == CURRENT_SPEC_FORMAT_VERSION and \
       spec['library_hash'] == library_hash:
-    log.info(f'Cache hit for {os.path.basename(path)}')
+    log.info(f'Cache hit for {lib_name}')
     return spec
 
   spec = yield from extract_data_spec(path)
 
-  lib_name = os.path.splitext(os.path.basename(path))[0]
   config.cache_put(cache_key, spec, f'{lib_name}*.json')
-
   return spec
 
 
-def load_libsm64(game_version: str) -> Loading[GameLib]:
-  filename = f'sm64_{game_version}.dll'
-  log.info('Loading', filename)
-  path = os.path.join(config.lib_directory, 'libsm64', filename)
-
-  dll = ctypes.cdll.LoadLibrary(path)
-
-  status = f'Loading {filename}'
-  yield in_progress(0.0, status)
-
-  spec = yield from load_child(
-    0.0, 0.95, status, extract_data_spec_cached(path),
-  )
-
-  # TODO: Hacks until macros/object fields are implemented
-  with open(os.path.join(config.assets_directory, 'hack_constants.json'), 'r') as f:
-    spec['constants'].update(json.load(f))
-  with open(os.path.join(config.assets_directory, 'hack_object_fields.json'), 'r') as f:
-    spec['extra'] = {}
-    spec['extra']['object_fields'] = json.load(f)
-
-  yield in_progress(1.0, status)
-  log.info('Done loading', filename)
-  return GameLib(spec, dll)
+__all__ = ['load_dll_data_spec']

@@ -5,9 +5,7 @@ from abc import ABC, abstractmethod
 import traceback
 from dataclasses import dataclass
 
-from wafel.core.game_state import GameState
-from wafel.core.game_lib import GameLib
-from wafel.core.data_path import DataPath
+from wafel.core import Slot, Game, DataPath, Controller
 from wafel.util import *
 
 
@@ -38,16 +36,18 @@ class ScriptedSegment:
 
 
 class ScriptContext:
-  lib: GameLib
+  @property
+  @abstractmethod
+  def game(self) -> Game: ...
 
   @abstractmethod
-  def get_globals(self, state: GameState) -> dict: ...
+  def get_globals(self, frame: int, slot: Slot) -> dict: ...
 
-  def run_state_script(self, state: GameState, script: Script) -> None:
+  def run_state_script(self, frame: int, slot: Slot, script: Script) -> None:
     # TODO: Error handling
     # TODO: Redirect stdout/stderr
 
-    script_globals = dict(self.get_globals(state))
+    script_globals = dict(self.get_globals(frame, slot))
     script_locals: dict = {}
 
     try:
@@ -68,29 +68,22 @@ class ScriptContext:
       if stick_x is not None:
         assert isinstance(stick_x, float) or isinstance(stick_x, int)
         stick_x = min(max(int(stick_x), -128), 127)
-        DataPath.compile(self.lib, '$state.gControllerPads[0].stick_x').set(state, stick_x)
+        self.game.path('gControllerPads[0].stick_x').set(slot, stick_x)
 
       if stick_y is not None:
         assert isinstance(stick_y, float) or isinstance(stick_y, int)
         stick_y = min(max(int(stick_y), -128), 127)
-        DataPath.compile(self.lib, '$state.gControllerPads[0].stick_y').set(state, stick_y)
+        self.game.path('gControllerPads[0].stick_y').set(slot, stick_y)
 
     except:
       log.warn('Script error:\n' + traceback.format_exc())
 
 
-class Scripts:
+class Scripts(Controller):
   def __init__(self, context: ScriptContext) -> None:
+    super().__init__()
     self._context = context
     self._segments = [ScriptedSegment(0, None, Script(''))]
-    self._invalidation_callbacks: List[Callable[[int], None]] = []
-
-  def on_invalidation(self, callback: Callable[[int], None]) -> None:
-    self._invalidation_callbacks.append(callback)
-
-  def _invalidate(self, frame: int) -> None:
-    for callback in list(self._invalidation_callbacks):
-      callback(frame)
 
   def get(self, frame: int) -> Script:
     for segment in self._segments:
@@ -120,13 +113,13 @@ class Scripts:
       assert i < len(self._segments) - 1
       self._segments[i + 1].frame_start = segment.frame_start
     del self._segments[i]
-    self._invalidate(segment.frame_start)
+    self.notify(segment.frame_start)
 
   def set_segment_source(self, segment: ScriptedSegment, source: str) -> None:
     if source != segment.script:
       segment.script = Script(source)
-      self._invalidate(segment.frame_start)
+      self.notify(segment.frame_start)
 
-  def run(self, state: GameState) -> None:
-    script = self.get(state.frame)
-    self._context.run_state_script(state, script)
+  def apply(self, game: Game, frame: int, slot: Slot) -> None:
+    script = self.get(frame)
+    self._context.run_state_script(frame, slot, script)

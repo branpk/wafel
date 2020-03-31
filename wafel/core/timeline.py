@@ -1,157 +1,109 @@
+from __future__ import annotations
+
 from typing import *
+from abc import ABC, abstractmethod
 import weakref
 
-from wafel.core.slot_manager import SlotManager, AbstractSlots
-from wafel.core.game_state import StateSlot
-from wafel.core.game_lib import GameLib
-from wafel.core.edit import Edits
-from wafel.core.variable import Variables, Variable
-from wafel.core.data_cache import DataCache
+from wafel.core.game import Game
+from wafel.core.memory import Slot
 from wafel.core.data_path import DataPath
-from wafel.core.script import Scripts, ScriptContext
-from wafel.util import *
+from wafel.core.slot_manager import SlotManager
 
 
-class StateSlots(AbstractSlots[StateSlot]):
+class Controller(ABC):
+  @staticmethod
+  def no_op() -> Controller:
+    return ControllerSequence([])
+
+  @staticmethod
+  def sequence(*controllers: Controller) -> Controller:
+    return ControllerSequence(controllers)
+
+  def __init__(self) -> None:
+    self._on_change_callbacks: List[Callable[[int], None]] = []
+
+  def on_change(self, callback: Callable[[int], None]) -> None:
+    self._on_change_callbacks.append(callback)
+
+  def notify(self, frame: int) -> None:
+    for callback in list(self._on_change_callbacks):
+      callback(frame)
+
+  @abstractmethod
+  def apply(self, game: Game, frame: int, slot: Slot) -> None: ...
+
+
+class ControllerSequence(Controller):
+  def __init__(self, controllers: Iterable[Controller]) -> None:
+    self.controllers = controllers
+
+  def on_change(self, callback: Callable[[int], None]) -> None:
+    for controller in self.controllers:
+      controller.on_change(callback)
+
+  def apply(self, game: Game, frame: int, slot: Slot) -> None:
+    for controller in self.controllers:
+      controller.apply(game, frame, slot)
+
+
+class BaseSlotContextManager:
   def __init__(
     self,
-    lib: GameLib,
-    variables: Variables,
-    edits: Edits,
-    scripts: Scripts,
-    capacity: int,
+    slot_manager: SlotManager,
+    slot: ContextManager[Slot],
+    invalidate: bool,
   ) -> None:
-    self.lib = lib
-    self.variables = variables
-    self.edits = edits
-    self.scripts = scripts
+    self.slot_manager = slot_manager
+    self.slot = slot
+    self.invalidate = invalidate
 
-    self._base = self.lib.base_slot()
-    self._non_base = [self.lib.alloc_slot() for _ in range(capacity - 1)]
-    self._temp = self._non_base.pop()
+  def __enter__(self) -> Slot:
+    return self.slot.__enter__()
 
-    assert self.base.frame == -1
-    self._power_on = self.where(base=False, frozen=False)[0]
-    self.copy(self._power_on, self.base)
-    self._power_on.permafreeze()
-
-    # Prevent callback from keeping self alive
-    weak_self = weakref.ref(self)
-    def invalidate(frame: int) -> None:
-      self_ref = weak_self()
-      if self_ref is not None:
-        self_ref.invalidate_frame(frame)
-    self.on_invalidation(invalidate)
-
-  def __del__(self) -> None:
-    # Restore contents of base slot since a new timeline may be created for this DLL
-    self.copy(self.base, self.power_on)
-    for slot in self.non_base + [self.temp]:
-      self.lib.dealloc_slot(slot)
-
-  @property
-  def temp(self) -> StateSlot:
-    return self._temp
-
-  @property
-  def base(self) -> StateSlot:
-    return self._base
-
-  @property
-  def non_base(self) -> List[StateSlot]:
-    return self._non_base
-
-  @property
-  def power_on(self) -> StateSlot:
-    return self._power_on
-
-  def copy(self, dst: StateSlot, src: StateSlot) -> None:
-    assert not dst.frozen
-    if dst is not src:
-      self.lib.raw_copy_slot(dst, src)
-      dst.frame = src.frame
-      log.timer.record_copy()
-
-  def execute_frame(self) -> None:
-    assert self.base.frame is not None
-    assert not self.base.frozen
-
-    with self.base as state:
-      # Disallowing reads shouldn't be necessary. It's just a precaution in case
-      # variable.set ever tries to read data from another state
-      self.base.disallow_reads = True
-
-      if self.base.frame != -1:
-        self.lib.execute_frame()
-        log.timer.record_update()
-      self.base.frame += 1
-      state.frame += 1
-
-      for edit in self.edits.get_edits(state.frame):
-        variable = self.variables[edit.variable_id]
-        variable.set(state, edit.value)
-
-      self.scripts.run(state)
-
-      self.base.disallow_reads = False
-
-  def invalidate_frame(self, frame: int) -> None:
-    for slot in self.where():
-      if slot.frame is not None and slot.frame >= frame:
-        slot.frame = None
-
-  def on_invalidation(self, callback: Callable[[int], None]) -> None:
-    self.edits.on_edit(callback)
-    self.scripts.on_invalidation(callback)
+  def __exit__(self, exc_type, exc_value, traceback) -> None:
+    if self.invalidate:
+      self.slot_manager.invalidate_base_slot()
+    self.slot.__exit__(exc_type, exc_value, traceback)
 
 
 class Timeline:
   def __init__(
     self,
-    lib: GameLib,
-    variables: Variables,
-    edits: Edits,
-    script_context: ScriptContext,
+    game: Game,
+    controller: Controller,
+    slot_capacity: int,
   ) -> None:
-    self.edits = edits
-    self.scripts = Scripts(script_context)
-    self.slots = StateSlots(lib, variables, edits, self.scripts, capacity=20)
-    self.slot_manager = SlotManager(self.slots)
-    self.data_cache = DataCache()
+    self.game = game
+    self.controller = controller
+    self.slot_manager = SlotManager(game, self.run_frame, slot_capacity)
 
-    weak_data_cache = weakref.ref(self.data_cache)
+    weak_self_ref = weakref.ref(self)
     def invalidate(frame: int) -> None:
-      data_cache = weak_data_cache()
-      if data_cache is not None:
-        data_cache.invalidate(frame)
-    self.on_invalidation(invalidate)
+      weak_self = weak_self_ref()
+      if weak_self is not None:
+        weak_self.invalidate(frame)
+    self.controller.on_change(invalidate)
 
-  def __getitem__(self, frame: int) -> StateSlot:
-    return self.get(frame)
+  def invalidate(self, frame: int) -> None:
+    self.slot_manager.invalidate(frame)
 
-  def get(self, frame: int, allow_nesting=False, require_base=False) -> StateSlot:
-    slot = self.slot_manager.request_frame(frame, allow_nesting, require_base)
-    # if frame not in self.data_cache:
-    #   with slot as state:
-    #     for path in self.data_cache.get_paths_to_prime():
-    #       self.data_cache.put(frame, path, path.get(state))
-    return slot
+  def run_frame(self, frame: int) -> None:
+    if frame != -1:
+      self.game.run_frame()
+    self.controller.apply(self.game, frame + 1, self.game.base_slot)
 
-  def get_cached_path(self, frame: int, path: DataPath) -> object:
-    cached = self.data_cache.get(frame, path)
-    if cached is not None:
-      return cached
-    with self.get(frame) as state:
-      value = path.get(state)
-    self.data_cache.put(frame, path, value)
-    return value
+  def get(self, frame: int, path: Union[DataPath, str]) -> object:
+    if isinstance(path, str):
+      path = self.game.path(path)
+    with self.slot_manager.request_frame(frame) as slot:
+      return path.get(slot)
 
-  def get_cached(self, frame: int, variable: Variable) -> object:
-    return variable.get_impl(lambda p: self.get_cached_path(frame, p))
-
-
-  def __len__(self) -> int:
-    return len(self.edits)
+  def request_base(self, frame: int, invalidate=False) -> ContextManager[Slot]:
+    return BaseSlotContextManager(
+      self.slot_manager,
+      self.slot_manager.request_frame(frame, require_base=True),
+      invalidate,
+    )
 
   def set_hotspot(self, name: str, frame: int) -> None:
     """Mark a certain frame as a "hotspot", which is a hint to try to ensure
@@ -167,4 +119,7 @@ class Timeline:
     self.slot_manager.balance_distribution(max_run_time)
 
   def on_invalidation(self, callback: Callable[[int], None]) -> None:
-    self.slots.on_invalidation(callback)
+    self.controller.on_change(callback)
+
+
+__all__ = ['Controller', 'Timeline']

@@ -38,6 +38,9 @@ def init() -> None:
   log_file = os.path.join(root_dir, 'log.txt')
   settings_file = os.path.join(root_dir, 'settings.json')
 
+  import wafel.bindings as bindings
+  bindings.init()
+
 def _load_cache_index() -> Any:
   cache_index = os.path.join(cache_directory, 'index.json')
   if os.path.exists(cache_index):

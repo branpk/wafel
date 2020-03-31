@@ -1,13 +1,16 @@
 from typing import *
 from dataclasses import dataclass
 import math
+import ctypes as C
 
 import ext_modules.util as c_util
 
 import wafel.imgui as ig
 from wafel.model import Model
-from wafel.core import ObjectId, Variable, VariableGroup, ObjectType, VariableId, DataPath, AbsoluteAddr, RelativeAddr
-from wafel.variable_format import Formatters, VariableFormatter, DecimalIntFormatter, FloatFormatter
+from wafel.variable import Variable, VariableGroup, ObjectId, Object
+from wafel.object_type import ObjectType
+from wafel.core import DataPath, Address
+from wafel.variable_format import Formatters, VariableFormatter, DecimalIntFormatter, FloatFormatter, EmptyFormatter
 import wafel.ui as ui
 from wafel.util import *
 import wafel.config as config
@@ -65,8 +68,7 @@ class VariableExplorer:
 
   def get_tab_label(self, tab: TabId) -> str:
     if tab.object_id is not None:
-      with self.model.timeline[self.model.selected_frame] as state:
-        object_type = self.model.get_object_type(state, tab.object_id)
+      object_type = self.model.get_object_type(self.model.selected_frame, tab.object_id)
       if object_type is None:
         return str(tab.object_id)
       else:
@@ -81,10 +83,9 @@ class VariableExplorer:
   def render_objects_tab(self) -> None:
     object_types: List[Optional[ObjectType]] = []
 
-    with self.model.timeline[self.model.selected_frame] as state:
-      for slot in range(240):
-        object_id = slot
-        object_types.append(self.model.get_object_type(state, object_id))
+    for slot in range(240):
+      object_id = slot
+      object_types.append(self.model.get_object_type(self.model.selected_frame, object_id))
 
     selected_slot = ui.render_object_slots('object-slots', object_types)
     if selected_slot is not None:
@@ -94,8 +95,7 @@ class VariableExplorer:
 
   def get_variables_for_tab(self, tab: TabId) -> List[Variable]:
     if tab.object_id is not None:
-      with self.model.timeline[self.model.selected_frame] as state:
-        object_type = self.model.get_object_type(state, tab.object_id)
+      object_type = self.model.get_object_type(self.model.selected_frame, tab.object_id)
       if object_type is None:
         return []
 
@@ -105,15 +105,14 @@ class VariableExplorer:
       ]
 
     elif tab.surface is not None:
-      with self.model.timeline[self.model.selected_frame] as state:
-        num_surfaces = DataPath.compile(self.model.lib, '$state.gSurfacesAllocated').get(state)
-        if tab.surface >= dcast(int, num_surfaces):
-          return []
+      num_surfaces = dcast(int, self.model.get('gSurfacesAllocated'))
+      if tab.surface >= num_surfaces:
+        return []
 
-        return [
-          var.at_surface(tab.surface)
-            for var in self.model.variables.group(VariableGroup('Surface'))
-        ]
+      return [
+        var.at_surface(tab.surface)
+          for var in self.model.variables.group(VariableGroup('Surface'))
+      ]
 
     else:
       return self.model.variables.group(VariableGroup(tab.name))
@@ -127,15 +126,14 @@ class VariableExplorer:
     value_width = 80,
   ) -> None:
     frame = self.model.selected_frame
-    with self.model.timeline[frame] as state:
-      value = variable.get(state)
+    value = self.model.get(frame, variable)
 
     changed_data, clear_edit = ui.render_labeled_variable(
       f'var-{hash((tab, variable))}',
       variable.label,
       variable.id,
       value,
-      self.formatters[variable],
+      EmptyFormatter() if value is None else self.formatters[variable],
       self.model.edits.is_edited(frame, variable.id),
       label_width = label_width,
       value_width = value_width,
@@ -155,8 +153,8 @@ class VariableExplorer:
     self.render_variable(tab, stick_x_var, 60, 50)
     self.render_variable(tab, stick_y_var, 60, 50)
 
-    stick_x = self.model.get(stick_x_var)
-    stick_y = self.model.get(stick_y_var)
+    stick_x = dcast(int, self.model.get(stick_x_var))
+    stick_y = dcast(int, self.model.get(stick_y_var))
 
     n_x = 2 * ((stick_x + 128) / 255) - 1
     n_y = 2 * ((stick_y + 128) / 255) - 1
@@ -184,14 +182,12 @@ class VariableExplorer:
     stick_x_var = self.model.variables['input-stick-x']
     stick_y_var = self.model.variables['input-stick-y']
 
-    with self.model.timeline[self.model.selected_frame] as state:
-      face_yaw = dcast(int, self.model.variables['mario-face-yaw'].get(state))
-      camera_yaw = dcast(int, self.model.variables['camera-yaw'].get(state))
-      squish_timer = DataPath.compile(self.model.lib, '$state.gMarioState[].squishTimer').get(state)
-      active_face_yaw = dcast(int, face_yaw)
+    face_yaw = dcast(int, self.model.get(self.model.variables['mario-face-yaw']))
+    camera_yaw = dcast(int, self.model.get(self.model.variables['camera-yaw']) or 0)
+    squish_timer = dcast(int, self.model.get('gMarioState[].squishTimer'))
+    active_face_yaw = face_yaw
 
-    with self.model.timeline[self.model.selected_frame + 1] as state:
-      events = get_frame_log(self.model.lib, state)
+    events = get_frame_log(self.model.timeline, self.model.selected_frame + 1)
 
     active_face_yaw_action = None
     for event in events:
@@ -270,10 +266,9 @@ class VariableExplorer:
       if target_mag is None:
         target_mag = intended_mag
 
-      with self.model.timeline[self.model.selected_frame] as state:
-        new_raw_stick_x, new_raw_stick_y = intended_to_raw(
-          self.model.lib, state, target_yaw, target_mag, relative_to
-        )
+      new_raw_stick_x, new_raw_stick_y = intended_to_raw(
+        self.model.timeline, self.model.selected_frame, target_yaw, target_mag, relative_to
+      )
 
       self.model.edits.edit(self.model.selected_frame, stick_x_var, new_raw_stick_x)
       self.model.edits.edit(self.model.selected_frame, stick_y_var, new_raw_stick_y)
@@ -290,10 +285,9 @@ class VariableExplorer:
       new_intended_yaw = up_angle + new_n_a
       new_intended_mag = 32 * math.sqrt(new_n[0]**2 + new_n[1]**2)
 
-      with self.model.timeline[self.model.selected_frame] as state:
-        new_raw_stick_x, new_raw_stick_y = intended_to_raw(
-          self.model.lib, state, new_intended_yaw, new_intended_mag, relative_to=0
-        )
+      new_raw_stick_x, new_raw_stick_y = intended_to_raw(
+        self.model.timeline, self.model.selected_frame, new_intended_yaw, new_intended_mag, relative_to=0
+      )
 
       self.model.edits.edit(self.model.selected_frame, stick_x_var, new_raw_stick_x)
       self.model.edits.edit(self.model.selected_frame, stick_y_var, new_raw_stick_y)
@@ -330,7 +324,7 @@ class VariableExplorer:
 
 
   def render_script_tab(self) -> None:
-    scripts = self.model.timeline.scripts
+    scripts = self.model.scripts
 
     if ig.button('Split'):
       scripts.split_segment(self.model.selected_frame)
@@ -404,12 +398,11 @@ class VariableExplorer:
     _, round_numbers.value = ig.checkbox('Round##round-numbers', round_numbers.value)
     ig.dummy(1, 10)
 
-    with self.model.timeline[self.model.selected_frame + frame_offset.value] as state:
-      events = get_frame_log(self.model.lib, state)
+    events = get_frame_log(self.model.timeline, self.model.selected_frame + frame_offset.value)
 
     def string(addr: object) -> str:
-      abs_addr = dcast(AbsoluteAddr, dcast(RelativeAddr, addr).value)
-      return self.model.lib.string(abs_addr)
+      abs_addr = dcast(Address, addr).absolute
+      return C.string_at(abs_addr).decode('utf-8')
 
     def round(number: object) -> str:
       assert isinstance(number, float)

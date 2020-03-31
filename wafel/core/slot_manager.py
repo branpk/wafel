@@ -3,100 +3,117 @@ from typing import *
 from dataclasses import dataclass
 import weakref
 import time
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 from wafel.util import *
+from wafel.core.memory import Slot
 
 
-class AbstractSlot(ABC):
-  frame: Optional[int]
-
-  @property
-  def based(self) -> bool: ...
-
+class SlotAllocator(Protocol):
   @property
   @abstractmethod
-  def frozen(self) -> bool: ...
+  def base_slot(self) -> Slot: ...
+
+  @abstractmethod
+  def alloc_slot(self) -> Slot: ...
+
+  @abstractmethod
+  def dealloc_slot(self, slot: Slot) -> None: ...
+
+  @abstractmethod
+  def copy_slot(self, dst: Slot, src: Slot) -> None: ...
 
 
-SLOT = TypeVar('SLOT', bound=AbstractSlot)
+@dataclass
+class SlotInfo:
+  slot: Slot
+  based: bool
+  frame: Optional[int] = None
+  read_locks: int = 0
+  write_locks: int = 0
 
-
-class AbstractSlots(ABC, Generic[SLOT]):
   @property
-  @abstractmethod
-  def temp(self) -> SLOT: ...
+  def frozen(self) -> bool:
+    return self.read_locks > 0
 
-  @property
-  @abstractmethod
-  def base(self) -> SLOT: ...
+  def __enter__(self) -> Slot:
+    assert self.frame is not None
+    assert self.write_locks == 0
+    self.read_locks += 1
+    return self.slot
 
-  @property
-  @abstractmethod
-  def non_base(self) -> List[SLOT]: ...
+  def __exit__(self, exc_type, exc_value, traceback) -> None:
+    self.read_locks -= 1
 
-  @property
-  @abstractmethod
-  def power_on(self) -> SLOT: ...
+  def permafreeze(self) -> None:
+    assert self.frame is not None
+    assert self.write_locks == 0
+    self.read_locks += 1
 
-  @abstractmethod
-  def copy(self, dst: SLOT, src: SLOT) -> None: ...
+  def __eq__(self, other: object) -> bool:
+    return self is other
 
-  @abstractmethod
-  def execute_frame(self) -> None: ...
 
-  def where(
+class SlotManager:
+  def __init__(
     self,
-    base: Optional[bool] = None,
-    frozen: Optional[bool] = None,
-    valid: Optional[bool] = None,
-  ) -> List[SLOT]:
-    if base == True:
-      results = [self.base]
-    elif base == False:
-      results = self.non_base
-    else:
-      results = self.non_base + [self.base]
-    if frozen is not None:
-      results = [slot for slot in results if slot.frozen == frozen]
-    if valid is not None:
-      results = [slot for slot in results if (slot.frame is not None) == valid]
-    return results
+    slot_allocator: SlotAllocator,
+    run_frame: Callable[[int], None],
+    capacity: int,
+  ) -> None:
+    self.slot_allocator = slot_allocator
+    self.run_frame_impl = run_frame
 
-  def swap_contents(self, slot1: SLOT, slot2: SLOT) -> None:
-    if slot1 is not slot2:
-      self.copy(self.temp, slot1)
-      self.copy(slot1, slot2)
-      self.copy(slot2, self.temp)
+    self.base_slot = SlotInfo(slot_allocator.base_slot, based=True, frame=-1)
+    self.non_base_slots = [
+      SlotInfo(slot_allocator.alloc_slot(), based=False)
+        for _ in range(capacity)
+    ]
+    self.slots = self.non_base_slots + [self.base_slot]
 
+    self.power_on_slot = self.non_base_slots[0]
+    self.copy(self.power_on_slot, self.base_slot)
+    self.power_on_slot.permafreeze()
 
-class SlotManager(Generic[SLOT]):
-  def __init__(self, slots: AbstractSlots[SLOT]) -> None:
-    self.slots = slots
     self.hotspots: Dict[str, int] = {}
 
-  def latest_non_base_slot_before(
-    self,
-    frame: int,
-    base: Optional[bool] = None,
-  ) -> Optional[SLOT]:
-    prev_slots = [
-      (slot.frame, slot) for slot in self.slots.where(base=base)
-        if slot.frame is not None and slot.frame <= frame
-    ]
-    return max(prev_slots, key=lambda s: s[:-1], default=(None,))[-1]
+  def __del__(self) -> None:
+    # Restore contents of base slot since a new timeline may be created for this DLL
+    self.copy(self.base_slot, self.power_on_slot)
+    for slot in self.non_base_slots:
+      self.slot_allocator.dealloc_slot(slot.slot)
 
-  def request_frame(self, frame: int, allow_nesting=False, require_base=False) -> SLOT:
+  def copy(self, dst: SlotInfo, src: SlotInfo) -> None:
+    assert not dst.frozen
+    if src is not dst:
+      self.slot_allocator.copy_slot(dst.slot, src.slot)
+      dst.frame = src.frame
+      log.timer.record_copy()
+
+  def run_frame(self) -> None:
+    assert self.base_slot.frame is not None
+    assert not self.base_slot.frozen
+    assert self.base_slot.write_locks == 0
+
+    # Disallowing reads is to prevent run_frame_impl from requesting a frame
+    self.base_slot.write_locks += 1
+
+    log.timer.record_update()
+    self.run_frame_impl(self.base_slot.frame)
+    self.base_slot.frame += 1
+
+    self.base_slot.write_locks -= 1
+
+  def request_frame(self, frame: int, allow_nesting=False, require_base=False) -> ContextManager[Slot]:
     assert frame >= 0, frame
 
     if require_base:
       assert not allow_nesting
-    assert not self.slots.base.frozen, 'Nested frame lookups require allow_nesting=True'
+    assert not self.base_slot.frozen, 'Nested frame lookups require allow_nesting=True'
 
     log.timer.record_request()
 
-    # TODO: Could compute this automatically by running the computation
-    def work_from(slot: SLOT) -> Tuple[int, int]:
+    def work_from(slot: SlotInfo) -> Tuple[int, int]:
       slot_frame = slot.frame
       slot_based = slot.based
       assert slot_frame is not None and slot_frame <= frame
@@ -110,12 +127,12 @@ class SlotManager(Generic[SLOT]):
         copies += 1
       return copies, updates
 
-    def cost_from(slot: SLOT) -> int:
+    def cost_from(slot: SlotInfo) -> int:
       copies, updates = work_from(slot)
       return 10 * copies + updates
 
     prev_slots = [
-      slot for slot in self.slots.where()
+      slot for slot in self.slots
         if slot.frame is not None and slot.frame <= frame
     ]
     latest_slot = min(prev_slots, key=cost_from)
@@ -125,14 +142,14 @@ class SlotManager(Generic[SLOT]):
         not (require_base and not latest_slot.based):
       return latest_slot
 
-    self.slots.copy(self.slots.base, latest_slot)
-    while assert_not_none(self.slots.base.frame) < frame:
-      self.slots.execute_frame()
+    self.copy(self.base_slot, latest_slot)
+    while assert_not_none(self.base_slot.frame) < frame:
+      self.run_frame()
 
     if not allow_nesting:
-      return self.slots.base
+      return self.base_slot
 
-    available_slots = self.slots.where(base=False, frozen=False)
+    available_slots = [slot for slot in self.non_base_slots if not slot.frozen]
     if len(available_slots) == 0:
       raise Exception('Ran out of slots')
 
@@ -141,8 +158,16 @@ class SlotManager(Generic[SLOT]):
       available_slots,
       key=lambda slot: float('inf') if slot.frame is None else slot.frame,
     )
-    self.slots.copy(selected_slot, self.slots.base)
+    self.copy(selected_slot, self.base_slot)
     return selected_slot
+
+  def invalidate(self, frame: int) -> None:
+    for slot in self.slots:
+      if slot.frame is not None and slot.frame >= frame:
+        slot.frame = None
+
+  def invalidate_base_slot(self) -> None:
+    self.base_slot.frame = None
 
   def set_hotspot(self, name: str, frame: int) -> None:
     self.hotspots[name] = frame
@@ -166,24 +191,24 @@ class SlotManager(Generic[SLOT]):
       if time.time() - start_time >= max_run_time:
         return
 
-      matching_slots = [
-        slot for slot in self.slots.where(base=False)
-          if slot.frame == frame
-      ]
+      matching_slots = [slot for slot in self.non_base_slots if slot.frame == frame]
       if len(matching_slots) > 0:
         used_slots.append(matching_slots[0])
         continue
 
       slot = self.request_frame(frame)
       available_slots = [
-        slot for slot in self.slots.where(base=False, frozen=False)
-          if slot not in used_slots
+        slot for slot in self.non_base_slots
+          if not slot.frozen and slot not in used_slots
       ]
       if len(available_slots) > 0:
         selected_slot = random.choice(available_slots)
-        self.slots.copy(selected_slot, slot)
+        self.copy(selected_slot, cast(SlotInfo, slot))
       else:
         log.warn('Using a suboptimal number of slots')
 
   def get_loaded_frames(self) -> List[int]:
-    return [assert_not_none(slot.frame) for slot in self.slots.where(valid=True)]
+    return [slot.frame for slot in self.slots if slot.frame is not None]
+
+
+__all__ = ['SlotManager']

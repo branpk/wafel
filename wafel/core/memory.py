@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from enum import Enum, auto
 from dataclasses import dataclass
 
-from wafel.core_new.data_spec import DataSpec, spec_get_concrete_type
+from wafel.core.data_spec import DataSpec, spec_get_concrete_type
 from wafel.util import *
 
 
@@ -63,13 +63,25 @@ class Address(Generic[VADDR]):
     return Address(type=AddressType.VIRTUAL, _virtual=addr)
 
   @property
+  def is_null(self) -> bool:
+    return self.type == AddressType.NULL
+
+  @property
+  def is_absolute(self) -> bool:
+    return self.type == AddressType.ABSOLUTE
+
+  @property
+  def is_virtual(self) -> bool:
+    return self.type == AddressType.VIRTUAL
+
+  @property
   def absolute(self) -> int:
-    assert self._absolute is not None
+    assert self._absolute is not None, self
     return self._absolute
 
   @property
   def virtual(self) -> VADDR:
-    assert self._virtual is not None
+    assert self._virtual is not None, self
     return self._virtual
 
   def __add__(self, offset: int) -> Address[VADDR]:
@@ -337,6 +349,19 @@ class AccessibleMemory(Memory[VADDR, SLOT]):
     This can be used to ensure that all stored addresses point to the base slot.
     """
     ...
+
+  def address_to_location(self, slot: SLOT, addr: Address[VADDR], allow_null=False) -> int:
+    if addr.type == AddressType.NULL:
+      if allow_null:
+        return 0
+      else:
+        raise Exception('Null pointer')
+    elif addr.type == AddressType.ABSOLUTE:
+      return addr.absolute
+    elif addr.type == AddressType.VIRTUAL:
+      return self.virtual_to_location(slot, addr.virtual)
+    else:
+      raise NotImplementedError(addr.type)
 
   def get_primitive_virtual(self, slot: SLOT, addr: VADDR, type_: str) -> object:
     location = self.virtual_to_location(slot, addr)

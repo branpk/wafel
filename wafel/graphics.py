@@ -4,7 +4,7 @@ import ext_modules.graphics as cg
 
 from wafel.model import Model
 import wafel.config as config
-from wafel.core import DataPath, Object, RelativeAddr
+from wafel.core import DataPath, Address, AccessibleMemory
 from wafel.util import *
 
 
@@ -25,45 +25,44 @@ def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
   mario_path = cg.ObjectPath()
 
   log.timer.begin('nodes')
-  pos_x = DataPath.compile(model.lib, '$state.gMarioState[].pos[0]')
-  pos_y = DataPath.compile(model.lib, '$state.gMarioState[].pos[1]')
-  pos_z = DataPath.compile(model.lib, '$state.gMarioState[].pos[2]')
+  pos_x = model.game.path('gMarioState[].pos[0]')
+  pos_y = model.game.path('gMarioState[].pos[1]')
+  pos_z = model.game.path('gMarioState[].pos[2]')
   cg.object_path_add_nodes(
     mario_path,
     path_frames.start,
     path_frames.stop,
-    lambda frame: model.timeline.get_cached_path(frame, pos_x),
-    lambda frame: model.timeline.get_cached_path(frame, pos_y),
-    lambda frame: model.timeline.get_cached_path(frame, pos_z),
+    lambda frame: model.timeline.get(frame, pos_x),
+    lambda frame: model.timeline.get(frame, pos_y),
+    lambda frame: model.timeline.get(frame, pos_z),
   )
   mario_path.root_index = path_frames.index(model.selected_frame)
   log.timer.end()
 
   log.timer.begin('qsteps')
-  with model.timeline[model.selected_frame + 1] as state:
-    num_steps = dcast(int, DataPath.compile(model.lib, '$state.gQStepsInfo.numSteps').get(state))
-    assert num_steps <= 4
+  qstep_frame = model.selected_frame + 1
+  num_steps = dcast(int, model.get(qstep_frame, 'gQStepsInfo.numSteps'))
+  assert num_steps <= 4
 
-    quarter_steps = []
-    for i in range(num_steps):
-      quarter_step_value = \
-        dcast(dict, DataPath.compile(model.lib, f'$state.gQStepsInfo.steps[{i}]').get(state))
-      quarter_step = cg.QuarterStep()
-      quarter_step.intended_pos = cg.vec3(
-        quarter_step_value['intendedPos'][0],
-        quarter_step_value['intendedPos'][1],
-        quarter_step_value['intendedPos'][2],
-      )
-      quarter_step.result_pos = cg.vec3(
-        quarter_step_value['resultPos'][0],
-        quarter_step_value['resultPos'][1],
-        quarter_step_value['resultPos'][2],
-      )
-      quarter_steps.append(quarter_step)
-
-    cg.object_path_set_qsteps(
-      mario_path, path_frames.index(model.selected_frame), quarter_steps
+  quarter_steps = []
+  for i in range(num_steps):
+    quarter_step_value = dcast(dict, model.get(qstep_frame, f'gQStepsInfo.steps[{i}]'))
+    quarter_step = cg.QuarterStep()
+    quarter_step.intended_pos = cg.vec3(
+      quarter_step_value['intendedPos'][0],
+      quarter_step_value['intendedPos'][1],
+      quarter_step_value['intendedPos'][2],
     )
+    quarter_step.result_pos = cg.vec3(
+      quarter_step_value['resultPos'][0],
+      quarter_step_value['resultPos'][1],
+      quarter_step_value['resultPos'][2],
+    )
+    quarter_steps.append(quarter_step)
+
+  cg.object_path_set_qsteps(
+    mario_path, path_frames.index(model.selected_frame), quarter_steps
+  )
   log.timer.end()
 
   return mario_path
@@ -80,28 +79,27 @@ def build_scene(
   scene.camera = camera
 
   def get_field_offset(path: str) -> int:
-    # TODO: Less hacky way to do this?
-    data_path = DataPath.compile(model.lib, path)
-    offset = data_path.addr_path.path[-1].value
-    return dcast(int, offset)
+    return model.game.path(path).edges[-1].value
 
   log.timer.begin('so')
-  with model.timeline[model.selected_frame] as state:
-    surface_pool_addr = DataPath.compile(model.lib, '$state.sSurfacePool').get(state)
-    assert isinstance(surface_pool_addr, RelativeAddr)
-    cg.scene_add_surfaces(
-      scene,
-      state.slot.relative_to_addr(surface_pool_addr),
-      model.lib.spec['types']['struct']['Surface']['size'],
-      DataPath.compile(model.lib, '$state.gSurfacesAllocated').get(state),
-      get_field_offset,
-      list(hidden_surfaces),
-    )
+  memory = model.game.memory
+  assert isinstance(memory, AccessibleMemory)
+  with model.timeline.request_base(model.selected_frame) as slot:
+    surface_pool_addr = dcast(Address, model.game.path('sSurfacePool').get(slot))
+    if not surface_pool_addr.is_null:
+      cg.scene_add_surfaces(
+        scene,
+        memory.address_to_location(slot, surface_pool_addr),
+        memory.data_spec['types']['struct']['Surface']['size'],
+        dcast(int, model.game.path('gSurfacesAllocated').get(slot)),
+        get_field_offset,
+        list(hidden_surfaces),
+      )
 
     cg.scene_add_objects(
       scene,
-      DataPath.compile(model.lib, '$state.gObjectPool').get_addr(state),
-      model.lib.spec['types']['struct']['Object']['size'],
+      memory.address_to_location(slot, model.game.path('gObjectPool').get_addr(slot)),
+      memory.data_spec['types']['struct']['Object']['size'],
       get_field_offset,
     )
   log.timer.end()

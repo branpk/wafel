@@ -1,7 +1,7 @@
 from typing import *
 
 import wafel.imgui as ig
-from wafel.core import VariableId
+from wafel.variable import VariableId
 from wafel.variable_format import VariableFormatter
 from wafel.util import *
 from wafel.ui.variable_value import render_variable_value

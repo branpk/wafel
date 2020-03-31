@@ -7,10 +7,15 @@ from dataclasses import dataclass
 import functools
 
 from wafel.util import *
-from wafel.core.data_path import DataPath
-from wafel.core.game_state import ObjectId, Object, GameState
-from wafel.core.game_lib import GameLib
-from wafel.core.object_type import ObjectType
+from wafel.core import DataPath, Timeline, Game, spec_get_concrete_type, Slot
+from wafel.object_type import ObjectType
+
+
+ObjectId = int
+
+class Object:
+  def __init__(self, addr: int) -> None:
+    self.addr = addr
 
 
 class ObjectSet:
@@ -105,8 +110,8 @@ class VariableDataType(Enum):
   VEC3F = auto()
 
   @staticmethod
-  def from_spec(lib: GameLib, type_: dict) -> 'VariableDataType':
-    type_ = lib.concrete_type(type_)
+  def from_spec(game: Game, type_: dict) -> 'VariableDataType':
+    type_ = spec_get_concrete_type(game.memory.data_spec, type_)
     if type_['kind'] == 'primitive':
       return {
         's8': VariableDataType.S8,
@@ -121,7 +126,7 @@ class VariableDataType(Enum):
         'f64': VariableDataType.F64,
       }[type_['name']]
     elif type_['kind'] == 'array':
-      elem_type = VariableDataType.from_spec(lib, type_['base'])
+      elem_type = VariableDataType.from_spec(game, type_['base'])
       if type_['length'] == 3 and elem_type == VariableDataType.F32:
         return VariableDataType.VEC3F
       else:
@@ -165,15 +170,15 @@ class VariableId:
 
 class Variable:
   @staticmethod
-  def create_all(lib: GameLib) -> 'Variables':
-    return _all_variables(lib)
+  def create_all(game: Game) -> 'Variables':
+    return _all_variables(game)
 
   def __init__(
     self,
     id: VariableId,
     group: VariableGroup,
     label: str,
-    lib: GameLib,
+    game: Game,
     semantics: VariableSemantics,
     read_only: bool,
     data_type: VariableDataType,
@@ -181,15 +186,15 @@ class Variable:
     self.id = id
     self.group = group
     self.label = label
-    self.lib = lib
+    self.game = game
     self.semantics = semantics
     self.read_only = read_only
     self.data_type = data_type
 
-  def get_impl(self, follow: Callable[[DataPath], object]) -> object:
+  def get(self, timeline: Timeline, frame: int) -> object:
     raise NotImplementedError
 
-  def set(self, state: GameState, value: object) -> None:
+  def set(self, slot: Slot, value: object) -> None:
     raise NotImplementedError
 
   def at_object_slot(self, object_id: ObjectId, slot: int) -> Variable:
@@ -197,10 +202,6 @@ class Variable:
 
   def at_surface(self, surface: int) -> Variable:
     raise NotImplementedError
-
-  def get(self, state: GameState) -> object:
-    follow = lambda path: path.get(state)
-    return self.get_impl(follow)
 
   def at_object(self, object_id: ObjectId) -> Variable:
     return self.at_object_slot(object_id, object_id)
@@ -224,7 +225,7 @@ class _DataVariable(Variable):
     id: VariableId,
     group: VariableGroup,
     label: str,
-    lib: GameLib,
+    game: Game,
     semantics: VariableSemantics,
     path: DataPath,
     read_only: bool = False,
@@ -234,38 +235,38 @@ class _DataVariable(Variable):
       id,
       group,
       label,
-      lib,
+      game,
       semantics,
       read_only,
-      VariableDataType.from_spec(lib, self.path.concrete_end_type),
+      VariableDataType.from_spec(game, self.path.end_type),
     )
 
-  def get_impl(self, follow: Callable[[DataPath], object]) -> object:
-    return follow(self.path)
+  def get(self, timeline: Timeline, frame: int) -> object:
+    return timeline.get(frame, self.path)
 
-  def set(self, state: GameState, value: object) -> None:
+  def set(self, slot: Slot, value: object) -> None:
     assert not self.read_only
-    self.path.set(state, value)
+    self.path.set(slot, value)
 
   def at_object_slot(self, object_id: ObjectId, slot: int) -> Variable:
-    object_path = DataPath.compile(self.lib, f'$state.gObjectPool[{slot}]')
+    object_path = self.game.path(f'gObjectPool[{slot}]')
     return _DataVariable(
       self.id.with_object_id(object_id),
       self.group,
       self.label,
-      self.lib,
+      self.game,
       self.semantics,
       object_path + self.path,
       self.read_only,
     )
 
   def at_surface(self, surface: int) -> Variable:
-    surface_path = DataPath.compile(self.lib, f'$state.sSurfacePool[{surface}]')
+    surface_path = self.game.path(f'sSurfacePool[{surface}]')
     return _DataVariable(
       self.id.with_surface(surface),
       self.group,
       self.label,
-      self.lib,
+      self.game,
       self.semantics,
       surface_path + self.path,
       self.read_only,
@@ -286,28 +287,29 @@ class _FlagVariable(Variable):
       flags.id.with_name(name),
       group,
       label,
-      flags.lib,
+      flags.game,
       VariableSemantics.FLAG,
       read_only or flags.read_only,
       VariableDataType.BOOL,
     )
     self.flags = flags
     self.flag_str = flag
-    self.flag = dcast(int, self.flags.lib.spec['constants'][flag]['value'])
+    self.flag = dcast(int, self.game.memory.data_spec['constants'][flag]['value'])
 
-  def get_impl(self, follow: Callable[[DataPath], object]) -> object:
-    flags = dcast(int, self.flags.get_impl(follow))
+  def get(self, timeline: Timeline, frame: int) -> object:
+    flags = dcast(int, self.flags.get(timeline, frame))
     return (flags & self.flag) != 0
 
-  def set(self, state: GameState, value: object) -> None:
+  def set(self, slot: Slot, value: object) -> None:
     assert not self.read_only
     assert isinstance(value, bool)
-    flags = dcast(int, self.flags.get(state))
+    assert isinstance(self.flags, _DataVariable)
+    flags = dcast(int, self.flags.path.get(slot))
     if value:
       flags |= self.flag
     else:
       flags &= ~self.flag
-    self.flags.set(state, flags)
+    self.flags.set(slot, flags)
 
   def at_object_slot(self, object_id: ObjectId, slot: int) -> Variable:
     return _FlagVariable(
@@ -383,8 +385,8 @@ class Variables:
     return [var for var in self if var.group.contains(group)]
 
 
-def _all_variables(lib: GameLib) -> Variables:
-  from wafel.core.variables import VARIABLES
+def _all_variables(game: Game) -> Variables:
+  from wafel.variables import VARIABLES
 
   info: Dict[str, Tuple[VariableGroup, VariableSpec]] = {}
   for group, group_variables in VARIABLES.items():
@@ -416,9 +418,9 @@ def _all_variables(lib: GameLib) -> Variables:
         VariableId(name),
         group,
         label,
-        lib,
+        game,
         VariableSemantics.RAW,
-        DataPath.compile(lib, spec.path),
+        game.path(spec.path),
       )
     elif isinstance(spec, FlagVariableSpec):
       flags = variables[spec.flags]

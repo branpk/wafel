@@ -1,6 +1,6 @@
 from typing import *
 
-from wafel.core import Variable, VariableDataType
+from wafel.variable import Variable, VariableDataType
 
 
 class VariableFormatter:
