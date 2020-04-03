@@ -30,6 +30,15 @@ class Controller(ABC):
     for callback in list(self._on_change_callbacks):
       callback(frame)
 
+  @property
+  def weak_notify(self) -> Callable[[int], None]:
+    weak_self_ref = weakref.ref(self)
+    def notify(frame: int) -> None:
+      weak_self = weak_self_ref()
+      if weak_self is not None:
+        weak_self.notify(frame)
+    return notify
+
   @abstractmethod
   def apply(self, game: Game, frame: int, slot: Slot) -> None: ...
 

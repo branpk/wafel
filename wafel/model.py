@@ -10,12 +10,13 @@ import ext_modules.util as c_util
 import wafel.config as config
 from wafel.core import Game, Timeline, load_dll_game, Controller, Address, DataPath, \
   AccessibleMemory, Slot
-from wafel.variable import Variable, ObjectId, Variables
+from wafel.variable import Variable, ObjectId, Variables, ScriptVariable, VariableSemantics, \
+  VariableId
 from wafel.edit import Edits
 from wafel.object_type import ObjectType
 from wafel.loading import Loading
 from wafel.util import *
-from wafel.script import Scripts
+from wafel.script import Scripts, ScriptController
 
 
 class EditController(Controller):
@@ -23,13 +24,7 @@ class EditController(Controller):
     super().__init__()
     self.variables = variables
     self.edits = edits
-
-    weak_self_ref = weakref.ref(self)
-    def notify(frame: int) -> None:
-      weak_self = weak_self_ref()
-      if weak_self is not None:
-        self.notify(frame)
-    self.edits.on_edit(notify)
+    self.edits.on_edit(self.weak_notify)
 
   def apply(self, game: Game, frame: int, slot: Slot) -> None:
     for edit in self.edits.get_edits(frame):
@@ -94,15 +89,18 @@ class Model:
         self.addr_to_symbol[addr] = symbol
 
   def _set_edits(self, edits: Edits) -> None:
-    from wafel.script_context import SM64ScriptContext
-
     if hasattr(self, 'timeline'):
       del self.timeline
     gc.collect() # Force garbage collection of game state slots
 
     self.edits = edits
-    self.scripts = Scripts(SM64ScriptContext(self))
-    self.controller = Controller.sequence(EditController(self.variables, self.edits), self.scripts)
+    self.scripts = Scripts()
+    self.controller = Controller.sequence(
+      EditController(self.variables, self.edits),
+      ScriptController(self.scripts),
+    )
+
+    self.variables.add(ScriptVariable(self.game, self.scripts))
 
     self.timeline = Timeline(
       self.game,
@@ -170,3 +168,27 @@ class Model:
       self.variables['obj-behavior-ptr'].at_object(object_id).get(self.timeline, frame)
     assert isinstance(behavior_addr, Address)
     return ObjectType(behavior_addr, self.addr_to_symbol[behavior_addr])
+
+  def edit(self, frame: int, variable: Union[Variable, VariableId], data: object) -> None:
+    if isinstance(variable, VariableId):
+      variable = self.variables[variable]
+    if variable.semantics == VariableSemantics.SCRIPT:
+      self.scripts.set_frame_source(frame, dcast(str, data))
+    else:
+      self.edits.edit(frame, variable, data)
+
+  def is_edited(self, frame: int, variable: Union[Variable, VariableId]) -> bool:
+    if isinstance(variable, VariableId):
+      variable = self.variables[variable]
+    if variable.semantics == VariableSemantics.SCRIPT:
+      return self.scripts.is_edited(frame)
+    else:
+      return self.edits.is_edited(frame, variable.id)
+
+  def reset(self, frame: int, variable: Union[Variable, VariableId]) -> None:
+    if isinstance(variable, VariableId):
+      variable = self.variables[variable]
+    if variable.semantics == VariableSemantics.SCRIPT:
+      return self.scripts.reset_frame(frame)
+    else:
+      return self.edits.reset(frame, variable.id)

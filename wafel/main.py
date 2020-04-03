@@ -35,12 +35,15 @@ from wafel.edit import Edits
 
 
 DEFAULT_FRAME_SHEET_VARS = [
-  'input-stick-x',
-  'input-stick-y',
   'input-button-a',
   'input-button-b',
   'input-button-z',
+  'mario-action',
+  'mario-vel-f',
 ]
+
+if config.dev_mode:
+  DEFAULT_FRAME_SHEET_VARS.insert(0, 'wafel-script')
 
 
 class SequenceFile:

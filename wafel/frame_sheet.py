@@ -6,7 +6,7 @@ from wafel.object_type import ObjectType
 from wafel.variable import Variable, VariableId
 from wafel.core import DataPath
 from wafel.model import Model
-from wafel.variable_format import Formatters, EmptyFormatter, VariableFormatter
+from wafel.variable_format import Formatters, EmptyFormatter, VariableFormatter, VariableSemantics
 import wafel.ui as ui
 from wafel.util import *
 
@@ -143,7 +143,7 @@ class FrameSheet:
       if variable.id.surface >= num_surfaces:
         raise Exception
 
-    self.model.edits.edit(frame, variable, data)
+    self.model.edit(frame, variable, data)
 
 
   def get_content_width(self) -> int:
@@ -222,13 +222,13 @@ class FrameSheet:
       data,
       formatter,
       (column.width, self.row_height),
-      self.model.edits.is_edited(frame, column.variable.id),
+      self.model.is_edited(frame, column.variable.id),
       frame == self.model.selected_frame,
     )
     if changed_data is not None:
       self.set_data(frame, column, changed_data.value)
     if clear_edit:
-      self.model.edits.reset(frame, column.variable.id)
+      self.model.reset(frame, column.variable.id)
     if selected:
       self.model.selected_frame = frame
 

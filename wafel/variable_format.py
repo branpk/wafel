@@ -1,6 +1,6 @@
 from typing import *
 
-from wafel.variable import Variable, VariableDataType
+from wafel.variable import Variable, VariableDataType, VariableSemantics
 
 
 class VariableFormatter:
@@ -74,6 +74,16 @@ class EnumFormatter(TextFormatter):
       return self.name_to_id[rep]
 
 
+class StringFormatter(TextFormatter):
+  def output(self, data: object) -> object:
+    assert isinstance(data, str)
+    return data
+
+  def input(self, rep: object) -> object:
+    assert isinstance(rep, str)
+    return rep
+
+
 class Formatters:
   def __init__(self) -> None:
     self.overrides: Dict[Variable, VariableFormatter] = {}
@@ -99,6 +109,9 @@ class Formatters:
       VariableDataType.F64,
     ]:
       return FloatFormatter()
+
+    elif variable.semantics == VariableSemantics.SCRIPT:
+      return StringFormatter()
 
     raise NotImplementedError(variable, variable.data_type)
 

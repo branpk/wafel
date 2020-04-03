@@ -134,16 +134,16 @@ class VariableExplorer:
       variable.id,
       value,
       EmptyFormatter() if value is None else self.formatters[variable],
-      self.model.edits.is_edited(frame, variable.id),
+      self.model.is_edited(frame, variable.id),
       label_width = label_width,
       value_width = value_width,
     )
 
     if changed_data is not None:
-      self.model.edits.edit(frame, variable, changed_data.value)
+      self.model.edit(frame, variable, changed_data.value)
 
     if clear_edit:
-      self.model.edits.reset(frame, variable.id)
+      self.model.reset(frame, variable.id)
 
 
   def render_stick_control(self, id: str, tab: TabId) -> None:
@@ -325,6 +325,10 @@ class VariableExplorer:
 
   def render_script_tab(self) -> None:
     scripts = self.model.scripts
+
+    ig.dummy(1, 5)
+    self.render_variable(self.current_tab, self.model.variables['wafel-script'], value_width=200)
+    ig.dummy(1, 10)
 
     if ig.button('Split'):
       scripts.split_segment(self.model.selected_frame)

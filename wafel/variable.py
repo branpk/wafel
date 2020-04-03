@@ -9,6 +9,7 @@ import functools
 from wafel.util import *
 from wafel.core import DataPath, Timeline, Game, spec_get_concrete_type, Slot
 from wafel.object_type import ObjectType
+from wafel.script import Scripts
 
 
 ObjectId = int
@@ -93,6 +94,7 @@ class VariableSemantics(Enum):
   ANGLE = auto()
   FLAG = auto()
   MARIO_ACTION = auto()
+  SCRIPT = auto()
 
 
 class VariableDataType(Enum):
@@ -108,6 +110,7 @@ class VariableDataType(Enum):
   F32 = auto()
   F64 = auto()
   VEC3F = auto()
+  OTHER = auto()
 
   @staticmethod
   def from_spec(game: Game, type_: dict) -> 'VariableDataType':
@@ -332,6 +335,23 @@ class _FlagVariable(Variable):
     )
 
 
+class ScriptVariable(Variable):
+  def __init__(self, game: Game, scripts: Scripts) -> None:
+    super().__init__(
+      VariableId('wafel-script'),
+      VariableGroup('Scripting'),
+      'script',
+      game,
+      VariableSemantics.SCRIPT,
+      False,
+      VariableDataType.OTHER,
+    )
+    self.scripts = scripts
+
+  def get(self, timeline: Timeline, frame: int) -> object:
+    return self.scripts.get(frame).source
+
+
 class VariableSpec:
   def __init__(self) -> None:
     pass
@@ -383,6 +403,12 @@ class Variables:
 
   def group(self, group: VariableGroup) -> List[Variable]:
     return [var for var in self if var.group.contains(group)]
+
+  def add(self, variable: Variable) -> None:
+    if variable.id in self.variables_by_id:
+      self.variables.remove(self.variables_by_id[variable.id])
+    self.variables.append(variable)
+    self.variables_by_id[variable.id] = variable
 
 
 def _all_variables(game: Game) -> Variables:
