@@ -101,6 +101,9 @@ def render_tabs(
       continue
     tab = matching[0]
 
+    ig.set_next_window_size(*ig.get_content_region_max(), ig.ONCE)
+    ig.set_next_window_position(*ig.get_window_position(), ig.ONCE)
+
     ig.push_style_color(ig.COLOR_WINDOW_BACKGROUND, 0.06, 0.06, 0.06, 0.94)
     _, opened = ig.begin(
       tab.label + '##window-' + tab.id,
