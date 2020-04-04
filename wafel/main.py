@@ -251,16 +251,8 @@ class View:
 
     def play_button(label: str, direction: int) -> None:
       disabled = play_direction.value == direction
-      if disabled:
-        ig.push_style_var(ig.STYLE_ALPHA, 0.5)
-        ig.push_style_color(ig.COLOR_BUTTON_HOVERED, *ig.get_style().colors[ig.COLOR_BUTTON])
-        ig.push_style_color(ig.COLOR_BUTTON_ACTIVE, *ig.get_style().colors[ig.COLOR_BUTTON])
-      if ig.button(label):
+      if ig.disableable_button(label, enabled=play_direction.value != direction):
         play_direction.value = direction
-      if disabled:
-        ig.pop_style_color()
-        ig.pop_style_color()
-        ig.pop_style_var()
 
     play_button('<|', -1)
     ig.same_line()

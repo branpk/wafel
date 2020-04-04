@@ -160,3 +160,16 @@ def get_clipboard_length() -> int:
 def set_clipboard_length(length: int) -> None:
   global _clipboard_length
   _clipboard_length = length
+
+def disableable_button(*args, **kwargs):
+  disabled = not kwargs.pop('enabled')
+  if disabled:
+    ig.push_style_var(ig.STYLE_ALPHA, 0.5)
+    ig.push_style_color(ig.COLOR_BUTTON_HOVERED, *ig.get_style().colors[ig.COLOR_BUTTON])
+    ig.push_style_color(ig.COLOR_BUTTON_ACTIVE, *ig.get_style().colors[ig.COLOR_BUTTON])
+  result = ig.button(*args, **kwargs)
+  if disabled:
+    ig.pop_style_color()
+    ig.pop_style_color()
+    ig.pop_style_var()
+  return result

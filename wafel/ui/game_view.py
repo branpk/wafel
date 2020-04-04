@@ -73,6 +73,13 @@ def angle_to_direction(pitch: float, yaw: float) -> Vec3f:
   )
 
 
+def direction_to_angle(dir: Vec3f) -> Tuple[float, float]:
+  xz = math.sqrt(dir[0] * dir[0] + dir[2] * dir[2])
+  pitch = math.atan2(dir[1], xz)
+  yaw = math.atan2(dir[0], dir[2])
+  return pitch, yaw
+
+
 def get_viewport(framebuffer_size: Tuple[int, int]) -> cg.Viewport:
   window_pos = tuple(map(int, ig.get_window_position()))
   window_size = tuple(map(int, ig.get_window_size()))
@@ -199,6 +206,7 @@ def use_rotational_camera(
   yaw = use_state('yaw', 0.0)
   zoom = use_state('zoom', 0.0)
   prev_frame_time = use_state_with('prev-frame-time', time.time)
+  lock_to_in_game = use_state('lock-to-in-game', False)
 
   delta_time = time.time() - prev_frame_time.value
   prev_frame_time.value = time.time()
@@ -206,10 +214,33 @@ def use_rotational_camera(
   drag_amount = mouse_state.get_drag_amount()
   pitch.value -= drag_amount[1] / 200
   yaw.value -= drag_amount[0] / 200
-  zoom.value += mouse_state.get_wheel_amount() / 5
+  wheel_amount = mouse_state.get_wheel_amount()
+  zoom.value += wheel_amount / 5
   zoom.value = min(zoom.value, 7.0)
 
-  target_pos = get_mario_pos(model) if target.value is None else target.value
+  mario_pos = get_mario_pos(model)
+  target_pos = mario_pos if target.value is None else target.value
+
+  fov_y = math.radians(45)
+
+  if drag_amount != (0.0, 0.0) or wheel_amount != 0.0:
+    lock_to_in_game.value = False
+
+  if lock_to_in_game.value:
+    target_pos = cast(Vec3f, model.get('gLakituState.focus'))
+    target.value = target_pos
+    camera_pos = cast(Vec3f, model.get('gLakituState.pos'))
+    dpos = (
+      target_pos[0] - camera_pos[0],
+      target_pos[1] - camera_pos[1],
+      target_pos[2] - camera_pos[2],
+    )
+    pitch.value, yaw.value = direction_to_angle(dpos)
+    offset = math.sqrt(sum(c ** 2 for c in dpos))
+    if offset > 0.001:
+      zoom.value = math.log(offset / 1500, 0.5)
+    fov_y = math.radians(cast(float, model.get('sFOVState.fov')))
+
   offset = 1500 * math.pow(0.5, zoom.value)
   face_direction = angle_to_direction(pitch.value, yaw.value)
 
@@ -221,7 +252,7 @@ def use_rotational_camera(
     if ig.is_key_down(glfw.KEY_LEFT_SHIFT): move[1] -= 1
     if ig.is_key_down(ord('A')): move[2] -= 1
     if ig.is_key_down(ord('D')): move[2] += 1
-  if move != [0.0, 0.0, 0.0] or target.value is not None:
+  if move != [0.0, 0.0, 0.0] or (target.value is not None and not lock_to_in_game.value):
     mag = math.sqrt(sum(c ** 2 for c in move))
     if mag > 1:
       move = [c / mag for c in move]
@@ -244,11 +275,15 @@ def use_rotational_camera(
       target_pos[2] + target_vel.value[2],
     )
     target_pos = target.value
+    lock_to_in_game.value = False
 
-  if target.value is not None:
-    if ig.button('Center'):
-      target.value = None
-      target_vel.value = None
+  if ig.disableable_button('Center', enabled=target.value is not None):
+    target.value = None
+    target_vel.value = None
+    lock_to_in_game.value = False
+  ig.same_line()
+  if ig.disableable_button('In game', enabled=not lock_to_in_game.value):
+    lock_to_in_game.value = True
 
   camera_pos = (
     target_pos[0] - offset * face_direction[0],
@@ -261,8 +296,8 @@ def use_rotational_camera(
   camera.target = cg.vec3(*target_pos)
   camera.pitch = pitch.value
   camera.yaw = yaw.value
-  camera.fov_y = math.radians(45)
-  if target.value is not None:
+  camera.fov_y = fov_y
+  if target.value is not None and not lock_to_in_game.value:
     camera.render_target = True # TODO: Should be a scene config
 
   return camera
@@ -311,18 +346,17 @@ def render_game_view_in_game(
 
   camera = use_rotational_camera(framebuffer_size, model)
 
-  # TODO: Move below to graphics.py
-
   # Invalidate frame to ensure no rendering state gets copied to other slots
   prev_frame = max(model.selected_frame - 1, 0)
   with model.timeline.request_base(prev_frame, invalidate=True) as slot:
-    # DataPath.compile(model.lib, 'gOverrideCamera.enabled').set(state, True)
-    # DataPath.compile(model.lib, 'gOverrideCamera.pos[0]').set(state, camera.pos.x)
-    # DataPath.compile(model.lib, 'gOverrideCamera.pos[1]').set(state, camera.pos.y)
-    # DataPath.compile(model.lib, 'gOverrideCamera.pos[2]').set(state, camera.pos.z)
-    # DataPath.compile(model.lib, 'gOverrideCamera.focus[0]').set(state, camera.target.x)
-    # DataPath.compile(model.lib, 'gOverrideCamera.focus[1]').set(state, camera.target.y)
-    # DataPath.compile(model.lib, 'gOverrideCamera.focus[2]').set(state, camera.target.z)
+    # TODO: Override fov (so that it stays at 45 when not in in-game mode)
+    model.game.path('gOverrideCamera.enabled').set(slot, True)
+    model.game.path('gOverrideCamera.pos[0]').set(slot, camera.pos.x)
+    model.game.path('gOverrideCamera.pos[1]').set(slot, camera.pos.y)
+    model.game.path('gOverrideCamera.pos[2]').set(slot, camera.pos.z)
+    model.game.path('gOverrideCamera.focus[0]').set(slot, camera.target.x)
+    model.game.path('gOverrideCamera.focus[1]').set(slot, camera.target.y)
+    model.game.path('gOverrideCamera.focus[2]').set(slot, camera.target.z)
 
     sm64_update_and_render = model.game.memory.symbol('sm64_update_and_render').absolute
     cg.update_and_render(get_viewport(framebuffer_size), sm64_update_and_render)
