@@ -97,6 +97,9 @@ def truncate_str(s: str, max_length: int, end: str = '') -> str:
   else:
     return s
 
+# Since id is a common variable name
+py_id = id
+
 
 __all__ = [
   'log',
@@ -114,4 +117,5 @@ __all__ = [
   'Maybe',
   'format_align',
   'truncate_str',
+  'py_id',
 ]

@@ -41,7 +41,9 @@ def _render_text(
   )
 
   ig.push_item_width(size[0])
-  _, input = ig.input_text('##text-edit', dcast(str, formatter.output(value)), 32)
+  value_text = dcast(str, formatter.output(value))
+  buffer_size = len(value_text) + ig.get_clipboard_length() + 1000
+  _, input = ig.input_text('##text-edit', value_text, buffer_size)
   ig.pop_item_width()
 
   if not initial_focus.value:

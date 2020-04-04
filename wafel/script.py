@@ -36,9 +36,16 @@ class ScriptedSegment:
     ]
 
 
+@dataclass
+class ScriptVariable:
+  name: str
+  value: object
+
+
 class Scripts:
   def __init__(self) -> None:
     self._segments = [ScriptedSegment(0, None, Script(''))]
+    self._variables: List[ScriptVariable] = []
     self._on_change_callbacks: List[Callable[[int], None]] = []
 
   def on_change(self, callback: Callable[[int], None]) -> None:
@@ -100,6 +107,44 @@ class Scripts:
       return
     self.delete_segment(segment, merge_upward=True)
 
+  # TODO: Better way to determine if a script uses a variable
+  def _find_earliest_frame_by_text(self, *text_opts: str) -> Optional[int]:
+    return min(
+      (
+        seg.frame_start
+          for seg in self.segments
+            if any(text in seg.script.source for text in text_opts)
+      ),
+      default = None,
+    )
+
+  def _invalidate_by_text(self, *text_opts: str) -> None:
+    frame = self._find_earliest_frame_by_text(*text_opts)
+    if frame is not None:
+      self._notify(frame)
+
+  @property
+  def variables(self) -> Iterable[ScriptVariable]:
+    return self._variables
+
+  def set_variable_name(self, variable: ScriptVariable, name: str) -> None:
+    if variable.name != name:
+      variable.name = name
+      self._invalidate_by_text(variable.name, name)
+
+  def set_variable_value(self, variable: ScriptVariable, value: object) -> None:
+    if variable.value != value:
+      variable.value = value
+      self._invalidate_by_text(variable.name)
+
+  def create_variable(self, name: str, value: object) -> None:
+    self._variables.append(ScriptVariable(name, value))
+    self._invalidate_by_text(name)
+
+  def delete_variable(self, variable: ScriptVariable) -> None:
+    self._variables.remove(variable)
+    self._invalidate_by_text(variable.name)
+
 
 def to_int(value: object) -> int:
   assert isinstance(value, int) or isinstance(value, float)
@@ -138,9 +183,13 @@ class ScriptController(Controller):
   def run_script(self, game: Game, frame: int, slot: Slot, script: Script) -> None:
     # TODO: Error handling
     # TODO: Redirect stdout/stderr
+    # TODO: Decide whether variables should be global or local
 
-    script_globals = dict(self.get_globals(game, frame, slot))
+    script_globals = self.get_globals(game, frame, slot)
     script_locals: dict = {}
+
+    for variable in self.scripts.variables:
+      script_globals[variable.name] = variable.value
 
     try:
       exec(script.source, script_globals, script_locals)

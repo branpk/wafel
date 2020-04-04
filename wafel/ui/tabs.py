@@ -15,7 +15,7 @@ class TabInfo:
 def render_tabs(
   id: str,
   tabs: List[TabInfo],
-  open_tab_index: Optional[int],
+  open_tab_index: Optional[int] = None,
 ) -> Tuple[Optional[int], Optional[int]]:
   ig.push_id(id)
   ig.columns(2)

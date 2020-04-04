@@ -323,7 +323,9 @@ class VariableExplorer:
     ig.end_child()
 
 
-  def render_script_tab(self) -> None:
+  def render_script_segments_tab(self, id: str) -> None:
+    ig.push_id(id)
+
     scripts = self.model.scripts
 
     ig.dummy(1, 5)
@@ -345,7 +347,7 @@ class VariableExplorer:
 
     segments = list(scripts.segments)
     for i, segment in enumerate(segments):
-      ig.push_id('segment-' + str(id(segment)))
+      ig.push_id('segment-' + str(py_id(segment)))
 
       clicked, _ = ig.selectable(
         frame_ranges[i] + '##frame-range',
@@ -386,6 +388,64 @@ class VariableExplorer:
         pending_source.value = None
 
       ig.pop_id()
+
+    ig.pop_id()
+
+
+  def render_script_variables_tab(self, id: str) -> None:
+    ig.push_id(id)
+
+    scripts = self.model.scripts
+
+    for variable in list(scripts.variables):
+      ig.push_id('var_' + str(py_id(variable)))
+
+      def validate_name(name: str) -> str:
+        for var in scripts.variables:
+          if var is not variable and var.name == name:
+            raise Exception
+        return name
+
+      def validate_value(source: str) -> object:
+        value = eval(source)
+        if not isinstance(value, int) and not isinstance(value, float):
+          raise Exception
+        return value
+
+      new_name = ui.render_input_text_with_error('##name', variable.name, 128, 150, validate_name)
+      ig.same_line()
+      new_value = ui.render_input_text_with_error('##value', str(variable.value), 128, 100, validate_value)
+
+      if new_name is not None:
+        scripts.set_variable_name(variable, new_name.value)
+      if new_value is not None:
+        scripts.set_variable_value(variable, new_value.value)
+
+      ig.same_line()
+      if ig.button('Delete'):
+        scripts.delete_variable(variable)
+
+      ig.pop_id()
+
+    next_suffix = use_state('next-suffix', 1)
+    if ig.button('New'):
+      while any(var.name == 'V' + str(next_suffix.value) for var in scripts.variables):
+        next_suffix.value += 1
+      name = 'V' + str(next_suffix.value)
+      next_suffix.value += 1
+      scripts.create_variable(name, 0)
+
+    ig.pop_id()
+
+
+  def render_script_tab(self) -> None:
+    ui.render_tabs(
+      'tabs',
+      [
+        ui.TabInfo('segments', 'Scripts', False, self.render_script_segments_tab),
+        ui.TabInfo('variables', 'Variables', False, self.render_script_variables_tab),
+      ]
+    )
 
 
   def render_frame_log_tab(self) -> None:
