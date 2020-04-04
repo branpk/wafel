@@ -277,12 +277,12 @@ def use_rotational_camera(
     target_pos = target.value
     lock_to_in_game.value = False
 
-  if ig.disableable_button('Center', enabled=target.value is not None):
+  if ig.disableable_button('Lock to Mario', enabled=target.value is not None):
     target.value = None
     target_vel.value = None
     lock_to_in_game.value = False
   ig.same_line()
-  if ig.disableable_button('In game', enabled=not lock_to_in_game.value):
+  if ig.disableable_button('Lakitu', enabled=not lock_to_in_game.value):
     lock_to_in_game.value = True
 
   camera_pos = (
@@ -441,9 +441,8 @@ def render_game_view_birds_eye(
     )
     camera_xz = target.value
 
-  if target.value is not None:
-    if ig.button('Center'):
-      target.value = None
+  if ig.disableable_button('Lock to Mario', enabled=target.value is not None):
+    target.value = None
 
   # Camera y
 

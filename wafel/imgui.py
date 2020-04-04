@@ -146,8 +146,7 @@ def global_keyboard_capture() -> bool:
   return not ig.get_io().want_capture_keyboard or ig.is_mouse_down()
 
 def global_mouse_capture() -> bool:
-  if not ig.is_window_focused(): return False
-  return _frames_without_modal >= 2
+  return ig.is_window_focused(ig.FOCUS_ROOT_AND_CHILD_WINDOWS) and _frames_without_modal >= 2
 
 def global_input_capture() -> bool:
   return global_keyboard_capture()
