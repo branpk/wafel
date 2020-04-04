@@ -1,5 +1,6 @@
 from typing import *
 import random
+import sys
 
 import wafel.imgui as ig
 import wafel.ui as ui
@@ -253,8 +254,6 @@ def test_bindings(id: str) -> None:
   ig.pop_id()
 
 
-DEFAULT_TEST = test_bindings
-
 TESTS = [
   test_joystick_control,
   test_object_slots,
@@ -272,7 +271,16 @@ TESTS = [
 def render_tests(id: str) -> None:
   ig.push_id(id)
 
-  test_index = use_state('_current-test', TESTS.index(DEFAULT_TEST))
+  if len(sys.argv) > 1:
+    default_test_name = sys.argv[1]
+    default_test_name = default_test_name.replace('-', '_')
+    if not default_test_name.startswith('test_'):
+      default_test_name = 'test_' + default_test_name
+    default_test = globals()[default_test_name]
+  else:
+    default_test = TESTS[0]
+
+  test_index = use_state('_current-test', TESTS.index(default_test))
   ig.columns(2)
 
   ig.set_column_width(-1, 220)

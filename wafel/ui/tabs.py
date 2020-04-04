@@ -12,10 +12,12 @@ class TabInfo:
   closable: bool
   render: Callable[[str], None]
 
+
 def render_tabs(
   id: str,
   tabs: List[TabInfo],
   open_tab_index: Optional[int] = None,
+  allow_windowing = False,
 ) -> Tuple[Optional[int], Optional[int]]:
   ig.push_id(id)
   ig.columns(2)
@@ -38,6 +40,10 @@ def render_tabs(
     selected_tab_index.value = open_tab_index
     selected_tab_id.value = tabs[open_tab_index].id
 
+  windowed_tabs = use_state('windowed-tabs', cast(Set[str], set())).value
+
+  # TODO: Change selected tab if windowed
+
   # Handle deletion/insertion
   if selected_tab_index.value >= len(tabs):
     selected_tab_index.value = len(tabs) - 1
@@ -50,6 +56,9 @@ def render_tabs(
 
   ig.begin_child('tabs')
   for i, tab in enumerate(tabs):
+    if tab.id in windowed_tabs:
+      continue
+
     _, selected = ig.selectable(
       tab.label + '##tab-' + tab.id,
       selected_tab_id.value == tab.id,
@@ -58,24 +67,51 @@ def render_tabs(
       selected_tab_index.value = i
       selected_tab_id.value = tab.id
 
-    if tab.closable:
-      if ig.is_item_hovered() and ig.is_mouse_clicked(2):
-        closed_tab = i
+    if tab.closable and ig.is_item_hovered() and ig.is_mouse_clicked(2):
+      closed_tab = i
+
+    if allow_windowing or tab.closable:
       if ig.begin_popup_context_item(f'##ctx-{tab.id}'):
-        if ig.selectable('Close')[0]:
+        if allow_windowing and ig.selectable('Pop out')[0]:
+          windowed_tabs.add(tab.id)
+        if tab.closable and ig.selectable('Close')[0]:
           closed_tab = i
         ig.end_popup_context_item()
+
   ig.end_child()
 
   ig.next_column()
 
   ig.begin_child('content', flags=ig.WINDOW_HORIZONTAL_SCROLLING_BAR)
-  tabs[selected_tab_index.value].render(selected_tab_id.value) # type: ignore
+  tab = tabs[selected_tab_index.value]
+  if tab.id not in windowed_tabs:
+    tab.render(tab.id) # type: ignore
   ig.end_child()
 
   ig.columns(1)
-  ig.pop_id()
 
+  for tab_id in set(windowed_tabs):
+    matching = [tab for tab in tabs if tab.id == tab_id]
+    if len(matching) == 0:
+      windowed_tabs.remove(tab.id)
+      continue
+    tab = matching[0]
+
+    ig.push_style_color(ig.COLOR_WINDOW_BACKGROUND, 0.06, 0.06, 0.06, 0.94)
+    # TODO: Some way to preserve local state between windowed and unwindowed
+    _, opened = ig.begin(
+      tab.label + '##window-' + tab.id,
+      closable = True,
+      flags = ig.WINDOW_HORIZONTAL_SCROLLING_BAR,
+    )
+    tab.render(tab.id) # type: ignore
+    ig.end()
+    ig.pop_style_color()
+
+    if not opened:
+      windowed_tabs.remove(tab.id)
+
+  ig.pop_id()
   return (
     None if open_tab_index == selected_tab_index.value else selected_tab_index.value,
     closed_tab,

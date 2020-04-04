@@ -8,16 +8,25 @@ import wafel.config as config
 
 _stack: List[Tuple[str, Any]] = []
 _frames_without_modal: int = 0
+_id_stack: List[str] = []
+
+def _push_id(args: Tuple[object, ...]) -> None:
+  if len(args) > 0 and isinstance(args[0], str):
+    _id_stack.append(args[0])
+  else:
+    _id_stack.append('')
 
 def _unconditional_begin_call(name: str) -> Any:
   ig_func = getattr(ig, name)
   def func(*args, **kwargs):
     _stack.append((name, (args, kwargs)))
+    _push_id(args)
     return ig_func(*args, **kwargs)
   return func
 
 def _begin_child(*args, **kwargs):
   _stack.append(('begin_child', (args, kwargs)))
+  _push_id(args)
   fixed_args = list(args)
   fixed_args[0] = str(ig.get_id(fixed_args[0]))
   return ig.begin_child(*fixed_args, **kwargs)
@@ -28,6 +37,7 @@ def _conditional_begin_call(name: str) -> Any:
     result = ig_func(*args, **kwargs)
     if result:
       _stack.append((name, (args, kwargs)))
+      _push_id(args)
     return result
   return func
 
@@ -36,6 +46,7 @@ def _begin_popup_modal(*args, **kwargs):
   result = ig.begin_popup_modal(*args, **kwargs)
   if result[0]:
     _stack.append(('begin_popup_modal', (args, kwargs)))
+    _push_id(args)
     _frames_without_modal = 0
   return result
 
@@ -59,6 +70,7 @@ def _end_call(name: str) -> Any:
         log.error(' ', item[0], *item[1])
       assert False, 'Expected ' + matching
     _stack.pop()
+    _id_stack.pop()
     ig_func()
 
   return func
@@ -115,6 +127,7 @@ def global_keyboard_capture() -> bool:
   return not ig.get_io().want_capture_keyboard or ig.is_mouse_down()
 
 def global_mouse_capture() -> bool:
+  if not ig.is_window_focused(): return False
   return _frames_without_modal >= 2
 
 def global_input_capture() -> bool:

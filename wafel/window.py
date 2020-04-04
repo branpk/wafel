@@ -36,7 +36,8 @@ def _render_window(window, ig_renderer, render: Callable[[str], None]) -> None:
   ig.begin(
     'Main',
     False,
-    ig.WINDOW_NO_SAVED_SETTINGS | ig.WINDOW_NO_RESIZE | ig.WINDOW_NO_TITLE_BAR | ig.WINDOW_MENU_BAR,
+    ig.WINDOW_NO_SAVED_SETTINGS | ig.WINDOW_NO_RESIZE | ig.WINDOW_NO_TITLE_BAR | ig.WINDOW_MENU_BAR |
+      ig.WINDOW_NO_BRING_TO_FRONT_ON_FOCUS,
   )
   render('root')
   ig.end()

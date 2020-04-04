@@ -544,6 +544,7 @@ class VariableExplorer:
           for tab in self.open_tabs
       ],
       open_tab_index,
+      allow_windowing = True,
     )
     if open_tab is not None:
       self.current_tab = self.open_tabs[open_tab]
