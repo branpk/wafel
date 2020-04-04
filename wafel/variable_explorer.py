@@ -24,6 +24,10 @@ class TabId:
   object_id: Optional[ObjectId] = None
   surface: Optional[int] = None
 
+  @property
+  def id(self) -> str:
+    return 'tab-' + '-'.join(map(str, self.__dict__.values()))
+
 
 FIXED_TABS = [
   TabId('Input'),
@@ -536,7 +540,7 @@ class VariableExplorer:
       'tabs',
       [
         ui.TabInfo(
-          id = f'tab-{hash(tab)}',
+          id = tab.id,
           label = self.get_tab_label(tab),
           closable = tab not in FIXED_TABS,
           render = render_tab(tab),

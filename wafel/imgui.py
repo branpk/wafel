@@ -10,34 +10,47 @@ _stack: List[Tuple[str, Any]] = []
 _frames_without_modal: int = 0
 _id_stack: List[str] = []
 
-def _push_id(args: Tuple[object, ...]) -> None:
+def get_id_stack() -> Tuple[str, ...]:
+  return tuple(_id_stack)
+
+def _push_logical_id(args: Tuple[object, ...]) -> None:
   if len(args) > 0 and isinstance(args[0], str):
-    _id_stack.append(args[0])
+    if '##' in args[0]:
+      _id_stack.append(args[0].split('##')[-1])
+    else:
+      _id_stack.append(args[0])
   else:
     _id_stack.append('')
 
+def _should_push_id(name: str) -> bool:
+  return name.startswith('begin') or name == 'push_id'
+
 def _unconditional_begin_call(name: str) -> Any:
+  push_id = _should_push_id(name)
   ig_func = getattr(ig, name)
   def func(*args, **kwargs):
     _stack.append((name, (args, kwargs)))
-    _push_id(args)
+    if push_id:
+      _push_logical_id(args)
     return ig_func(*args, **kwargs)
   return func
 
 def _begin_child(*args, **kwargs):
   _stack.append(('begin_child', (args, kwargs)))
-  _push_id(args)
+  _push_logical_id(args)
   fixed_args = list(args)
   fixed_args[0] = str(ig.get_id(fixed_args[0]))
   return ig.begin_child(*fixed_args, **kwargs)
 
 def _conditional_begin_call(name: str) -> Any:
+  push_id = _should_push_id(name)
   ig_func = getattr(ig, name)
   def func(*args, **kwargs):
     result = ig_func(*args, **kwargs)
     if result:
       _stack.append((name, (args, kwargs)))
-      _push_id(args)
+      if push_id:
+        _push_logical_id(args)
     return result
   return func
 
@@ -46,9 +59,12 @@ def _begin_popup_modal(*args, **kwargs):
   result = ig.begin_popup_modal(*args, **kwargs)
   if result[0]:
     _stack.append(('begin_popup_modal', (args, kwargs)))
-    _push_id(args)
+    _push_logical_id(args)
     _frames_without_modal = 0
   return result
+
+def _should_pop_id(name: str) -> bool:
+  return name.startswith('end') or name == 'pop_id'
 
 def _end_call(name: str) -> Any:
   if name.startswith('end'):
@@ -64,13 +80,16 @@ def _end_call(name: str) -> Any:
     name = 'end_popup'
   ig_func = getattr(ig, name)
 
+  pop_id = _should_pop_id(name)
+
   def func():
     if len(_stack) == 0 or _stack[-1][0] != matching:
       for item in _stack:
         log.error(' ', item[0], *item[1])
       assert False, 'Expected ' + matching
     _stack.pop()
-    _id_stack.pop()
+    if pop_id:
+      _id_stack.pop()
     ig_func()
 
   return func

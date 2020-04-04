@@ -2,7 +2,8 @@ from typing import *
 from dataclasses import dataclass
 
 import wafel.imgui as ig
-from wafel.local_state import use_state, use_state_with
+from wafel.local_state import use_state, use_state_with, push_local_state_rebase, \
+  pop_local_state_rebase, get_local_state_id_stack
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,7 @@ def render_tabs(
   allow_windowing = False,
 ) -> Tuple[Optional[int], Optional[int]]:
   ig.push_id(id)
+  root_id = get_local_state_id_stack()
   ig.columns(2)
 
   closed_tab = None
@@ -85,7 +87,9 @@ def render_tabs(
   ig.begin_child('content', flags=ig.WINDOW_HORIZONTAL_SCROLLING_BAR)
   tab = tabs[selected_tab_index.value]
   if tab.id not in windowed_tabs:
+    push_local_state_rebase(('rebase-tabs',) + root_id)
     tab.render(tab.id) # type: ignore
+    pop_local_state_rebase()
   ig.end_child()
 
   ig.columns(1)
@@ -98,13 +102,14 @@ def render_tabs(
     tab = matching[0]
 
     ig.push_style_color(ig.COLOR_WINDOW_BACKGROUND, 0.06, 0.06, 0.06, 0.94)
-    # TODO: Some way to preserve local state between windowed and unwindowed
     _, opened = ig.begin(
       tab.label + '##window-' + tab.id,
       closable = True,
       flags = ig.WINDOW_HORIZONTAL_SCROLLING_BAR,
     )
+    push_local_state_rebase(('rebase-tabs',) + root_id)
     tab.render(tab.id) # type: ignore
+    pop_local_state_rebase()
     ig.end()
     ig.pop_style_color()
 
