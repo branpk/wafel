@@ -10,7 +10,6 @@ class DataCache:
   def __init__(self) -> None:
     self.rows: Dict[int, Dict[object, object]] = {}
     self.max_num_rows = 200
-    self.warned = False
 
   def path_key(self, path: DataPath) -> Optional[object]:
     type_ = path.end_type
@@ -19,9 +18,6 @@ class DataCache:
     elif type_['kind'] == 'pointer':
       return (path.edges, 'pointer')
     else:
-      if not self.warned:
-        log.warn('Cache could not save:', type_)
-        self.warned = True
       return None
 
   def get(self, frame: int, path: DataPath) -> Optional[object]:
