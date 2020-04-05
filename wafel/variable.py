@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import *
 from abc import abstractmethod
 from dataclasses import dataclass, field
-import json
+import pickle
+from wafel.util import *
 
 
 @dataclass(frozen=True)
@@ -24,11 +25,11 @@ class Variable:
     return Variable(self.name, **args)
 
   def to_bytes(self) -> bytes:
-    return json.dumps(self.__dict__).encode('utf-8')
+    return pickle.dumps(self)
 
   @staticmethod
   def from_bytes(b: bytes) -> Variable:
-    return Variable(**json.loads(b.decode('utf-8')))
+    return dcast(Variable, pickle.loads(b))
 
   def __hash__(self) -> int:
     return self._hash

@@ -106,6 +106,7 @@ class VariableExplorer:
       return [
         var.at(object=tab.object, object_type=object_type)
           for var in self.model.data_variables.group('Object')
+            if self.model.data_variables[var].label is not None
       ]
 
     elif tab.surface is not None:
@@ -116,6 +117,7 @@ class VariableExplorer:
       return [
         var.at(surface=tab.surface)
           for var in self.model.data_variables.group('Surface')
+            if self.model.data_variables[var].label is not None
       ]
 
     else:
@@ -129,8 +131,7 @@ class VariableExplorer:
     label_width = 80,
     value_width = 80,
   ) -> None:
-    frame = self.model.selected_frame
-    value = self.model.get(frame, variable)
+    value = self.model.get(variable)
 
     changed_data, clear_edit = ui.render_labeled_variable(
       f'var-{hash((tab, variable))}',
@@ -138,16 +139,14 @@ class VariableExplorer:
       variable,
       value,
       EmptyFormatter() if value is None else self.formatters[variable],
-      self.model.is_edited(frame, variable),
+      self.model.edited(variable),
       label_width = label_width,
       value_width = value_width,
     )
-
     if changed_data is not None:
-      self.model.edit(frame, variable, changed_data.value)
-
+      self.model.set(variable, changed_data.value)
     if clear_edit:
-      self.model.reset(variable.at(frame=frame))
+      self.model.reset(variable)
 
 
   def render_stick_control(self, id: str, tab: TabId) -> None:
@@ -308,7 +307,12 @@ class VariableExplorer:
       ig.set_column_width(i, w)
 
     def render_button(button: str) -> None:
-      self.render_variable(tab, Variable('input-button-' + button), 10, 25)
+      self.render_variable(
+        tab,
+        Variable('input-button-' + button).at(frame=self.model.selected_frame),
+        10,
+        25,
+      )
     ig.dummy(1, 3)
     render_button('a'); ig.same_line(); render_button('b'); ig.same_line(); render_button('z')
     ig.dummy(1, 5)
@@ -333,7 +337,11 @@ class VariableExplorer:
     scripts = self.model.scripts
 
     ig.dummy(1, 5)
-    self.render_variable(self.current_tab, Variable('wafel-script'), value_width=200)
+    self.render_variable(
+      self.current_tab,
+      Variable('wafel-script').at(frame=self.model.selected_frame),
+      value_width=200,
+    )
     ig.dummy(1, 10)
 
     if ig.button('Split'):
@@ -508,7 +516,7 @@ class VariableExplorer:
   def render_variable_tab(self, tab: TabId) -> None:
     variables = self.get_variables_for_tab(tab)
     for variable in variables:
-      self.render_variable(tab, variable)
+      self.render_variable(tab, variable.at(frame=self.model.selected_frame))
 
 
   def render_tab_contents(self, id: str, tab: TabId) -> None:

@@ -174,11 +174,9 @@ class Model:
       else:
         # TODO: Possibly move to DataVariables?
         object_slot: Optional[int] = data.args.get('object')
-        object_type: Optional[ObjectType] = data.args.get('object_type')
         if object_slot is not None:
-          actual_object_type = self.get_object_type(frame, object_slot)
-          if actual_object_type is None or \
-              (object_type is not None and actual_object_type != object_type):
+          object_type: Optional[ObjectType] = data.args.get('object_type')
+          if object_type is not None and self.get_object_type(frame, object_slot) != object_type:
             return None
 
         surface_index: Optional[int] = data.args.get('surface')
@@ -208,11 +206,9 @@ class Model:
       frame: int = variable.args['frame']
 
       object_slot: Optional[int] = variable.args.get('object')
-      object_type: Optional[ObjectType] = variable.args.get('object_type')
       if object_slot is not None:
-        actual_object_type = self.get_object_type(frame, object_slot)
-        if actual_object_type is None or \
-            (object_type is not None and actual_object_type != object_type):
+        object_type: Optional[ObjectType] = variable.args.get('object_type')
+        if object_type is not None and self.get_object_type(frame, object_slot) != object_type:
           return
 
       surface_index: Optional[int] = variable.args.get('surface')
@@ -223,17 +219,11 @@ class Model:
 
       self.edits.edit(variable, value)
 
-  def edit(self, frame: int, variable: Variable, data: object) -> None:
-    self.set(variable.at(frame=frame), data)
-
   def edited(self, variable: Variable) -> bool:
     if variable.name == 'wafel-script':
       return self.scripts.is_edited(variable.args['frame'])
     else:
       return self.edits.edited(variable)
-
-  def is_edited(self, frame: int, variable: Variable) -> bool:
-    return self.edited(variable.at(frame=frame))
 
   def reset(self, variable: Variable) -> None:
     if variable.name == 'wafel-script':
