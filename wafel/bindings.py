@@ -169,12 +169,38 @@ def check_input(input: Optional[Input]) -> float:
     return 1.0 if ig.is_key_down(input.key) else 0.0
 
 
+DEFAULT_BINDINGS = bindings_to_json({
+  'n64-^': KeyboardKey(glfw.KEY_I),
+  'n64-<': KeyboardKey(glfw.KEY_J),
+  'n64->': KeyboardKey(glfw.KEY_L),
+  'n64-v': KeyboardKey(glfw.KEY_K),
+  'n64-A': KeyboardKey(glfw.KEY_Z),
+  'n64-B': KeyboardKey(glfw.KEY_X),
+  'n64-Z': KeyboardKey(glfw.KEY_C),
+  'frame-prev-fast': KeyboardKey(glfw.KEY_PAGE_UP),
+  'frame-prev': KeyboardKey(glfw.KEY_UP),
+  'frame-prev-alt': KeyboardKey(glfw.KEY_LEFT),
+  'frame-next': KeyboardKey(glfw.KEY_DOWN),
+  'frame-next-alt': KeyboardKey(glfw.KEY_RIGHT),
+  'frame-next-fast': KeyboardKey(glfw.KEY_PAGE_DOWN),
+  '3d-camera-move-f': KeyboardKey(glfw.KEY_W),
+  '3d-camera-move-b': KeyboardKey(glfw.KEY_S),
+  '3d-camera-move-l': KeyboardKey(glfw.KEY_A),
+  '3d-camera-move-r': KeyboardKey(glfw.KEY_D),
+  '3d-camera-move-u': KeyboardKey(glfw.KEY_SPACE),
+  '3d-camera-move-d': KeyboardKey(glfw.KEY_LEFT_SHIFT),
+  'playback-play': KeyboardKey(glfw.KEY_ENTER),
+  'playback-rewind': KeyboardKey(glfw.KEY_APOSTROPHE),
+  'playback-speed-up': KeyboardKey(glfw.KEY_EQUAL),
+  'playback-slow-down': KeyboardKey(glfw.KEY_MINUS),
+})
+
 bindings: Bindings
 
 
 def init() -> None:
   global bindings
-  bindings = bindings_from_json(config.settings.get('bindings') or {})
+  bindings = bindings_from_json(config.settings.get('bindings') or DEFAULT_BINDINGS)
 
 
 def begin_binding_form() -> None:
@@ -246,12 +272,12 @@ def render_controller_settings(id: str) -> None:
 
   binding_button('n64-A', 'A')
   binding_button('n64-B', 'B')
-  binding_button('n64-S', 'S')
+  binding_button('n64-Z', 'Z')
 
   ig.dummy(1, 5)
-  binding_button('n64-Z', 'Z')
   binding_button('n64-L', 'L')
   binding_button('n64-R', 'R')
+  binding_button('n64-S', 'S')
 
   ig.dummy(1, 5)
   cardinal('')

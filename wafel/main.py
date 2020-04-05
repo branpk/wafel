@@ -241,8 +241,8 @@ class View:
 
 
     play_direction = use_state('play-direction', 0)
-    speed_options = [0.05, 0.25, 0.5, 1, 2, 4, 20]
-    speed_index = use_state('speed-options', 2)
+    speed_options = [0.05, 0.25, 0.5, 1, 2, 4]
+    speed_index = use_state('speed-options', 3)
 
     self.model.play_speed = play_direction.value * speed_options[speed_index.value]
 
