@@ -51,9 +51,8 @@ class Edits:
       self._frames.append([])
     return self._frames[frame]
 
-  def edit(self, frame: int, variable: Union[Variable, str], value: Any) -> None:
-    if isinstance(variable, str):
-      variable = Variable(variable)
+  def edit(self, variable: Variable, value: object) -> None:
+    frame: int = variable.args['frame']
     edits = self.get_edits(frame)
     for edit in list(edits):
       if edit.variable == variable:
@@ -61,10 +60,12 @@ class Edits:
     edits.append(Edit(variable, value))
     self._invalidate(frame)
 
-  def is_edited(self, frame: int, variable: Variable) -> bool:
+  def edited(self, variable: Variable) -> bool:
+    frame: int = variable.args['frame']
     return any(edit.variable == variable for edit in self.get_edits(frame))
 
-  def reset(self, frame: int, variable: Variable) -> None:
+  def reset(self, variable: Variable) -> None:
+    frame: int = variable.args['frame']
     edits = self.get_edits(frame)
     for edit in list(edits):
       if edit.variable == variable:

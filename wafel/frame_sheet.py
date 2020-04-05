@@ -1,41 +1,63 @@
 import sys
 from typing import *
+from abc import abstractmethod
+from dataclasses import dataclass, field
 
 import wafel.imgui as ig
-from wafel.object_type import ObjectType
-from wafel.variable import Variable
-from wafel.core import DataPath
-from wafel.model import Model
+from wafel.variable import Variable, VariableAccessor
+from wafel.variable_display import VariableDisplayer
 from wafel.variable_format import Formatters, EmptyFormatter, VariableFormatter
 import wafel.ui as ui
 from wafel.util import *
 
 
+class FrameSequence(Protocol):
+  @property
+  @abstractmethod
+  def selected_frame(self) -> int: ...
+
+  @abstractmethod
+  def set_selected_frame(self, frame: int) -> None: ...
+
+  @abstractmethod
+  def on_selected_frame_change(self, callback: Callable[[int], None]) -> None: ...
+
+  @property
+  @abstractmethod
+  def max_frame(self) -> int: ...
+
+  @abstractmethod
+  def extend_to_frame(self, frame: int) -> None: ...
+
+  @abstractmethod
+  def insert_frame(self, frame: int) -> None: ...
+
+  @abstractmethod
+  def delete_frame(self, frame: int) -> None: ...
+
+  @abstractmethod
+  def set_hotspot(self, name: str, frame: int) -> None: ...
+
+
+@dataclass(unsafe_hash=True)
 class FrameSheetColumn:
-  def __init__(
-    self,
-    variable: Variable,
-    object_type: Optional[ObjectType] = None,
-  ) -> None:
-    self.variable = variable
-    # TODO: Semantic object ids should make object_type unnecessary
-    self.object_type = object_type
-    self.width = 100 # TODO: Remove
-
-  def __eq__(self, other) -> bool:
-    return isinstance(other, FrameSheetColumn) and \
-      self.variable == other.variable and \
-      self.object_type == other.object_type
-
-  def __hash__(self) -> int:
-    return hash((self.variable, self.object_type))
+  variable: Variable
+  width: int = field(default=100, hash=False, compare=False)
 
 
 class FrameSheet:
 
-  def __init__(self, model: Model, formatters: Formatters) -> None:
+  def __init__(
+    self,
+    sequence: FrameSequence,
+    accessor: VariableAccessor,
+    displayer: VariableDisplayer,
+    formatters: Formatters,
+  ) -> None:
     super().__init__()
-    self.model = model
+    self.sequence = sequence
+    self.accessor = accessor
+    self.displayer = displayer
     self.formatters = formatters
 
     self.columns: List[FrameSheetColumn] = []
@@ -47,7 +69,7 @@ class FrameSheet:
     self.scroll_to_frame: Optional[int] = None
     def selected_frame_changed(frame: int) -> None:
       self.scroll_to_frame = frame
-    self.model.on_selected_frame_change(selected_frame_changed)
+    self.sequence.on_selected_frame_change(selected_frame_changed)
 
 
   def _insert_variable(self, index: int, variable: Variable) -> None:
@@ -56,14 +78,7 @@ class FrameSheet:
       return
 
     object_slot = variable.args.get('object')
-    if object_slot is None:
-      column = FrameSheetColumn(variable)
-    else:
-      # TODO: This should use the state that the drop began
-      column = FrameSheetColumn(
-        variable,
-        self.model.get_object_type(self.model.selected_frame, object_slot),
-      )
+    column = FrameSheetColumn(variable)
     if column not in self.columns:
       self.next_columns.insert(index, column)
 
@@ -90,64 +105,6 @@ class FrameSheet:
     del self.next_columns[index]
 
 
-  def get_row_count(self) -> int:
-    return len(self.model.edits)
-
-
-  def get_header_label(self, column: FrameSheetColumn) -> str:
-    variable = column.variable
-    object_slot = variable.args.get('object')
-    surface_index = variable.args.get('surface')
-
-    if object_slot is not None:
-      if column.object_type is None:
-        return str(object_slot) + '\n' + self.model.label(variable)
-      else:
-        return str(object_slot) + ' - ' + column.object_type.name + '\n' + self.model.label(variable)
-
-    elif surface_index is not None:
-      return f'Surface {surface_index}\n{self.model.label(variable)}'
-
-    else:
-      return self.model.label(variable)
-
-
-  def get_data(self, frame: int, column: FrameSheetColumn) -> Maybe[object]:
-    variable = column.variable
-
-    object_slot = variable.args.get('object')
-    if column.object_type is not None and object_slot is not None:
-      row_object_type = self.model.get_object_type(frame, object_slot)
-      if row_object_type != column.object_type:
-        return None
-
-    surface_index = variable.args.get('surface')
-    if surface_index is not None:
-      num_surfaces = dcast(int, self.model.timeline.get(frame, 'gSurfacesAllocated'))
-      if surface_index >= num_surfaces:
-        return None
-
-    return Just(self.model.get(frame, variable))
-
-
-  def set_data(self, frame: int, column: FrameSheetColumn, data: Any) -> None:
-    variable = column.variable
-
-    object_slot = variable.args.get('object')
-    if column.object_type is not None and object_slot is not None:
-      row_object_type = self.model.get_object_type(frame, object_slot)
-      if row_object_type != column.object_type:
-        raise Exception # TODO: Error message
-
-    surface_index = variable.args.get('surface')
-    if surface_index is not None:
-      num_surfaces = dcast(int, self.model.timeline.get(frame, 'gSurfacesAllocated'))
-      if surface_index >= num_surfaces:
-        raise Exception
-
-    self.model.edit(frame, variable, data)
-
-
   def get_content_width(self) -> int:
     if len(self.columns) == 0:
       return 0
@@ -155,7 +112,7 @@ class FrameSheet:
 
 
   def render_headers(self) -> None:
-    header_labels = [self.get_header_label(column) for column in self.columns]
+    header_labels = [self.displayer.column_header(column.variable) for column in self.columns]
     header_lines = max((len(label.split('\n')) for label in header_labels), default=1)
 
     ig.columns(len(self.columns) + 1)
@@ -208,30 +165,27 @@ class FrameSheet:
 
 
   def render_cell(self, frame: int, column: FrameSheetColumn) -> None:
-    data: object
-    formatter: VariableFormatter
-    maybe_data = self.get_data(frame, column)
-    if maybe_data is None:
-      data = None
-      formatter = EmptyFormatter()
-    else:
-      data = maybe_data.value
-      formatter = EmptyFormatter() if data is None else self.formatters[column.variable]
+    cell_variable = column.variable.at(frame=frame)
+
+    data = self.accessor.get(cell_variable)
+    formatter = EmptyFormatter() if data is None else self.formatters[cell_variable]
 
     changed_data, clear_edit, selected = ui.render_variable_cell(
       f'cell-{frame}-{hash(column)}',
       data,
       formatter,
       (column.width, self.row_height),
-      self.model.is_edited(frame, column.variable),
-      frame == self.model.selected_frame,
+      self.accessor.edited(cell_variable),
+      frame == self.sequence.selected_frame,
     )
     if changed_data is not None:
-      self.set_data(frame, column, changed_data.value)
+      self.accessor.set(cell_variable, changed_data.value)
     if clear_edit:
-      self.model.reset(frame, column.variable)
+      self.accessor.reset(cell_variable)
     if selected:
-      self.model.selected_frame = frame
+      self.sequence.set_selected_frame(frame)
+
+    return None
 
 
   def render_rows(self) -> None:
@@ -242,7 +196,7 @@ class FrameSheet:
     max_row = int(ig.get_scroll_y() + ig.get_window_height()) // self.row_height
     # max_row = min(max_row, self.get_row_count() - 1)
 
-    self.model.edits.extend(max_row + 100)
+    self.sequence.extend_to_frame(max_row + 100)
 
     timeline_operations: List[Callable[[], None]] = []
 
@@ -254,24 +208,24 @@ class FrameSheet:
         ig.set_column_width(-1, self.frame_column_width)
       clicked, _ = ig.selectable(
         str(row) + '##fs-framenum-' + str(id(self)) + '-' + str(row),
-        row == self.model.selected_frame,
+        row == self.sequence.selected_frame,
         height=self.row_height - 8, # TODO: Compute padding
       )
       if clicked:
-        self.model.selected_frame = row
+        self.sequence.set_selected_frame(row)
 
       if ig.begin_popup_context_item('##fs-framenumctx-' + str(id(self)) + '-' + str(row)):
         if ig.selectable('Insert above')[0]:
           def op(row):
-            return lambda: self.model.insert_frame(row)
+            return lambda: self.sequence.insert_frame(row)
           timeline_operations.append(op(row))
         if ig.selectable('Insert below')[0]:
           def op(row):
-            return lambda: self.model.insert_frame(row + 1)
+            return lambda: self.sequence.insert_frame(row + 1)
           timeline_operations.append(op(row))
         if ig.selectable('Delete')[0]:
           def op(row):
-            return lambda: self.model.delete_frame(row)
+            return lambda: self.sequence.delete_frame(row)
           timeline_operations.append(op(row))
         ig.end_popup_context_item()
 
@@ -284,7 +238,7 @@ class FrameSheet:
         ig.next_column()
       ig.separator()
 
-    ig.set_cursor_pos((0, self.get_row_count() * self.row_height))
+    ig.set_cursor_pos((0, (self.sequence.max_frame + 1) * self.row_height))
 
     ig.columns(1)
 
@@ -314,7 +268,7 @@ class FrameSheet:
     ig.begin_child('Frame Sheet Rows', flags=ig.WINDOW_ALWAYS_VERTICAL_SCROLLBAR)
     self.update_scolling()
     min_frame = int(ig.get_scroll_y()) // self.row_height - 1
-    self.model.timeline.set_hotspot('frame-sheet-min', max(min_frame, 0))
+    self.sequence.set_hotspot('frame-sheet-min', max(min_frame, 0))
     self.render_rows()
     ig.end_child()
 

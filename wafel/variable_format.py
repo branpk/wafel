@@ -88,7 +88,7 @@ class StringFormatter(TextFormatter):
 class Formatters:
   def __init__(self, data_variables: DataVariables) -> None:
     self.data_variables = data_variables
-    self.overrides: Dict[Variable, VariableFormatter] = {}
+    self.overrides: Dict[str, VariableFormatter] = {}
 
   def _get_default(self, variable: Variable) -> VariableFormatter:
     if variable.name == 'wafel-script':
@@ -107,7 +107,7 @@ class Formatters:
     raise NotImplementedError(variable, type_)
 
   def __getitem__(self, variable: Variable) -> VariableFormatter:
-    return self.overrides.get(variable) or self._get_default(variable)
+    return self.overrides.get(variable.name) or self._get_default(variable)
 
   def __setitem__(self, variable: Variable, formatter: VariableFormatter) -> None:
-    self.overrides[variable] = formatter
+    self.overrides[variable.name] = formatter

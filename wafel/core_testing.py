@@ -237,10 +237,10 @@ class TestController(Controller):
     self._stick[frame] = stick
     self.notify(frame)
 
-  def apply(self, game: Game, frame: int, slot: Slot) -> None:
-    stick_x, stick_y = self.get_stick(frame)
-    game.path('controller.stick_x').set(slot, stick_x)
-    game.path('controller.stick_y').set(slot, stick_y)
+  def apply(self, state: SlotState) -> None:
+    stick_x, stick_y = self.get_stick(state.frame)
+    state.game.path('controller.stick_x').set(state.slot, stick_x)
+    state.game.path('controller.stick_y').set(state.slot, stick_y)
 
 
 # game = TestGame().remove_type_vars()

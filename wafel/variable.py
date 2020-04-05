@@ -48,20 +48,22 @@ class ReadOnlyVariableError(Exception):
 
 
 class VariableAccessor(Protocol):
-  @staticmethod
-  def sequence(*accessors: VariableAccessor) -> VariableAccessor:
-    return AccessorSequence(accessors)
-
   @abstractmethod
   def get(self, variable: Variable) -> object: ...
 
   @abstractmethod
   def set(self, variable: Variable, value: object) -> None: ...
 
+  def edited(self, variable: Variable) -> bool:
+    return False
 
-class AccessorSequence(VariableAccessor):
+  def reset(self, variable: Variable) -> None:
+    pass
+
+
+class VariableAccessorSequence(VariableAccessor):
   def __init__(self, accessors: Iterable[VariableAccessor]) -> None:
-    self.accessors = accessors
+    self.accessors = tuple(accessors)
 
   def get(self, variable: Variable) -> object:
     for accessor in self.accessors:
@@ -85,4 +87,5 @@ __all__ = [
   'UndefinedVariableError',
   'ReadOnlyVariableError',
   'VariableAccessor',
+  'VariableAccessorSequence',
 ]

@@ -22,7 +22,6 @@ from wafel.variable import Variable
 from wafel.variable_explorer import VariableExplorer
 from wafel.variable_format import Formatters, EnumFormatter
 from wafel.format_m64 import load_m64, save_m64
-from wafel.format_wafi import load_wafi, save_wafi
 from wafel.tas_metadata import TasMetadata
 from wafel.window import open_window_and_run
 import wafel.ui as ui
@@ -93,8 +92,6 @@ class View:
     if self.file is None:
       metadata = TasMetadata('us', 'Untitled TAS', 'Unknown author(s)', 'Made using Wafel')
       edits = Edits()
-    elif self.file.type == 'wafi':
-      metadata, edits = load_wafi(self.file.filename)
     elif self.file.type == 'm64':
       metadata, edits = load_m64(self.file.filename)
     else:
@@ -122,7 +119,9 @@ class View:
     self.formatters = Formatters(self.model.data_variables)
     self.formatters[Variable('mario-action')] = EnumFormatter(self.model.action_names)
 
-    self.frame_sheets: List[FrameSheet] = [FrameSheet(self.model, self.formatters)]
+    self.frame_sheets: List[FrameSheet] = [
+      FrameSheet(self.model, self.model, self.model, self.formatters),
+    ]
     for var_name in DEFAULT_FRAME_SHEET_VARS:
       self.frame_sheets[0].append_variable(Variable(var_name))
 
@@ -133,9 +132,7 @@ class View:
 
   def save(self) -> None:
     assert self.file is not None
-    if self.file.type == 'wafi':
-      save_wafi(self.file.filename, self.metadata, self.model.edits)
-    elif self.file.type == 'm64':
+    if self.file.type == 'm64':
       save_m64(self.file.filename, self.metadata, self.model.edits)
     else:
       raise NotImplementedError(self.file.type)
@@ -448,11 +445,11 @@ class View:
     if any(controller_button_values.values()):
       buttons_enabled.value = True
     for variable_name, new_button_value in controller_button_values.items():
-      variable = Variable(variable_name)
+      variable = Variable(variable_name).at(frame=self.model.selected_frame)
       button_value = self.model.get(variable)
       if buttons_enabled.value and button_value != new_button_value:
         input_edit.value = True
-        self.model.edits.edit(self.model.selected_frame, variable, new_button_value)
+        self.model.edits.edit(variable, new_button_value)
         input_edit.value = False
 
     controller_stick_values = {
@@ -462,11 +459,11 @@ class View:
     if any(controller_stick_values.values()):
       stick_enabled.value = True
     for variable_name, new_stick_value in controller_stick_values.items():
-      variable = Variable(variable_name)
+      variable = Variable(variable_name).at(frame=self.model.selected_frame)
       stick_value = self.model.get(variable)
       if stick_enabled.value and stick_value != new_stick_value:
         input_edit.value = True
-        self.model.edits.edit(self.model.selected_frame, variable, new_stick_value)
+        self.model.edits.edit(variable, new_stick_value)
         input_edit.value = False
 
     ig.pop_id()

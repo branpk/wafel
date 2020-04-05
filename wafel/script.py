@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import traceback
 from dataclasses import dataclass
 
-from wafel.core import Slot, Game, DataPath, Controller
+from wafel.core import State, SlotState, Game, DataPath, Controller
 from wafel.util import *
 from wafel.sm64_util import *
 
@@ -161,18 +161,18 @@ class ScriptController(Controller):
     self.scripts = scripts
     self.scripts.on_change(self.weak_notify)
 
-  def get_globals(self, game: Game, frame: int, slot: Slot) -> dict:
+  def get_globals(self, state: State) -> dict:
     def from_int_yaw(int_yaw: object, int_mag: object = 32.0) -> Tuple[int, int]:
-      return intended_to_raw_impl(
-        game, slot, to_int(int_yaw), to_float(int_mag), relative_to=0
+      return intended_to_raw(
+        state, to_int(int_yaw), to_float(int_mag), relative_to=0
       )
 
     def from_dyaw(dyaw: object, int_mag: object = 32.0) -> Tuple[int, int]:
       # TODO: How to get this accurately?
-      active_face_yaw = dcast(int, game.path('gMarioState[].faceAngle[1]').get(slot))
+      active_face_yaw = dcast(int, state.get('gMarioState[].faceAngle[1]'))
       int_yaw = active_face_yaw + to_int(dyaw)
-      return intended_to_raw_impl(
-        game, slot, int_yaw, to_float(int_mag), relative_to=active_face_yaw
+      return intended_to_raw(
+        state, int_yaw, to_float(int_mag), relative_to=active_face_yaw
       )
 
     return {
@@ -180,12 +180,12 @@ class ScriptController(Controller):
       'from_dyaw': from_dyaw,
     }
 
-  def run_script(self, game: Game, frame: int, slot: Slot, script: Script) -> None:
+  def run_script(self, state: SlotState, script: Script) -> None:
     # TODO: Error handling
     # TODO: Redirect stdout/stderr
     # TODO: Decide whether variables should be global or local
 
-    script_globals = self.get_globals(game, frame, slot)
+    script_globals = self.get_globals(state)
     script_locals: dict = {}
 
     for variable in self.scripts.variables:
@@ -209,16 +209,16 @@ class ScriptController(Controller):
       if stick_x is not None:
         assert isinstance(stick_x, float) or isinstance(stick_x, int)
         stick_x = min(max(int(stick_x), -128), 127)
-        game.path('gControllerPads[0].stick_x').set(slot, stick_x)
+        state.game.path('gControllerPads[0].stick_x').set(state.slot, stick_x)
 
       if stick_y is not None:
         assert isinstance(stick_y, float) or isinstance(stick_y, int)
         stick_y = min(max(int(stick_y), -128), 127)
-        game.path('gControllerPads[0].stick_y').set(slot, stick_y)
+        state.game.path('gControllerPads[0].stick_y').set(state.slot, stick_y)
 
     except:
       log.warn('Script error:\n' + traceback.format_exc())
 
-  def apply(self, game: Game, frame: int, slot: Slot) -> None:
-    script = self.scripts.get(frame)
-    self.run_script(game, frame, slot, script)
+  def apply(self, state: SlotState) -> None:
+    script = self.scripts.get(state.frame)
+    self.run_script(state, script)

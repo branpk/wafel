@@ -179,17 +179,17 @@ def trace_ray(model: Model, ray: Tuple[Vec3f, Vec3f]) -> Optional[int]:
   memory = model.game.memory
   assert isinstance(memory, AccessibleMemory)
 
-  with model.timeline.request_base(model.selected_frame) as slot:
-    surface_pool_addr = dcast(Address, model.game.path('sSurfacePool').get(slot))
+  with model.timeline.request_base(model.selected_frame) as state:
+    surface_pool_addr = dcast(Address, state.get('sSurfacePool'))
     if surface_pool_addr.is_null:
       return None
 
     index = cg.trace_ray_to_surface(
       cg.vec3(*ray[0]),
       cg.vec3(*ray[1]),
-      memory.address_to_location(slot, surface_pool_addr),
+      memory.address_to_location(state.slot, surface_pool_addr),
       memory.data_spec['types']['struct']['Surface']['size'],
-      model.game.path('gSurfacesAllocated').get(slot),
+      state.get('gSurfacesAllocated'),
       get_field_offset,
     )
 
@@ -349,15 +349,15 @@ def render_game_view_in_game(
 
   # Invalidate frame to ensure no rendering state gets copied to other slots
   prev_frame = max(model.selected_frame - 1, 0)
-  with model.timeline.request_base(prev_frame, invalidate=True) as slot:
+  with model.timeline.request_base(prev_frame, invalidate=True) as state:
     # TODO: Override fov (so that it stays at 45 when not in in-game mode)
-    model.game.path('gOverrideCamera.enabled').set(slot, True)
-    model.game.path('gOverrideCamera.pos[0]').set(slot, camera.pos.x)
-    model.game.path('gOverrideCamera.pos[1]').set(slot, camera.pos.y)
-    model.game.path('gOverrideCamera.pos[2]').set(slot, camera.pos.z)
-    model.game.path('gOverrideCamera.focus[0]').set(slot, camera.target.x)
-    model.game.path('gOverrideCamera.focus[1]').set(slot, camera.target.y)
-    model.game.path('gOverrideCamera.focus[2]').set(slot, camera.target.z)
+    model.game.path('gOverrideCamera.enabled').set(state.slot, True)
+    model.game.path('gOverrideCamera.pos[0]').set(state.slot, camera.pos.x)
+    model.game.path('gOverrideCamera.pos[1]').set(state.slot, camera.pos.y)
+    model.game.path('gOverrideCamera.pos[2]').set(state.slot, camera.pos.z)
+    model.game.path('gOverrideCamera.focus[0]').set(state.slot, camera.target.x)
+    model.game.path('gOverrideCamera.focus[1]').set(state.slot, camera.target.y)
+    model.game.path('gOverrideCamera.focus[2]').set(state.slot, camera.target.z)
 
     sm64_update_and_render = model.game.memory.symbol('sm64_update_and_render').absolute
     cg.update_and_render(get_viewport(framebuffer_size), sm64_update_and_render)

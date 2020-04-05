@@ -2,7 +2,7 @@ from typing import *
 from dataclasses import dataclass
 
 from wafel.variable import Variable, UndefinedVariableError
-from wafel.core import Timeline, DataPath, Slot, Game
+from wafel.core import Timeline, DataPath, State, SlotState, Game
 
 
 def data(*args, **kwargs):
@@ -125,37 +125,26 @@ class DataVariables:
 
     return path
 
-  def get(self, timeline: Timeline, variable: Variable) -> object:
+  def get(self, state: State, variable: Variable) -> object:
     spec = self[variable]
     path = self.get_path(variable)
 
-    value = timeline.get(variable.args['frame'], path)
+    value = state.get(path)
     if spec.flag is None or value is None:
       return value
 
     assert isinstance(value, int)
     return (value & spec.flag) != 0
 
-  def get_raw(self, slot: Slot, variable: Variable) -> object:
-    spec = self[variable]
-    path = self.get_path(variable)
-
-    value = path.get(slot)
-    if spec.flag is None or value is None:
-      return value
-
-    assert isinstance(value, int)
-    return (value & spec.flag) != 0
-
-  def set_raw(self, slot: Slot, variable: Variable, value: object) -> None:
+  def set_raw(self, state: SlotState, variable: Variable, value: object) -> None:
     spec = self[variable]
     path = self.get_path(variable)
 
     if spec.flag is None:
-      path.set(slot, value)
+      path.set(state.slot, value)
       return
 
-    flags = path.get(slot)
+    flags = state.get(path)
     if flags is not None:
       assert isinstance(flags, int)
       assert isinstance(value, bool)
@@ -163,4 +152,4 @@ class DataVariables:
         flags |= spec.flag
       else:
         flags &= ~spec.flag
-      path.set(slot, flags)
+      path.set(state.slot, flags)

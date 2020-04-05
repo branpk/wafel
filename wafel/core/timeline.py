@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import *
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 import weakref
 
 from wafel.core.game import Game
-from wafel.core.memory import Slot
+from wafel.core.memory import Slot, Address, VirtualAddress
 from wafel.core.data_path import DataPath
 from wafel.core.slot_manager import SlotManager
 from wafel.core.data_cache import DataCache
@@ -40,7 +41,7 @@ class Controller(ABC):
     return notify
 
   @abstractmethod
-  def apply(self, game: Game, frame: int, slot: Slot) -> None: ...
+  def apply(self, state: SlotState) -> None: ...
 
 
 class ControllerSequence(Controller):
@@ -51,24 +52,28 @@ class ControllerSequence(Controller):
     for controller in self.controllers:
       controller.on_change(callback)
 
-  def apply(self, game: Game, frame: int, slot: Slot) -> None:
+  def apply(self, state: SlotState) -> None:
     for controller in self.controllers:
-      controller.apply(game, frame, slot)
+      controller.apply(state)
 
 
 class BaseSlotContextManager:
   def __init__(
     self,
+    game: Game,
+    frame: int,
     slot_manager: SlotManager,
     slot: ContextManager[Slot],
     invalidate: bool,
   ) -> None:
+    self.game = game
+    self.frame = frame
     self.slot_manager = slot_manager
     self.slot = slot
     self.invalidate = invalidate
 
-  def __enter__(self) -> Slot:
-    return self.slot.__enter__()
+  def __enter__(self) -> SlotState:
+    return SlotState(self.game, self.frame, self.slot.__enter__())
 
   def __exit__(self, exc_type, exc_value, traceback) -> None:
     if self.invalidate:
@@ -102,7 +107,8 @@ class Timeline:
   def run_frame(self, frame: int) -> None:
     if frame != -1:
       self.game.run_frame()
-    self.controller.apply(self.game, frame + 1, self.game.base_slot)
+    state = SlotState(self.game, frame + 1, self.game.base_slot)
+    self.controller.apply(state)
 
   def get(self, frame: int, path: Union[DataPath, str]) -> object:
     if isinstance(path, str):
@@ -119,8 +125,13 @@ class Timeline:
       self.data_cache.put(frame, path, value)
     return value
 
-  def request_base(self, frame: int, invalidate=False) -> ContextManager[Slot]:
+  def __getitem__(self, frame: int) -> State:
+    return TimelineFrameState(self, frame)
+
+  def request_base(self, frame: int, invalidate=False) -> ContextManager[SlotState]:
     return BaseSlotContextManager(
+      self.game,
+      frame,
       self.slot_manager,
       self.slot_manager.request_frame(frame, require_base=True),
       invalidate,
@@ -143,4 +154,67 @@ class Timeline:
     self.controller.on_change(callback)
 
 
-__all__ = ['Controller', 'Timeline']
+class State(ABC):
+  @property
+  @abstractmethod
+  def game(self) -> Game: ...
+
+  @property
+  @abstractmethod
+  def frame(self) -> int: ...
+
+  @abstractmethod
+  def get(self, path: Union[DataPath, str]) -> object: ...
+
+
+class SlotState(State):
+  def __init__(self, game: Game, frame: int, slot: Slot) -> None:
+    self._game = game
+    self._frame = frame
+    self._slot = slot
+
+  @property
+  def game(self) -> Game:
+    return self._game
+
+  @property
+  def frame(self) -> int:
+    return self._frame
+
+  @property
+  def slot(self) -> Slot:
+    return self._slot
+
+  def get_addr(self, path: Union[DataPath, str]) -> Address[VirtualAddress]:
+    if isinstance(path, str):
+      path = self.game.path(path)
+    return path.get_addr(self.slot)
+
+  def get(self, path: Union[DataPath, str]) -> object:
+    if isinstance(path, str):
+      path = self.game.path(path)
+    return path.get(self.slot)
+
+
+class TimelineFrameState(State):
+  def __init__(self, timeline: Timeline, frame: int) -> None:
+    self._timeline = timeline
+    self._frame = frame
+
+  @property
+  def game(self) -> Game:
+    return self._timeline.game
+
+  @property
+  def frame(self) -> int:
+    return self._frame
+
+  @property
+  def timeline(self) -> Timeline:
+    return self._timeline
+
+  def get(self, path: Union[DataPath, str]) -> object:
+    return self.timeline.get(self.frame, path)
+
+
+__all__ = ['Controller', 'Timeline', 'State', 'SlotState']

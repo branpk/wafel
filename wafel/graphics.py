@@ -84,21 +84,21 @@ def build_scene(
   log.timer.begin('so')
   memory = model.game.memory
   assert isinstance(memory, AccessibleMemory)
-  with model.timeline.request_base(model.selected_frame) as slot:
-    surface_pool_addr = dcast(Address, model.game.path('sSurfacePool').get(slot))
+  with model.timeline.request_base(model.selected_frame) as state:
+    surface_pool_addr = dcast(Address, state.get('sSurfacePool'))
     if not surface_pool_addr.is_null:
       cg.scene_add_surfaces(
         scene,
-        memory.address_to_location(slot, surface_pool_addr),
+        memory.address_to_location(state.slot, surface_pool_addr),
         memory.data_spec['types']['struct']['Surface']['size'],
-        dcast(int, model.game.path('gSurfacesAllocated').get(slot)),
+        dcast(int, state.get('gSurfacesAllocated')),
         get_field_offset,
         list(hidden_surfaces),
       )
 
     cg.scene_add_objects(
       scene,
-      memory.address_to_location(slot, model.game.path('gObjectPool').get_addr(slot)),
+      memory.address_to_location(state.slot, state.get_addr('gObjectPool')),
       memory.data_spec['types']['struct']['Object']['size'],
       get_field_offset,
     )

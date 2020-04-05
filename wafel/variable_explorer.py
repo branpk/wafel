@@ -104,7 +104,7 @@ class VariableExplorer:
         return []
 
       return [
-        var.at(object=tab.object)
+        var.at(object=tab.object, object_type=object_type)
           for var in self.model.data_variables.group('Object')
       ]
 
@@ -147,12 +147,12 @@ class VariableExplorer:
       self.model.edit(frame, variable, changed_data.value)
 
     if clear_edit:
-      self.model.reset(frame, variable)
+      self.model.reset(variable.at(frame=frame))
 
 
   def render_stick_control(self, id: str, tab: TabId) -> None:
-    stick_x_var = Variable('input-stick-x')
-    stick_y_var = Variable('input-stick-y')
+    stick_x_var = Variable('input-stick-x').at(frame=self.model.selected_frame)
+    stick_y_var = Variable('input-stick-y').at(frame=self.model.selected_frame)
 
     self.render_variable(tab, stick_x_var, 60, 50)
     self.render_variable(tab, stick_y_var, 60, 50)
@@ -168,8 +168,8 @@ class VariableExplorer:
       new_stick_x = int(0.5 * (new_n[0] + 1) * 255 - 128)
       new_stick_y = int(0.5 * (new_n[1] + 1) * 255 - 128)
 
-      self.model.edits.edit(self.model.selected_frame, stick_x_var, new_stick_x)
-      self.model.edits.edit(self.model.selected_frame, stick_y_var, new_stick_y)
+      self.model.edits.edit(stick_x_var, new_stick_x)
+      self.model.edits.edit(stick_y_var, new_stick_y)
 
 
   def render_intended_stick_control(self, id: str) -> None:
@@ -183,8 +183,8 @@ class VariableExplorer:
     ig.pop_item_width()
     ig.dummy(1, 10)
 
-    stick_x_var = Variable('input-stick-x')
-    stick_y_var = Variable('input-stick-y')
+    stick_x_var = Variable('input-stick-x').at(frame=self.model.selected_frame)
+    stick_y_var = Variable('input-stick-y').at(frame=self.model.selected_frame)
 
     face_yaw = dcast(int, self.model.get(Variable('mario-face-yaw')))
     camera_yaw = dcast(int, self.model.get(Variable('camera-yaw')) or 0)
@@ -271,11 +271,11 @@ class VariableExplorer:
         target_mag = intended_mag
 
       new_raw_stick_x, new_raw_stick_y = intended_to_raw(
-        self.model.timeline, self.model.selected_frame, target_yaw, target_mag, relative_to
+        self.model.timeline[self.model.selected_frame], target_yaw, target_mag, relative_to
       )
 
-      self.model.edits.edit(self.model.selected_frame, stick_x_var, new_raw_stick_x)
-      self.model.edits.edit(self.model.selected_frame, stick_y_var, new_raw_stick_y)
+      self.model.edits.edit(stick_x_var, new_raw_stick_x)
+      self.model.edits.edit(stick_y_var, new_raw_stick_y)
 
     n_a = intended_yaw - up_angle
     n_x = intended_mag / 32 * math.sin(-n_a * math.pi / 0x8000)
@@ -290,11 +290,11 @@ class VariableExplorer:
       new_intended_mag = 32 * math.sqrt(new_n[0]**2 + new_n[1]**2)
 
       new_raw_stick_x, new_raw_stick_y = intended_to_raw(
-        self.model.timeline, self.model.selected_frame, new_intended_yaw, new_intended_mag, relative_to=0
+        self.model.timeline[self.model.selected_frame], new_intended_yaw, new_intended_mag, relative_to=0
       )
 
-      self.model.edits.edit(self.model.selected_frame, stick_x_var, new_raw_stick_x)
-      self.model.edits.edit(self.model.selected_frame, stick_y_var, new_raw_stick_y)
+      self.model.edits.edit(stick_x_var, new_raw_stick_x)
+      self.model.edits.edit(stick_y_var, new_raw_stick_y)
 
 
   def render_input_tab(self, tab: TabId) -> None:

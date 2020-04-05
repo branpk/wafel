@@ -113,11 +113,11 @@ def load_m64(filename: str) -> Tuple[TasMetadata, Edits]:
 
       for variable, flag in INPUT_BUTTON_FLAGS.items():
         if (prev_buttons & flag) != (buttons & flag):
-          edits.edit(frame, variable, bool(buttons & flag))
+          edits.edit(variable.at(frame=frame), bool(buttons & flag))
       if stick_x != prev_stick_x:
-        edits.edit(frame, 'input-stick-x', stick_x)
+        edits.edit(Variable('input-stick-x').at(frame=frame), stick_x)
       if stick_y != prev_stick_y:
-        edits.edit(frame, 'input-stick-y', stick_y)
+        edits.edit(Variable('input-stick-y').at(frame=frame), stick_y)
 
       prev_buttons = buttons
       prev_stick_x = stick_x

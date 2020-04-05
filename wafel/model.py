@@ -9,7 +9,7 @@ import ext_modules.util as c_util
 
 import wafel.config as config
 from wafel.core import Game, Timeline, load_dll_game, Controller, Address, DataPath, \
-  AccessibleMemory, Slot
+  AccessibleMemory, SlotState
 from wafel.variable import Variable
 from wafel.edit import Edits
 from wafel.object_type import ObjectType
@@ -26,9 +26,9 @@ class EditController(Controller):
     self.edits = edits
     self.edits.on_edit(self.weak_notify)
 
-  def apply(self, game: Game, frame: int, slot: Slot) -> None:
-    for edit in self.edits.get_edits(frame):
-      self.data_variables.set_raw(slot, edit.variable, edit.value)
+  def apply(self, state: SlotState) -> None:
+    for edit in self.edits.get_edits(state.frame):
+      self.data_variables.set_raw(state, edit.variable, edit.value)
 
 
 class Model:
@@ -127,18 +127,33 @@ class Model:
     for callback in list(self.selected_frame_callbacks):
       callback(self._selected_frame)
 
+  def set_selected_frame(self, frame: int) -> None:
+    self.selected_frame = frame
+
   def on_selected_frame_change(self, callback: Callable[[int], None]) -> None:
     self.selected_frame_callbacks.append(callback)
 
-  def insert_frame(self, index: int) -> None:
-    self.edits.insert_frame(index)
-    if self.selected_frame >= index:
+  @property
+  def max_frame(self) -> int:
+    return len(self.edits) - 1
+
+  def extend_to_frame(self, frame: int) -> None:
+    return self.edits.extend(frame + 1)
+
+  def insert_frame(self, frame: int) -> None:
+    self.edits.insert_frame(frame)
+    if self.selected_frame >= frame:
       self.selected_frame += 1
 
-  def delete_frame(self, index: int) -> None:
-    self.edits.delete_frame(index)
-    if self.selected_frame > index or self.selected_frame >= len(self.edits):
+  def delete_frame(self, frame: int) -> None:
+    self.edits.delete_frame(frame)
+    if self.selected_frame > frame or self.selected_frame >= len(self.edits):
       self.selected_frame -= 1
+
+  def set_hotspot(self, name: str, frame: int) -> None:
+    self.timeline.set_hotspot(name, frame)
+
+  # TODO: Clean up below / remove old frame parameter methods
 
   @overload
   def get(self, data: Union[str, DataPath, Variable]) -> object:
@@ -150,11 +165,30 @@ class Model:
     if data is None:
       data = frame
       frame = self.selected_frame
+
     if isinstance(data, Variable):
+      if 'frame' in data.args:
+        frame = data.args['frame']
       if data.name == 'wafel-script':
         return self.scripts.get(frame).source
       else:
-        return self.data_variables.get(self.timeline, data.at(frame=frame))
+        # TODO: Possibly move to DataVariables?
+        object_slot: Optional[int] = data.args.get('object')
+        object_type: Optional[ObjectType] = data.args.get('object_type')
+        if object_slot is not None:
+          actual_object_type = self.get_object_type(frame, object_slot)
+          if actual_object_type is None or \
+              (object_type is not None and actual_object_type != object_type):
+            return None
+
+        surface_index: Optional[int] = data.args.get('surface')
+        if surface_index is not None:
+          num_surfaces = dcast(int, self.timeline.get(frame, 'gSurfacesAllocated'))
+          if surface_index >= num_surfaces:
+            return None
+
+        return self.data_variables.get(self.timeline[frame], data)
+
     else:
       return self.timeline.get(frame, data)
 
@@ -167,26 +201,65 @@ class Model:
     assert isinstance(behavior_addr, Address)
     return ObjectType(behavior_addr, self.addr_to_symbol[behavior_addr])
 
-  def edit(self, frame: int, variable: Variable, data: object) -> None:
+  def set(self, variable: Variable, value: object) -> None:
     if variable.name == 'wafel-script':
-      self.scripts.set_frame_source(frame, dcast(str, data))
+      self.scripts.set_frame_source(variable.args['frame'], dcast(str, value))
     else:
-      self.edits.edit(frame, variable, data)
+      frame: int = variable.args['frame']
+
+      object_slot: Optional[int] = variable.args.get('object')
+      object_type: Optional[ObjectType] = variable.args.get('object_type')
+      if object_slot is not None:
+        actual_object_type = self.get_object_type(frame, object_slot)
+        if actual_object_type is None or \
+            (object_type is not None and actual_object_type != object_type):
+          return
+
+      surface_index: Optional[int] = variable.args.get('surface')
+      if surface_index is not None:
+        num_surfaces = dcast(int, self.timeline.get(frame, 'gSurfacesAllocated'))
+        if surface_index >= num_surfaces:
+          return
+
+      self.edits.edit(variable, value)
+
+  def edit(self, frame: int, variable: Variable, data: object) -> None:
+    self.set(variable.at(frame=frame), data)
+
+  def edited(self, variable: Variable) -> bool:
+    if variable.name == 'wafel-script':
+      return self.scripts.is_edited(variable.args['frame'])
+    else:
+      return self.edits.edited(variable)
 
   def is_edited(self, frame: int, variable: Variable) -> bool:
-    if variable.name == 'wafel-script':
-      return self.scripts.is_edited(frame)
-    else:
-      return self.edits.is_edited(frame, variable)
+    return self.edited(variable.at(frame=frame))
 
-  def reset(self, frame: int, variable: Variable) -> None:
+  def reset(self, variable: Variable) -> None:
     if variable.name == 'wafel-script':
-      return self.scripts.reset_frame(frame)
+      return self.scripts.reset_frame(variable.args['frame'])
     else:
-      return self.edits.reset(frame, variable)
+      return self.edits.reset(variable)
 
   def label(self, variable: Variable) -> str:
     if variable.name == 'wafel-script':
       return 'script'
     else:
       return assert_not_none(self.data_variables[variable].label)
+
+  def column_header(self, variable: Variable) -> str:
+    object_slot: Optional[int] = variable.args.get('object')
+    surface_index: Optional[int] = variable.args.get('surface')
+
+    if object_slot is not None:
+      object_type: Optional[ObjectType] = variable.args.get('object_type')
+      if object_type is None:
+        return str(object_slot) + '\n' + self.label(variable)
+      else:
+        return str(object_slot) + ' - ' + object_type.name + '\n' + self.label(variable)
+
+    elif surface_index is not None:
+      return f'Surface {surface_index}\n{self.label(variable)}'
+
+    else:
+      return self.label(variable)
