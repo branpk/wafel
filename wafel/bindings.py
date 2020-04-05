@@ -96,17 +96,22 @@ def get_joysticks_impl() -> List[Tuple[int, str]]:
   return [(j, glfw.get_joystick_guid(j).decode('utf-8')) for j in joysticks]
 
 
-_cached_joysticks: List[Tuple[int, str]]
-_joystick_valid_time = float('-inf')
+def log_joystick_info(joysticks: List[Tuple[int, str]]) -> None:
+  message = 'Detected joysticks:\n'
+  for joystick, id in joysticks:
+    message += f'  {joystick}: {glfw.get_joystick_name(joystick).decode("utf-8")} ({id})\n'
+  log.info(message.strip())
+
+
+_prev_joysticks: Optional[List[Tuple[int, str]]] = None
 
 def get_joysticks() -> List[Tuple[int, str]]:
-  global _cached_joysticks, _joystick_valid_time
-  if time.time() - _joystick_valid_time < 1.0:
-    return _cached_joysticks
-  else:
-    _cached_joysticks = get_joysticks_impl()
-    _joystick_valid_time = time.time()
-    return _cached_joysticks
+  global _prev_joysticks
+  joysticks = get_joysticks_impl()
+  if joysticks != _prev_joysticks:
+    log_joystick_info(joysticks)
+  _prev_joysticks = joysticks
+  return joysticks
 
 
 def get_joysticks_by_id(joystick_id: str) -> List[int]:
