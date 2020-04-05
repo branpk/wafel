@@ -110,7 +110,7 @@ class VariableExplorer:
       ]
 
     elif tab.surface is not None:
-      num_surfaces = dcast(int, self.model.get('gSurfacesAllocated'))
+      num_surfaces = dcast(int, self.model.get(self.model.selected_frame, 'gSurfacesAllocated'))
       if tab.surface >= num_surfaces:
         return []
 
@@ -185,9 +185,9 @@ class VariableExplorer:
     stick_x_var = Variable('input-stick-x').at(frame=self.model.selected_frame)
     stick_y_var = Variable('input-stick-y').at(frame=self.model.selected_frame)
 
-    face_yaw = dcast(int, self.model.get(Variable('mario-face-yaw')))
-    camera_yaw = dcast(int, self.model.get(Variable('camera-yaw')) or 0)
-    squish_timer = dcast(int, self.model.get('gMarioState[].squishTimer'))
+    face_yaw = dcast(int, self.model.get(Variable('mario-face-yaw').at(frame=self.model.selected_frame)))
+    camera_yaw = dcast(int, self.model.get(Variable('camera-yaw').at(frame=self.model.selected_frame)) or 0)
+    squish_timer = dcast(int, self.model.get(self.model.selected_frame, 'gMarioState[].squishTimer'))
     active_face_yaw = face_yaw
 
     events = get_frame_log(self.model.timeline, self.model.selected_frame + 1)

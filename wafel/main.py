@@ -151,8 +151,8 @@ class View:
       use_state('hidden-surfaces', cast(Dict[Tuple[int, int], Set[int]], {})).value
 
     current_area = (
-      dcast(int, self.model.get(Variable('level-num'))),
-      dcast(int, self.model.get(Variable('area-index'))),
+      dcast(int, self.model.get(Variable('level-num').at(frame=self.model.selected_frame))),
+      dcast(int, self.model.get(Variable('area-index').at(frame=self.model.selected_frame))),
     )
     hidden_surfaces = hidden_surfaces_by_area.setdefault(current_area, set())
 

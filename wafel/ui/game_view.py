@@ -96,9 +96,9 @@ def get_viewport(framebuffer_size: Tuple[int, int]) -> cg.Viewport:
 
 def get_mario_pos(model: Model) -> Vec3f:
   return (
-    dcast(float, model.get(Variable('mario-pos-x'))),
-    dcast(float, model.get(Variable('mario-pos-y'))),
-    dcast(float, model.get(Variable('mario-pos-z'))),
+    dcast(float, model.get(Variable('mario-pos-x').at(frame=model.selected_frame))),
+    dcast(float, model.get(Variable('mario-pos-y').at(frame=model.selected_frame))),
+    dcast(float, model.get(Variable('mario-pos-z').at(frame=model.selected_frame))),
   )
 
 
@@ -228,9 +228,9 @@ def use_rotational_camera(
     lock_to_in_game.value = False
 
   if lock_to_in_game.value:
-    target_pos = cast(Vec3f, model.get('gLakituState.focus'))
+    target_pos = cast(Vec3f, model.get(model.selected_frame, 'gLakituState.focus'))
     target.value = target_pos
-    camera_pos = cast(Vec3f, model.get('gLakituState.pos'))
+    camera_pos = cast(Vec3f, model.get(model.selected_frame, 'gLakituState.pos'))
     dpos = (
       target_pos[0] - camera_pos[0],
       target_pos[1] - camera_pos[1],
@@ -240,7 +240,7 @@ def use_rotational_camera(
     offset = math.sqrt(sum(c ** 2 for c in dpos))
     if offset > 0.001:
       zoom.value = math.log(offset / 1500, 0.5)
-    fov_y = math.radians(cast(float, model.get('sFOVState.fov')))
+    fov_y = math.radians(cast(float, model.get(model.selected_frame, 'sFOVState.fov')))
 
   offset = 1500 * math.pow(0.5, zoom.value)
   face_direction = angle_to_direction(pitch.value, yaw.value)

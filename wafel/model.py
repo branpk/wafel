@@ -117,6 +117,8 @@ class Model:
     self.on_selected_frame_change(set_hotspot)
     set_hotspot(self._selected_frame)
 
+  # FrameSequence
+
   @property
   def selected_frame(self) -> int:
     return self._selected_frame
@@ -153,49 +155,46 @@ class Model:
   def set_hotspot(self, name: str, frame: int) -> None:
     self.timeline.set_hotspot(name, frame)
 
-  # TODO: Clean up below / remove old frame parameter methods
+  # VariableAccessor
 
   @overload
-  def get(self, data: Union[str, DataPath, Variable]) -> object:
+  def get(self, frame: int, path: Union[str, DataPath]) -> object:
     ...
   @overload
-  def get(self, frame: int, data: Union[str, DataPath, Variable]) -> object:
+  def get(self, variable: Variable) -> object:
     ...
-  def get(self, frame, data = None):
-    if data is None:
-      data = frame
-      frame = self.selected_frame
-
-    if isinstance(data, Variable):
-      if 'frame' in data.args:
-        frame = data.args['frame']
-      if data.name == 'wafel-script':
+  def get(self, arg1, arg2=None):
+    frame: int
+    if isinstance(arg1, Variable):
+      variable: Variable = arg1
+      frame = variable.args['frame']
+      if variable.name == 'wafel-script':
         return self.scripts.get(frame).source
       else:
         # TODO: Possibly move to DataVariables?
-        object_slot: Optional[int] = data.args.get('object')
+        object_slot: Optional[int] = variable.args.get('object')
         if object_slot is not None:
-          object_type: Optional[ObjectType] = data.args.get('object_type')
+          object_type: Optional[ObjectType] = variable.args.get('object_type')
           if object_type is not None and self.get_object_type(frame, object_slot) != object_type:
             return None
 
-        surface_index: Optional[int] = data.args.get('surface')
+        surface_index: Optional[int] = variable.args.get('surface')
         if surface_index is not None:
           num_surfaces = dcast(int, self.timeline.get(frame, 'gSurfacesAllocated'))
           if surface_index >= num_surfaces:
             return None
 
-        return self.data_variables.get(self.timeline[frame], data)
-
+        return self.data_variables.get(self.timeline[frame], variable)
     else:
-      return self.timeline.get(frame, data)
+      frame = arg1
+      path: DataPath = arg2
+      return self.timeline.get(frame, path)
 
   def get_object_type(self, frame: int, object_slot: int) -> Optional[ObjectType]:
-    active = self.get(frame, Variable('obj-active-flags-active', object=object_slot))
+    active = self.get(Variable('obj-active-flags-active', frame=frame, object=object_slot))
     if not active:
       return None
-
-    behavior_addr = self.get(frame, Variable('obj-behavior-ptr', object=object_slot))
+    behavior_addr = self.get(Variable('obj-behavior-ptr', frame=frame, object=object_slot))
     assert isinstance(behavior_addr, Address)
     return ObjectType(behavior_addr, self.addr_to_symbol[behavior_addr])
 
@@ -230,6 +229,8 @@ class Model:
       return self.scripts.reset_frame(variable.args['frame'])
     else:
       return self.edits.reset(variable)
+
+  # VariableDisplayer
 
   def label(self, variable: Variable) -> str:
     if variable.name == 'wafel-script':
