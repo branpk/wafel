@@ -644,10 +644,10 @@ def run() -> None:
     finally:
       log.timer.end_frame()
 
-      # TODO: Should enable in non-dev mode, but should throttle it
-      if config.dev_mode:
-        summary = log.timer.get_frame_summary()
-        if summary[('frame',)].time >= 100:
-          log.warn('Spike:\n' + '\n'.join(log.timer.format(summary)))
+      # # TODO: Should enable in non-dev mode, but should throttle it
+      # if config.dev_mode:
+      #   summary = log.timer.get_frame_summary()
+      #   if summary[('frame',)].time >= 100:
+      #     log.warn('Spike:\n' + '\n'.join(log.timer.format(summary)))
 
   open_window_and_run(render, maximize=True)

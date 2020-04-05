@@ -19,9 +19,6 @@ class FrameSequence(Protocol):
   @abstractmethod
   def set_selected_frame(self, frame: int) -> None: ...
 
-  @abstractmethod
-  def on_selected_frame_change(self, callback: Callable[[int], None]) -> None: ...
-
   @property
   @abstractmethod
   def max_frame(self) -> int: ...
@@ -66,10 +63,8 @@ class FrameSheet:
     self.row_height = 30
     self.frame_column_width = 60
 
-    self.scroll_to_frame: Optional[int] = None
-    def selected_frame_changed(frame: int) -> None:
-      self.scroll_to_frame = frame
-    self.sequence.on_selected_frame_change(selected_frame_changed)
+    self.prev_selected_frame: Optional[int] = None
+    self.scroll_delta = 0.0
 
 
   def _insert_variable(self, index: int, variable: Variable) -> None:
@@ -191,9 +186,9 @@ class FrameSheet:
   def render_rows(self) -> None:
     ig.columns(len(self.columns) + 1)
 
-    min_row = int(ig.get_scroll_y()) // self.row_height - 1
+    min_row = int(ig.get_scroll_y() + self.scroll_delta) // self.row_height - 1
     min_row = max(min_row, 0)
-    max_row = int(ig.get_scroll_y() + ig.get_window_height()) // self.row_height
+    max_row = int(ig.get_scroll_y() + self.scroll_delta + ig.get_window_height()) // self.row_height
     # max_row = min(max_row, self.get_row_count() - 1)
 
     self.sequence.extend_to_frame(max_row + 100)
@@ -202,7 +197,7 @@ class FrameSheet:
 
     for row in range(min_row, max_row + 1):
       initial_pos = ig.get_cursor_pos()
-      ig.set_cursor_pos((initial_pos[0], row * self.row_height))
+      ig.set_cursor_pos((initial_pos[0], row * self.row_height - self.scroll_delta))
 
       if len(self.columns) > 0:
         ig.set_column_width(-1, self.frame_column_width)
@@ -247,19 +242,28 @@ class FrameSheet:
 
 
   def update_scolling(self) -> None:
-    if self.scroll_to_frame is None:
-      return
+    self.scroll_delta = 0.0
 
-    target_y = self.scroll_to_frame * self.row_height
-    current_min_y = ig.get_scroll_y()
-    current_max_y = ig.get_scroll_y() + ig.get_window_height() - self.row_height
+    if self.sequence.selected_frame == self.prev_selected_frame:
+      return
+    self.prev_selected_frame = self.sequence.selected_frame
+
+    target_y = self.sequence.selected_frame * self.row_height
+    curr_scroll_y = ig.get_scroll_y()
+    current_min_y = curr_scroll_y
+    current_max_y = curr_scroll_y + ig.get_window_height() - self.row_height
 
     if target_y > current_max_y:
-      ig.set_scroll_y(target_y - ig.get_window_height() + self.row_height)
+      new_scroll_y = target_y - ig.get_window_height() + self.row_height
     elif target_y < current_min_y:
-      ig.set_scroll_y(target_y)
+      new_scroll_y = target_y
+    else:
+      return
 
-    self.scroll_to_frame = None
+    ig.set_scroll_y(new_scroll_y)
+
+    # Account for one frame set_scroll_y delay to prevent flickering
+    self.scroll_delta = new_scroll_y - curr_scroll_y
 
 
   def render(self) -> None:
