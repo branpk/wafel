@@ -12,15 +12,11 @@ class Variable:
   args: Dict[str, Any]
   _hash: int
 
-  def __init__(self, name: str, **args) -> None:
+  def __init__(self, name: str, args: Dict[str, Any] = {}, **kwargs) -> None:
     super().__setattr__('name', name)
-    super().__setattr__('args', args)
+    super().__setattr__('args', dict(args))
+    self.args.update(kwargs)
     super().__setattr__('_hash', hash((self.name, tuple(self.args.items()))))
-
-  # FIXME: Remove label property
-  @property
-  def label(self) -> str:
-    return self.name
 
   def at(self, **kwargs) -> Variable:
     args = dict(self.args)

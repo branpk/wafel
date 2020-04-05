@@ -101,15 +101,15 @@ class FrameSheet:
 
     if object_slot is not None:
       if column.object_type is None:
-        return str(object_slot) + '\n' + variable.label
+        return str(object_slot) + '\n' + self.model.label(variable)
       else:
-        return str(object_slot) + ' - ' + column.object_type.name + '\n' + variable.label
+        return str(object_slot) + ' - ' + column.object_type.name + '\n' + self.model.label(variable)
 
     elif surface_index is not None:
-      return f'Surface {surface_index}\n{variable.label}'
+      return f'Surface {surface_index}\n{self.model.label(variable)}'
 
     else:
-      return variable.label
+      return self.model.label(variable)
 
 
   def get_data(self, frame: int, column: FrameSheetColumn) -> Maybe[object]:

@@ -134,7 +134,7 @@ class VariableExplorer:
 
     changed_data, clear_edit = ui.render_labeled_variable(
       f'var-{hash((tab, variable))}',
-      variable.label,
+      self.model.label(variable),
       variable,
       value,
       EmptyFormatter() if value is None else self.formatters[variable],

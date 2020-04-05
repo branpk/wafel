@@ -184,3 +184,9 @@ class Model:
       return self.scripts.reset_frame(frame)
     else:
       return self.edits.reset(frame, variable)
+
+  def label(self, variable: Variable) -> str:
+    if variable.name == 'wafel-script':
+      return 'script'
+    else:
+      return assert_not_none(self.data_variables[variable].label)
