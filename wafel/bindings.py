@@ -19,7 +19,7 @@ KEY_NAMES: Dict[int, str] = {
       .replace('SUBTRACT', 'SUB')
       .replace('GRAVE_ACCENT', 'ACCENT')
       .replace('SCROLL_LOCK', 'SCR_LOCK')
-      .replace('APOSTROPHE', 'APOS')
+      .replace('APOSTROPHE', 'QUOTE')
       .replace('DECIMAL', 'DEC')
       .replace('PRINT_SCREEN', 'PRINT_SCR')
     for var in dir(glfw)
@@ -283,12 +283,21 @@ def render_key_binding_settings(id: str) -> None:
 
   ig.text('3D movement:')
   button_width = 70
-  binding_button('rot-move-f', 'Forward', button_width)
-  binding_button('rot-move-b', 'Back', button_width)
-  binding_button('rot-move-l', 'Left', button_width)
-  binding_button('rot-move-r', 'Right', button_width)
-  binding_button('rot-move-u', 'Up', button_width)
-  binding_button('rot-move-d', 'Down', button_width)
+  binding_button('3d-camera-move-f', 'Forward', button_width)
+  binding_button('3d-camera-move-b', 'Back', button_width)
+  binding_button('3d-camera-move-l', 'Left', button_width)
+  binding_button('3d-camera-move-r', 'Right', button_width)
+  binding_button('3d-camera-move-u', 'Up', button_width)
+  binding_button('3d-camera-move-d', 'Down', button_width)
+
+  ig.dummy(1, 5)
+
+  ig.text('Playback:')
+  button_width = 90
+  binding_button('playback-play', 'Play', button_width)
+  binding_button('playback-rewind', 'Rewind', button_width)
+  binding_button('playback-speed-up', 'Speed up', button_width)
+  binding_button('playback-slow-down', 'Slow down', button_width)
 
   ig.dummy(200, 1)
   ig.pop_id()

@@ -241,7 +241,7 @@ class View:
 
 
     play_direction = use_state('play-direction', 0)
-    speed_options = [0.25, 0.5, 1, 2, 4]
+    speed_options = [0.05, 0.25, 0.5, 1, 2, 4, 20]
     speed_index = use_state('speed-options', 2)
 
     self.model.play_speed = play_direction.value * speed_options[speed_index.value]
@@ -257,6 +257,21 @@ class View:
     ig.same_line()
     play_button('|>', 1)
     ig.same_line()
+
+    if input_pressed('playback-play'):
+      if play_direction.value == 0:
+        play_direction.value = 1
+      else:
+        play_direction.value = 0
+    if input_pressed('playback-rewind'):
+      if play_direction.value == 0:
+        play_direction.value = -1
+      else:
+        play_direction.value = 0
+    if input_pressed('playback-speed-up'):
+      speed_index.value = min(speed_index.value + 1, len(speed_options) - 1)
+    if input_pressed('playback-slow-down'):
+      speed_index.value = max(speed_index.value - 1, 0)
 
     ig.push_item_width(60)
     _, speed_index.value = ig.combo(
@@ -513,10 +528,12 @@ class View:
     else:
       target_fps = 30 * abs(play_speed)
       target_dt = 1 / target_fps
-      while accum_time.value >= target_dt:
+      updates = 0
+      while accum_time.value >= target_dt and updates < 20:
         accum_time.value -= target_dt
         self.model.selected_frame += 1 if play_speed > 0 else -1
         self.handle_controller()
+        updates += 1
 
 
     ig_window_size = ig.get_window_size()
