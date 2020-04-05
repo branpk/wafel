@@ -196,9 +196,6 @@ def begin_binding_form() -> None:
       else:
         listening_for.value = None
 
-    elif ig.is_key_pressed(ig.get_key_index(ig.KEY_ESCAPE)):
-      listening_for.value = None
-
     if input is None:
       waiting_for_release.value = False
 
@@ -282,6 +279,18 @@ def render_key_binding_settings(id: str) -> None:
   binding_button('frame-next-alt', '+1', button_width)
   binding_button('frame-next-fast', '+5', button_width)
 
+  ig.dummy(1, 5)
+
+  ig.text('3D movement:')
+  button_width = 70
+  binding_button('rot-move-f', 'Forward', button_width)
+  binding_button('rot-move-b', 'Back', button_width)
+  binding_button('rot-move-l', 'Left', button_width)
+  binding_button('rot-move-r', 'Right', button_width)
+  binding_button('rot-move-u', 'Up', button_width)
+  binding_button('rot-move-d', 'Down', button_width)
+
+  ig.dummy(200, 1)
   ig.pop_id()
 
 

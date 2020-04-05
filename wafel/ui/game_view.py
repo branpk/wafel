@@ -14,6 +14,7 @@ from wafel.local_state import use_state, use_state_with
 from wafel.graphics import render_game
 from wafel.core import DataPath, Address, AccessibleMemory
 from wafel.variable import Variable
+from wafel.bindings import input_float
 
 
 # TODO: Rename to game_view_overlay. Reduce parameters to minimum (don't require full Model)
@@ -247,12 +248,12 @@ def use_rotational_camera(
 
   move = [0.0, 0.0, 0.0] # forward, up, right
   if ig.global_keyboard_capture():
-    if ig.is_key_down(ord('W')): move[0] += 1
-    if ig.is_key_down(ord('S')): move[0] -= 1
-    if ig.is_key_down(glfw.KEY_SPACE): move[1] += 1
-    if ig.is_key_down(glfw.KEY_LEFT_SHIFT): move[1] -= 1
-    if ig.is_key_down(ord('A')): move[2] -= 1
-    if ig.is_key_down(ord('D')): move[2] += 1
+    move[0] += input_float('rot-move-f')
+    move[0] -= input_float('rot-move-b')
+    move[1] += input_float('rot-move-u')
+    move[1] -= input_float('rot-move-d')
+    move[2] += input_float('rot-move-r')
+    move[2] -= input_float('rot-move-l')
   if move != [0.0, 0.0, 0.0] or (target.value is not None and not lock_to_in_game.value):
     mag = math.sqrt(sum(c ** 2 for c in move))
     if mag > 1:

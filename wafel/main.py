@@ -494,16 +494,14 @@ class View:
 
 
     # TODO: Move keyboard handling somewhere else
-    model = self.model
-    # ig.get_io().key_repeat_rate = 1/30
     if ig.global_keyboard_capture():
       rep = lambda name: input_pressed_repeat(name, 0.25, 30)
-      model.selected_frame += 1 * (rep('frame-next') + rep('frame-next-alt'))
-      model.selected_frame -= 1 * (rep('frame-prev') + rep('frame-prev-alt'))
-      model.selected_frame += 5 * rep('frame-next-fast')
-      model.selected_frame -= 5 * rep('frame-prev-fast')
+      self.model.selected_frame += 1 * (rep('frame-next') + rep('frame-next-alt'))
+      self.model.selected_frame -= 1 * (rep('frame-prev') + rep('frame-prev-alt'))
+      self.model.selected_frame += 5 * rep('frame-next-fast')
+      self.model.selected_frame -= 5 * rep('frame-prev-fast')
 
-    if self.dbg_is_key_pressed(ord('`')):
+    if ig.is_key_pressed(ord('`')):
       self.show_debug_pane = not self.show_debug_pane
 
     self.handle_controller()
@@ -545,20 +543,6 @@ class View:
     ig.columns(1)
 
     ig.pop_id()
-
-
-  def dbg_is_key_pressed(self, key: int) -> bool:
-    if not hasattr(self, 'dbg_keys_down'):
-      self.dbg_keys_down: Set[int] = set()
-
-    if ig.is_key_down(key):
-      pressed = key not in self.dbg_keys_down
-      self.dbg_keys_down.add(key)
-      return pressed
-    else:
-      if key in self.dbg_keys_down:
-        self.dbg_keys_down.remove(key)
-      return False
 
 
 def run() -> None:

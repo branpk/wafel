@@ -10,13 +10,6 @@ from wafel.util import *
 
 
 def _render_window(window, ig_renderer, render: Callable[[str], None]) -> None:
-  #   if view.dbg_is_key_pressed(ord(']')):
-  #     view.dbg_frame_advance = not view.dbg_frame_advance
-
-  # if view.dbg_frame_advance and not view.dbg_is_key_pressed(ord('\\')):
-  #   glfw.swap_buffers(window)
-  #   return
-
   ig.set_clipboard_length(len(glfw.get_clipboard_string(window)))
 
   style = ig.get_style()

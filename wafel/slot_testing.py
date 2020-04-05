@@ -8,6 +8,7 @@ import wafel.imgui as ig
 from wafel.core.slot_manager import SlotManager, SlotAllocator, Slot
 from wafel.local_state import use_state, use_state_with
 import wafel.ui as ui
+from wafel.bindings import input_pressed_repeat
 
 
 SLOWDOWN = 1
@@ -78,18 +79,12 @@ def test_timeline_algorithm(id: str) -> None:
   cur_frame = use_state('cur-frame', 0)
   slot_manager.set_hotspot('cur-frame', cur_frame.value)
 
-  ig.get_io().key_repeat_rate = 1/30
-  if not ig.get_io().want_capture_keyboard:
-    if ig.is_key_pressed(ig.get_key_index(ig.KEY_DOWN_ARROW)) or \
-        ig.is_key_pressed(ig.get_key_index(ig.KEY_RIGHT_ARROW)):
-      cur_frame.value += 1
-    if ig.is_key_pressed(ig.get_key_index(ig.KEY_UP_ARROW)) or \
-        ig.is_key_pressed(ig.get_key_index(ig.KEY_LEFT_ARROW)):
-      cur_frame.value -= 1
-    if ig.is_key_pressed(ig.get_key_index(ig.KEY_PAGE_DOWN)):
-      cur_frame.value += 5
-    if ig.is_key_pressed(ig.get_key_index(ig.KEY_PAGE_UP)):
-      cur_frame.value -= 5
+  if ig.global_keyboard_capture():
+    rep = lambda name: input_pressed_repeat(name, 0.25, 30)
+    cur_frame.value += 1 * (rep('frame-next') + rep('frame-next-alt'))
+    cur_frame.value -= 1 * (rep('frame-prev') + rep('frame-prev-alt'))
+    cur_frame.value += 5 * rep('frame-next-fast')
+    cur_frame.value -= 5 * rep('frame-prev-fast')
 
   with slot_manager.request_frame(cur_frame.value) as slot:
     cur_value = cast(TestSlot, slot).content
