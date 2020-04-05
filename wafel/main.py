@@ -388,6 +388,8 @@ class View:
       if ig.begin_menu('Settings'):
         if ig.menu_item('Controller')[0]:
           open_popup = 'Controller##settings-controller'
+        if ig.menu_item('Key bindings')[0]:
+          open_popup = 'Key bindings##settings-key-bindings'
         ig.end_menu()
 
       ig.end_menu_bar()
@@ -427,20 +429,20 @@ class View:
     prev_play_speed.value = self.model.play_speed
 
     controller_button_values = {
-      'input-button-a': input_bool('n64-A'),
-      'input-button-b': input_bool('n64-B'),
-      'input-button-z': input_bool('n64-Z'),
-      'input-button-s': input_bool('n64-S'),
-      'input-button-l': input_bool('n64-L'),
-      'input-button-r': input_bool('n64-R'),
-      'input-button-cu': input_bool('n64-C^'),
-      'input-button-cl': input_bool('n64-C<'),
-      'input-button-cr': input_bool('n64-C>'),
-      'input-button-cd': input_bool('n64-Cv'),
-      'input-button-du': input_bool('n64-D^'),
-      'input-button-dl': input_bool('n64-D<'),
-      'input-button-dr': input_bool('n64-D>'),
-      'input-button-dd': input_bool('n64-Dv'),
+      'input-button-a': input_down('n64-A'),
+      'input-button-b': input_down('n64-B'),
+      'input-button-z': input_down('n64-Z'),
+      'input-button-s': input_down('n64-S'),
+      'input-button-l': input_down('n64-L'),
+      'input-button-r': input_down('n64-R'),
+      'input-button-cu': input_down('n64-C^'),
+      'input-button-cl': input_down('n64-C<'),
+      'input-button-cr': input_down('n64-C>'),
+      'input-button-cd': input_down('n64-Cv'),
+      'input-button-du': input_down('n64-D^'),
+      'input-button-dl': input_down('n64-D<'),
+      'input-button-dr': input_down('n64-D>'),
+      'input-button-dd': input_down('n64-Dv'),
     }
     if any(controller_button_values.values()):
       buttons_enabled.value = True
@@ -493,18 +495,13 @@ class View:
 
     # TODO: Move keyboard handling somewhere else
     model = self.model
-    ig.get_io().key_repeat_rate = 1/30
+    # ig.get_io().key_repeat_rate = 1/30
     if ig.global_keyboard_capture():
-      if ig.is_key_pressed(ig.get_key_index(ig.KEY_DOWN_ARROW)) or \
-          ig.is_key_pressed(ig.get_key_index(ig.KEY_RIGHT_ARROW)):
-        model.selected_frame += 1
-      if ig.is_key_pressed(ig.get_key_index(ig.KEY_UP_ARROW)) or \
-          ig.is_key_pressed(ig.get_key_index(ig.KEY_LEFT_ARROW)):
-        model.selected_frame -= 1
-      if ig.is_key_pressed(ig.get_key_index(ig.KEY_PAGE_DOWN)):
-        model.selected_frame += 5
-      if ig.is_key_pressed(ig.get_key_index(ig.KEY_PAGE_UP)):
-        model.selected_frame -= 5
+      rep = lambda name: input_pressed_repeat(name, 0.25, 30)
+      model.selected_frame += 1 * (rep('frame-next') + rep('frame-next-alt'))
+      model.selected_frame -= 1 * (rep('frame-prev') + rep('frame-prev-alt'))
+      model.selected_frame += 5 * rep('frame-next-fast')
+      model.selected_frame -= 5 * rep('frame-prev-fast')
 
     if self.dbg_is_key_pressed(ord('`')):
       self.show_debug_pane = not self.show_debug_pane
@@ -535,7 +532,10 @@ class View:
     self.render_menu_bar()
 
     if ig.begin_popup_modal('Controller##settings-controller', True, ig.WINDOW_NO_RESIZE)[0]:
-      render_binding_settings('bindings')
+      render_controller_settings('content')
+      ig.end_popup_modal()
+    if ig.begin_popup_modal('Key bindings##settings-key-bindings', True, ig.WINDOW_NO_RESIZE)[0]:
+      render_key_binding_settings('content')
       ig.end_popup_modal()
 
     ig.columns(2)

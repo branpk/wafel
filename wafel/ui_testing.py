@@ -13,7 +13,7 @@ from wafel.util import *
 from wafel.variable_format import DecimalIntFormatter, CheckboxFormatter
 from wafel.slot_testing import test_timeline_algorithm
 from wafel.loading import in_progress
-from wafel.bindings import render_binding_settings
+from wafel.bindings import render_controller_settings, render_key_binding_settings
 import wafel.config as config
 
 
@@ -249,7 +249,13 @@ def test_loading_bar(id: str) -> None:
 def test_bindings(id: str) -> None:
   ig.push_id(id)
 
-  render_binding_settings('bindings')
+  option = use_state('option', 1)
+  _, option.value = ig.combo('', option.value, ['Controller', 'Key bindings'])
+
+  if option.value == 0:
+    render_controller_settings('menu')
+  else:
+    render_key_binding_settings('menu')
 
   ig.pop_id()
 
