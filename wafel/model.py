@@ -125,9 +125,10 @@ class Model:
 
   @selected_frame.setter
   def selected_frame(self, frame: int) -> None:
-    self._selected_frame = min(max(frame, 0), len(self.edits) - 1)
-    for callback in list(self.selected_frame_callbacks):
-      callback(self._selected_frame)
+    if frame != self._selected_frame:
+      self._selected_frame = min(max(frame, 0), len(self.edits) - 1)
+      for callback in list(self.selected_frame_callbacks):
+        callback(self._selected_frame)
 
   def set_selected_frame(self, frame: int) -> None:
     self.selected_frame = frame

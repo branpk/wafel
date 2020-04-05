@@ -399,9 +399,6 @@ class View:
 
 
   def handle_controller(self) -> None:
-    if not ig.global_input_capture():
-      return
-
     log.timer.begin('controller')
     ig.push_id('controller-inputs')
 
@@ -492,14 +489,11 @@ class View:
       ig.pop_id()
       return
 
-
-    # TODO: Move keyboard handling somewhere else
-    if ig.global_keyboard_capture():
-      rep = lambda name: input_pressed_repeat(name, 0.25, 30)
-      self.model.selected_frame += 1 * (rep('frame-next') + rep('frame-next-alt'))
-      self.model.selected_frame -= 1 * (rep('frame-prev') + rep('frame-prev-alt'))
-      self.model.selected_frame += 5 * rep('frame-next-fast')
-      self.model.selected_frame -= 5 * rep('frame-prev-fast')
+    rep = lambda name: input_pressed_repeat(name, 0.25, 30)
+    self.model.selected_frame += 1 * (rep('frame-next') + rep('frame-next-alt'))
+    self.model.selected_frame -= 1 * (rep('frame-prev') + rep('frame-prev-alt'))
+    self.model.selected_frame += 5 * rep('frame-next-fast')
+    self.model.selected_frame -= 5 * rep('frame-prev-fast')
 
     if ig.is_key_pressed(ord('`')):
       self.show_debug_pane = not self.show_debug_pane

@@ -79,12 +79,11 @@ def test_timeline_algorithm(id: str) -> None:
   cur_frame = use_state('cur-frame', 0)
   slot_manager.set_hotspot('cur-frame', cur_frame.value)
 
-  if ig.global_keyboard_capture():
-    rep = lambda name: input_pressed_repeat(name, 0.25, 30)
-    cur_frame.value += 1 * (rep('frame-next') + rep('frame-next-alt'))
-    cur_frame.value -= 1 * (rep('frame-prev') + rep('frame-prev-alt'))
-    cur_frame.value += 5 * rep('frame-next-fast')
-    cur_frame.value -= 5 * rep('frame-prev-fast')
+  rep = lambda name: input_pressed_repeat(name, 0.25, 30)
+  cur_frame.value += 1 * (rep('frame-next') + rep('frame-next-alt'))
+  cur_frame.value -= 1 * (rep('frame-prev') + rep('frame-prev-alt'))
+  cur_frame.value += 5 * rep('frame-next-fast')
+  cur_frame.value -= 5 * rep('frame-prev-fast')
 
   with slot_manager.request_frame(cur_frame.value) as slot:
     cur_value = cast(TestSlot, slot).content

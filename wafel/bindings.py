@@ -295,6 +295,8 @@ def render_key_binding_settings(id: str) -> None:
 
 
 def input_float(name: str) -> float:
+  if not ig.global_keyboard_capture():
+    return 0.0
   return check_input(bindings.get(name))
 
 def input_down(name: str) -> bool:

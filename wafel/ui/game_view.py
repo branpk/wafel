@@ -247,13 +247,13 @@ def use_rotational_camera(
   face_direction = angle_to_direction(pitch.value, yaw.value)
 
   move = [0.0, 0.0, 0.0] # forward, up, right
-  if ig.global_keyboard_capture():
-    move[0] += input_float('rot-move-f')
-    move[0] -= input_float('rot-move-b')
-    move[1] += input_float('rot-move-u')
-    move[1] -= input_float('rot-move-d')
-    move[2] += input_float('rot-move-r')
-    move[2] -= input_float('rot-move-l')
+  move[0] += input_float('rot-move-f')
+  move[0] -= input_float('rot-move-b')
+  move[1] += input_float('rot-move-u')
+  move[1] -= input_float('rot-move-d')
+  move[2] += input_float('rot-move-r')
+  move[2] -= input_float('rot-move-l')
+
   if move != [0.0, 0.0, 0.0] or (target.value is not None and not lock_to_in_game.value):
     mag = math.sqrt(sum(c ** 2 for c in move))
     if mag > 1:
