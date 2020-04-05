@@ -7,7 +7,7 @@ import ext_modules.util as c_util
 
 import wafel.imgui as ig
 from wafel.model import Model
-from wafel.variable import Variable, VariableGroup, ObjectId, Object
+from wafel.variable import Variable
 from wafel.object_type import ObjectType
 from wafel.core import DataPath, Address
 from wafel.variable_format import Formatters, VariableFormatter, DecimalIntFormatter, FloatFormatter, EmptyFormatter
@@ -21,7 +21,7 @@ from wafel.sm64_util import *
 @dataclass(frozen=True)
 class TabId:
   name: str
-  object_id: Optional[ObjectId] = None
+  object: Optional[int] = None
   surface: Optional[int] = None
 
   @property
@@ -71,12 +71,12 @@ class VariableExplorer:
 
 
   def get_tab_label(self, tab: TabId) -> str:
-    if tab.object_id is not None:
-      object_type = self.model.get_object_type(self.model.selected_frame, tab.object_id)
+    if tab.object is not None:
+      object_type = self.model.get_object_type(self.model.selected_frame, tab.object)
       if object_type is None:
-        return str(tab.object_id)
+        return str(tab.object)
       else:
-        return str(tab.object_id) + ': ' + object_type.name
+        return str(tab.object) + ': ' + object_type.name
 
     elif tab.surface is not None:
       return f'Surface {tab.surface}'
@@ -98,14 +98,14 @@ class VariableExplorer:
 
 
   def get_variables_for_tab(self, tab: TabId) -> List[Variable]:
-    if tab.object_id is not None:
-      object_type = self.model.get_object_type(self.model.selected_frame, tab.object_id)
+    if tab.object is not None:
+      object_type = self.model.get_object_type(self.model.selected_frame, tab.object)
       if object_type is None:
         return []
 
       return [
-        var.at_object(tab.object_id)
-          for var in self.model.variables.group(VariableGroup.object(object_type.name))
+        var.at(object=tab.object)
+          for var in self.model.data_variables.group('Object')
       ]
 
     elif tab.surface is not None:
@@ -114,12 +114,12 @@ class VariableExplorer:
         return []
 
       return [
-        var.at_surface(tab.surface)
-          for var in self.model.variables.group(VariableGroup('Surface'))
+        var.at(surface=tab.surface)
+          for var in self.model.data_variables.group('Surface')
       ]
 
     else:
-      return self.model.variables.group(VariableGroup(tab.name))
+      return self.model.data_variables.group(tab.name)
 
 
   def render_variable(
@@ -135,10 +135,10 @@ class VariableExplorer:
     changed_data, clear_edit = ui.render_labeled_variable(
       f'var-{hash((tab, variable))}',
       variable.label,
-      variable.id,
+      variable,
       value,
       EmptyFormatter() if value is None else self.formatters[variable],
-      self.model.is_edited(frame, variable.id),
+      self.model.is_edited(frame, variable),
       label_width = label_width,
       value_width = value_width,
     )
@@ -147,12 +147,12 @@ class VariableExplorer:
       self.model.edit(frame, variable, changed_data.value)
 
     if clear_edit:
-      self.model.reset(frame, variable.id)
+      self.model.reset(frame, variable)
 
 
   def render_stick_control(self, id: str, tab: TabId) -> None:
-    stick_x_var = self.model.variables['input-stick-x']
-    stick_y_var = self.model.variables['input-stick-y']
+    stick_x_var = Variable('input-stick-x')
+    stick_y_var = Variable('input-stick-y')
 
     self.render_variable(tab, stick_x_var, 60, 50)
     self.render_variable(tab, stick_y_var, 60, 50)
@@ -183,11 +183,11 @@ class VariableExplorer:
     ig.pop_item_width()
     ig.dummy(1, 10)
 
-    stick_x_var = self.model.variables['input-stick-x']
-    stick_y_var = self.model.variables['input-stick-y']
+    stick_x_var = Variable('input-stick-x')
+    stick_y_var = Variable('input-stick-y')
 
-    face_yaw = dcast(int, self.model.get(self.model.variables['mario-face-yaw']))
-    camera_yaw = dcast(int, self.model.get(self.model.variables['camera-yaw']) or 0)
+    face_yaw = dcast(int, self.model.get(Variable('mario-face-yaw')))
+    camera_yaw = dcast(int, self.model.get(Variable('camera-yaw')) or 0)
     squish_timer = dcast(int, self.model.get('gMarioState[].squishTimer'))
     active_face_yaw = face_yaw
 
@@ -308,7 +308,7 @@ class VariableExplorer:
       ig.set_column_width(i, w)
 
     def render_button(button: str) -> None:
-      self.render_variable(tab, self.model.variables['input-button-' + button], 10, 25)
+      self.render_variable(tab, Variable('input-button-' + button), 10, 25)
     ig.dummy(1, 3)
     render_button('a'); ig.same_line(); render_button('b'); ig.same_line(); render_button('z')
     ig.dummy(1, 5)
@@ -333,7 +333,7 @@ class VariableExplorer:
     scripts = self.model.scripts
 
     ig.dummy(1, 5)
-    self.render_variable(self.current_tab, self.model.variables['wafel-script'], value_width=200)
+    self.render_variable(self.current_tab, Variable('wafel-script'), value_width=200)
     ig.dummy(1, 10)
 
     if ig.button('Split'):

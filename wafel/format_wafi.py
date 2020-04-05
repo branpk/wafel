@@ -2,30 +2,30 @@ from typing import *
 import json
 
 from wafel.edit import Edits
-from wafel.variable import VariableId
+from wafel.variable import Variable
 from wafel.input_buttons import INPUT_BUTTON_FLAGS
 from wafel.tas_metadata import TasMetadata
 
 
 INPUT_BUTTON_LABELS = {
-  VariableId('input-button-a'): 'A',
-  VariableId('input-button-b'): 'B',
-  VariableId('input-button-z'): 'Z',
-  VariableId('input-button-s'): 'S',
-  VariableId('input-button-l'): 'L',
-  VariableId('input-button-r'): 'R',
-  VariableId('input-button-cu'): 'C^',
-  VariableId('input-button-cl'): 'C<',
-  VariableId('input-button-cr'): 'C>',
-  VariableId('input-button-cd'): 'Cv',
-  VariableId('input-button-du'): 'D^',
-  VariableId('input-button-dl'): 'D<',
-  VariableId('input-button-dr'): 'D>',
-  VariableId('input-button-dd'): 'Dv',
+  Variable('input-button-a'): 'A',
+  Variable('input-button-b'): 'B',
+  Variable('input-button-z'): 'Z',
+  Variable('input-button-s'): 'S',
+  Variable('input-button-l'): 'L',
+  Variable('input-button-r'): 'R',
+  Variable('input-button-cu'): 'C^',
+  Variable('input-button-cl'): 'C<',
+  Variable('input-button-cr'): 'C>',
+  Variable('input-button-cd'): 'Cv',
+  Variable('input-button-du'): 'D^',
+  Variable('input-button-dl'): 'D<',
+  Variable('input-button-dr'): 'D>',
+  Variable('input-button-dd'): 'Dv',
 }
 
 
-def get_input_button_by_label(label: str) -> VariableId:
+def get_input_button_by_label(label: str) -> Variable:
   for variable, value in INPUT_BUTTON_LABELS.items():
     if value.lower() == label.lower():
       return variable
@@ -64,30 +64,30 @@ def save_wafi(filename: str, metadata: TasMetadata, edits: Edits) -> None:
   for frame in range(len(edits)):
     # Variable hacks
     for edit in edits.get_edits(frame):
-      if not edit.variable_id.name.startswith('input-'):
-        hack_data: Dict[str, Any] = { 'variable': edit.variable_id.name }
-        if edit.variable_id.object_id is not None:
-          hack_data['object_slot'] = edit.variable_id.object_id  # TODO: Slot
+      if not edit.variable.name.startswith('input-'):
+        hack_data: Dict[str, Any] = { 'variable': edit.variable.name }
+        if 'object' in edit.variable.args:
+          hack_data['object_slot'] = edit.variable.args['object']
         hack_data['value'] = edit.value
         input_data.append(NoIndent(hack_data))
 
     # Inputs
     for edit in edits.get_edits(frame):
-      if edit.variable_id.name.startswith('input-'):
-        if edit.variable_id in INPUT_BUTTON_FLAGS:
-          flag = INPUT_BUTTON_FLAGS[edit.variable_id]
+      if edit.variable.name.startswith('input-'):
+        if edit.variable in INPUT_BUTTON_FLAGS:
+          flag = INPUT_BUTTON_FLAGS[edit.variable]
           if edit.value:
             buttons = buttons | flag
           else:
             buttons = buttons & ~flag
-        elif edit.variable_id == VariableId('input-buttons'):
+        elif edit.variable == Variable('input-buttons'):
           buttons = edit.value
-        elif edit.variable_id == VariableId('input-stick-x'):
+        elif edit.variable == Variable('input-stick-x'):
           stick_x = edit.value
-        elif edit.variable_id == VariableId('input-stick-y'):
+        elif edit.variable == Variable('input-stick-y'):
           stick_y = edit.value
         else:
-          raise NotImplementedError(edit.variable_id)
+          raise NotImplementedError(edit.variable)
 
     stick_inputs: List[object] = [stick_x, stick_y]
     button_labels: List[object] = [
@@ -138,9 +138,9 @@ def load_wafi(filename: str) -> Tuple[TasMetadata, Edits]:
   frame = 0
   for edit in data['inputs']:
     if isinstance(edit, dict):
-      variable = VariableId(edit['variable'])
+      variable = Variable(edit['variable'])
       if 'object_slot' in edit:
-        variable = variable.with_object_id(edit['object_slot'])
+        variable = variable.at(object=edit['object_slot'])
       edits.edit(frame, variable, edit['value'])
 
     else:

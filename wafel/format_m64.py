@@ -3,7 +3,7 @@ import struct
 import os
 
 from wafel.input_buttons import INPUT_BUTTON_FLAGS
-from wafel.variable import VariableId
+from wafel.variable import Variable
 from wafel.edit import Edits
 from wafel.util import *
 from wafel.tas_metadata import TasMetadata
@@ -54,17 +54,17 @@ def save_m64(filename: str, metadata: TasMetadata, edits: Edits) -> None:
 
     for frame in range(len(edits)):
       for edit in edits.get_edits(frame):
-        if edit.variable_id in INPUT_BUTTON_FLAGS:
-          flag = INPUT_BUTTON_FLAGS[edit.variable_id]
+        if edit.variable in INPUT_BUTTON_FLAGS:
+          flag = INPUT_BUTTON_FLAGS[edit.variable]
           if edit.value:
             buttons |= flag
           else:
             buttons &= ~flag
-        elif edit.variable_id == VariableId('input-buttons'):
+        elif edit.variable == Variable('input-buttons'):
           buttons = edit.value
-        elif edit.variable_id == VariableId('input-stick-x'):
+        elif edit.variable == Variable('input-stick-x'):
           stick_x = edit.value
-        elif edit.variable_id == VariableId('input-stick-y'):
+        elif edit.variable == Variable('input-stick-y'):
           stick_y = edit.value
 
       f.write(struct.pack(b'>H', buttons & 0xFFFF))

@@ -18,7 +18,7 @@ import wafel.imgui as ig
 from wafel.core import *
 from wafel.model import Model
 from wafel.frame_sheet import FrameSheet
-from wafel.variable import Variable, VariableId
+from wafel.variable import Variable
 from wafel.variable_explorer import VariableExplorer
 from wafel.variable_format import Formatters, EnumFormatter
 from wafel.format_m64 import load_m64, save_m64
@@ -119,12 +119,12 @@ class View:
 
   def reload_ui(self) -> None:
     self.show_debug_pane = config.dev_mode
-    self.formatters = Formatters()
-    self.formatters[self.model.variables['mario-action']] = EnumFormatter(self.model.action_names)
+    self.formatters = Formatters(self.model.data_variables)
+    self.formatters[Variable('mario-action')] = EnumFormatter(self.model.action_names)
 
     self.frame_sheets: List[FrameSheet] = [FrameSheet(self.model, self.formatters)]
     for var_name in DEFAULT_FRAME_SHEET_VARS:
-      self.frame_sheets[0].append_variable(self.model.variables[var_name])
+      self.frame_sheets[0].append_variable(Variable(var_name))
 
     self.variable_explorer = VariableExplorer(self.model, self.formatters)
 
@@ -154,8 +154,8 @@ class View:
       use_state('hidden-surfaces', cast(Dict[Tuple[int, int], Set[int]], {})).value
 
     current_area = (
-      dcast(int, self.model.get(self.model.variables['level-num'])),
-      dcast(int, self.model.get(self.model.variables['area-index'])),
+      dcast(int, self.model.get(Variable('level-num'))),
+      dcast(int, self.model.get(Variable('area-index'))),
     )
     hidden_surfaces = hidden_surfaces_by_area.setdefault(current_area, set())
 
@@ -328,8 +328,7 @@ class View:
     if ig.begin_drag_drop_target():
       payload = ig.accept_drag_drop_payload('ve-var')
       if payload is not None:
-        variable = self.model.variables[VariableId.from_bytes(payload)]
-        frame_sheet.append_variable(variable)
+        frame_sheet.append_variable(Variable.from_bytes(payload))
       ig.end_drag_drop_target()
     log.timer.end()
 
@@ -448,8 +447,8 @@ class View:
     }
     if any(controller_button_values.values()):
       buttons_enabled.value = True
-    for variable_id, new_button_value in controller_button_values.items():
-      variable = self.model.variables[variable_id]
+    for variable_name, new_button_value in controller_button_values.items():
+      variable = Variable(variable_name)
       button_value = self.model.get(variable)
       if buttons_enabled.value and button_value != new_button_value:
         input_edit.value = True
@@ -462,8 +461,8 @@ class View:
     }
     if any(controller_stick_values.values()):
       stick_enabled.value = True
-    for variable_id, new_stick_value in controller_stick_values.items():
-      variable = self.model.variables[variable_id]
+    for variable_name, new_stick_value in controller_stick_values.items():
+      variable = Variable(variable_name)
       stick_value = self.model.get(variable)
       if stick_enabled.value and stick_value != new_stick_value:
         input_edit.value = True

@@ -13,6 +13,7 @@ from wafel.util import *
 from wafel.local_state import use_state, use_state_with
 from wafel.graphics import render_game
 from wafel.core import DataPath, Address, AccessibleMemory
+from wafel.variable import Variable
 
 
 # TODO: Rename to game_view_overlay. Reduce parameters to minimum (don't require full Model)
@@ -95,9 +96,9 @@ def get_viewport(framebuffer_size: Tuple[int, int]) -> cg.Viewport:
 
 def get_mario_pos(model: Model) -> Vec3f:
   return (
-    dcast(float, model.get(model.variables['mario-pos-x'])),
-    dcast(float, model.get(model.variables['mario-pos-y'])),
-    dcast(float, model.get(model.variables['mario-pos-z'])),
+    dcast(float, model.get(Variable('mario-pos-x'))),
+    dcast(float, model.get(Variable('mario-pos-y'))),
+    dcast(float, model.get(Variable('mario-pos-z'))),
   )
 
 

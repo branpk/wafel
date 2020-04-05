@@ -1,6 +1,7 @@
 from typing import *
 
-from wafel.variable import Variable, VariableDataType, VariableSemantics
+from wafel.variable import Variable, UndefinedVariableError
+from wafel.data_variables import DataVariables
 
 
 class VariableFormatter:
@@ -85,35 +86,25 @@ class StringFormatter(TextFormatter):
 
 
 class Formatters:
-  def __init__(self) -> None:
+  def __init__(self, data_variables: DataVariables) -> None:
+    self.data_variables = data_variables
     self.overrides: Dict[Variable, VariableFormatter] = {}
 
   def _get_default(self, variable: Variable) -> VariableFormatter:
-    if variable.data_type == VariableDataType.BOOL:
-      return CheckboxFormatter()
-
-    elif variable.data_type in [
-      VariableDataType.S8,
-      VariableDataType.S16,
-      VariableDataType.S32,
-      VariableDataType.S64,
-      VariableDataType.U8,
-      VariableDataType.U16,
-      VariableDataType.U32,
-      VariableDataType.U64,
-    ]:
-      return DecimalIntFormatter()
-
-    elif variable.data_type in [
-      VariableDataType.F32,
-      VariableDataType.F64,
-    ]:
-      return FloatFormatter()
-
-    elif variable.semantics == VariableSemantics.SCRIPT:
+    if variable.name == 'wafel-script':
       return StringFormatter()
 
-    raise NotImplementedError(variable, variable.data_type)
+    spec = self.data_variables[variable]
+    type_ = spec.path.end_type
+
+    if spec.flag is not None:
+      return CheckboxFormatter()
+    elif type_['kind'] == 'primitive' and type_['name'][0] in ['s', 'u']:
+      return DecimalIntFormatter()
+    elif type_['kind'] == 'primitive' and type_['name'][0] == 'f':
+      return FloatFormatter()
+
+    raise NotImplementedError(variable, type_)
 
   def __getitem__(self, variable: Variable) -> VariableFormatter:
     return self.overrides.get(variable) or self._get_default(variable)

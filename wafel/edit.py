@@ -1,6 +1,6 @@
 from typing import *
 
-from wafel.variable import Variable, VariableId
+from wafel.variable import Variable
 
 
 # TODO: Move this somewhere
@@ -12,8 +12,8 @@ from wafel.variable import Variable, VariableId
 
 
 class Edit:
-  def __init__(self, variable_id: VariableId, value: Any) -> None:
-    self.variable_id = variable_id
+  def __init__(self, variable: Variable, value: Any) -> None:
+    self.variable = variable
     self.value = value
 
 
@@ -51,24 +51,22 @@ class Edits:
       self._frames.append([])
     return self._frames[frame]
 
-  def edit(self, frame: int, variable: Union[Variable, VariableId, str], value: Any) -> None:
-    if isinstance(variable, Variable):
-      variable = variable.id
-    elif isinstance(variable, str):
-      variable = VariableId(variable)
+  def edit(self, frame: int, variable: Union[Variable, str], value: Any) -> None:
+    if isinstance(variable, str):
+      variable = Variable(variable)
     edits = self.get_edits(frame)
     for edit in list(edits):
-      if edit.variable_id == variable:
+      if edit.variable == variable:
         edits.remove(edit)
     edits.append(Edit(variable, value))
     self._invalidate(frame)
 
-  def is_edited(self, frame: int, variable_id: VariableId) -> bool:
-    return any(edit.variable_id == variable_id for edit in self.get_edits(frame))
+  def is_edited(self, frame: int, variable: Variable) -> bool:
+    return any(edit.variable == variable for edit in self.get_edits(frame))
 
-  def reset(self, frame: int, variable_id: VariableId) -> None:
+  def reset(self, frame: int, variable: Variable) -> None:
     edits = self.get_edits(frame)
     for edit in list(edits):
-      if edit.variable_id == variable_id:
+      if edit.variable == variable:
         edits.remove(edit)
     self._invalidate(frame)

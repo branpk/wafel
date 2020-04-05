@@ -1,7 +1,7 @@
 from typing import *
 
 import wafel.imgui as ig
-from wafel.variable import VariableId
+from wafel.variable import Variable
 from wafel.variable_format import VariableFormatter
 from wafel.util import *
 from wafel.ui.variable_value import render_variable_value
@@ -12,7 +12,7 @@ T = TypeVar('T')
 def render_labeled_variable(
   id: str,
   label: str,
-  variable_id: VariableId,
+  variable: Variable,
   value: T,
   formatter: VariableFormatter,
   is_edited: bool,
@@ -25,7 +25,7 @@ def render_labeled_variable(
 
   if ig.begin_drag_drop_source():
     ig.text(label)
-    ig.set_drag_drop_payload('ve-var', variable_id.to_bytes())
+    ig.set_drag_drop_payload('ve-var', variable.to_bytes())
     ig.end_drag_drop_source()
 
   ig.same_line()

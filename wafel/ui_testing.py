@@ -7,7 +7,7 @@ import wafel.ui as ui
 from wafel.local_state import use_state, use_state_with, local_state
 from wafel.window import open_window_and_run
 from wafel.object_type import ObjectType
-from wafel.variable import VariableId
+from wafel.variable import Variable
 from wafel.core import Address
 from wafel.util import *
 from wafel.variable_format import DecimalIntFormatter, CheckboxFormatter
@@ -127,7 +127,7 @@ def test_labeled_variable(id: str) -> None:
   changed_value, clear_edit = ui.render_labeled_variable(
     'var',
     'Variable',
-    VariableId('my-var'),
+    Variable('my-var'),
     variable.value,
     DecimalIntFormatter(),
     edited.value,

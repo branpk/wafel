@@ -10,26 +10,25 @@ import ext_modules.util as c_util
 import wafel.config as config
 from wafel.core import Game, Timeline, load_dll_game, Controller, Address, DataPath, \
   AccessibleMemory, Slot
-from wafel.variable import Variable, ObjectId, Variables, ScriptVariable, VariableSemantics, \
-  VariableId
+from wafel.variable import Variable
 from wafel.edit import Edits
 from wafel.object_type import ObjectType
 from wafel.loading import Loading
 from wafel.util import *
 from wafel.script import Scripts, ScriptController
+from wafel.data_variables import DataVariables
 
 
 class EditController(Controller):
-  def __init__(self, variables: Variables, edits: Edits) -> None:
+  def __init__(self, data_variables: DataVariables, edits: Edits) -> None:
     super().__init__()
-    self.variables = variables
+    self.data_variables = data_variables
     self.edits = edits
     self.edits.on_edit(self.weak_notify)
 
   def apply(self, game: Game, frame: int, slot: Slot) -> None:
     for edit in self.edits.get_edits(frame):
-      variable = self.variables[edit.variable_id]
-      variable.set(slot, edit.value)
+      self.data_variables.set_raw(slot, edit.variable, edit.value)
 
 
 class Model:
@@ -73,7 +72,7 @@ class Model:
     assert isinstance(memory, AccessibleMemory)
     c_util.init(lambda name: memory.address_to_location(self.game.base_slot, memory.symbol(name)))
 
-    self.variables = Variable.create_all(self.game)
+    self.data_variables = DataVariables(self.game)
 
     self.action_names: Dict[int, str] = {}
     for constant_name, constant in self.game.memory.data_spec['constants'].items():
@@ -96,11 +95,9 @@ class Model:
     self.edits = edits
     self.scripts = Scripts()
     self.controller = Controller.sequence(
-      EditController(self.variables, self.edits),
+      EditController(self.data_variables, self.edits),
       ScriptController(self.scripts),
     )
-
-    self.variables.add(ScriptVariable(self.game, self.scripts))
 
     self.timeline = Timeline(
       self.game,
@@ -154,41 +151,36 @@ class Model:
       data = frame
       frame = self.selected_frame
     if isinstance(data, Variable):
-      return data.get(self.timeline, frame)
+      if data.name == 'wafel-script':
+        return self.scripts.get(frame).source
+      else:
+        return self.data_variables.get(self.timeline, data.at(frame=frame))
     else:
       return self.timeline.get(frame, data)
 
-  def get_object_type(self, frame: int, object_id: ObjectId) -> Optional[ObjectType]:
-    active_variable = self.variables['obj-active-flags-active'].at_object(object_id)
-    active = active_variable.get(self.timeline, frame)
+  def get_object_type(self, frame: int, object_slot: int) -> Optional[ObjectType]:
+    active = self.get(frame, Variable('obj-active-flags-active', object=object_slot))
     if not active:
       return None
 
-    behavior_addr =\
-      self.variables['obj-behavior-ptr'].at_object(object_id).get(self.timeline, frame)
+    behavior_addr = self.get(frame, Variable('obj-behavior-ptr', object=object_slot))
     assert isinstance(behavior_addr, Address)
     return ObjectType(behavior_addr, self.addr_to_symbol[behavior_addr])
 
-  def edit(self, frame: int, variable: Union[Variable, VariableId], data: object) -> None:
-    if isinstance(variable, VariableId):
-      variable = self.variables[variable]
-    if variable.semantics == VariableSemantics.SCRIPT:
+  def edit(self, frame: int, variable: Variable, data: object) -> None:
+    if variable.name == 'wafel-script':
       self.scripts.set_frame_source(frame, dcast(str, data))
     else:
       self.edits.edit(frame, variable, data)
 
-  def is_edited(self, frame: int, variable: Union[Variable, VariableId]) -> bool:
-    if isinstance(variable, VariableId):
-      variable = self.variables[variable]
-    if variable.semantics == VariableSemantics.SCRIPT:
+  def is_edited(self, frame: int, variable: Variable) -> bool:
+    if variable.name == 'wafel-script':
       return self.scripts.is_edited(frame)
     else:
-      return self.edits.is_edited(frame, variable.id)
+      return self.edits.is_edited(frame, variable)
 
-  def reset(self, frame: int, variable: Union[Variable, VariableId]) -> None:
-    if isinstance(variable, VariableId):
-      variable = self.variables[variable]
-    if variable.semantics == VariableSemantics.SCRIPT:
+  def reset(self, frame: int, variable: Variable) -> None:
+    if variable.name == 'wafel-script':
       return self.scripts.reset_frame(frame)
     else:
-      return self.edits.reset(frame, variable.id)
+      return self.edits.reset(frame, variable)

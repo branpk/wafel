@@ -3,10 +3,10 @@ from typing import *
 
 import wafel.imgui as ig
 from wafel.object_type import ObjectType
-from wafel.variable import Variable, VariableId
+from wafel.variable import Variable
 from wafel.core import DataPath
 from wafel.model import Model
-from wafel.variable_format import Formatters, EmptyFormatter, VariableFormatter, VariableSemantics
+from wafel.variable_format import Formatters, EmptyFormatter, VariableFormatter
 import wafel.ui as ui
 from wafel.util import *
 
@@ -55,14 +55,14 @@ class FrameSheet:
       log.error('Multiple frame sheet column mods on same frame')
       return
 
-    object_id = variable.get_object_id()
-    if object_id is None:
+    object_slot = variable.args.get('object')
+    if object_slot is None:
       column = FrameSheetColumn(variable)
     else:
       # TODO: This should use the state that the drop began
       column = FrameSheetColumn(
         variable,
-        self.model.get_object_type(self.model.selected_frame, object_id),
+        self.model.get_object_type(self.model.selected_frame, object_slot),
       )
     if column not in self.columns:
       self.next_columns.insert(index, column)
@@ -96,17 +96,17 @@ class FrameSheet:
 
   def get_header_label(self, column: FrameSheetColumn) -> str:
     variable = column.variable
-    object_id = variable.get_object_id()
-    surface = variable.id.surface
+    object_slot = variable.args.get('object')
+    surface_index = variable.args.get('surface')
 
-    if object_id is not None:
+    if object_slot is not None:
       if column.object_type is None:
-        return str(object_id) + '\n' + variable.label
+        return str(object_slot) + '\n' + variable.label
       else:
-        return str(object_id) + ' - ' + column.object_type.name + '\n' + variable.label
+        return str(object_slot) + ' - ' + column.object_type.name + '\n' + variable.label
 
-    elif surface is not None:
-      return f'Surface {surface}\n{variable.label}'
+    elif surface_index is not None:
+      return f'Surface {surface_index}\n{variable.label}'
 
     else:
       return variable.label
@@ -115,32 +115,34 @@ class FrameSheet:
   def get_data(self, frame: int, column: FrameSheetColumn) -> Maybe[object]:
     variable = column.variable
 
-    object_id = variable.get_object_id()
-    if column.object_type is not None and object_id is not None:
-      row_object_type = self.model.get_object_type(frame, object_id)
+    object_slot = variable.args.get('object')
+    if column.object_type is not None and object_slot is not None:
+      row_object_type = self.model.get_object_type(frame, object_slot)
       if row_object_type != column.object_type:
         return None
 
-    if variable.id.surface is not None:
+    surface_index = variable.args.get('surface')
+    if surface_index is not None:
       num_surfaces = dcast(int, self.model.timeline.get(frame, 'gSurfacesAllocated'))
-      if variable.id.surface >= num_surfaces:
+      if surface_index >= num_surfaces:
         return None
 
-    return Just(variable.get(self.model.timeline, frame))
+    return Just(self.model.get(frame, variable))
 
 
   def set_data(self, frame: int, column: FrameSheetColumn, data: Any) -> None:
     variable = column.variable
 
-    object_id = variable.get_object_id()
-    if column.object_type is not None and object_id is not None:
-      row_object_type = self.model.get_object_type(frame, object_id)
+    object_slot = variable.args.get('object')
+    if column.object_type is not None and object_slot is not None:
+      row_object_type = self.model.get_object_type(frame, object_slot)
       if row_object_type != column.object_type:
         raise Exception # TODO: Error message
 
-    if variable.id.surface is not None:
+    surface_index = variable.args.get('surface')
+    if surface_index is not None:
       num_surfaces = dcast(int, self.model.timeline.get(frame, 'gSurfacesAllocated'))
-      if variable.id.surface >= num_surfaces:
+      if surface_index >= num_surfaces:
         raise Exception
 
     self.model.edit(frame, variable, data)
@@ -185,8 +187,7 @@ class FrameSheet:
 
         payload = ig.accept_drag_drop_payload('ve-var')
         if payload is not None:
-          variable = self.model.variables[VariableId.from_bytes(payload)]
-          self._insert_variable(index, variable)
+          self._insert_variable(index, Variable.from_bytes(payload))
 
         ig.end_drag_drop_target()
 
@@ -222,13 +223,13 @@ class FrameSheet:
       data,
       formatter,
       (column.width, self.row_height),
-      self.model.is_edited(frame, column.variable.id),
+      self.model.is_edited(frame, column.variable),
       frame == self.model.selected_frame,
     )
     if changed_data is not None:
       self.set_data(frame, column, changed_data.value)
     if clear_edit:
-      self.model.reset(frame, column.variable.id)
+      self.model.reset(frame, column.variable)
     if selected:
       self.model.selected_frame = frame
 
