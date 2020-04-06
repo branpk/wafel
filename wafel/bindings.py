@@ -203,6 +203,17 @@ def init() -> None:
   bindings = bindings_from_json(config.settings.get('bindings') or DEFAULT_BINDINGS)
 
 
+def find_overlapping_bindings() -> Dict[Input, List[str]]:
+  input_to_controls: Dict[Input, List[str]] = {}
+  for control, input in bindings.items():
+    input_to_controls.setdefault(input, []).append(control)
+  return {
+    input: controls
+      for input, controls in input_to_controls.items()
+        if len(controls) > 1
+  }
+
+
 def begin_binding_form() -> None:
   controls: Ref[List[str]] = use_state('controls', [])
   listening_for: Ref[Optional[str]] = use_state('listening-for', None)
@@ -251,7 +262,21 @@ def binding_button(name: str, label: str, width=0) -> None:
     text = 'Unbound'
   if listening_for.value == name:
     text = '(' + text + ')'
-  ig.text(text)
+
+  if name in bindings:
+    overlapping = find_overlapping_bindings().get(bindings[name])
+  else:
+    overlapping = None
+
+  if overlapping is None:
+    ig.text(text)
+  else:
+    ig.text_colored(text, 1.0, 0.8, 0.0, 1.0)
+    if ig.is_item_hovered():
+      def control_name(name: str) -> str:
+        return name.replace('-', ' ').replace('n64', 'N64')
+      overlapping = [c for c in overlapping if c != name]
+      ig.set_tooltip('Also bound to ' + ', '.join(map(control_name, overlapping)))
 
 
 def render_controller_settings(id: str) -> None:

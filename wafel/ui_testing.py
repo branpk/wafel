@@ -249,7 +249,7 @@ def test_loading_bar(id: str) -> None:
 def test_bindings(id: str) -> None:
   ig.push_id(id)
 
-  option = use_state('option', 1)
+  option = use_state('option', 0)
   _, option.value = ig.combo('', option.value, ['Controller', 'Key bindings'])
 
   if option.value == 0:
