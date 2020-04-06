@@ -335,12 +335,12 @@ def render_key_binding_settings(id: str) -> None:
 
   ig.text('Frame advance:')
   button_width = 0
-  binding_button('frame-prev-fast', '-5', button_width)
+  binding_button('frame-prev-fast', '-10', button_width)
   binding_button('frame-prev', '-1', button_width)
   binding_button('frame-prev-alt', '-1', button_width)
   binding_button('frame-next', '+1', button_width)
   binding_button('frame-next-alt', '+1', button_width)
-  binding_button('frame-next-fast', '+5', button_width)
+  binding_button('frame-next-fast', '+10', button_width)
 
   ig.dummy(1, 5)
 
@@ -361,6 +361,10 @@ def render_key_binding_settings(id: str) -> None:
   binding_button('playback-rewind', 'Rewind', button_width)
   binding_button('playback-speed-up', 'Speed up', button_width)
   binding_button('playback-slow-down', 'Slow down', button_width)
+  ig.text_colored(
+    'Tip: Use the frame advance keys\nduring playback to change speed\ntemporarily.',
+    1.0, 1.0, 1.0, 0.5,
+  )
 
   ig.dummy(200, 1)
   ig.pop_id()
@@ -405,6 +409,23 @@ def input_pressed_repeat(name: str, delay: float, per_second: float) -> int:
   ig.pop_id()
   return count
 
+def input_down_gradual(name: str, until_full: float) -> float:
+  ig.push_id('ctrl-down-gradual-' + name)
+  down_start: Ref[Optional[float]] = use_state('down-start', None)
+
+  down = input_down(name)
+  if not down:
+    down_start.value = None
+    result = 0.0
+  elif down_start.value is None:
+    down_start.value = time.time()
+    result = 0.0
+  else:
+    result = min((time.time() - down_start.value) / until_full, 1)
+
+  ig.pop_id()
+  return result
+
 
 __all__ = [
   'render_controller_settings',
@@ -413,4 +434,5 @@ __all__ = [
   'input_down',
   'input_pressed',
   'input_pressed_repeat',
+  'input_down_gradual',
 ]

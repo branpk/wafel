@@ -240,16 +240,71 @@ class View:
         hidden_surfaces.add(hovered_surface.value)
 
 
-    play_direction = use_state('play-direction', 0)
     speed_options = [0.05, 0.25, 0.5, 1, 2, 4]
-    speed_index = use_state('speed-options', 3)
+    saved_play_direction = use_state('saved-play-direction', 0)
+    saved_speed_index = use_state('saved-speed-index', 3)
 
-    self.model.play_speed = play_direction.value * speed_options[speed_index.value]
+    play_direction = saved_play_direction.value
+    speed_index = saved_speed_index.value
+
+    if play_direction == 0:
+      frame_advance = 0
+      play_override = 0
+
+      def control(name: str, speed: int) -> None:
+        nonlocal frame_advance, play_override
+        x = input_down_gradual(name, 0.25)
+        if x == 1.0:
+          play_override = speed
+        elif input_pressed(name):
+          frame_advance += speed
+      control('frame-next', 1)
+      control('frame-next-alt', 1)
+      control('frame-prev', -1)
+      control('frame-prev-alt', -1)
+      control('frame-next-fast', 10)
+      control('frame-prev-fast', -10)
+
+      if play_override != 0:
+        if abs(play_override) in speed_options:
+          speed_index = speed_options.index(abs(play_override))
+        else:
+          speed_index = len(speed_options) - 1
+        play_direction = 1 if play_override > 0 else -1
+      else:
+        self.model.selected_frame += frame_advance
+
+    else:
+      if input_down('frame-next') or input_down('frame-next-alt'):
+        if play_direction == 1:
+          speed_index += 1
+        else:
+          play_direction = -play_direction
+      elif input_down('frame-prev') or input_down('frame-prev-alt'):
+        if play_direction == -1:
+          speed_index += 1
+        else:
+          play_direction = -play_direction
+      elif input_down('frame-next-fast'):
+        if play_direction == 1:
+          speed_index += 2
+        else:
+          play_direction = -play_direction
+          speed_index += 1
+      elif input_down('frame-prev-fast'):
+        if play_direction == -1:
+          speed_index += 2
+        else:
+          play_direction = -play_direction
+          speed_index += 1
+      speed_index = min(max(speed_index, 0), len(speed_options) - 1)
+
+    self.model.play_speed = play_direction * speed_options[speed_index]
 
     def play_button(label: str, direction: int) -> None:
-      disabled = play_direction.value == direction
-      if ig.disableable_button(label, enabled=play_direction.value != direction):
-        play_direction.value = direction
+      disabled = play_direction == direction
+      if ig.disableable_button(label, enabled=play_direction != direction):
+        saved_play_direction.value = direction
 
     play_button('<|', -1)
     ig.same_line()
@@ -258,31 +313,33 @@ class View:
     play_button('|>', 1)
     ig.same_line()
 
-    if input_pressed('playback-play'):
-      if play_direction.value == 0:
-        play_direction.value = 1
-      else:
-        play_direction.value = 0
-    if input_pressed('playback-rewind'):
-      if play_direction.value == 0:
-        play_direction.value = -1
-      else:
-        play_direction.value = 0
-    if input_pressed('playback-speed-up'):
-      speed_index.value = min(speed_index.value + 1, len(speed_options) - 1)
-    if input_pressed('playback-slow-down'):
-      speed_index.value = max(speed_index.value - 1, 0)
-
-    ig.push_item_width(60)
-    _, speed_index.value = ig.combo(
+    ig.push_item_width(63)
+    changed, new_index = ig.combo(
       '##speed-option',
-      speed_index.value,
+      speed_index,
       [str(s) + 'x' for s in speed_options],
     )
     ig.pop_item_width()
+    if changed:
+      saved_speed_index.value = new_index
+
+    if input_pressed('playback-play'):
+      if saved_play_direction.value == 0:
+        saved_play_direction.value = 1
+      else:
+        saved_play_direction.value = 0
+    if input_pressed('playback-rewind'):
+      if saved_play_direction.value == 0:
+        saved_play_direction.value = -1
+      else:
+        saved_play_direction.value = 0
+    if input_pressed('playback-speed-up'):
+      saved_speed_index.value = min(saved_speed_index.value + 1, len(speed_options) - 1)
+    if input_pressed('playback-slow-down'):
+      saved_speed_index.value = max(saved_speed_index.value - 1, 0)
+
+
     ig.same_line()
-
-
     new_frame = ui.render_frame_slider(
       'frame-slider',
       self.model.selected_frame,
@@ -503,12 +560,6 @@ class View:
         ui.render_loading_bar('loading-bar', progress, width)
       ig.pop_id()
       return
-
-    rep = lambda name: input_pressed_repeat(name, 0.25, 30)
-    self.model.selected_frame += 1 * (rep('frame-next') + rep('frame-next-alt'))
-    self.model.selected_frame -= 1 * (rep('frame-prev') + rep('frame-prev-alt'))
-    self.model.selected_frame += 5 * rep('frame-next-fast')
-    self.model.selected_frame -= 5 * rep('frame-prev-fast')
 
     if ig.is_key_pressed(ord('`')):
       self.show_debug_pane = not self.show_debug_pane
