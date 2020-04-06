@@ -169,7 +169,7 @@ def check_input(input: Optional[Input]) -> float:
     return 1.0 if ig.is_key_down(input.key) else 0.0
 
 
-DEFAULT_BINDINGS = bindings_to_json({
+DEFAULT_BINDINGS: Bindings = {
   'n64-^': KeyboardKey(glfw.KEY_I),
   'n64-<': KeyboardKey(glfw.KEY_J),
   'n64->': KeyboardKey(glfw.KEY_L),
@@ -193,14 +193,16 @@ DEFAULT_BINDINGS = bindings_to_json({
   'playback-rewind': KeyboardKey(glfw.KEY_APOSTROPHE),
   'playback-speed-up': KeyboardKey(glfw.KEY_EQUAL),
   'playback-slow-down': KeyboardKey(glfw.KEY_MINUS),
-})
+}
 
 bindings: Bindings
 
 
 def init() -> None:
   global bindings
-  bindings = bindings_from_json(config.settings.get('bindings') or DEFAULT_BINDINGS)
+  bindings = bindings_from_json(
+    config.settings.get('bindings') or bindings_to_json(DEFAULT_BINDINGS)
+  )
 
 
 def find_overlapping_bindings() -> Dict[Input, List[str]]:
@@ -218,6 +220,9 @@ def begin_binding_form() -> None:
   controls: Ref[List[str]] = use_state('controls', [])
   listening_for: Ref[Optional[str]] = use_state('listening-for', None)
   waiting_for_release: Ref[bool] = use_state('waiting-for-release', False)
+
+  if ig.is_mouse_clicked():
+    listening_for.value = None
 
   if listening_for.value is not None:
     input = detect_input()
@@ -254,6 +259,13 @@ def binding_button(name: str, label: str, width=0) -> None:
   if ig.button(label, width=width):
     listening_for.value = name
   ig.pop_style_color()
+
+  if ig.begin_popup_context_item('##btn-ctx-' + name):
+    if ig.menu_item('Clear')[0] and name in bindings:
+      del bindings[name]
+    if ig.menu_item('Default')[0] and name in DEFAULT_BINDINGS:
+      bindings[name] = DEFAULT_BINDINGS[name]
+    ig.end_popup_context_item()
 
   ig.same_line()
   if name in bindings:
