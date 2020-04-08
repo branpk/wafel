@@ -515,6 +515,7 @@ class View:
     }
     if any(controller_button_values.values()):
       buttons_enabled.value = True
+      stick_enabled.value = True
     for variable_name, new_button_value in controller_button_values.items():
       variable = Variable(variable_name).at(frame=self.model.selected_frame)
       button_value = self.model.get(variable)
@@ -529,6 +530,7 @@ class View:
     }
     if any(controller_stick_values.values()):
       stick_enabled.value = True
+      buttons_enabled.value = True
     for variable_name, new_stick_value in controller_stick_values.items():
       variable = Variable(variable_name).at(frame=self.model.selected_frame)
       stick_value = self.model.get(variable)
