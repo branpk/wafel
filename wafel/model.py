@@ -37,6 +37,7 @@ class Model:
     self.game_version: str
     self.timeline: Timeline
     self.rotational_camera_yaw = 0
+    self.input_up_yaw: Optional[int] = None
 
   def load(self, game_version: str, edits: Edits) -> Loading[None]:
     yield from self._load_game(game_version)

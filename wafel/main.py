@@ -470,8 +470,24 @@ class View:
       ig.open_popup(open_popup)
 
 
+  def compute_stick_from_controller(self, cx: float, cy: float) -> Tuple[int, int]:
+    if abs(cx) < 8 / 128:
+      cx = 0
+    if abs(cy) < 8 / 128:
+      cy = 0
+    camera_angle = dcast(int, self.model.get(Variable('camera-yaw').at(frame=self.model.selected_frame)) or 0) + 0x8000
+    up_angle = self.model.input_up_yaw
+    if up_angle is None:
+      up_angle = camera_angle
+    rotation = (up_angle - camera_angle) / 0x8000 * math.pi
+    sx = math.cos(rotation) * cx - math.sin(rotation) * cy
+    sy = math.sin(rotation) * cx + math.cos(rotation) * cy
+    stick_x = min(max(int(sx * 128), -128), 127)
+    stick_y = min(max(int(sy * 128), -128), 127)
+    return stick_x, stick_y
+
+
   def handle_controller(self) -> None:
-    log.timer.begin('controller')
     ig.push_id('controller-inputs')
 
     buttons_enabled = use_state('buttons-enabled', False)
@@ -524,23 +540,25 @@ class View:
         self.model.edits.edit(variable, new_button_value)
         input_edit.value = False
 
-    controller_stick_values = {
-      'input-stick-x': int(127 * input_float('n64->') - 128 * input_float('n64-<')),
-      'input-stick-y': int(127 * input_float('n64-^') - 128 * input_float('n64-v')),
-    }
-    if any(controller_stick_values.values()):
+    controller_stick_values = (
+      input_float('n64->') - input_float('n64-<'),
+      input_float('n64-^') - input_float('n64-v'),
+    )
+    if any(controller_stick_values):
       stick_enabled.value = True
       buttons_enabled.value = True
-    for variable_name, new_stick_value in controller_stick_values.items():
-      variable = Variable(variable_name).at(frame=self.model.selected_frame)
-      stick_value = self.model.get(variable)
-      if stick_enabled.value and stick_value != new_stick_value:
+    if stick_enabled.value:
+      stick_x_var = Variable('input-stick-x').at(frame=self.model.selected_frame)
+      stick_y_var = Variable('input-stick-y').at(frame=self.model.selected_frame)
+      new_stick = self.compute_stick_from_controller(*controller_stick_values)
+      stick = (self.model.get(stick_x_var), self.model.get(stick_y_var))
+      if stick != new_stick:
         input_edit.value = True
-        self.model.edits.edit(variable, new_stick_value)
+        self.model.edits.edit(stick_x_var, new_stick[0])
+        self.model.edits.edit(stick_y_var, new_stick[1])
         input_edit.value = False
 
     ig.pop_id()
-    log.timer.end()
 
   def render(self) -> None:
     ig.push_id(str(self.epoch))

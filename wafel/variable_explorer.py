@@ -172,7 +172,7 @@ class VariableExplorer:
 
 
   def render_intended_stick_control(self, id: str) -> None:
-    up_options = ['mario yaw', 'stick y', 'world x', '3d view']
+    up_options = ['3d view', 'mario yaw', 'stick y', 'world x']
     up_option = use_state('up-option', 0)
 
     ig.text('up =')
@@ -207,6 +207,7 @@ class VariableExplorer:
       'world x': 0x4000,
       '3d view': self.model.rotational_camera_yaw,
     }[up_options[up_option.value]]
+    self.model.input_up_yaw = up_angle
 
     raw_stick_x = self.model.get(stick_x_var)
     raw_stick_y = self.model.get(stick_y_var)
