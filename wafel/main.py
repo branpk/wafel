@@ -74,6 +74,8 @@ class View:
     self.model = model
     self.epoch = 0
     self.tkinter_root = tkinter.Tk()
+    self.tkinter_root.attributes('-topmost', True)
+    self.tkinter_root.lift()
     self.tkinter_root.withdraw()
 
     self.dbg_frame_advance = False

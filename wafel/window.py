@@ -9,7 +9,15 @@ import wafel.config as config
 from wafel.util import *
 
 
+rendering = False
+
+
 def _render_window(window, ig_renderer, render: Callable[[str], None]) -> None:
+  global rendering
+  if rendering:
+    return
+  rendering = True
+
   ig.set_clipboard_length(len(glfw.get_clipboard_string(window)))
 
   style = ig.get_style()
@@ -42,6 +50,7 @@ def _render_window(window, ig_renderer, render: Callable[[str], None]) -> None:
   ig_renderer.render(draw_data)
 
   glfw.swap_buffers(window)
+  rendering = False
 
 
 def open_window_and_run(render: Callable[[str], None], maximize = False) -> None:
