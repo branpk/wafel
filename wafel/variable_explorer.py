@@ -167,8 +167,8 @@ class VariableExplorer:
       new_stick_x = int(0.5 * (new_n[0] + 1) * 255 - 128)
       new_stick_y = int(0.5 * (new_n[1] + 1) * 255 - 128)
 
-      self.model.edits.edit(stick_x_var, new_stick_x)
-      self.model.edits.edit(stick_y_var, new_stick_y)
+      self.model.set(stick_x_var, new_stick_x)
+      self.model.set(stick_y_var, new_stick_y)
 
 
   def render_intended_stick_control(self, id: str) -> None:
@@ -274,8 +274,8 @@ class VariableExplorer:
         self.model.timeline[self.model.selected_frame], target_yaw, target_mag, relative_to
       )
 
-      self.model.edits.edit(stick_x_var, new_raw_stick_x)
-      self.model.edits.edit(stick_y_var, new_raw_stick_y)
+      self.model.set(stick_x_var, new_raw_stick_x)
+      self.model.set(stick_y_var, new_raw_stick_y)
 
     n_a = intended_yaw - up_angle
     n_x = intended_mag / 32 * math.sin(-n_a * math.pi / 0x8000)
@@ -293,8 +293,8 @@ class VariableExplorer:
         self.model.timeline[self.model.selected_frame], new_intended_yaw, new_intended_mag, relative_to=0
       )
 
-      self.model.edits.edit(stick_x_var, new_raw_stick_x)
-      self.model.edits.edit(stick_y_var, new_raw_stick_y)
+      self.model.set(stick_x_var, new_raw_stick_x)
+      self.model.set(stick_y_var, new_raw_stick_y)
 
 
   def render_input_tab(self, tab: TabId) -> None:
