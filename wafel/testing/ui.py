@@ -322,5 +322,5 @@ def render_tests(id: str) -> None:
 
 
 config.init()
-cProfile.run('open_window_and_run(render_tests)', sort='cumtime')
-# open_window_and_run(render_tests)
+# cProfile.run('open_window_and_run(render_tests)', sort='tottime')
+open_window_and_run(render_tests)

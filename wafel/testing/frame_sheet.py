@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import *
 from dataclasses import dataclass
-from copy import copy
 import time
 
 import wafel.imgui as ig
@@ -48,54 +47,65 @@ class OpSequence:
 EditRangeOp = Union[OpAtom, OpSequence]
 
 
-class Edits:
+class EditRanges:
   def __init__(self) -> None:
-    self.ranges: Set[EditRange] = set()
+    self._all: Set[EditRange] = set()
+    self._by_variable: Dict[Variable, EditRange] = {}
 
-  def apply_to_set(self, ranges: Set[EditRange], op: EditRangeOp) -> None:
+  def get(self, variable: Variable) -> Optional[EditRange]:
+    return self._by_variable.get(variable)
+
+  def by_variable(self, variable: Variable) -> Iterable[EditRange]:
+    return (edit_range for edit_range in self._all if edit_range.variable == variable)
+
+  def _remove(self, edit_range: EditRange) -> None:
+    self._all.remove(edit_range)
+    for variable, other in list(self._by_variable.items()):
+      if other == edit_range:
+        del self._by_variable[variable]
+
+  def _add(self, edit_range: EditRange) -> None:
+    self._all.add(edit_range)
+    for frame in edit_range.frames:
+      self._by_variable[edit_range.variable.at(frame=frame)] = edit_range
+
+  def apply_mutate(self, op: EditRangeOp) -> None:
     if isinstance(op, OpAtom):
       if op.target is not None:
-        assert op.target in ranges
-        ranges.remove(op.target)
+        assert op.target in self._all
+        self._remove(op.target)
       if op.result is not None:
-        for edit_range in ranges:
+        for edit_range in self._all:
           assert not edit_range.intersects(op.result)
-        ranges.add(op.result)
+        self._add(op.result)
     elif isinstance(op, OpSequence):
       for child in op.ops:
-        self.apply_to_set(ranges, child)
+        self.apply_mutate(child)
     else:
       raise NotImplementedError(op)
 
+
+class Edits:
+  def __init__(self) -> None:
+    self.ranges = EditRanges()
+    self._tentative_op: Optional[EditRangeOp] = None
+
   def apply(self, op: EditRangeOp) -> None:
-    self.apply_to_set(self.ranges, op)
+    self.revert_tentative()
+    self.ranges.apply_mutate(op)
 
-  def get_range(
-    self,
-    variable: Variable,
-    tentative_op: Optional[EditRangeOp] = None,
-  ) -> Optional[EditRange]:
-    ranges = self.ranges
-    if tentative_op is not None:
-      ranges = set(ranges)
-      self.apply_to_set(ranges, tentative_op)
-    for edit_range in ranges:
-      if variable in edit_range:
-        return edit_range
-    return None
+  def get_range(self, variable: Variable) -> Optional[EditRange]:
+    return self.ranges.get(variable)
 
-  def get_edited_value(
-    self,
-    variable: Variable,
-    tentative_op: Optional[EditRangeOp] = None,
-  ) -> Maybe[object]:
-    edit_range = self.get_range(variable, tentative_op)
+  def get_edited_value(self, variable: Variable) -> Maybe[object]:
+    edit_range = self.get_range(variable)
     if edit_range is None:
       return None
     else:
       return Just(edit_range.value)
 
   def set_edit(self, variable: Variable, value: object) -> None:
+    self.revert_tentative()
     edit_range = self.get_range(variable)
     if edit_range is None:
       frame = dcast(int, variable.args['frame'])
@@ -103,6 +113,20 @@ class Edits:
     else:
       op = self.op_set_value(edit_range, value)
     self.apply(op)
+
+  def apply_tentative(self, op: EditRangeOp) -> None:
+    assert self._tentative_op is None
+    self.apply(op)
+    self._tentative_op = op
+
+  def revert_tentative(self) -> None:
+    op = self._tentative_op
+    if op is not None:
+      self._tentative_op = None
+      self.apply(op.inverse())
+
+  def commit_tentative(self) -> None:
+    self._tentative_op = None
 
   def op_no_op(self) -> EditRangeOp:
     return OpSequence(())
@@ -136,9 +160,10 @@ class Edits:
       return self.op_delete(edit_range)
 
   def op_resize(self, edit_range: EditRange, frames: range) -> EditRangeOp:
+    assert self._tentative_op is None
     ops = []
-    for other in self.ranges:
-      if other != edit_range and other.variable == edit_range.variable:
+    for other in self.ranges.by_variable(edit_range.variable):
+      if other != edit_range:
         new_frames = other.frames
         if new_frames.stop in frames:
           new_frames = range(new_frames.start, frames.start)
@@ -184,8 +209,8 @@ class Edits:
   def op_insert_then_resize(
     self, variable: Variable, value: object, to_frames: range
   ) -> EditRangeOp:
-    for edit_range in self.ranges:
-      assert variable not in edit_range
+    assert self._tentative_op is None
+    assert self.ranges.get(variable) is None
     frame = variable.args['frame']
     edit_range = EditRange(variable.without('frame'), range(frame, frame + 1), value)
     return OpSequence((
@@ -201,76 +226,75 @@ class Model(VariableAccessor, VariableDisplayer, Formatters, FrameSequence, Cell
     self._edits = Edits()
     for f in range(100):
       self._edits.set_edit(Variable('stick', frame=f), 10 + f)
-    self._tentative_op: Optional[EditRangeOp] = None
 
   def get(self, variable: Variable) -> object:
-    frame = dcast(int, variable.args['frame'])
-    edit = self._edits.get_edited_value(variable, self._tentative_op)
+    edit = self._edits.get_edited_value(variable)
     if edit is not None:
       return edit.value
-    if variable.name == 'vel':
-      if frame == -1:
-        return 0
-      else:
-        prev_vel = dcast(int, self.get(Variable('vel', frame=frame - 1)))
-        stick = dcast(int, self.get(Variable('stick', frame=frame)))
-        return prev_vel + stick
-    elif variable.name == 'pos':
-      if frame == -1:
-        return 0
-      else:
-        prev_pos = dcast(int, self.get(Variable('pos', frame=frame - 1)))
-        vel = dcast(int, self.get(Variable('vel', frame=frame)))
-        return prev_pos + vel
+    # elif variable.name == 'vel':
+    #   if frame == -1:
+    #     return 0
+    #   else:
+    #     prev_vel = dcast(int, self.get(Variable('vel', frame=frame - 1)))
+    #     stick = dcast(int, self.get(Variable('stick', frame=frame)))
+    #     return prev_vel + stick
+    # elif variable.name == 'pos':
+    #   if frame == -1:
+    #     return 0
+    #   else:
+    #     prev_pos = dcast(int, self.get(Variable('pos', frame=frame - 1)))
+    #     vel = dcast(int, self.get(Variable('vel', frame=frame)))
+    #     return prev_pos + vel
     else:
       return 0
 
   def set(self, variable: Variable, value: object) -> None:
-    if self._tentative_op is None:
-      self._edits.set_edit(variable, value)
+    self._edits.set_edit(variable, value)
 
   def drag(self, source: Variable, target_frame: int) -> None:
-    self._tentative_op = self._edits.op_no_op()
+    self._edits.revert_tentative()
 
     source_frame = dcast(int, source.args['frame'])
     edit_range = self._edits.get_range(source)
+    op: Optional[EditRangeOp] = None
 
     if edit_range is None:
       if target_frame > source_frame:
-        self._tentative_op = self._edits.op_insert_then_resize(
+        op = self._edits.op_insert_then_resize(
           source, self.get(source), range(source_frame, target_frame + 1)
         )
       elif target_frame < source_frame:
-        self._tentative_op = self._edits.op_insert_then_resize(
+        op = self._edits.op_insert_then_resize(
           source, self.get(source), range(target_frame, source_frame + 1)
         )
     elif edit_range.frames == range(source_frame, source_frame + 1):
-      self._tentative_op = self._edits.op_include(edit_range, target_frame)
+      op = self._edits.op_include(edit_range, target_frame)
     elif edit_range.frames.start == source_frame:
-      self._tentative_op = self._edits.op_resize(
+      op = self._edits.op_resize(
         edit_range, range(target_frame, edit_range.frames.stop)
       )
     elif edit_range.frames.stop - 1 == source_frame:
-      self._tentative_op = self._edits.op_resize(
+      op = self._edits.op_resize(
         edit_range, range(edit_range.frames.start, target_frame + 1)
       )
     else:
       if target_frame > source_frame:
-        self._tentative_op = self._edits.op_split_downward(
+        op = self._edits.op_split_downward(
           edit_range, range(source_frame, target_frame)
         )
       elif target_frame < source_frame:
-        self._tentative_op = self._edits.op_split_upward(
+        op = self._edits.op_split_upward(
           edit_range, range(target_frame + 1, source_frame + 1)
         )
 
+    if op is not None:
+      self._edits.apply_tentative(op)
+
   def release(self) -> None:
-    if self._tentative_op is not None:
-      self._edits.apply(self._tentative_op)
-      self._tentative_op = None
+    self._edits.commit_tentative()
 
   def highlight_range(self, variable: Variable) -> Optional[range]:
-    edit_range = self._edits.get_range(variable, self._tentative_op)
+    edit_range = self._edits.get_range(variable)
     if edit_range is not None:
       return edit_range.frames
     else:

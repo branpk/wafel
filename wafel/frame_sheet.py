@@ -77,6 +77,7 @@ class FrameSheet:
     self.frame_column_width = 60
 
     self.drag_source: Optional[Variable] = None
+    self.drag_target: Optional[int] = None
 
     self.prev_selected_frame: Optional[int] = None
     self.scroll_delta = 0.0
@@ -224,8 +225,8 @@ class FrameSheet:
       ig.set_cursor_pos(row_pos)
 
       mouse_in_row = mouse_pos[1] >= row_pos[1] and mouse_pos[1] < row_pos[1] + self.row_height
-      if self.drag_source is not None and mouse_in_row:
-        self.drag_handler.drag(self.drag_source, row)
+      if mouse_in_row:
+        self.drag_target = row
 
       if len(self.columns) > 0:
         ig.set_column_width(-1, self.frame_column_width)
@@ -306,7 +307,10 @@ class FrameSheet:
     if self.drag_source is not None and not ig.is_mouse_down():
       self.drag_handler.release()
       self.drag_source = None
+    self.drag_target = None
     self.render_rows()
+    if self.drag_source is not None and self.drag_target is not None:
+      self.drag_handler.drag(self.drag_source, self.drag_target)
 
     ig.end_child()
 
