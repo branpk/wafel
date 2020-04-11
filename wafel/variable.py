@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import *
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from dataclasses import dataclass, field
 import pickle
 from wafel.util import *
@@ -54,39 +54,39 @@ class ReadOnlyVariableError(Exception):
   pass
 
 
-class VariableAccessor(Protocol):
+class VariableAccessor(ABC):
+  @staticmethod
+  def combine(choose: Callable[[Variable], VariableAccessor]) -> VariableAccessor:
+    return DeterminedVariableAccessor(choose)
+
   @abstractmethod
   def get(self, variable: Variable) -> object: ...
 
   @abstractmethod
   def set(self, variable: Variable, value: object) -> None: ...
 
+  @abstractmethod
+  def reset(self, variable: Variable) -> None: ...
+
   def edited(self, variable: Variable) -> bool:
     return False
 
-  def reset(self, variable: Variable) -> None:
-    pass
 
-
-class VariableAccessorSequence(VariableAccessor):
-  def __init__(self, accessors: Iterable[VariableAccessor]) -> None:
-    self.accessors = tuple(accessors)
+class DeterminedVariableAccessor(VariableAccessor):
+  def __init__(self, choose: Callable[[Variable], VariableAccessor]) -> None:
+    self.choose = choose
 
   def get(self, variable: Variable) -> object:
-    for accessor in self.accessors:
-      try:
-        return accessor.get(variable)
-      except UndefinedVariableError:
-        pass
-    raise UndefinedVariableError(variable)
+    return self.choose(variable).get(variable)
 
   def set(self, variable: Variable, value: object) -> None:
-    for accessor in self.accessors:
-      try:
-        accessor.set(variable, value)
-      except UndefinedVariableError:
-        pass
-    raise UndefinedVariableError(variable)
+    self.choose(variable).set(variable, value)
+
+  def reset(self, variable: Variable) -> None:
+    self.choose(variable).reset(variable)
+
+  def edited(self, variable: Variable) -> bool:
+    return self.choose(variable).edited(variable)
 
 
 __all__ = [
@@ -94,5 +94,4 @@ __all__ = [
   'UndefinedVariableError',
   'ReadOnlyVariableError',
   'VariableAccessor',
-  'VariableAccessorSequence',
 ]

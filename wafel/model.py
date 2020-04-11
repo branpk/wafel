@@ -10,13 +10,14 @@ import ext_modules.util as c_util
 import wafel.config as config
 from wafel.core import Game, Timeline, load_dll_game, Controller, Address, DataPath, \
   AccessibleMemory, SlotState
-from wafel.variable import Variable
+from wafel.variable import Variable, VariableAccessor
 from wafel.edit import Edits
 from wafel.object_type import ObjectType
 from wafel.loading import Loading
 from wafel.util import *
 from wafel.script import Scripts, ScriptController
 from wafel.data_variables import DataVariables
+from wafel.range_edit import RangeEditAccessor
 
 
 class EditController(Controller):
@@ -29,6 +30,90 @@ class EditController(Controller):
   def apply(self, state: SlotState) -> None:
     for edit in self.edits.get_edits(state.frame):
       self.data_variables.set_raw(state, edit.variable, edit.value)
+
+
+class DataVariableAccessor(VariableAccessor):
+  def __init__(
+    self,
+    timeline: Timeline,
+    data_variables: DataVariables,
+    addr_to_symbol: Dict[Address, str],
+    edits: Edits,
+  ) -> None:
+    self.timeline = timeline
+    self.data_variables = data_variables
+    self.addr_to_symbol = addr_to_symbol
+    self.edits = edits
+
+  def get(self, variable: Variable) -> object:
+    frame = variable.args['frame']
+
+    # TODO: Possibly move to DataVariables?
+    object_slot: Optional[int] = variable.args.get('object')
+    if object_slot is not None:
+      object_type: Optional[ObjectType] = variable.args.get('object_type')
+      if object_type is not None and self.get_object_type(frame, object_slot) != object_type:
+        return None
+
+    surface_index: Optional[int] = variable.args.get('surface')
+    if surface_index is not None:
+      num_surfaces = dcast(int, self.timeline.get(frame, 'gSurfacesAllocated'))
+      if surface_index >= num_surfaces:
+        return None
+
+    return self.data_variables.get(self.timeline[frame], variable)
+
+  def get_object_type(self, frame: int, object_slot: int) -> Optional[ObjectType]:
+    active = self.get(Variable('obj-active-flags-active', frame=frame, object=object_slot))
+    if not active:
+      return None
+    behavior_addr = self.get(Variable('obj-behavior-ptr', frame=frame, object=object_slot))
+    assert isinstance(behavior_addr, Address)
+    return ObjectType(behavior_addr, self.addr_to_symbol[behavior_addr])
+
+  def set(self, variable: Variable, value: object) -> None:
+    frame: int = variable.args['frame']
+
+    object_slot: Optional[int] = variable.args.get('object')
+    if object_slot is not None:
+      object_type: Optional[ObjectType] = variable.args.get('object_type')
+      if object_type is not None and self.get_object_type(frame, object_slot) != object_type:
+        return
+
+    surface_index: Optional[int] = variable.args.get('surface')
+    if surface_index is not None:
+      num_surfaces = dcast(int, self.timeline.get(frame, 'gSurfacesAllocated'))
+      if surface_index >= num_surfaces:
+        return
+
+    self.edits.edit(variable, value)
+
+  def reset(self, variable: Variable) -> None:
+    self.edits.reset(variable)
+
+  def edited(self, variable: Variable) -> bool:
+    return self.edits.edited(variable)
+
+
+class ScriptVariableAccessor(VariableAccessor):
+  def __init__(self, scripts: Scripts) -> None:
+    self.scripts = scripts
+
+  def get(self, variable: Variable) -> object:
+    frame: int = variable.args['frame']
+    return self.scripts.get(frame).source
+
+  def set(self, variable: Variable, value: object) -> None:
+    frame: int = variable.args['frame']
+    self.scripts.set_frame_source(frame, dcast(str, value))
+
+  def reset(self, variable: Variable) -> None:
+    frame: int = variable.args['frame']
+    self.scripts.reset_frame(frame)
+
+  def edited(self, variable: Variable) -> bool:
+    frame: int = variable.args['frame']
+    return self.scripts.is_edited(frame)
 
 
 class Model:
@@ -106,6 +191,26 @@ class Model:
       slot_capacity = 20,
     )
 
+    data_accessor = DataVariableAccessor(
+      self.timeline,
+      self.data_variables,
+      self.addr_to_symbol,
+      self.edits,
+    )
+    script_accessor = ScriptVariableAccessor(self.scripts)
+
+    def choose_accessor(variable: Variable) -> VariableAccessor:
+      if variable.name == 'wafel-script':
+        return script_accessor
+      else:
+        return data_accessor
+
+    range_edit_accessor = RangeEditAccessor(
+      VariableAccessor.combine(choose_accessor),
+    )
+    self.accessor: VariableAccessor = range_edit_accessor
+    self.drag_handler = range_edit_accessor
+
     self._selected_frame = 0
     if config.dev_mode:
       self._selected_frame = 1580
@@ -157,8 +262,6 @@ class Model:
   def set_hotspot(self, name: str, frame: int) -> None:
     self.timeline.set_hotspot(name, frame)
 
-  # VariableAccessor
-
   @overload
   def get(self, frame: int, path: Union[str, DataPath]) -> object:
     ...
@@ -166,29 +269,11 @@ class Model:
   def get(self, variable: Variable) -> object:
     ...
   def get(self, arg1, arg2=None):
-    frame: int
     if isinstance(arg1, Variable):
       variable: Variable = arg1
-      frame = variable.args['frame']
-      if variable.name == 'wafel-script':
-        return self.scripts.get(frame).source
-      else:
-        # TODO: Possibly move to DataVariables?
-        object_slot: Optional[int] = variable.args.get('object')
-        if object_slot is not None:
-          object_type: Optional[ObjectType] = variable.args.get('object_type')
-          if object_type is not None and self.get_object_type(frame, object_slot) != object_type:
-            return None
-
-        surface_index: Optional[int] = variable.args.get('surface')
-        if surface_index is not None:
-          num_surfaces = dcast(int, self.timeline.get(frame, 'gSurfacesAllocated'))
-          if surface_index >= num_surfaces:
-            return None
-
-        return self.data_variables.get(self.timeline[frame], variable)
+      return self.accessor.get(variable)
     else:
-      frame = arg1
+      frame: int = arg1
       path: DataPath = arg2
       return self.timeline.get(frame, path)
 
@@ -201,36 +286,13 @@ class Model:
     return ObjectType(behavior_addr, self.addr_to_symbol[behavior_addr])
 
   def set(self, variable: Variable, value: object) -> None:
-    if variable.name == 'wafel-script':
-      self.scripts.set_frame_source(variable.args['frame'], dcast(str, value))
-    else:
-      frame: int = variable.args['frame']
-
-      object_slot: Optional[int] = variable.args.get('object')
-      if object_slot is not None:
-        object_type: Optional[ObjectType] = variable.args.get('object_type')
-        if object_type is not None and self.get_object_type(frame, object_slot) != object_type:
-          return
-
-      surface_index: Optional[int] = variable.args.get('surface')
-      if surface_index is not None:
-        num_surfaces = dcast(int, self.timeline.get(frame, 'gSurfacesAllocated'))
-        if surface_index >= num_surfaces:
-          return
-
-      self.edits.edit(variable, value)
-
-  def edited(self, variable: Variable) -> bool:
-    if variable.name == 'wafel-script':
-      return self.scripts.is_edited(variable.args['frame'])
-    else:
-      return self.edits.edited(variable)
+    self.accessor.set(variable, value)
 
   def reset(self, variable: Variable) -> None:
-    if variable.name == 'wafel-script':
-      return self.scripts.reset_frame(variable.args['frame'])
-    else:
-      return self.edits.reset(variable)
+    self.accessor.reset(variable)
+
+  def edited(self, variable: Variable) -> bool:
+    return self.accessor.edited(variable)
 
   # VariableDisplayer
 

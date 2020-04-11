@@ -75,8 +75,6 @@ class View:
     self.epoch = 0
     self.tkinter_root = tkinter.Tk()
     self.tkinter_root.withdraw()
-    self.tkinter_root.attributes('-topmost', True)
-    self.tkinter_root.lift()
 
     self.dbg_frame_advance = False
 
@@ -122,7 +120,7 @@ class View:
     self.formatters[Variable('mario-action')] = EnumFormatter(self.model.action_names)
 
     self.frame_sheets: List[FrameSheet] = [
-      FrameSheet(self.model, self.model, self.model, self.formatters),
+      FrameSheet(self.model, self.model.accessor, self.model.drag_handler, self.model, self.formatters),
     ]
     for var_name in DEFAULT_FRAME_SHEET_VARS:
       self.frame_sheets[0].append_variable(Variable(var_name))
@@ -410,7 +408,13 @@ class View:
     log.timer.end()
 
 
+  def tkinter_lift(self) -> None:
+    self.tkinter_root.attributes('-topmost', True)
+    self.tkinter_root.lift()
+
+
   def ask_save_filename(self) -> bool:
+    self.tkinter_lift()
     filename = tkinter.filedialog.asksaveasfilename(
       defaultext='.m64',
       filetypes=SequenceFile.FILE_TYPES,
@@ -431,6 +435,7 @@ class View:
           self.reload()
 
         if ig.menu_item('Open')[0]:
+          self.tkinter_lift()
           filename = tkinter.filedialog.askopenfilename() or None
           if filename is not None:
             self.file = SequenceFile.from_filename(filename)
