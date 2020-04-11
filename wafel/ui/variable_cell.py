@@ -16,7 +16,9 @@ def render_variable_cell(
   cell_size: Tuple[int, int],
   is_edited: bool,
   is_selected: bool,
-) -> Tuple[Maybe[T], bool, bool]:
+  frame: Optional[int] = None,
+  highlight_range: Optional[range] = None,
+) -> Tuple[Maybe[T], bool, bool, bool]:
   ig.push_id(id)
 
   window_pos = ig.get_window_position()
@@ -28,7 +30,21 @@ def render_variable_cell(
     cell_cursor_pos.y + window_pos.y - ig.get_scroll_y() - item_spacing.y,
   )
 
-  changed_data, selected = render_variable_value(
+  if highlight_range is not None:
+    assert frame is not None
+    margin = 5
+    offset_top = margin if frame == highlight_range.start else 0
+    offset_bottom = margin if frame == highlight_range.stop - 1 else 0
+    dl = ig.get_window_draw_list()
+    dl.add_rect_filled(
+      cell_cursor_pos[0] + margin,
+      cell_cursor_pos[1] + offset_top,
+      cell_cursor_pos[0] + cell_size[0] - margin,
+      cell_cursor_pos[1] + cell_size[1] - offset_bottom,
+      ig.get_color_u32_rgba(0.2, 0.6, 0, 0.3),
+    )
+
+  changed_data, selected, pressed = render_variable_value(
     'value',
     value,
     formatter,
@@ -41,18 +57,8 @@ def render_variable_cell(
 
   clear_edit = ig.is_item_hovered() and ig.is_mouse_down(2)
 
-  if is_edited:
-    dl = ig.get_window_draw_list()
-    dl.add_rect(
-      cell_cursor_pos[0],
-      cell_cursor_pos[1],
-      cell_cursor_pos[0] + cell_size[0],
-      cell_cursor_pos[1] + cell_size[1],
-      ig.get_color_u32_rgba(0.8, 0.6, 0, 1),
-    )
-
   ig.pop_id()
-  return changed_data, clear_edit, selected
+  return changed_data, clear_edit, selected, pressed
 
 
 __all__ = ['render_variable_cell']

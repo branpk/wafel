@@ -14,7 +14,7 @@ def _render_text(
   formatter: VariableFormatter,
   size: Tuple[int, int],
   highlight: bool,
-) -> Tuple[Maybe[T], bool]:
+) -> Tuple[Maybe[T], bool, bool]:
   editing = use_state('editing', False)
   initial_focus = use_state('initial-focus', False)
 
@@ -32,7 +32,9 @@ def _render_text(
         editing.value = True
         initial_focus.value = False
 
-    return None, clicked
+    pressed = ig.is_item_hovered() and ig.is_mouse_clicked()
+
+    return None, clicked, pressed
 
   cursor_pos = ig.get_cursor_pos()
   cursor_pos = (
@@ -56,7 +58,7 @@ def _render_text(
     input_value = formatter.input(input)
     assert type(input_value) is type(value)
     if input_value != value:
-      return Just(cast(T, input_value)), False
+      return Just(cast(T, input_value)), False, False
   except:
     # TODO: Show error message
     dl = ig.get_window_draw_list()
@@ -68,7 +70,7 @@ def _render_text(
       ig.get_color_u32_rgba(1, 0, 0, 1),
     )
 
-  return None, False
+  return None, False, False
 
 
 def _render_checkbox(
@@ -76,7 +78,7 @@ def _render_checkbox(
   formatter: VariableFormatter,
   size: Tuple[int, int],
   highlight: bool,
-) -> Tuple[Maybe[T], bool]:
+) -> Tuple[Maybe[T], bool, bool]:
   cursor_pos = ig.get_cursor_pos()
   _, input = ig.checkbox('##checkbox', dcast(bool, formatter.output(value)))
 
@@ -88,12 +90,14 @@ def _render_checkbox(
     height=size[1],
   )
 
+  pressed = ig.is_item_hovered() and ig.is_mouse_clicked()
+
   input_value = formatter.input(input)
   assert type(input_value) == type(value)
   if input_value != value:
-    return Just(cast(T, input_value)), clicked
+    return Just(cast(T, input_value)), clicked, pressed
   else:
-    return None, clicked
+    return None, clicked, pressed
 
 
 def render_variable_value(
@@ -102,7 +106,7 @@ def render_variable_value(
   formatter: VariableFormatter,
   size: Tuple[int, int],
   highlight: bool = False,
-) -> Tuple[Maybe[T], bool]:
+) -> Tuple[Maybe[T], bool, bool]:
   ig.push_id(id)
 
   if isinstance(formatter, TextFormatter):

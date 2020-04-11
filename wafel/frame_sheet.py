@@ -36,6 +36,17 @@ class FrameSequence(Protocol):
   def set_hotspot(self, name: str, frame: int) -> None: ...
 
 
+class CellDragHandler(Protocol):
+  @abstractmethod
+  def drag(self, source: Variable, target_frame: int) -> None: ...
+
+  @abstractmethod
+  def release(self) -> None: ...
+
+  @abstractmethod
+  def highlight_range(self, variable: Variable) -> Optional[range]: ...
+
+
 @dataclass(unsafe_hash=True)
 class FrameSheetColumn:
   variable: Variable
@@ -48,12 +59,14 @@ class FrameSheet:
     self,
     sequence: FrameSequence,
     accessor: VariableAccessor,
+    drag_handler: CellDragHandler,
     displayer: VariableDisplayer,
     formatters: Formatters,
   ) -> None:
     super().__init__()
     self.sequence = sequence
     self.accessor = accessor
+    self.drag_handler = drag_handler
     self.displayer = displayer
     self.formatters = formatters
 
@@ -62,6 +75,8 @@ class FrameSheet:
 
     self.row_height = 30
     self.frame_column_width = 60
+
+    self.drag_source: Optional[Variable] = None
 
     self.prev_selected_frame: Optional[int] = None
     self.scroll_delta = 0.0
@@ -165,13 +180,15 @@ class FrameSheet:
     data = self.accessor.get(cell_variable)
     formatter = EmptyFormatter() if data is None else self.formatters[cell_variable]
 
-    changed_data, clear_edit, selected = ui.render_variable_cell(
+    changed_data, clear_edit, selected, pressed = ui.render_variable_cell(
       f'cell-{frame}-{hash(column)}',
       data,
       formatter,
       (column.width, self.row_height),
       self.accessor.edited(cell_variable),
       frame == self.sequence.selected_frame,
+      frame,
+      self.drag_handler.highlight_range(cell_variable),
     )
     if changed_data is not None:
       self.accessor.set(cell_variable, changed_data.value)
@@ -179,6 +196,8 @@ class FrameSheet:
       self.accessor.reset(cell_variable)
     if selected:
       self.sequence.set_selected_frame(frame)
+    if pressed:
+      self.drag_source = cell_variable
 
     return None
 
@@ -195,9 +214,18 @@ class FrameSheet:
 
     timeline_operations: List[Callable[[], None]] = []
 
+    mouse_pos = (
+      ig.get_mouse_pos().x - ig.get_window_position().x,
+      ig.get_mouse_pos().y - ig.get_window_position().y + ig.get_scroll_y() + self.scroll_delta,
+    )
+
     for row in range(min_row, max_row + 1):
-      initial_pos = ig.get_cursor_pos()
-      ig.set_cursor_pos((initial_pos[0], row * self.row_height - self.scroll_delta))
+      row_pos = (0.0, row * self.row_height - self.scroll_delta)
+      ig.set_cursor_pos(row_pos)
+
+      mouse_in_row = mouse_pos[1] >= row_pos[1] and mouse_pos[1] < row_pos[1] + self.row_height
+      if self.drag_source is not None and mouse_in_row:
+        self.drag_handler.drag(self.drag_source, row)
 
       if len(self.columns) > 0:
         ig.set_column_width(-1, self.frame_column_width)
@@ -269,11 +297,17 @@ class FrameSheet:
   def render(self) -> None:
     self.render_headers()
     # TODO: Make the vertical scrollbar always visible?
+
     ig.begin_child('Frame Sheet Rows', flags=ig.WINDOW_ALWAYS_VERTICAL_SCROLLBAR)
     self.update_scolling()
     min_frame = int(ig.get_scroll_y()) // self.row_height - 1
     self.sequence.set_hotspot('frame-sheet-min', max(min_frame, 0))
+
+    if self.drag_source is not None and not ig.is_mouse_down():
+      self.drag_handler.release()
+      self.drag_source = None
     self.render_rows()
+
     ig.end_child()
 
     self.columns = list(self.next_columns)
