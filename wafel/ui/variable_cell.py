@@ -14,7 +14,6 @@ def render_variable_cell(
   value: T,
   formatter: VariableFormatter,
   cell_size: Tuple[int, int],
-  is_edited: bool,
   is_selected: bool,
   frame: Optional[int] = None,
   highlight_range: Optional[range] = None,

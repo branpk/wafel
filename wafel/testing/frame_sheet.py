@@ -300,6 +300,16 @@ class Model(VariableAccessor, VariableDisplayer, Formatters, FrameSequence, Cell
     else:
       return None
 
+  def edited(self, variable: Variable) -> bool:
+    return self._edits.get_range(variable) is not None
+
+  def reset(self, variable: Variable) -> None:
+    self._edits.revert_tentative()
+    edit_range = self._edits.get_range(variable)
+    if edit_range is not None:
+      frame = dcast(int, variable.args['frame'])
+      self._edits.apply(self._edits.op_split_upward(edit_range, range(frame, frame + 1)))
+
   def label(self, variable: Variable) -> str:
     return variable.name
 

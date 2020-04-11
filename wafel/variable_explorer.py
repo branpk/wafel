@@ -230,7 +230,7 @@ class VariableExplorer:
       ig.selectable(label, width=label_width)
       ig.pop_item_width()
       ig.same_line()
-      new_value, _ = ui.render_variable_value(
+      new_value, _, _ = ui.render_variable_value(
         'value-' + label, value, formatter, value_size
       )
       return None if new_value is None else new_value.value

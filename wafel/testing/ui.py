@@ -80,7 +80,7 @@ def test_variable_value(id: str) -> None:
   cell_width = 80
   cell_height = ig.get_text_line_height() + 2 * ig.get_style().frame_padding[1]
 
-  new_int_value, selected = ui.render_variable_value(
+  new_int_value, selected, _ = ui.render_variable_value(
     'int-value',
     int_variable.value,
     DecimalIntFormatter(),
@@ -92,7 +92,7 @@ def test_variable_value(id: str) -> None:
   if selected:
     last_selected.value = 'int'
 
-  new_int_value, selected = ui.render_variable_value(
+  new_int_value, selected, _ = ui.render_variable_value(
     'int-value-copy',
     int_variable.value,
     DecimalIntFormatter(),
@@ -104,7 +104,7 @@ def test_variable_value(id: str) -> None:
   if selected:
     last_selected.value = 'int2'
 
-  new_bool_value, selected = ui.render_variable_value(
+  new_bool_value, selected, _ = ui.render_variable_value(
     'bool-value',
     bool_variable.value,
     CheckboxFormatter(),

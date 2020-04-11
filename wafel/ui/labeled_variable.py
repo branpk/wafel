@@ -39,7 +39,7 @@ def render_labeled_variable(
     cell_cursor_pos[1] + ig.get_window_position()[1] - ig.get_scroll_y(),
   )
 
-  changed_data, _ = render_variable_value(
+  changed_data, _, _ = render_variable_value(
     'value',
     value,
     formatter,

@@ -47,6 +47,17 @@ class CellDragHandler(Protocol):
   def highlight_range(self, variable: Variable) -> Optional[range]: ...
 
 
+class NoOpDragHandler(CellDragHandler):
+  def drag(self, source: Variable, target_frame: int) -> None:
+    pass
+
+  def release(self) -> None:
+    pass
+
+  def highlight_range(self, variable: Variable) -> Optional[range]:
+    return None
+
+
 @dataclass(unsafe_hash=True)
 class FrameSheetColumn:
   variable: Variable
@@ -59,9 +70,9 @@ class FrameSheet:
     self,
     sequence: FrameSequence,
     accessor: VariableAccessor,
-    drag_handler: CellDragHandler,
     displayer: VariableDisplayer,
     formatters: Formatters,
+    drag_handler: CellDragHandler = NoOpDragHandler(),
   ) -> None:
     super().__init__()
     self.sequence = sequence
@@ -186,7 +197,6 @@ class FrameSheet:
       data,
       formatter,
       (column.width, self.row_height),
-      self.accessor.edited(cell_variable),
       frame == self.sequence.selected_frame,
       frame,
       self.drag_handler.highlight_range(cell_variable),
