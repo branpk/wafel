@@ -1,6 +1,7 @@
 from typing import *
 import random
 import sys
+import cProfile
 
 import wafel.imgui as ig
 import wafel.ui as ui
@@ -321,4 +322,5 @@ def render_tests(id: str) -> None:
 
 
 config.init()
-open_window_and_run(render_tests)
+cProfile.run('open_window_and_run(render_tests)', sort='cumtime')
+# open_window_and_run(render_tests)
