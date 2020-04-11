@@ -22,7 +22,13 @@ class Variable:
   def at(self, **kwargs) -> Variable:
     args = dict(self.args)
     args.update(kwargs)
-    return Variable(self.name, **args)
+    return Variable(self.name, args)
+
+  def without(self, arg: str) -> Variable:
+    args = dict(self.args)
+    if arg in args:
+      del args[arg]
+    return Variable(self.name, args)
 
   def to_bytes(self) -> bytes:
     return pickle.dumps(self)

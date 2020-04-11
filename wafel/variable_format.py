@@ -1,4 +1,5 @@
 from typing import *
+from abc import abstractmethod
 
 from wafel.variable import Variable, UndefinedVariableError
 from wafel.data_variables import DataVariables
@@ -85,7 +86,12 @@ class StringFormatter(TextFormatter):
     return rep
 
 
-class Formatters:
+class Formatters(Protocol):
+  @abstractmethod
+  def __getitem__(self, variable: Variable) -> VariableFormatter: ...
+
+
+class DataFormatters:
   def __init__(self, data_variables: DataVariables) -> None:
     self.data_variables = data_variables
     self.overrides: Dict[str, VariableFormatter] = {}

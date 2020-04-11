@@ -11,7 +11,8 @@ from wafel.variable import Variable
 from wafel.core import Address
 from wafel.util import *
 from wafel.variable_format import DecimalIntFormatter, CheckboxFormatter
-from wafel.slot_testing import test_timeline_algorithm
+from wafel.testing.timeline import test_timeline_algorithm
+from wafel.testing.frame_sheet import test_frame_sheet
 from wafel.loading import in_progress
 from wafel.bindings import render_controller_settings, render_key_binding_settings
 import wafel.config as config
@@ -271,6 +272,7 @@ TESTS = [
   test_timeline_algorithm,
   test_loading_bar,
   test_bindings,
+  test_frame_sheet,
 ]
 
 

@@ -20,7 +20,7 @@ from wafel.model import Model
 from wafel.frame_sheet import FrameSheet
 from wafel.variable import Variable
 from wafel.variable_explorer import VariableExplorer
-from wafel.variable_format import Formatters, EnumFormatter
+from wafel.variable_format import Formatters, EnumFormatter, DataFormatters
 from wafel.format_m64 import load_m64, save_m64
 from wafel.tas_metadata import TasMetadata
 from wafel.window import open_window_and_run
@@ -118,7 +118,7 @@ class View:
 
   def reload_ui(self) -> None:
     self.show_debug_pane = config.dev_mode
-    self.formatters = Formatters(self.model.data_variables)
+    self.formatters = DataFormatters(self.model.data_variables)
     self.formatters[Variable('mario-action')] = EnumFormatter(self.model.action_names)
 
     self.frame_sheets: List[FrameSheet] = [
