@@ -60,6 +60,10 @@ class Edits:
     edits.append(Edit(variable, value))
     self._invalidate(frame)
 
+  def unsafe_edit(self, variable: Variable, value: object) -> None:
+    frame: int = variable.args['frame']
+    self.get_edits(frame).append(Edit(variable, value))
+
   def edited(self, variable: Variable) -> bool:
     frame: int = variable.args['frame']
     return any(edit.variable == variable for edit in self.get_edits(frame))

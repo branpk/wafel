@@ -43,38 +43,38 @@ EditRangeOp = Union[OpAtom, OpSequence]
 
 class EditRangesImpl:
   def __init__(self, accessor: VariableAccessor) -> None:
-    self._all: Set[EditRange] = set()
     self._by_variable: Dict[Variable, EditRange] = {}
     self._accessor = accessor
 
   def get(self, variable: Variable) -> Optional[EditRange]:
     return self._by_variable.get(variable)
 
-  def by_variable(self, variable: Variable) -> Iterable[EditRange]:
-    return (edit_range for edit_range in self._all if edit_range.variable == variable)
+  def intersecting(self, variable: Variable, frames: range) -> Iterable[EditRange]:
+    result = set()
+    for frame in frames:
+      other = self._by_variable.get(variable.at(frame=frame))
+      if other is not None:
+        result.add(other)
+    return result
 
   def _remove(self, edit_range: EditRange) -> None:
-    self._all.remove(edit_range)
-    for variable, other in list(self._by_variable.items()):
-      if other == edit_range:
-        del self._by_variable[variable]
-        self._accessor.reset(variable)
-
-  def _add(self, edit_range: EditRange) -> None:
-    self._all.add(edit_range)
     for frame in edit_range.frames:
       variable = edit_range.variable.at(frame=frame)
+      del self._by_variable[variable]
+      self._accessor.reset(variable)
+
+  def _add(self, edit_range: EditRange) -> None:
+    for frame in edit_range.frames:
+      variable = edit_range.variable.at(frame=frame)
+      assert variable not in self._by_variable
       self._by_variable[variable] = edit_range
       self._accessor.set(variable, edit_range.value)
 
   def apply_mutate(self, op: EditRangeOp) -> None:
     if isinstance(op, OpAtom):
       if op.target is not None:
-        assert op.target in self._all
         self._remove(op.target)
       if op.result is not None:
-        for edit_range in self._all:
-          assert not edit_range.intersects(op.result)
         self._add(op.result)
     elif isinstance(op, OpSequence):
       for child in op.ops:
@@ -153,7 +153,7 @@ class EditRanges:
   def op_resize(self, edit_range: EditRange, frames: range) -> EditRangeOp:
     assert self._tentative_op is None
     ops = []
-    for other in self._ranges.by_variable(edit_range.variable):
+    for other in self._ranges.intersecting(edit_range.variable, frames):
       if other != edit_range:
         new_frames = other.frames
         if new_frames.stop in frames:
@@ -241,11 +241,11 @@ class RangeEditAccessor(VariableAccessor):
     if edit_range is None:
       if target_frame > source_frame:
         op = self._ranges.op_insert_then_resize(
-          source, self._accessor.get(source), range(source_frame, target_frame + 1)
+          source, self.get(source), range(source_frame, target_frame + 1)
         )
       elif target_frame < source_frame:
         op = self._ranges.op_insert_then_resize(
-          source, self._accessor.get(source), range(target_frame, source_frame + 1)
+          source, self.get(source), range(target_frame, source_frame + 1)
         )
     elif edit_range.frames == range(source_frame, source_frame + 1):
       op = self._ranges.op_include(edit_range, target_frame)

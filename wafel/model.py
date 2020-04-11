@@ -211,6 +211,10 @@ class Model:
     self.accessor: VariableAccessor = range_edit_accessor
     self.drag_handler = range_edit_accessor
 
+    for frame in range(len(self.edits)):
+      for edit in list(self.edits.get_edits(frame)):
+        self.accessor.set(edit.variable, edit.value)
+
     self._selected_frame = 0
     if config.dev_mode:
       self._selected_frame = 1580

@@ -48,11 +48,11 @@ def save_m64(filename: str, metadata: TasMetadata, edits: Edits) -> None:
     f.write(bytes_to_buffer(metadata.authors.encode('utf-8'), 222))
     f.write(bytes_to_buffer(metadata.description.encode('utf-8'), 256))
 
-    buttons = 0
-    stick_x = 0
-    stick_y = 0
-
     for frame in range(len(edits)):
+      buttons = 0
+      stick_x = 0
+      stick_y = 0
+
       for edit in edits.get_edits(frame):
         if edit.variable in INPUT_BUTTON_FLAGS:
           flag = INPUT_BUTTON_FLAGS[edit.variable]
@@ -97,10 +97,6 @@ def load_m64(filename: str) -> Tuple[TasMetadata, Edits]:
     )
     edits = Edits()
 
-    prev_buttons = 0
-    prev_stick_x = 0
-    prev_stick_y = 0
-
     f.seek(0x400)
     frame = 0
     while True:
@@ -112,12 +108,12 @@ def load_m64(filename: str) -> Tuple[TasMetadata, Edits]:
         break
 
       for variable, flag in INPUT_BUTTON_FLAGS.items():
-        if (prev_buttons & flag) != (buttons & flag):
-          edits.edit(variable.at(frame=frame), bool(buttons & flag))
-      if stick_x != prev_stick_x:
-        edits.edit(Variable('input-stick-x').at(frame=frame), stick_x)
-      if stick_y != prev_stick_y:
-        edits.edit(Variable('input-stick-y').at(frame=frame), stick_y)
+        if buttons & flag:
+          edits.unsafe_edit(variable.at(frame=frame), bool(buttons & flag))
+      if stick_x != 0:
+        edits.unsafe_edit(Variable('input-stick-x').at(frame=frame), stick_x)
+      if stick_y != 0:
+        edits.unsafe_edit(Variable('input-stick-y').at(frame=frame), stick_y)
 
       prev_buttons = buttons
       prev_stick_x = stick_x

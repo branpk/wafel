@@ -223,7 +223,7 @@ class FrameSheet:
       row_pos = (0.0, row * self.row_height - self.scroll_delta)
       ig.set_cursor_pos(row_pos)
 
-      mouse_in_row = mouse_pos[1] >= row_pos[1] and mouse_pos[1] < row_pos[1] + self.row_height
+      mouse_in_row = mouse_pos[1] > row_pos[1] and mouse_pos[1] <= row_pos[1] + self.row_height
       if mouse_in_row:
         self.drag_target = row
 
