@@ -6,6 +6,8 @@ import imgui as ig
 from wafel.util import *
 import wafel.config as config
 
+Color4f = Tuple[float, float, float, float]
+
 _stack: List[Tuple[str, Any]] = []
 _frames_without_modal: int = 0
 _id_stack: List[str] = []

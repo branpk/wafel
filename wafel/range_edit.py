@@ -2,9 +2,23 @@ from __future__ import annotations
 
 from typing import *
 from dataclasses import dataclass
+import random
+import textwrap
 
+import wafel.imgui as ig
 from wafel.variable import Variable, VariableAccessor
 from wafel.util import *
+
+
+RANGE_COLORS = [
+  (0.4, 0.9, 0.0, 0.3),
+  (0.6, 0.4, 0.0, 0.3),
+  (0.2, 0.6, 0.0, 0.3),
+  (0.4, 0.9, 0.5, 0.3),
+  (0.5, 0.5, 0.5, 0.3),
+  (0.7, 0.7, 0.3, 0.3),
+  (0.3, 0.3, 0.7, 0.3),
+]
 
 
 @dataclass(frozen=True)
@@ -22,14 +36,22 @@ class EditRange:
       return False
     return self.frames.stop > other.frames.start and other.frames.stop > self.frames.start
 
+  def __str__(self) -> str:
+    return f'{self.variable}[{self.frames.start}, {self.frames.stop})={self.value}'
+
 
 @dataclass(frozen=True)
 class OpAtom:
-  target: Optional[EditRange]
-  result: Optional[EditRange]
+  targets: Tuple[EditRange, ...]
+  results: Tuple[EditRange, ...]
 
-  def inverse(self) -> OpAtom:
-    return OpAtom(self.result, self.target)
+  def inverse(self) -> EditRangeOp:
+    return OpAtom(self.results, self.targets)
+
+  def __str__(self) -> str:
+    targets = ', '.join(map(str, self.targets))
+    results = ', '.join(map(str, self.results))
+    return targets + ' -> ' + results
 
 @dataclass(frozen=True)
 class OpSequence:
@@ -38,6 +60,10 @@ class OpSequence:
   def inverse(self) -> OpSequence:
     return OpSequence(tuple(op.inverse() for op in reversed(self.ops)))
 
+  def __str__(self) -> str:
+    children = '\n'.join(map(str, self.ops))
+    return 'seq:\n' + textwrap.indent(children, '  ')
+
 EditRangeOp = Union[OpAtom, OpSequence]
 
 
@@ -45,9 +71,14 @@ class EditRangesImpl:
   def __init__(self, accessor: VariableAccessor) -> None:
     self._by_variable: Dict[Variable, EditRange] = {}
     self._accessor = accessor
+    self._colors: Dict[EditRange, ig.Color4f] = {}
+    self._color_index: int = 0
 
   def get(self, variable: Variable) -> Optional[EditRange]:
     return self._by_variable.get(variable)
+
+  def get_color(self, edit_range: EditRange) -> ig.Color4f:
+    return self._colors[edit_range]
 
   def intersecting(self, variable: Variable, frames: range) -> Iterable[EditRange]:
     result = set()
@@ -70,15 +101,29 @@ class EditRangesImpl:
       self._by_variable[variable] = edit_range
       self._accessor.set(variable, edit_range.value)
 
-  def apply_mutate(self, op: EditRangeOp) -> None:
+  def apply(self, op: EditRangeOp) -> None:
     if isinstance(op, OpAtom):
-      if op.target is not None:
-        self._remove(op.target)
-      if op.result is not None:
-        self._add(op.result)
+      color_queue = []
+
+      for target in op.targets:
+        color_queue.append(self._colors.pop(target))
+        self._remove(target)
+
+      for result in op.results:
+        if len(color_queue) == 0:
+          color = RANGE_COLORS[self._color_index]
+          self._color_index = (self._color_index + 1) % len(RANGE_COLORS)
+        else:
+          color = color_queue.pop(0)
+        self._colors[result] = color
+        self._add(result)
+
+      self._color_index = (self._color_index - len(color_queue)) % len(RANGE_COLORS)
+
     elif isinstance(op, OpSequence):
       for child in op.ops:
-        self.apply_mutate(child)
+        self.apply(child)
+
     else:
       raise NotImplementedError(op)
 
@@ -90,10 +135,13 @@ class EditRanges:
 
   def apply(self, op: EditRangeOp) -> None:
     self.revert_tentative()
-    self._ranges.apply_mutate(op)
+    self._ranges.apply(op)
 
   def get_range(self, variable: Variable) -> Optional[EditRange]:
     return self._ranges.get(variable)
+
+  def get_color(self, edit_range: EditRange) -> ig.Color4f:
+    return self._ranges.get_color(edit_range)
 
   def set_value(self, variable: Variable, value: object) -> None:
     self.revert_tentative()
@@ -123,21 +171,28 @@ class EditRanges:
     return OpSequence(())
 
   def op_set_value(self, edit_range: EditRange, value: object) -> EditRangeOp:
-    return OpAtom(edit_range, EditRange(edit_range.variable, edit_range.frames, value))
+    return OpAtom((edit_range,), (EditRange(edit_range.variable, edit_range.frames, value),))
 
   def op_set_frames(self, edit_range: EditRange, to_frames: range) -> EditRangeOp:
     assert len(to_frames) > 0
-    return OpAtom(edit_range, EditRange(edit_range.variable, to_frames, edit_range.value))
+    return OpAtom((edit_range,), (EditRange(edit_range.variable, to_frames, edit_range.value),))
 
   def op_delete(self, edit_range: EditRange) -> EditRangeOp:
-    return OpAtom(edit_range, None)
+    return OpAtom((edit_range,), ())
 
   def op_insert_range(self, edit_range: EditRange) -> EditRangeOp:
     assert len(edit_range.frames) > 0
-    return OpAtom(None, edit_range)
+    return OpAtom((), (edit_range,))
 
   def op_insert(self, variable: Variable, frames: range, value: object) -> EditRangeOp:
     return self.op_insert_range(EditRange(variable, frames, value))
+
+  def op_split(self, edit_range: EditRange, *frame_ranges: range) -> EditRangeOp:
+    result = []
+    for frames in frame_ranges:
+      if len(frames) > 0:
+        result.append(EditRange(edit_range.variable, frames, edit_range.value))
+    return OpAtom((edit_range,), tuple(result))
 
   # There is no op_sequence since op_grow depends on self.ranges, so sequencing
   # it isn't guaranteed to result in a valid operation
@@ -176,26 +231,20 @@ class EditRanges:
     return self.op_no_op()
 
   def op_split_upward(self, edit_range: EditRange, gap: range) -> EditRangeOp:
-    assert gap.stop - 1 in edit_range.frames
-    ops = [self.op_shrink(edit_range, range(edit_range.frames.start, gap.start))]
-    if gap.stop < edit_range.frames.stop:
-      ops.append(self.op_insert(
-        edit_range.variable,
-        range(gap.stop, edit_range.frames.stop),
-        edit_range.value,
-      ))
-    return OpSequence(tuple(ops))
+    # assert gap.stop - 1 in edit_range.frames
+    return self.op_split(
+      edit_range,
+      range(edit_range.frames.start, gap.start),
+      range(gap.stop, edit_range.frames.stop),
+    )
 
   def op_split_downward(self, edit_range: EditRange, gap: range) -> EditRangeOp:
-    assert gap.start in edit_range.frames
-    ops = [self.op_shrink(edit_range, range(gap.stop, edit_range.frames.stop))]
-    if edit_range.frames.start < gap.start:
-      ops.append(self.op_insert(
-        edit_range.variable,
-        range(edit_range.frames.start, gap.start),
-        edit_range.value,
-      ))
-    return OpSequence(tuple(ops))
+    # assert gap.start in edit_range.frames
+    return self.op_split(
+      edit_range,
+      range(gap.stop, edit_range.frames.stop),
+      range(edit_range.frames.start, gap.start),
+    )
 
   def op_insert_then_resize(
     self, variable: Variable, value: object, to_frames: range
@@ -211,9 +260,14 @@ class EditRanges:
 
 
 class RangeEditAccessor(VariableAccessor):
-  def __init__(self, accessor: VariableAccessor) -> None:
+  def __init__(
+    self,
+    accessor: VariableAccessor,
+    highlight_single: Callable[[Variable], bool] = lambda _: True,
+  ) -> None:
     self._ranges = EditRanges(accessor)
     self._accessor = accessor
+    self._highlight_single = highlight_single
 
   def get(self, variable: Variable) -> object:
     return self._accessor.get(variable)
@@ -259,11 +313,11 @@ class RangeEditAccessor(VariableAccessor):
       )
     else:
       if target_frame > source_frame:
-        op = self._ranges.op_split_downward(
+        op = self._ranges.op_split_upward(
           edit_range, range(source_frame, target_frame)
         )
       elif target_frame < source_frame:
-        op = self._ranges.op_split_upward(
+        op = self._ranges.op_split_downward(
           edit_range, range(target_frame + 1, source_frame + 1)
         )
 
@@ -273,10 +327,12 @@ class RangeEditAccessor(VariableAccessor):
   def release(self) -> None:
     self._ranges.commit_tentative()
 
-  def highlight_range(self, variable: Variable) -> Optional[range]:
+  def highlight_range(self, variable: Variable) -> Optional[Tuple[range, ig.Color4f]]:
     edit_range = self._ranges.get_range(variable)
     if edit_range is not None:
-      return edit_range.frames
+      if len(edit_range.frames) == 1 and not self._highlight_single(variable):
+        return None
+      return edit_range.frames, self._ranges.get_color(edit_range)
     else:
       return None
 

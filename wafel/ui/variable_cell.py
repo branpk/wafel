@@ -16,7 +16,7 @@ def render_variable_cell(
   cell_size: Tuple[int, int],
   is_selected: bool,
   frame: Optional[int] = None,
-  highlight_range: Optional[range] = None,
+  highlight_range: Optional[Tuple[range, ig.Color4f]] = None,
 ) -> Tuple[Maybe[T], bool, bool, bool]:
   ig.push_id(id)
 
@@ -31,16 +31,17 @@ def render_variable_cell(
 
   if highlight_range is not None:
     assert frame is not None
+    frames, color = highlight_range
     margin = 5
-    offset_top = margin if frame == highlight_range.start else 0
-    offset_bottom = margin if frame == highlight_range.stop - 1 else 0
+    offset_top = margin if frame == frames.start else 0
+    offset_bottom = margin if frame == frames.stop - 1 else 0
     dl = ig.get_window_draw_list()
     dl.add_rect_filled(
       cell_cursor_pos[0] + margin,
       cell_cursor_pos[1] + offset_top,
       cell_cursor_pos[0] + cell_size[0] - margin,
       cell_cursor_pos[1] + cell_size[1] - offset_bottom,
-      ig.get_color_u32_rgba(0.2, 0.6, 0, 0.3),
+      ig.get_color_u32_rgba(*color),
     )
 
   changed_data, selected, pressed = render_variable_value(

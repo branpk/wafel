@@ -207,6 +207,7 @@ class Model:
 
     range_edit_accessor = RangeEditAccessor(
       VariableAccessor.combine(choose_accessor),
+      highlight_single = lambda variable: not variable.name.startswith('input-'),
     )
     self.accessor: VariableAccessor = range_edit_accessor
     self.drag_handler = range_edit_accessor
