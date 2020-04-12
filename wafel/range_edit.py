@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import *
 from dataclasses import dataclass
-import random
 import textwrap
+import time
 
 import wafel.imgui as ig
 from wafel.variable import Variable, VariableAccessor
@@ -13,9 +13,9 @@ from wafel.util import *
 RANGE_COLORS = [
   (0.4, 0.9, 0.0, 0.3),
   (0.6, 0.4, 0.0, 0.3),
-  (0.2, 0.6, 0.0, 0.3),
   (0.4, 0.9, 0.5, 0.3),
   (0.5, 0.5, 0.5, 0.3),
+  (0.2, 0.6, 0.0, 0.3),
   (0.7, 0.7, 0.3, 0.3),
   (0.3, 0.3, 0.7, 0.3),
 ]
@@ -268,6 +268,7 @@ class RangeEditAccessor(VariableAccessor):
     self._ranges = EditRanges(accessor)
     self._accessor = accessor
     self._highlight_single = highlight_single
+    self._drag_start_time: Optional[float] = None
 
   def get(self, variable: Variable) -> object:
     return self._accessor.get(variable)
@@ -286,6 +287,8 @@ class RangeEditAccessor(VariableAccessor):
       self._ranges.apply(self._ranges.op_split_upward(edit_range, range(frame, frame + 1)))
 
   def drag(self, source: Variable, target_frame: int) -> None:
+    if self._drag_start_time is None:
+      self._drag_start_time = time.time()
     self._ranges.revert_tentative()
 
     source_frame = dcast(int, source.args['frame'])
@@ -325,7 +328,12 @@ class RangeEditAccessor(VariableAccessor):
       self._ranges.apply_tentative(op)
 
   def release(self) -> None:
-    self._ranges.commit_tentative()
+    # Prevent accidental drags
+    if self._drag_start_time is not None and time.time() - self._drag_start_time > 0.2:
+      self._ranges.commit_tentative()
+    else:
+      self._ranges.revert_tentative()
+    self._drag_start_time = None
 
   def highlight_range(self, variable: Variable) -> Optional[Tuple[range, ig.Color4f]]:
     edit_range = self._ranges.get_range(variable)

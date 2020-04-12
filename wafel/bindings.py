@@ -370,29 +370,33 @@ def render_key_binding_settings(id: str) -> None:
   ig.pop_id()
 
 
-def input_float(name: str) -> float:
-  if not ig.global_keyboard_capture():
-    return 0.0
+def _input_float_uncond(name: str) -> float:
   return check_input(bindings.get(name))
 
+def _input_down_uncond(name: str) -> bool:
+  return bool(round(_input_float_uncond(name)))
+
+def input_float(name: str) -> float:
+  return _input_float_uncond(name) if ig.global_keyboard_capture() else 0.0
+
 def input_down(name: str) -> bool:
-  return bool(round(input_float(name)))
+  return _input_down_uncond(name) if ig.global_keyboard_capture() else False
 
 def input_pressed(name: str) -> bool:
   ig.push_id('ctrl-pressed-' + name)
   prev_down = use_state('prev-down', False)
-  down = input_down(name)
+  down = _input_down_uncond(name)
   pressed = not prev_down.value and down
   prev_down.value = down
   ig.pop_id()
-  return pressed
+  return pressed if ig.global_keyboard_capture() else False
 
 def input_pressed_repeat(name: str, delay: float, per_second: float) -> int:
   ig.push_id('ctrl-pressed-repeat-' + name)
   down_start: Ref[Optional[float]] = use_state('down-start', None)
   counted = use_state('counted', 0)
 
-  down = input_down(name)
+  down = _input_down_uncond(name)
   if not down:
     down_start.value = None
     count = 0
@@ -407,13 +411,13 @@ def input_pressed_repeat(name: str, delay: float, per_second: float) -> int:
     counted.value = total_count
 
   ig.pop_id()
-  return count
+  return count if ig.global_keyboard_capture() else 0
 
 def input_down_gradual(name: str, until_full: float) -> float:
   ig.push_id('ctrl-down-gradual-' + name)
   down_start: Ref[Optional[float]] = use_state('down-start', None)
 
-  down = input_down(name)
+  down = _input_down_uncond(name)
   if not down:
     down_start.value = None
     result = 0.0
@@ -424,7 +428,7 @@ def input_down_gradual(name: str, until_full: float) -> float:
     result = min((time.time() - down_start.value) / until_full, 1)
 
   ig.pop_id()
-  return result
+  return result if ig.global_keyboard_capture() else 0.0
 
 
 __all__ = [

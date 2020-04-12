@@ -34,10 +34,11 @@ class Model(VariableDisplayer, Formatters, FrameSequence):
     self._selected_frame = 0
     self._max_frame = 1000
     self._accessor = RangeEditAccessor(Accessor())
-    for f in range(5, 6):
-      for var in ['stick', 'vel', 'pos']:
+    for var in ['stick', 'vel', 'pos']:
+      for f in range(100):
         self._accessor.set(Variable(var, frame=f), 10 + f)
-      for i in range(10):
+    for i in range(10):
+      for f in range(100):
         self._accessor.set(Variable('junk ' + str(i), frame=f), 10 + f)
 
   def label(self, variable: Variable) -> str:
