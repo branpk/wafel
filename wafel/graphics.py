@@ -104,7 +104,7 @@ def build_scene(
     )
   log.timer.end()
 
-  if model.play_speed <= 0:
+  if model.play_speed <= 0 or not model.playback_mode:
     path_frames = range(max(model.selected_frame - 5, 0), model.selected_frame + 61)
   else:
     path_frames = range(max(model.selected_frame - 60, 0), model.selected_frame + 6)

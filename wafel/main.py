@@ -302,6 +302,7 @@ class View:
       speed_index = min(max(speed_index, 0), len(speed_options) - 1)
 
     self.model.play_speed = play_direction * speed_options[speed_index]
+    self.model.playback_mode = saved_play_direction.value != 0
 
     def play_button(label: str, direction: int) -> None:
       disabled = play_direction == direction
