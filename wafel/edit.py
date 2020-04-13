@@ -57,19 +57,21 @@ class Edits:
     for edit in list(edits):
       if edit.variable == variable:
         edits.remove(edit)
-    edits.append(Edit(variable, value))
+    edits.append(Edit(variable.without('frame'), value))
     self._invalidate(frame)
 
   def unsafe_edit(self, variable: Variable, value: object) -> None:
     frame: int = variable.args['frame']
-    self.get_edits(frame).append(Edit(variable, value))
+    self.get_edits(frame).append(Edit(variable.without('frame'), value))
 
   def edited(self, variable: Variable) -> bool:
     frame: int = variable.args['frame']
+    variable = variable.without('frame')
     return any(edit.variable == variable for edit in self.get_edits(frame))
 
   def reset(self, variable: Variable) -> None:
     frame: int = variable.args['frame']
+    variable = variable.without('frame')
     edits = self.get_edits(frame)
     for edit in list(edits):
       if edit.variable == variable:

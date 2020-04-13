@@ -210,11 +210,11 @@ class Model:
       highlight_single = lambda variable: not variable.name.startswith('input-'),
     )
     self.accessor: VariableAccessor = range_edit_accessor
-    self.drag_handler = range_edit_accessor
+    self.range_edit_accessor = range_edit_accessor
 
     for frame in range(len(self.edits)):
       for edit in list(self.edits.get_edits(frame)):
-        self.accessor.set(edit.variable, edit.value)
+        self.accessor.set(edit.variable.at(frame=frame), edit.value)
 
     self._selected_frame = 0
     if config.dev_mode:
@@ -256,12 +256,12 @@ class Model:
     return self.edits.extend(frame + 1)
 
   def insert_frame(self, frame: int) -> None:
-    self.edits.insert_frame(frame)
+    self.range_edit_accessor.insert_frame(frame)
     if self.selected_frame >= frame:
       self.selected_frame += 1
 
   def delete_frame(self, frame: int) -> None:
-    self.edits.delete_frame(frame)
+    self.range_edit_accessor.delete_frame(frame)
     if self.selected_frame > frame or self.selected_frame >= len(self.edits):
       self.selected_frame -= 1
 

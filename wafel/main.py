@@ -120,7 +120,7 @@ class View:
     self.formatters[Variable('mario-action')] = EnumFormatter(self.model.action_names)
 
     self.frame_sheets: List[FrameSheet] = [
-      FrameSheet(self.model, self.model.accessor, self.model.drag_handler, self.model, self.formatters),
+      FrameSheet(self.model, self.model.accessor, self.model.range_edit_accessor, self.model, self.formatters),
     ]
     for var_name in DEFAULT_FRAME_SHEET_VARS:
       self.frame_sheets[0].append_variable(Variable(var_name))

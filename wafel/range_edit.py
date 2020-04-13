@@ -69,8 +69,8 @@ EditRangeOp = Union[OpAtom, OpSequence]
 
 class EditRangesImpl:
   def __init__(self, accessor: VariableAccessor) -> None:
-    self._by_variable: Dict[Variable, EditRange] = {}
     self._accessor = accessor
+    self._by_variable: Dict[Variable, EditRange] = {}
     self._colors: Dict[EditRange, ig.Color4f] = {}
     self._color_index: int = 0
 
@@ -127,6 +127,41 @@ class EditRangesImpl:
     else:
       raise NotImplementedError(op)
 
+  def _insert_frame_into_range(self, edit_range: EditRange, frame: int) -> EditRange:
+    frames = edit_range.frames
+    if frames.start >= frame:
+      frames = range(frames.start + 1, frames.stop + 1)
+    elif frames.stop - 1 >= frame:
+      frames = range(frames.start, frames.stop + 1)
+    return EditRange(edit_range.variable, frames, edit_range.value)
+
+  def insert_frame(self, frame: int) -> None:
+    targets = tuple(set(self._by_variable.values()))
+    results = tuple(map(lambda r: self._insert_frame_into_range(r, frame), targets))
+    op = OpAtom(targets, results)
+    self.apply(op)
+
+  def _delete_frame_from_range(self, edit_range: EditRange, frame: int) -> EditRange:
+    frames = edit_range.frames
+    if frames.start > frame:
+      frames = range(frames.start - 1, frames.stop - 1)
+    elif frames.stop - 1 >= frame:
+      frames = range(frames.start, frames.stop - 1)
+    return EditRange(edit_range.variable, frames, edit_range.value)
+
+  def delete_frame(self, frame: int) -> None:
+    delete_ranges = []
+    for edit_range in self._by_variable.values():
+      if edit_range.frames == range(frame, frame + 1):
+        delete_ranges.append(edit_range)
+    for edit_range in delete_ranges:
+      self.apply(OpAtom((edit_range,), ()))
+
+    targets = tuple(set(self._by_variable.values()))
+    results = tuple(map(lambda r: self._delete_frame_from_range(r, frame), targets))
+    op = OpAtom(targets, results)
+    self.apply(op)
+
 
 class EditRanges:
   def __init__(self, accessor: VariableAccessor) -> None:
@@ -166,6 +201,14 @@ class EditRanges:
 
   def commit_tentative(self) -> None:
     self._tentative_op = None
+
+  def insert_frame(self, frame: int) -> None:
+    self.revert_tentative()
+    self._ranges.insert_frame(frame)
+
+  def delete_frame(self, frame: int) -> None:
+    self.revert_tentative()
+    self._ranges.delete_frame(frame)
 
   def op_no_op(self) -> EditRangeOp:
     return OpSequence(())
@@ -343,6 +386,12 @@ class RangeEditAccessor(VariableAccessor):
       return edit_range.frames, self._ranges.get_color(edit_range)
     else:
       return None
+
+  def insert_frame(self, frame: int) -> None:
+    self._ranges.insert_frame(frame)
+
+  def delete_frame(self, frame: int) -> None:
+    self._ranges.delete_frame(frame)
 
 
 __all__ = [
