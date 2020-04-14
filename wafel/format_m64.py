@@ -3,8 +3,7 @@ import struct
 import os
 
 from wafel.input_buttons import INPUT_BUTTON_FLAGS
-from wafel.variable import Variable
-from wafel.edit import Edits
+from wafel.variable import Variable, VariableReader
 from wafel.util import *
 from wafel.tas_metadata import TasMetadata
 
@@ -20,7 +19,7 @@ COUNTRY_CODES = {
 }
 
 
-def save_m64(filename: str, metadata: TasMetadata, edits: Edits) -> None:
+def save_m64(filename: str, metadata: TasMetadata, reader: VariableReader, length: int) -> None:
   with open(filename, 'wb') as f:
     # TODO: Remove blank frames at end
     f.write(b'\x4d\x36\x34\x1a')
@@ -30,7 +29,7 @@ def save_m64(filename: str, metadata: TasMetadata, edits: Edits) -> None:
 
     f.write(struct.pack('<I', (metadata.rerecords or 0) & 0xFFFFFFFF))
     f.write(b'\x3c\x01\x00\x00')
-    f.write(struct.pack('<I', len(edits)))
+    f.write(struct.pack('<I', length))
     f.write(b'\x02\x00\x00\x00') # power-on
 
     f.write(b'\x01\x00\x00\x00')
@@ -48,31 +47,17 @@ def save_m64(filename: str, metadata: TasMetadata, edits: Edits) -> None:
     f.write(bytes_to_buffer(metadata.authors.encode('utf-8'), 222))
     f.write(bytes_to_buffer(metadata.description.encode('utf-8'), 256))
 
-    for frame in range(len(edits)):
-      buttons = 0
-      stick_x = 0
-      stick_y = 0
-
-      for edit in edits.get_edits(frame):
-        if edit.variable in INPUT_BUTTON_FLAGS:
-          flag = INPUT_BUTTON_FLAGS[edit.variable]
-          if edit.value:
-            buttons |= flag
-          else:
-            buttons &= ~flag
-        elif edit.variable == Variable('input-buttons'):
-          buttons = edit.value
-        elif edit.variable == Variable('input-stick-x'):
-          stick_x = edit.value
-        elif edit.variable == Variable('input-stick-y'):
-          stick_y = edit.value
+    for frame in range(length):
+      buttons = dcast(int, reader.read(Variable('input-buttons').at(frame=frame)))
+      stick_x = dcast(int, reader.read(Variable('input-stick-x').at(frame=frame)))
+      stick_y = dcast(int, reader.read(Variable('input-stick-y').at(frame=frame)))
 
       f.write(struct.pack(b'>H', buttons & 0xFFFF))
       f.write(struct.pack(b'=B', stick_x & 0xFF))
       f.write(struct.pack(b'=B', stick_y & 0xFF))
 
 
-def load_m64(filename: str) -> Tuple[TasMetadata, Edits]:
+def load_m64(filename: str) -> Tuple[TasMetadata, Dict[Variable, object]]:
   with open(filename, 'rb') as f:
     f.seek(0x10)
     rerecords = struct.unpack('>H', f.read(2))[0]
@@ -95,7 +80,7 @@ def load_m64(filename: str) -> Tuple[TasMetadata, Edits]:
       description,
       rerecords,
     )
-    edits = Edits()
+    edits: Dict[Variable, object] = {}
 
     f.seek(0x400)
     frame = 0
@@ -109,11 +94,11 @@ def load_m64(filename: str) -> Tuple[TasMetadata, Edits]:
 
       for variable, flag in INPUT_BUTTON_FLAGS.items():
         if buttons & flag:
-          edits.unsafe_edit(variable.at(frame=frame), bool(buttons & flag))
+          edits[variable.at(frame=frame)] = True
       if stick_x != 0:
-        edits.unsafe_edit(Variable('input-stick-x').at(frame=frame), stick_x)
+        edits[Variable('input-stick-x').at(frame=frame)] = stick_x
       if stick_y != 0:
-        edits.unsafe_edit(Variable('input-stick-y').at(frame=frame), stick_y)
+        edits[Variable('input-stick-y').at(frame=frame)] = stick_y
 
       prev_buttons = buttons
       prev_stick_x = stick_x

@@ -6,6 +6,7 @@ import traceback
 from dataclasses import dataclass
 
 from wafel.core import State, SlotState, Game, DataPath, Controller
+from wafel.variable import Variable, VariableReader, VariableWriter
 from wafel.util import *
 from wafel.sm64_util import *
 
@@ -155,7 +156,7 @@ def to_float(value: object) -> float:
   return float(value)
 
 
-class ScriptController(Controller):
+class ScriptController(Controller, VariableReader, VariableWriter):
   def __init__(self, scripts: Scripts) -> None:
     super().__init__()
     self.scripts = scripts
@@ -222,3 +223,19 @@ class ScriptController(Controller):
   def apply(self, state: SlotState) -> None:
     script = self.scripts.get(state.frame)
     self.run_script(state, script)
+
+  def read(self, variable: Variable) -> object:
+    frame: int = variable.args['frame']
+    return self.scripts.get(frame).source
+
+  def write(self, variable: Variable, value: object) -> None:
+    frame: int = variable.args['frame']
+    self.scripts.set_frame_source(frame, dcast(str, value))
+
+  def reset(self, variable: Variable) -> None:
+    frame: int = variable.args['frame']
+    self.scripts.reset_frame(frame)
+
+  def edited(self, variable: Variable) -> bool:
+    frame: int = variable.args['frame']
+    return self.scripts.is_edited(frame)

@@ -54,44 +54,66 @@ class ReadOnlyVariableError(Exception):
   pass
 
 
-class VariableAccessor(ABC):
+class VariableReader(ABC):
   @staticmethod
-  def combine(choose: Callable[[Variable], VariableAccessor]) -> VariableAccessor:
-    return DeterminedVariableAccessor(choose)
+  def combine_readers(choose: Callable[[Variable], VariableReader]) -> VariableReader:
+    return ChooseVariableReader(choose)
 
   @abstractmethod
-  def get(self, variable: Variable) -> object: ...
+  def read(self, variable: Variable) -> object: ...
+
+
+class ChooseVariableReader(VariableReader):
+  def __init__(self, choose: Callable[[Variable], VariableReader]) -> None:
+    self.choose = choose
+
+  def read(self, variable: Variable) -> object:
+    return self.choose(variable).read(variable)
+
+
+class VariableWriter(ABC):
+  @staticmethod
+  def combine_writers(choose: Callable[[Variable], VariableWriter]) -> VariableWriter:
+    return ChooseVariableWriter(choose)
 
   @abstractmethod
-  def set(self, variable: Variable, value: object) -> None: ...
+  def write(self, variable: Variable, value: object) -> None: ...
 
   @abstractmethod
   def reset(self, variable: Variable) -> None: ...
 
-  def edited(self, variable: Variable) -> bool:
-    return False
 
-
-class DeterminedVariableAccessor(VariableAccessor):
-  def __init__(self, choose: Callable[[Variable], VariableAccessor]) -> None:
+class ChooseVariableWriter(VariableWriter):
+  def __init__(self, choose: Callable[[Variable], VariableWriter]) -> None:
     self.choose = choose
 
-  def get(self, variable: Variable) -> object:
-    return self.choose(variable).get(variable)
-
-  def set(self, variable: Variable, value: object) -> None:
-    self.choose(variable).set(variable, value)
+  def write(self, variable: Variable, value: object) -> None:
+    self.choose(variable).write(variable, value)
 
   def reset(self, variable: Variable) -> None:
     self.choose(variable).reset(variable)
 
-  def edited(self, variable: Variable) -> bool:
-    return self.choose(variable).edited(variable)
+
+class VariablePipeline(VariableReader, VariableWriter):
+  def __init__(self, writer: VariableWriter, reader: VariableReader) -> None:
+    self.writer = writer
+    self.reader = reader
+
+  def read(self, variable: Variable) -> object:
+    return self.reader.read(variable)
+
+  def write(self, variable: Variable, value: object) -> None:
+    self.writer.write(variable, value)
+
+  def reset(self, variable: Variable) -> None:
+    self.writer.reset(variable)
 
 
 __all__ = [
   'Variable',
   'UndefinedVariableError',
   'ReadOnlyVariableError',
-  'VariableAccessor',
+  'VariableReader',
+  'VariableWriter',
+  'VariablePipeline',
 ]

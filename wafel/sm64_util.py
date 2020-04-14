@@ -2,8 +2,9 @@ from typing import *
 
 import ext_modules.util as c_util
 
-from wafel.core import State, DataPath, Timeline
+from wafel.core import State, DataPath, Timeline, Address
 from wafel.util import *
+from wafel.object_type import ObjectType
 
 
 def _get_event_variant(event_type: str) -> str:
@@ -58,7 +59,15 @@ def intended_to_raw(
   return cast(Tuple[int, int], (stick_x, stick_y))
 
 
+def get_object_behavior(state: State, object_slot: int) -> Optional[Address]:
+  active_flags = dcast(int, state.get(f'gObjectPool[{object_slot}].activeFlags'))
+  if not active_flags:
+    return None
+  return dcast(Address, state.get(f'gObjectPool[{object_slot}].behavior'))
+
+
 __all__ = [
   'get_frame_log',
   'intended_to_raw',
+  'get_object_behavior',
 ]

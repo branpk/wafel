@@ -30,7 +30,6 @@ from wafel.util import *
 import wafel.config as config
 from wafel.bindings import *
 from wafel.loading import *
-from wafel.edit import Edits
 
 
 DEFAULT_FRAME_SHEET_VARS = [
@@ -89,9 +88,10 @@ class View:
 
 
   def _reload(self) -> Loading[None]:
+    edits: Dict[Variable, object]
     if self.file is None:
       metadata = TasMetadata('us', 'Untitled TAS', 'Unknown author(s)', 'Made using Wafel')
-      edits = Edits()
+      edits = {}
     elif self.file.type == 'm64':
       metadata, edits = load_m64(self.file.filename)
     else:
@@ -120,7 +120,13 @@ class View:
     self.formatters[Variable('mario-action')] = EnumFormatter(self.model.action_names)
 
     self.frame_sheets: List[FrameSheet] = [
-      FrameSheet(self.model, self.model.accessor, self.model.range_edit_accessor, self.model, self.formatters),
+      FrameSheet(
+        self.model,
+        self.model.pipeline,
+        self.model.range_edit_writer,
+        self.model,
+        self.formatters,
+      ),
     ]
     for var_name in DEFAULT_FRAME_SHEET_VARS:
       self.frame_sheets[0].append_variable(Variable(var_name))
@@ -133,7 +139,7 @@ class View:
   def save(self) -> None:
     assert self.file is not None
     if self.file.type == 'm64':
-      save_m64(self.file.filename, self.metadata, self.model.edits)
+      save_m64(self.file.filename, self.metadata, self.model.pipeline.reader, self.model.max_frame - 1)
     else:
       raise NotImplementedError(self.file.type)
 
@@ -344,7 +350,7 @@ class View:
     new_frame = ui.render_frame_slider(
       'frame-slider',
       self.model.selected_frame,
-      len(self.model.edits),
+      self.model.max_frame - 1,
       self.model.timeline.slot_manager.get_loaded_frames() if self.show_debug_pane else [],
     )
     if new_frame is not None:
@@ -545,7 +551,7 @@ class View:
       button_value = self.model.get(variable)
       if buttons_enabled.value and button_value != new_button_value:
         input_edit.value = True
-        self.model.edits.edit(variable, new_button_value)
+        self.model.set(variable, new_button_value)
         input_edit.value = False
 
     controller_stick_values = (
@@ -562,8 +568,8 @@ class View:
       stick = (self.model.get(stick_x_var), self.model.get(stick_y_var))
       if stick != new_stick:
         input_edit.value = True
-        self.model.edits.edit(stick_x_var, new_stick[0])
-        self.model.edits.edit(stick_y_var, new_stick[1])
+        self.model.set(stick_x_var, new_stick[0])
+        self.model.set(stick_y_var, new_stick[1])
         input_edit.value = False
 
     ig.pop_id()

@@ -3,6 +3,9 @@ from dataclasses import dataclass
 
 from wafel.variable import Variable, UndefinedVariableError
 from wafel.core import Timeline, DataPath, State, SlotState, Game
+from wafel.object_type import ObjectType
+from wafel.sm64_util import get_object_behavior
+from wafel.util import dcast
 
 
 def data(*args, **kwargs):
@@ -112,22 +115,30 @@ class DataVariables:
   def group(self, group: str) -> List[Variable]:
     return [Variable(var) for var, spec in self.specs.items() if spec.group == group]
 
-  def get_path(self, variable: Variable) -> DataPath:
+  def get_path(self, state: State, variable: Variable) -> Optional[DataPath]:
     path = self[variable].path
 
-    object_slot = variable.args.get('object')
+    object_slot: Optional[int] = variable.args.get('object')
     if object_slot is not None:
+      object_type: Optional[ObjectType] = variable.args.get('object_type')
+      if object_type is not None and get_object_behavior(state, object_slot) != object_type.addr:
+        return None
       path = self.game.path(f'gObjectPool[{object_slot}]') + path
 
-    surface_index = variable.args.get('surface')
+    surface_index: Optional[int] = variable.args.get('surface')
     if surface_index is not None:
+      num_surfaces = state.get('gSurfacesAllocated')
+      if surface_index >= dcast(int, num_surfaces):
+        return None
       path = self.game.path(f'sSurfacePool[{surface_index}]') + path
 
     return path
 
   def get(self, state: State, variable: Variable) -> object:
     spec = self[variable]
-    path = self.get_path(variable)
+    path = self.get_path(state, variable)
+    if path is None:
+      return None
 
     value = state.get(path)
     if spec.flag is None or value is None:
@@ -136,9 +147,11 @@ class DataVariables:
     assert isinstance(value, int)
     return (value & spec.flag) != 0
 
-  def set_raw(self, state: SlotState, variable: Variable, value: object) -> None:
+  def set(self, state: SlotState, variable: Variable, value: object) -> None:
     spec = self[variable]
-    path = self.get_path(variable)
+    path = self.get_path(state, variable)
+    if path is None:
+      return
 
     if spec.flag is None:
       path.set(state.slot, value)

@@ -139,7 +139,7 @@ class VariableExplorer:
       variable,
       value,
       EmptyFormatter() if value is None else self.formatters[variable],
-      self.model.edited(variable),
+      False,
       label_width = label_width,
       value_width = value_width,
     )

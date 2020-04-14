@@ -10,110 +10,14 @@ import ext_modules.util as c_util
 import wafel.config as config
 from wafel.core import Game, Timeline, load_dll_game, Controller, Address, DataPath, \
   AccessibleMemory, SlotState
-from wafel.variable import Variable, VariableAccessor
-from wafel.edit import Edits
+from wafel.variable import Variable, VariableReader, VariableWriter, VariablePipeline
+from wafel.data_edit import DataEdits, DataReader
 from wafel.object_type import ObjectType
 from wafel.loading import Loading
 from wafel.util import *
 from wafel.script import Scripts, ScriptController
 from wafel.data_variables import DataVariables
-from wafel.range_edit import RangeEditAccessor
-
-
-class EditController(Controller):
-  def __init__(self, data_variables: DataVariables, edits: Edits) -> None:
-    super().__init__()
-    self.data_variables = data_variables
-    self.edits = edits
-    self.edits.on_edit(self.weak_notify)
-
-  def apply(self, state: SlotState) -> None:
-    for edit in self.edits.get_edits(state.frame):
-      self.data_variables.set_raw(state, edit.variable, edit.value)
-
-
-class DataVariableAccessor(VariableAccessor):
-  def __init__(
-    self,
-    timeline: Timeline,
-    data_variables: DataVariables,
-    addr_to_symbol: Dict[Address, str],
-    edits: Edits,
-  ) -> None:
-    self.timeline = timeline
-    self.data_variables = data_variables
-    self.addr_to_symbol = addr_to_symbol
-    self.edits = edits
-
-  def get(self, variable: Variable) -> object:
-    frame = variable.args['frame']
-
-    # TODO: Possibly move to DataVariables?
-    object_slot: Optional[int] = variable.args.get('object')
-    if object_slot is not None:
-      object_type: Optional[ObjectType] = variable.args.get('object_type')
-      if object_type is not None and self.get_object_type(frame, object_slot) != object_type:
-        return None
-
-    surface_index: Optional[int] = variable.args.get('surface')
-    if surface_index is not None:
-      num_surfaces = dcast(int, self.timeline.get(frame, 'gSurfacesAllocated'))
-      if surface_index >= num_surfaces:
-        return None
-
-    return self.data_variables.get(self.timeline[frame], variable)
-
-  def get_object_type(self, frame: int, object_slot: int) -> Optional[ObjectType]:
-    active = self.get(Variable('obj-active-flags-active', frame=frame, object=object_slot))
-    if not active:
-      return None
-    behavior_addr = self.get(Variable('obj-behavior-ptr', frame=frame, object=object_slot))
-    assert isinstance(behavior_addr, Address)
-    return ObjectType(behavior_addr, self.addr_to_symbol[behavior_addr])
-
-  def set(self, variable: Variable, value: object) -> None:
-    frame: int = variable.args['frame']
-
-    object_slot: Optional[int] = variable.args.get('object')
-    if object_slot is not None:
-      object_type: Optional[ObjectType] = variable.args.get('object_type')
-      if object_type is not None and self.get_object_type(frame, object_slot) != object_type:
-        return
-
-    surface_index: Optional[int] = variable.args.get('surface')
-    if surface_index is not None:
-      num_surfaces = dcast(int, self.timeline.get(frame, 'gSurfacesAllocated'))
-      if surface_index >= num_surfaces:
-        return
-
-    self.edits.edit(variable, value)
-
-  def reset(self, variable: Variable) -> None:
-    self.edits.reset(variable)
-
-  def edited(self, variable: Variable) -> bool:
-    return self.edits.edited(variable)
-
-
-class ScriptVariableAccessor(VariableAccessor):
-  def __init__(self, scripts: Scripts) -> None:
-    self.scripts = scripts
-
-  def get(self, variable: Variable) -> object:
-    frame: int = variable.args['frame']
-    return self.scripts.get(frame).source
-
-  def set(self, variable: Variable, value: object) -> None:
-    frame: int = variable.args['frame']
-    self.scripts.set_frame_source(frame, dcast(str, value))
-
-  def reset(self, variable: Variable) -> None:
-    frame: int = variable.args['frame']
-    self.scripts.reset_frame(frame)
-
-  def edited(self, variable: Variable) -> bool:
-    frame: int = variable.args['frame']
-    return self.scripts.is_edited(frame)
+from wafel.range_edit import RangeEditWriter
 
 
 class Model:
@@ -121,14 +25,16 @@ class Model:
   def __init__(self) -> None:
     self.game_version: str
     self.timeline: Timeline
+    self.pipeline: VariablePipeline
     self.rotational_camera_yaw = 0
     self.input_up_yaw: Optional[int] = None
 
-  def load(self, game_version: str, edits: Edits) -> Loading[None]:
+  def load(self, game_version: str, edits: Dict[Variable, object]) -> Loading[None]:
     yield from self._load_game(game_version)
     self._set_edits(edits)
 
   def change_version(self, game_version: str) -> Loading[None]:
+    raise NotImplementedError # FIXME
     yield from self.load(game_version, self.edits)
 
   def _load_game(self, game_version: str) -> Loading[None]:
@@ -173,48 +79,17 @@ class Model:
       if not addr.is_null:
         self.addr_to_symbol[addr] = symbol
 
-  def _set_edits(self, edits: Edits) -> None:
-    if hasattr(self, 'timeline'):
+  def _set_edits(self, edits: Dict[Variable, object]) -> None:
+    if hasattr(self, 'pipeline'):
+      del self.pipeline
       del self.timeline
     gc.collect() # Force garbage collection of game state slots
 
-    self.edits = edits
-    self.scripts = Scripts()
-    self.controller = Controller.sequence(
-      EditController(self.data_variables, self.edits),
-      ScriptController(self.scripts),
-    )
+    self._build_pipeline()
 
-    self.timeline = Timeline(
-      self.game,
-      self.controller,
-      slot_capacity = 20,
-    )
-
-    data_accessor = DataVariableAccessor(
-      self.timeline,
-      self.data_variables,
-      self.addr_to_symbol,
-      self.edits,
-    )
-    script_accessor = ScriptVariableAccessor(self.scripts)
-
-    def choose_accessor(variable: Variable) -> VariableAccessor:
-      if variable.name == 'wafel-script':
-        return script_accessor
-      else:
-        return data_accessor
-
-    range_edit_accessor = RangeEditAccessor(
-      VariableAccessor.combine(choose_accessor),
-      highlight_single = lambda variable: not variable.name.startswith('input-'),
-    )
-    self.accessor: VariableAccessor = range_edit_accessor
-    self.range_edit_accessor = range_edit_accessor
-
-    for frame in range(len(self.edits)):
-      for edit in list(self.edits.get_edits(frame)):
-        self.accessor.set(edit.variable.at(frame=frame), edit.value)
+    for variable, value in edits.items():
+      self.pipeline.write(variable, value)
+    self._max_frame = max((variable.args.get('frame', 0) for variable in edits), default=0)
 
     self._selected_frame = 0
     if config.dev_mode:
@@ -229,6 +104,48 @@ class Model:
     self.on_selected_frame_change(set_hotspot)
     set_hotspot(self._selected_frame)
 
+  def _build_pipeline(self) -> None:
+    # DataEdits handles writes to in-game variables
+    data_edits = DataEdits(self.data_variables)
+
+    # ScriptController handles writes to wafel scripting variables
+    self.scripts = Scripts()
+    script_controller = ScriptController(self.scripts)
+
+    def choose_writer(variable: Variable) -> VariableWriter:
+      if variable.name == 'wafel-script':
+        return script_controller
+      else:
+        return data_edits
+    variable_writer = VariableWriter.combine_writers(choose_writer)
+
+    # RangeEditWriter allows dragging to edit multiple frames at once
+    self.range_edit_writer = RangeEditWriter(
+      variable_writer,
+      highlight_single = lambda variable: not variable.name.startswith('input-'),
+    )
+
+    # Controller should apply data edits, then scripts, in that order
+    controller = Controller.sequence(data_edits, script_controller)
+    self.timeline = Timeline(
+      self.game,
+      controller,
+      slot_capacity = 20,
+    )
+
+    # DataReader handles reading from in-game variables
+    data_reader = DataReader(self.data_variables, self.timeline)
+
+    # ScriptController also handles reads from scripting variables
+    def choose_reader(variable: Variable) -> VariableReader:
+      if variable.name == 'wafel-script':
+        return script_controller
+      else:
+        return data_reader
+    variable_reader = VariableReader.combine_readers(choose_reader)
+
+    self.pipeline = VariablePipeline(self.range_edit_writer, variable_reader)
+
   # FrameSequence
 
   @property
@@ -238,7 +155,7 @@ class Model:
   @selected_frame.setter
   def selected_frame(self, frame: int) -> None:
     if frame != self._selected_frame:
-      self._selected_frame = min(max(frame, 0), len(self.edits) - 1)
+      self._selected_frame = min(max(frame, 0), self._max_frame)
       for callback in list(self.selected_frame_callbacks):
         callback(self._selected_frame)
 
@@ -250,19 +167,19 @@ class Model:
 
   @property
   def max_frame(self) -> int:
-    return len(self.edits) - 1
+    return self._max_frame
 
   def extend_to_frame(self, frame: int) -> None:
-    return self.edits.extend(frame + 1)
+    self._max_frame = max(self._max_frame, frame)
 
   def insert_frame(self, frame: int) -> None:
-    self.range_edit_accessor.insert_frame(frame)
+    self.range_edit_writer.insert_frame(frame)
     if self.selected_frame >= frame:
       self.selected_frame += 1
 
   def delete_frame(self, frame: int) -> None:
-    self.range_edit_accessor.delete_frame(frame)
-    if self.selected_frame > frame or self.selected_frame >= len(self.edits):
+    self.range_edit_writer.delete_frame(frame)
+    if self.selected_frame > frame or self.selected_frame > self._max_frame:
       self.selected_frame -= 1
 
   def set_hotspot(self, name: str, frame: int) -> None:
@@ -277,7 +194,7 @@ class Model:
   def get(self, arg1, arg2=None):
     if isinstance(arg1, Variable):
       variable: Variable = arg1
-      return self.accessor.get(variable)
+      return self.pipeline.read(variable)
     else:
       frame: int = arg1
       path: DataPath = arg2
@@ -292,13 +209,10 @@ class Model:
     return ObjectType(behavior_addr, self.addr_to_symbol[behavior_addr])
 
   def set(self, variable: Variable, value: object) -> None:
-    self.accessor.set(variable, value)
+    self.pipeline.write(variable, value)
 
   def reset(self, variable: Variable) -> None:
-    self.accessor.reset(variable)
-
-  def edited(self, variable: Variable) -> bool:
-    return self.accessor.edited(variable)
+    self.pipeline.reset(variable)
 
   # VariableDisplayer
 

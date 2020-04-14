@@ -4,7 +4,7 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 
 import wafel.imgui as ig
-from wafel.variable import Variable, VariableAccessor
+from wafel.variable import Variable, VariablePipeline
 from wafel.variable_display import VariableDisplayer
 from wafel.variable_format import Formatters, EmptyFormatter, VariableFormatter
 import wafel.ui as ui
@@ -38,7 +38,7 @@ class FrameSequence(Protocol):
 
 class CellDragHandler(Protocol):
   @abstractmethod
-  def drag(self, source: Variable, target_frame: int) -> None: ...
+  def drag(self, source: Variable, source_value: object, target_frame: int) -> None: ...
 
   @abstractmethod
   def release(self) -> None: ...
@@ -58,14 +58,14 @@ class FrameSheet:
   def __init__(
     self,
     sequence: FrameSequence,
-    accessor: VariableAccessor,
+    pipeline: VariablePipeline,
     drag_handler: CellDragHandler,
     displayer: VariableDisplayer,
     formatters: Formatters,
   ) -> None:
     super().__init__()
     self.sequence = sequence
-    self.accessor = accessor
+    self.pipeline = pipeline
     self.drag_handler = drag_handler
     self.displayer = displayer
     self.formatters = formatters
@@ -178,7 +178,7 @@ class FrameSheet:
   def render_cell(self, frame: int, column: FrameSheetColumn) -> None:
     cell_variable = column.variable.at(frame=frame)
 
-    data = self.accessor.get(cell_variable)
+    data = self.pipeline.read(cell_variable)
     formatter = EmptyFormatter() if data is None else self.formatters[cell_variable]
 
     changed_data, clear_edit, selected, pressed = ui.render_variable_cell(
@@ -191,9 +191,9 @@ class FrameSheet:
       self.drag_handler.highlight_range(cell_variable),
     )
     if changed_data is not None:
-      self.accessor.set(cell_variable, changed_data.value)
+      self.pipeline.write(cell_variable, changed_data.value)
     if clear_edit:
-      self.accessor.reset(cell_variable)
+      self.pipeline.reset(cell_variable)
     if selected:
       self.sequence.set_selected_frame(frame)
     if pressed:
@@ -309,7 +309,11 @@ class FrameSheet:
     self.drag_target = None
     self.render_rows()
     if self.drag_source is not None and self.drag_target is not None:
-      self.drag_handler.drag(self.drag_source, self.drag_target)
+      self.drag_handler.drag(
+        self.drag_source,
+        self.pipeline.read(self.drag_source),
+        self.drag_target,
+      )
 
     ig.end_child()
 

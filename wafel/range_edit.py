@@ -6,7 +6,7 @@ import textwrap
 import time
 
 import wafel.imgui as ig
-from wafel.variable import Variable, VariableAccessor
+from wafel.variable import Variable, VariableWriter, VariableReader
 from wafel.util import *
 
 
@@ -68,8 +68,8 @@ EditRangeOp = Union[OpAtom, OpSequence]
 
 
 class EditRangesImpl:
-  def __init__(self, accessor: VariableAccessor) -> None:
-    self._accessor = accessor
+  def __init__(self, writer: VariableWriter) -> None:
+    self._writer = writer
     self._by_variable: Dict[Variable, EditRange] = {}
     self._colors: Dict[EditRange, ig.Color4f] = {}
     self._color_index: int = 0
@@ -92,14 +92,14 @@ class EditRangesImpl:
     for frame in edit_range.frames:
       variable = edit_range.variable.at(frame=frame)
       del self._by_variable[variable]
-      self._accessor.reset(variable)
+      self._writer.reset(variable)
 
   def _add(self, edit_range: EditRange) -> None:
     for frame in edit_range.frames:
       variable = edit_range.variable.at(frame=frame)
       assert variable not in self._by_variable
       self._by_variable[variable] = edit_range
-      self._accessor.set(variable, edit_range.value)
+      self._writer.write(variable, edit_range.value)
 
   def apply(self, op: EditRangeOp) -> None:
     if isinstance(op, OpAtom):
@@ -164,8 +164,8 @@ class EditRangesImpl:
 
 
 class EditRanges:
-  def __init__(self, accessor: VariableAccessor) -> None:
-    self._ranges = EditRangesImpl(accessor)
+  def __init__(self, writer: VariableWriter) -> None:
+    self._ranges = EditRangesImpl(writer)
     self._tentative_op: Optional[EditRangeOp] = None
 
   def apply(self, op: EditRangeOp) -> None:
@@ -302,21 +302,17 @@ class EditRanges:
     ))
 
 
-class RangeEditAccessor(VariableAccessor):
+class RangeEditWriter(VariableWriter):
   def __init__(
     self,
-    accessor: VariableAccessor,
+    writer: VariableWriter,
     highlight_single: Callable[[Variable], bool] = lambda _: True,
   ) -> None:
-    self._ranges = EditRanges(accessor)
-    self._accessor = accessor
+    self._ranges = EditRanges(writer)
     self._highlight_single = highlight_single
     self._drag_start_time: Optional[float] = None
 
-  def get(self, variable: Variable) -> object:
-    return self._accessor.get(variable)
-
-  def set(self, variable: Variable, value: object) -> None:
+  def write(self, variable: Variable, value: object) -> None:
     self._ranges.set_value(variable, value)
 
   def edited(self, variable: Variable) -> bool:
@@ -329,7 +325,7 @@ class RangeEditAccessor(VariableAccessor):
       frame = dcast(int, variable.args['frame'])
       self._ranges.apply(self._ranges.op_split_upward(edit_range, range(frame, frame + 1)))
 
-  def drag(self, source: Variable, target_frame: int) -> None:
+  def drag(self, source: Variable, source_value: object, target_frame: int) -> None:
     if self._drag_start_time is None:
       self._drag_start_time = time.time()
     self._ranges.revert_tentative()
@@ -341,11 +337,11 @@ class RangeEditAccessor(VariableAccessor):
     if edit_range is None:
       if target_frame > source_frame:
         op = self._ranges.op_insert_then_resize(
-          source, self.get(source), range(source_frame, target_frame + 1)
+          source, source_value, range(source_frame, target_frame + 1)
         )
       elif target_frame < source_frame:
         op = self._ranges.op_insert_then_resize(
-          source, self.get(source), range(target_frame, source_frame + 1)
+          source, source_value, range(target_frame, source_frame + 1)
         )
     elif edit_range.frames == range(source_frame, source_frame + 1):
       op = self._ranges.op_include(edit_range, target_frame)
@@ -395,5 +391,5 @@ class RangeEditAccessor(VariableAccessor):
 
 
 __all__ = [
-  'RangeEditAccessor',
+  'RangeEditWriter',
 ]
