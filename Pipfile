@@ -5,11 +5,12 @@ verify_ssl = true
 
 [dev-packages]
 pyinstaller = "*"
+mypy = "*"
 
 [packages]
 imgui = {editable = true,extras = ["cython", "glfw"],git = "https://github.com/branpk/pyimgui.git"}
 pyelftools = "*"
-pefile = {git = "https://github.com/erocarrera/pefile.git"}
+pefile = {git = "https://github.com/branpk/pefile.git"}
 
 [requires]
 python_version = "3.8"
