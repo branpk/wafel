@@ -18,7 +18,12 @@ def _render_window(window, ig_renderer, render: Callable[[str], None]) -> None:
     return
   rendering = True
 
-  ig.set_clipboard_length(len(glfw.get_clipboard_string(window)))
+  try:
+    clipboard_length = glfw.get_clipboard_string(window)
+  except:
+    # Fails if the user has non-text copied
+    clipboard_length = 0
+  ig.set_clipboard_length(clipboard_length)
 
   style = ig.get_style()
   style.window_rounding = 0
