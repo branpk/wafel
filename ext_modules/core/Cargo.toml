@@ -1,0 +1,23 @@
+[package]
+name = "core"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+name = "core"
+crate-type = ["cdylib"]
+
+[dependencies]
+derive_more = "0.99.5"
+nom = "5.1.1"
+object = "0.18.0"
+gimli = "0.20.0"
+topological-sort = "0.1.0"
+textwrap = "0.11.0"
+itertools = "0.9.0"
+dlopen = "0.1.8"
+rand = "0.7.3"
+pyo3 = { version = "0.10.1", features = ["extension-module"] }
+derivative = "2.1.1"
+serde_json = "1.0.55"
+lazy_static = "1.4.0"
