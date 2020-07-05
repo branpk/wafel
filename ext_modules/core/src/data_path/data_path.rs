@@ -112,6 +112,11 @@ impl<M: Memory> GlobalDataPath<M> {
             .write_value(slot, &address, &self.0.concrete_type, value)
             .map_err(|error| error.context(format!("path {}", self.0.source)))
     }
+
+    /// Get the concrete data type that the path points to.
+    pub fn concrete_type(&self) -> DataTypeRef {
+        self.0.concrete_type.clone()
+    }
 }
 
 impl<M: Memory> Display for GlobalDataPath<M> {
@@ -139,6 +144,11 @@ impl LocalDataPath {
     /// of `path`.
     pub fn concat(&self, path: &LocalDataPath) -> Result<Self, Error> {
         concat_paths(&self.0, &path.0).map(Self)
+    }
+
+    /// Get the concrete data type that the path points to.
+    pub fn concrete_type(&self) -> DataTypeRef {
+        self.0.concrete_type.clone()
     }
 }
 

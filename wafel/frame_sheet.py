@@ -3,10 +3,9 @@ from typing import *
 from abc import abstractmethod
 from dataclasses import dataclass, field
 
-from ext_modules.core import Variable
+from ext_modules.core import Variable, Pipeline
 
 import wafel.imgui as ig
-from wafel.variable import VariablePipeline
 from wafel.variable_display import VariableDisplayer
 from wafel.variable_format import Formatters, EmptyFormatter, VariableFormatter
 import wafel.ui as ui
@@ -60,7 +59,7 @@ class FrameSheet:
   def __init__(
     self,
     sequence: FrameSequence,
-    pipeline: VariablePipeline,
+    pipeline: Pipeline,
     drag_handler: CellDragHandler,
     displayer: VariableDisplayer,
     formatters: Formatters,

@@ -2,7 +2,7 @@ use super::{util, SM64ErrorCause, Variable};
 use crate::{
     data_path::{DataPath, GlobalDataPath, LocalDataPath},
     error::Error,
-    memory::{IntValue, Memory, Value},
+    memory::{data_type::DataTypeRef, IntValue, Memory, Value},
     timeline::{SlotStateMut, State},
 };
 use std::collections::HashMap;
@@ -191,6 +191,21 @@ impl<M: Memory> DataVariables<M> {
         }
 
         state.write(&path, &value)
+    }
+
+    /// Get the concrete data type for the given variable.
+    pub fn data_type(&self, variable: &Variable) -> Result<DataTypeRef, Error> {
+        let spec = self.variable_spec(&variable.name)?;
+        match &spec.path {
+            Path::Global(path) => Ok(path.concrete_type()),
+            Path::Object(path) => Ok(path.concrete_type()),
+            Path::Surface(path) => Ok(path.concrete_type()),
+        }
+    }
+
+    pub fn flag(&self, variable: &Variable) -> Result<Option<IntValue>, Error> {
+        let spec = self.variable_spec(&variable.name)?;
+        Ok(spec.flag)
     }
 }
 

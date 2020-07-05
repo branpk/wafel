@@ -66,7 +66,7 @@ impl<M: Memory> Pipeline<M> {
         controller.edits.write(variable, value.clone());
     }
 
-    fn data_variables(&self) -> &DataVariables<M> {
+    pub fn data_variables(&self) -> &DataVariables<M> {
         &self.timeline.controller().data_variables
     }
 }

@@ -1,8 +1,7 @@
 from typing import *
 from abc import abstractmethod
 
-from wafel.variable import Variable, UndefinedVariableError
-from wafel.data_variables import DataVariables
+from ext_modules.core import Variable, Pipeline
 
 
 class VariableFormatter:
@@ -51,12 +50,12 @@ class FloatFormatter(TextFormatter):
 
 class CheckboxFormatter(VariableFormatter):
   def output(self, data: object) -> object:
-    assert isinstance(data, bool)
-    return data
+    assert isinstance(data, int)
+    return bool(data)
 
   def input(self, rep: object) -> object:
-    assert isinstance(rep, bool)
-    return rep
+    assert isinstance(rep, int)
+    return int(bool(rep))
 
 
 class EnumFormatter(TextFormatter):
@@ -92,25 +91,22 @@ class Formatters(Protocol):
 
 
 class DataFormatters:
-  def __init__(self, data_variables: DataVariables) -> None:
-    self.data_variables = data_variables
+  def __init__(self, pipeline: Pipeline) -> None:
+    self.pipeline = pipeline
     self.overrides: Dict[str, VariableFormatter] = {}
 
   def _get_default(self, variable: Variable) -> VariableFormatter:
     if variable.name == 'wafel-script':
       return StringFormatter()
 
-    spec = self.data_variables[variable]
-    type_ = spec.path.end_type
-
-    if spec.flag is not None:
+    if self.pipeline.is_bit_flag(variable):
       return CheckboxFormatter()
-    elif type_['kind'] == 'primitive' and type_['name'][0] in ['s', 'u']:
+    elif self.pipeline.is_int(variable):
       return DecimalIntFormatter()
-    elif type_['kind'] == 'primitive' and type_['name'][0] == 'f':
+    elif self.pipeline.is_float(variable):
       return FloatFormatter()
 
-    raise NotImplementedError(variable, type_)
+    raise NotImplementedError(variable)
 
   def __getitem__(self, variable: Variable) -> VariableFormatter:
     return self.overrides.get(variable.name) or self._get_default(variable)

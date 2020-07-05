@@ -90,6 +90,33 @@ impl PyPipeline {
         self.pipeline.write(&variable, &value);
         Ok(())
     }
+
+    /// Return true if the variable has an integer data type.
+    pub fn is_int(&self, variable: &PyVariable) -> PyResult<bool> {
+        Ok(self
+            .pipeline
+            .data_variables()
+            .data_type(&variable.variable)?
+            .is_int())
+    }
+
+    /// Return true if the variable has a float data type.
+    pub fn is_float(&self, variable: &PyVariable) -> PyResult<bool> {
+        Ok(self
+            .pipeline
+            .data_variables()
+            .data_type(&variable.variable)?
+            .is_float())
+    }
+
+    /// Return true if the variable is a bit flag.
+    pub fn is_bit_flag(&self, variable: &PyVariable) -> PyResult<bool> {
+        Ok(self
+            .pipeline
+            .data_variables()
+            .flag(&variable.variable)?
+            .is_some())
+    }
 }
 
 /// An abstract game variable.

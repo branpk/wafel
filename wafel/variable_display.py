@@ -1,7 +1,7 @@
 from typing import *
 from abc import abstractmethod
 
-from wafel.variable import Variable
+from ext_modules.core import Variable
 
 
 class VariableDisplayer(Protocol):

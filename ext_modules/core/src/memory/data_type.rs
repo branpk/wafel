@@ -180,3 +180,69 @@ pub struct Field {
     /// The type of the field.
     pub data_type: DataTypeRef,
 }
+
+impl DataType {
+    pub fn is_void(&self) -> bool {
+        if let Self::Void = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_int(&self) -> bool {
+        if let Self::Int(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_float(&self) -> bool {
+        if let Self::Float(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_pointer(&self) -> bool {
+        if let Self::Pointer { .. } = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_array(&self) -> bool {
+        if let Self::Array { .. } = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_struct(&self) -> bool {
+        if let Self::Struct { .. } = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_union(&self) -> bool {
+        if let Self::Union { .. } = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_name(&self) -> bool {
+        if let Self::Name(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+}

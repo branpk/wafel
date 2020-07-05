@@ -9,7 +9,7 @@ from ext_modules.core import Variable, Pipeline
 import wafel.imgui as ig
 from wafel.variable import VariableReader, VariableWriter, VariablePipeline
 from wafel.variable_display import VariableDisplayer
-from wafel.variable_format import Formatters, DecimalIntFormatter, VariableFormatter
+from wafel.variable_format import Formatters, DecimalIntFormatter, VariableFormatter, DataFormatters
 from wafel.local_state import use_state_with, use_state
 from wafel.frame_sheet import FrameSequence, FrameSheet, CellDragHandler
 from wafel.util import *
@@ -28,22 +28,7 @@ class NoOpDragHandler:
     return None
 
 
-class Accessor(VariableReader, VariableWriter):
-  def __init__(self) -> None:
-    self.edits: Dict[Variable, object] = {}
-
-  def read(self, variable: Variable) -> object:
-    return self.edits.get(variable, 0)
-
-  def write(self, variable: Variable, value: object) -> None:
-    self.edits[variable] = value
-
-  def reset(self, variable: Variable) -> None:
-    if variable in self.edits:
-      del self.edits[variable]
-
-
-class Model(VariableDisplayer, Formatters, FrameSequence):
+class Model(VariableDisplayer, FrameSequence):
   def __init__(self) -> None:
     self._selected_frame = 0
     self._max_frame = 1000
@@ -54,9 +39,6 @@ class Model(VariableDisplayer, Formatters, FrameSequence):
 
   def column_header(self, variable: Variable) -> str:
     return variable.name
-
-  def __getitem__(self, variable: Variable) -> VariableFormatter:
-    return DecimalIntFormatter()
 
   @property
   def selected_frame(self) -> int:
@@ -87,9 +69,15 @@ def test_frame_sheet(id: str) -> None:
   model = use_state_with('model', lambda: Model()).value
 
   def make_sheet() -> FrameSheet:
-    sheet = FrameSheet(model, model._pipeline, NoOpDragHandler(), model, model)
-    sheet.append_variable(Variable('global-timer'))
-    sheet.append_variable(Variable('mario-pos-y'))
+    sheet = FrameSheet(model, model._pipeline, NoOpDragHandler(), model, DataFormatters(model._pipeline))
+    for name in [
+          'input-button-a',
+          'input-button-b',
+          'input-button-z',
+          'mario-action',
+          'mario-vel-f',
+        ]:
+      sheet.append_variable(Variable(name))
     return sheet
   sheet = use_state_with('sheet', make_sheet).value
 
