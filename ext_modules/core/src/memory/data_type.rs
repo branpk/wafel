@@ -182,6 +182,7 @@ pub struct Field {
 }
 
 impl DataType {
+    /// Return true if the data type is void.
     pub fn is_void(&self) -> bool {
         if let Self::Void = self {
             true
@@ -190,6 +191,7 @@ impl DataType {
         }
     }
 
+    /// Return true if the data type is an integer type.
     pub fn is_int(&self) -> bool {
         if let Self::Int(_) = self {
             true
@@ -198,6 +200,7 @@ impl DataType {
         }
     }
 
+    /// Return true if the data type is a float type.
     pub fn is_float(&self) -> bool {
         if let Self::Float(_) = self {
             true
@@ -206,6 +209,7 @@ impl DataType {
         }
     }
 
+    /// Return true if the data type is a pointer type.
     pub fn is_pointer(&self) -> bool {
         if let Self::Pointer { .. } = self {
             true
@@ -214,6 +218,7 @@ impl DataType {
         }
     }
 
+    /// Return true if the data type is an array type.
     pub fn is_array(&self) -> bool {
         if let Self::Array { .. } = self {
             true
@@ -222,6 +227,7 @@ impl DataType {
         }
     }
 
+    /// Return true if the data type is a struct type.
     pub fn is_struct(&self) -> bool {
         if let Self::Struct { .. } = self {
             true
@@ -230,6 +236,7 @@ impl DataType {
         }
     }
 
+    /// Return true if the data type is a union type.
     pub fn is_union(&self) -> bool {
         if let Self::Union { .. } = self {
             true
@@ -238,6 +245,7 @@ impl DataType {
         }
     }
 
+    /// Return true if the data type is a type name.
     pub fn is_name(&self) -> bool {
         if let Self::Name(_) = self {
             true

@@ -1,19 +1,19 @@
 //! Dynamically typed value used for reading and writing to memory.
 
-use super::MemoryErrorCause;
+use super::{AddressValue, MemoryErrorCause};
 use crate::error::Error;
 use derive_more::Display;
-use std::{collections::HashMap, fmt::Display};
+use std::collections::HashMap;
 
 /// A dynamically typed value.
 #[derive(Debug, Display, Clone)]
-pub enum Value<A> {
+pub enum Value {
     /// An integer value, regardless of the underlying `IntType` size.
     Int(IntValue),
     /// A float value, regardless of the underlying `FloatType` size.
     Float(FloatValue),
     /// An address value.
-    Address(A),
+    Address(AddressValue),
     /// A struct value.
     #[display(fmt = "{}", "display_struct(fields)")]
     Struct {
@@ -21,11 +21,11 @@ pub enum Value<A> {
         ///
         /// If a field's name is present in the original struct definition, it will match the
         /// name used here. Anonymous fields will be given a name, typically `__anon`.
-        fields: HashMap<String, Value<A>>,
+        fields: HashMap<String, Value>,
     },
     /// An array value.
     #[display(fmt = "{}", "display_array(_0)")]
-    Array(Vec<Value<A>>),
+    Array(Vec<Value>),
 }
 
 /// An integer value.
@@ -38,7 +38,7 @@ pub type IntValue = i128;
 /// f64 is used so that any `FloatType` can fit in it.
 pub type FloatValue = f64;
 
-fn display_struct<A: Display>(fields: &HashMap<String, Value<A>>) -> String {
+fn display_struct(fields: &HashMap<String, Value>) -> String {
     let field_str = fields
         .iter()
         .map(|(name, value)| format!("{} = {}", name, value))
@@ -47,7 +47,7 @@ fn display_struct<A: Display>(fields: &HashMap<String, Value<A>>) -> String {
     format!("{{ {} }}", field_str)
 }
 
-fn display_array<A: Display>(elements: &Vec<Value<A>>) -> String {
+fn display_array(elements: &Vec<Value>) -> String {
     let elements_str = elements
         .iter()
         .map(ToString::to_string)
@@ -56,7 +56,7 @@ fn display_array<A: Display>(elements: &Vec<Value<A>>) -> String {
     format!("[{}]", elements_str)
 }
 
-impl<A: Display + Clone> Value<A> {
+impl Value {
     /// Convert the value to an int.
     //
     /// Return an error if the value is not an int.
@@ -90,7 +90,7 @@ impl<A: Display + Clone> Value<A> {
     /// Convert the value to an address.
     //
     /// Return an error if the value is not an address.
-    pub fn as_address(&self) -> Result<A, Error> {
+    pub fn as_address(&self) -> Result<AddressValue, Error> {
         if let Value::Address(address) = self {
             Ok(address.clone())
         } else {

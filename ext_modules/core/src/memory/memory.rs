@@ -8,6 +8,7 @@ use crate::{
     data_path::{DataPath, DataPathCache, GlobalDataPath, LocalDataPath},
     error::Error,
 };
+use derive_more::Display;
 use std::{
     fmt::{Debug, Display},
     ops::Add,
@@ -34,7 +35,12 @@ pub trait Memory: Sized {
     ///
     /// `Address` must implement `Add<usize, Output=Address>` so that offsets (field offsets and
     /// array/pointer stride) can be added to it.
-    type Address: Debug + Display + Clone + Add<usize, Output = Self::Address>;
+    type Address: Debug
+        + Display
+        + Clone
+        + Add<usize, Output = Self::Address>
+        + Into<AddressValue>
+        + From<AddressValue>;
 
     /// The type of a static address that lies outside of slot memory.
     type StaticAddress;
@@ -176,7 +182,7 @@ pub trait Memory: Sized {
         slot: &Self::Slot,
         address: &Self::Address,
         data_type: &DataTypeRef,
-    ) -> Result<Value<Self::Address>, Error> {
+    ) -> Result<Value, Error> {
         Ok(match data_type.as_ref() {
             DataType::Int(int_type) => {
                 let address = self.classify_address(address)?;
@@ -188,7 +194,7 @@ pub trait Memory: Sized {
             }
             DataType::Pointer { .. } => {
                 let address = self.classify_address(address)?;
-                Value::Address(self.read_address(slot, &address)?)
+                Value::Address(self.read_address(slot, &address)?.into())
             }
             _ => Err(MemoryErrorCause::UnreadableValue {
                 data_type: data_type.clone(),
@@ -208,7 +214,7 @@ pub trait Memory: Sized {
         slot: &mut Self::Slot,
         address: &Self::Address,
         data_type: &DataTypeRef,
-        value: &Value<Self::Address>,
+        value: &Value,
     ) -> Result<(), Error> {
         let to_relocatable = |address| {
             self.classify_address(address)
@@ -231,7 +237,7 @@ pub trait Memory: Sized {
             }
             DataType::Pointer { .. } => {
                 let address = to_relocatable(address)?;
-                self.write_slot_address(slot, &address, &value.as_address()?)?;
+                self.write_slot_address(slot, &address, &value.as_address()?.into())?;
             }
             _ => Err(MemoryErrorCause::UnwritableValue {
                 data_type: data_type.clone(),
@@ -249,15 +255,15 @@ pub trait Memory: Sized {
     fn symbol_address(&self, symbol: &str) -> Result<Self::Address, Error>;
 
     /// Return a data path cache.
-    fn data_path_cache(&self) -> &DataPathCache<Self>;
+    fn data_path_cache(&self) -> &DataPathCache;
 
     /// Look up or compile a data path (either global or local).
-    fn data_path(&self, source: &str) -> Result<DataPath<Self>, Error> {
+    fn data_path(&self, source: &str) -> Result<DataPath, Error> {
         self.data_path_cache().path(self, source)
     }
 
     /// Look up or compile a global data path using the cache.
-    fn global_path(&self, source: &str) -> Result<GlobalDataPath<Self>, Error> {
+    fn global_path(&self, source: &str) -> Result<GlobalDataPath, Error> {
         Ok(self.data_path(source)?.into_global()?)
     }
 
@@ -284,3 +290,8 @@ pub enum ClassifiedAddress<M: Memory> {
     /// An address that can be relocated to a specific slot.
     Relocatable(M::RelocatableAddress),
 }
+
+/// A non-generic representation of an address.
+#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash)]
+#[display(fmt = "{:#X}", _0)]
+pub struct AddressValue(pub usize);

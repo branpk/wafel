@@ -15,14 +15,14 @@ use std::{collections::HashSet, sync::Mutex};
 
 /// SM64 controller implementation.
 #[derive(Debug)]
-pub struct SM64Controller<M: Memory> {
-    data_variables: DataVariables<M>,
-    edits: DirectEdits<M>,
+pub struct SM64Controller {
+    data_variables: DataVariables,
+    edits: DirectEdits,
 }
 
-impl<M: Memory> SM64Controller<M> {
+impl SM64Controller {
     /// Create a new SM64Controller that allows reading/writing the given data variables.
-    pub fn new(data_variables: DataVariables<M>) -> Self {
+    pub fn new(data_variables: DataVariables) -> Self {
         Self {
             data_variables,
             edits: DirectEdits::new(),
@@ -30,8 +30,8 @@ impl<M: Memory> SM64Controller<M> {
     }
 }
 
-impl<M: Memory> Controller<M> for SM64Controller<M> {
-    fn apply(&self, state: &mut impl SlotStateMut<Memory = M>) -> Result<(), Error> {
+impl<M: Memory> Controller<M> for SM64Controller {
+    fn apply(&self, state: &mut impl SlotStateMut) -> Result<(), Error> {
         for (variable, value) in self.edits.edits(state.frame()) {
             self.data_variables.set(state, variable, value.clone())?;
         }
@@ -45,39 +45,39 @@ impl<M: Memory> Controller<M> for SM64Controller<M> {
 /// necessarily result in the original value.
 #[derive(Debug)]
 pub struct Pipeline<M: Memory> {
-    timeline: Timeline<M, SM64Controller<M>>,
+    timeline: Timeline<M, SM64Controller>,
 }
 
 impl<M: Memory> Pipeline<M> {
     /// Create a new pipeline over the given timeline.
-    pub fn new(timeline: Timeline<M, SM64Controller<M>>) -> Self {
+    pub fn new(timeline: Timeline<M, SM64Controller>) -> Self {
         Self { timeline }
     }
 
     /// Read a variable.
-    pub fn read(&self, variable: &Variable) -> Result<Value<M::Address>, Error> {
+    pub fn read(&self, variable: &Variable) -> Result<Value, Error> {
         let state = self.timeline.frame(variable.frame_unwrap())?;
         self.data_variables().get(&state, &variable.without_frame())
     }
 
     /// Write a variable.
-    pub fn write(&mut self, variable: &Variable, value: &Value<M::Address>) {
+    pub fn write(&mut self, variable: &Variable, value: &Value) {
         let controller = self.timeline.controller_mut(variable.frame_unwrap());
         controller.edits.write(variable, value.clone());
     }
 
     /// Get the data variables for this pipeline.
-    pub fn data_variables(&self) -> &DataVariables<M> {
+    pub fn data_variables(&self) -> &DataVariables {
         &self.timeline.controller().data_variables
     }
 
     /// Get the timeline for this pipeline.
-    pub fn timeline(&self) -> &Timeline<M, SM64Controller<M>> {
+    pub fn timeline(&self) -> &Timeline<M, SM64Controller> {
         &self.timeline
     }
 
     /// Get the timeline for this pipeline.
-    pub fn timeline_mut(&mut self) -> &mut Timeline<M, SM64Controller<M>> {
+    pub fn timeline_mut(&mut self) -> &mut Timeline<M, SM64Controller> {
         &mut self.timeline
     }
 }

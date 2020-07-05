@@ -2,10 +2,7 @@ use super::{ObjectBehavior, ObjectSlot, SM64ErrorCause, SurfaceSlot};
 use crate::{data_path::GlobalDataPath, error::Error, memory::Memory, timeline::State};
 
 /// Get the data path for an object.
-pub fn object_path<M: Memory>(
-    state: &impl State<Memory = M>,
-    object: ObjectSlot,
-) -> Result<GlobalDataPath<M>, Error> {
+pub fn object_path(state: &impl State, object: ObjectSlot) -> Result<GlobalDataPath, Error> {
     let active_flags = state
         .read(format!("gObjectPool[{}].activeFlags", object.0))?
         .as_int()?;
@@ -22,9 +19,9 @@ pub fn object_path<M: Memory>(
 }
 
 /// Get the behavior address for an object.
-pub fn object_behavior<M: Memory>(
-    state: &impl State<Memory = M>,
-    object_path: &GlobalDataPath<M>,
+pub fn object_behavior(
+    state: &impl State,
+    object_path: &GlobalDataPath,
 ) -> Result<ObjectBehavior, Error> {
     let behavior_path =
         object_path.concat(&state.memory().local_path("struct Object.behavior")?)?;
@@ -33,10 +30,7 @@ pub fn object_behavior<M: Memory>(
 }
 
 /// Get the data path for a surface.
-pub fn surface_path<M: Memory>(
-    state: &impl State<Memory = M>,
-    surface: SurfaceSlot,
-) -> Result<GlobalDataPath<M>, Error> {
+pub fn surface_path(state: &impl State, surface: SurfaceSlot) -> Result<GlobalDataPath, Error> {
     let num_surfaces = state.read("gSurfacesAllocated")?.as_int()? as usize;
     if surface.0 >= num_surfaces {
         Err(SM64ErrorCause::InactiveSurface { surface })?;

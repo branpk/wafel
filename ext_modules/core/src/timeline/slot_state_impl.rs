@@ -26,14 +26,14 @@ impl<'a, M: Memory, S: DerefMut<Target = M::Slot>> State for SlotStateImpl<'a, M
 
     fn address(
         &self,
-        path: impl AsGlobalDataPath<Self::Memory>,
+        path: impl AsGlobalDataPath,
     ) -> Result<<Self::Memory as Memory>::Address, Error> {
         path.as_global_data_path(self.memory)?
             .borrow()
             .address(self.memory, &*self.slot)
     }
 
-    fn read(&self, path: impl AsGlobalDataPath<M>) -> Result<Value<M::Address>, Error> {
+    fn read(&self, path: impl AsGlobalDataPath) -> Result<Value, Error> {
         path.as_global_data_path(self.memory)?
             .borrow()
             .read(self.memory, &*self.slot)
@@ -54,11 +54,7 @@ impl<'a, M: Memory, S: DerefMut<Target = M::Slot>> SlotStateMut for SlotStateImp
     }
 
     /// Write to the given path.
-    fn write(
-        &mut self,
-        path: impl AsGlobalDataPath<M>,
-        value: &Value<M::Address>,
-    ) -> Result<(), Error> {
+    fn write(&mut self, path: impl AsGlobalDataPath, value: &Value) -> Result<(), Error> {
         path.as_global_data_path(self.memory)?
             .borrow()
             .write(self.memory, &mut *self.slot, value)

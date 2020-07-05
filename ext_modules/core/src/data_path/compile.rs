@@ -5,7 +5,7 @@ use crate::{
     error::Error,
     memory::{
         data_type::{DataType, DataTypeRef, Field, Namespace, TypeName},
-        DataLayout, Memory,
+        AddressValue, DataLayout, Memory,
     },
 };
 use nom::{
@@ -19,7 +19,7 @@ use nom::{
     Err, IResult,
 };
 
-pub fn data_path<M: Memory>(memory: &M, source: &str) -> Result<DataPath<M>, Error> {
+pub fn data_path<M: Memory>(memory: &M, source: &str) -> Result<DataPath, Error> {
     let result: Result<_, Error> = try {
         let (_, ast): (_, PathAst) = all_consuming(parse_path::<VerboseError<&str>>)(source)
             .map_err(|e| to_path_error(source, e))?;
@@ -28,7 +28,7 @@ pub fn data_path<M: Memory>(memory: &M, source: &str) -> Result<DataPath<M>, Err
 
         match ast.root {
             RootAst::Global(root_name) => {
-                let root = memory.symbol_address(&root_name)?;
+                let root: AddressValue = memory.symbol_address(&root_name)?.into();
                 let root_type = layout.get_global(&root_name)?;
                 let root_type = layout.concrete_type(root_type)?;
 

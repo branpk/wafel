@@ -9,7 +9,7 @@ use crate::{
     error::Error,
     memory::{
         data_type::{FloatType, IntType},
-        ClassifiedAddress, DataLayout, FloatValue, IntValue, Memory as MemoryTrait,
+        AddressValue, ClassifiedAddress, DataLayout, FloatValue, IntValue, Memory as MemoryTrait,
         MemoryErrorCause,
     },
 };
@@ -123,6 +123,18 @@ impl Add<usize> for Address {
     }
 }
 
+impl From<Address> for AddressValue {
+    fn from(address: Address) -> Self {
+        AddressValue(address.0 as usize)
+    }
+}
+
+impl From<AddressValue> for Address {
+    fn from(value: AddressValue) -> Self {
+        Self(value.0 as *const u8)
+    }
+}
+
 /// An address in DLL memory that does not belong to a slot.
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash)]
 #[display(fmt = "static+{:010X}", _0)]
@@ -153,7 +165,7 @@ pub struct Memory {
     layout: DataLayout,
     next_buffer_id: AtomicUsize,
     update_function: unsafe extern "C" fn(),
-    data_path_cache: DataPathCache<Self>,
+    data_path_cache: DataPathCache,
 }
 
 impl Memory {
@@ -591,7 +603,7 @@ impl MemoryTrait for Memory {
         Ok(Address(pointer))
     }
 
-    fn data_path_cache(&self) -> &DataPathCache<Self> {
+    fn data_path_cache(&self) -> &DataPathCache {
         &self.data_path_cache
     }
 

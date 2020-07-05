@@ -4,11 +4,11 @@ use std::{cell::RefCell, collections::HashMap};
 
 /// A cache for data path compilation.
 #[derive(Debug, Clone)]
-pub struct DataPathCache<M: Memory> {
-    paths: RefCell<HashMap<String, DataPath<M>>>, // TODO: RwLock or thread-local?
+pub struct DataPathCache {
+    paths: RefCell<HashMap<String, DataPath>>, // TODO: RwLock or thread-local?
 }
 
-impl<M: Memory> DataPathCache<M> {
+impl DataPathCache {
     /// Construct an empty cache.
     pub fn new() -> Self {
         Self {
@@ -17,7 +17,7 @@ impl<M: Memory> DataPathCache<M> {
     }
 
     /// Look up or compile a data path.
-    pub fn path(&self, memory: &M, source: &str) -> Result<DataPath<M>, Error> {
+    pub fn path(&self, memory: &impl Memory, source: &str) -> Result<DataPath, Error> {
         let mut paths = self.paths.borrow_mut();
         Ok(match paths.get(source) {
             Some(path) => path.clone(),

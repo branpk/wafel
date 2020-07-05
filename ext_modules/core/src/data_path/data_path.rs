@@ -1,14 +1,10 @@
 use super::{compile, DataPathErrorCause};
 use crate::{
     error::Error,
-    memory::{data_type::DataTypeRef, Memory, Value},
+    memory::{data_type::DataTypeRef, AddressValue, Memory, Value},
 };
-use derivative::Derivative;
 use derive_more::Display;
-use std::{
-    borrow::Borrow,
-    fmt::{self, Display},
-};
+use std::borrow::Borrow;
 
 /// Internal representation of a global or local data path.
 #[derive(Debug, Display, Clone)]
@@ -36,9 +32,8 @@ pub(super) enum DataPathEdge {
 /// A data path starting from a global variable address.
 ///
 /// See module documentation for more information.
-#[derive(Debug, Derivative)]
-#[derivative(Clone(bound = "M::Address: Clone"))]
-pub struct GlobalDataPath<M: Memory>(pub(super) DataPathImpl<M::Address>);
+#[derive(Debug, Display, Clone)]
+pub struct GlobalDataPath(pub(super) DataPathImpl<AddressValue>);
 
 /// A data path starting from a type, such as a specific struct.
 ///
@@ -47,20 +42,19 @@ pub struct GlobalDataPath<M: Memory>(pub(super) DataPathImpl<M::Address>);
 pub struct LocalDataPath(pub(super) DataPathImpl<DataTypeRef>);
 
 /// Either a global or a local data path.
-#[derive(Debug, Display, Derivative)]
-#[derivative(Clone(bound = "M::Address: Clone"))]
-pub enum DataPath<M: Memory> {
+#[derive(Debug, Display, Clone)]
+pub enum DataPath {
     /// A global data path.
-    Global(GlobalDataPath<M>),
+    Global(GlobalDataPath),
     /// A local data path.
     Local(LocalDataPath),
 }
 
-impl<M: Memory> GlobalDataPath<M> {
+impl GlobalDataPath {
     /// Compile a global data path from source.
     ///
     /// See module documentation for syntax.
-    pub fn compile(memory: &M, source: &str) -> Result<Self, Error> {
+    pub fn compile(memory: &impl Memory, source: &str) -> Result<Self, Error> {
         Ok(compile::data_path(memory, source)?.into_global()?)
     }
 
@@ -75,9 +69,9 @@ impl<M: Memory> GlobalDataPath<M> {
     /// Evaluate the path and return the address of the variable.
     ///
     /// Note that this will read from memory if the path passes through a pointer.
-    pub fn address(&self, memory: &M, slot: &M::Slot) -> Result<M::Address, Error> {
+    pub fn address<M: Memory>(&self, memory: &M, slot: &M::Slot) -> Result<M::Address, Error> {
         let result: Result<_, Error> = try {
-            let mut address = self.0.root.clone();
+            let mut address: M::Address = self.0.root.clone().into();
             for edge in &self.0.edges {
                 match edge {
                     DataPathEdge::Offset(offset) => address = address + *offset,
@@ -93,7 +87,7 @@ impl<M: Memory> GlobalDataPath<M> {
     }
 
     /// Evaluate the path and return the value stored in the variable.
-    pub fn read(&self, memory: &M, slot: &M::Slot) -> Result<Value<M::Address>, Error> {
+    pub fn read<M: Memory>(&self, memory: &M, slot: &M::Slot) -> Result<Value, Error> {
         let address = self.address(memory, slot)?;
         memory
             .read_value(slot, &address, &self.0.concrete_type)
@@ -101,11 +95,11 @@ impl<M: Memory> GlobalDataPath<M> {
     }
 
     /// Evaluate the path and write `value` to the variable.
-    pub fn write(
+    pub fn write<M: Memory>(
         &self,
         memory: &M,
         slot: &mut M::Slot,
-        value: &Value<M::Address>,
+        value: &Value,
     ) -> Result<(), Error> {
         let address = self.address(memory, slot)?;
         memory
@@ -119,17 +113,11 @@ impl<M: Memory> GlobalDataPath<M> {
     }
 }
 
-impl<M: Memory> Display for GlobalDataPath<M> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        Display::fmt(&self.0, f)
-    }
-}
-
 impl LocalDataPath {
     /// Compile a local data path from source.
     ///
     /// See module documentation for syntax.
-    pub fn compile<M: Memory>(memory: &M, source: &str) -> Result<Self, Error> {
+    pub fn compile(memory: &impl Memory, source: &str) -> Result<Self, Error> {
         Ok(compile::data_path(memory, source)?.into_local()?)
     }
 
@@ -152,11 +140,11 @@ impl LocalDataPath {
     }
 }
 
-impl<M: Memory> DataPath<M> {
+impl DataPath {
     /// Compile a data path from source.
     ///
     /// See module documentation for syntax.
-    pub fn compile(memory: &M, source: &str) -> Result<Self, Error> {
+    pub fn compile(memory: &impl Memory, source: &str) -> Result<Self, Error> {
         compile::data_path(memory, source)
     }
 
@@ -168,7 +156,7 @@ impl<M: Memory> DataPath<M> {
     }
 
     /// Try to convert into a `GlobalDataPath`.
-    pub fn into_global(self) -> Result<GlobalDataPath<M>, Error> {
+    pub fn into_global(self) -> Result<GlobalDataPath, Error> {
         if let Self::Global(path) = self {
             Ok(path)
         } else {
@@ -222,26 +210,26 @@ fn concat_paths<R: Clone>(
 /// A trait for objects that can be used as global data paths.
 ///
 /// This allows `GlobalDataPath`s and strings to be used as paths.
-pub trait AsGlobalDataPath<M: Memory> {
+pub trait AsGlobalDataPath {
     /// The reference type.
-    type PathRef: Borrow<GlobalDataPath<M>>;
+    type PathRef: Borrow<GlobalDataPath>;
 
     /// Perform the conversion.
-    fn as_global_data_path(&self, memory: &M) -> Result<Self::PathRef, Error>;
+    fn as_global_data_path(&self, memory: &impl Memory) -> Result<Self::PathRef, Error>;
 }
 
-impl<'a, M: Memory> AsGlobalDataPath<M> for &'a GlobalDataPath<M> {
-    type PathRef = &'a GlobalDataPath<M>;
+impl<'a> AsGlobalDataPath for &'a GlobalDataPath {
+    type PathRef = &'a GlobalDataPath;
 
-    fn as_global_data_path(&self, _memory: &M) -> Result<Self::PathRef, Error> {
+    fn as_global_data_path(&self, _memory: &impl Memory) -> Result<Self::PathRef, Error> {
         Ok(self)
     }
 }
 
-impl<M: Memory, S: AsRef<str>> AsGlobalDataPath<M> for S {
-    type PathRef = GlobalDataPath<M>;
+impl<S: AsRef<str>> AsGlobalDataPath for S {
+    type PathRef = GlobalDataPath;
 
-    fn as_global_data_path(&self, memory: &M) -> Result<Self::PathRef, Error> {
+    fn as_global_data_path(&self, memory: &impl Memory) -> Result<Self::PathRef, Error> {
         memory.global_path(self.as_ref())
     }
 }

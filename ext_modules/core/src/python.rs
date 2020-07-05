@@ -74,10 +74,11 @@ impl PyPipeline {
 
         let memory = pipeline.timeline().memory();
         let globals = &memory.data_layout().globals;
-        let symbols_by_address = globals
-            .keys()
-            .filter_map(|name| Some((memory.symbol_address(name).ok()?, name.to_owned())))
-            .collect();
+        // let symbols_by_address = globals
+        //     .keys()
+        //     .filter_map(|name| Some((memory.symbol_address(name).ok()?, name.to_owned())))
+        //     .collect();
+        let symbols_by_address = HashMap::new();
 
         Ok(Self {
             pipeline,
@@ -328,12 +329,12 @@ pub struct PyAddress {
     address: dll::Address,
 }
 
-fn value_to_py_object(py: Python<'_>, value: &Value<dll::Address>) -> PyResult<PyObject> {
+fn value_to_py_object(py: Python<'_>, value: &Value) -> PyResult<PyObject> {
     match value {
         Value::Int(n) => Ok(n.to_object(py)),
         Value::Float(r) => Ok(r.to_object(py)),
         Value::Address(address) => Ok(PyAddress {
-            address: address.clone(),
+            address: (*address).into(),
         }
         .into_py(py)),
         _ => Err(Error::from(SM64ErrorCause::ValueToPython {
@@ -343,13 +344,13 @@ fn value_to_py_object(py: Python<'_>, value: &Value<dll::Address>) -> PyResult<P
     }
 }
 
-fn py_object_to_value(py: Python<'_>, value: &PyObject) -> PyResult<Value<dll::Address>> {
+fn py_object_to_value(py: Python<'_>, value: &PyObject) -> PyResult<Value> {
     if let Ok(long_value) = value.cast_as::<PyLong>(py) {
         Ok(Value::Int(long_value.extract()?))
     } else if let Ok(float_value) = value.cast_as::<PyFloat>(py) {
         Ok(Value::Float(float_value.extract()?))
     } else if let Ok(address) = value.cast_as::<PyAny>(py)?.extract::<PyAddress>() {
-        Ok(Value::Address(address.address))
+        Ok(Value::Address(address.address.into()))
     } else {
         Err(Error::from(SM64ErrorCause::ValueFromPython {
             value: value.cast_as::<PyAny>(py)?.str()?.to_string()?.into(),

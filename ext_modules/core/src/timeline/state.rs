@@ -18,14 +18,11 @@ pub trait State {
     /// Get the address for the given path.
     fn address(
         &self,
-        path: impl AsGlobalDataPath<Self::Memory>,
+        path: impl AsGlobalDataPath,
     ) -> Result<<Self::Memory as Memory>::Address, Error>;
 
     /// Read from the given path.
-    fn read(
-        &self,
-        path: impl AsGlobalDataPath<Self::Memory>,
-    ) -> Result<Value<<Self::Memory as Memory>::Address>, Error>;
+    fn read(&self, path: impl AsGlobalDataPath) -> Result<Value, Error>;
 }
 
 /// A state backed by a slot.
@@ -40,9 +37,5 @@ pub trait SlotStateMut: SlotState {
     fn slot_mut(&mut self) -> &mut <Self::Memory as Memory>::Slot;
 
     /// Write to the given path.
-    fn write(
-        &mut self,
-        path: impl AsGlobalDataPath<Self::Memory>,
-        value: &Value<<Self::Memory as Memory>::Address>,
-    ) -> Result<(), Error>;
+    fn write(&mut self, path: impl AsGlobalDataPath, value: &Value) -> Result<(), Error>;
 }

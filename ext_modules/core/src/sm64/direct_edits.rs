@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
 use super::Variable;
-use crate::memory::{Memory, Value};
+use crate::memory::Value;
 
 #[derive(Debug)]
-pub struct DirectEdits<M: Memory> {
-    frames: Vec<HashMap<Variable, Value<M::Address>>>,
+pub struct DirectEdits {
+    frames: Vec<HashMap<Variable, Value>>,
 }
 
-impl<M: Memory> DirectEdits<M> {
+impl DirectEdits {
     pub fn new() -> Self {
         Self { frames: Vec::new() }
     }
@@ -28,11 +28,11 @@ impl<M: Memory> DirectEdits<M> {
         }
     }
 
-    pub fn edits(&self, frame: u32) -> impl Iterator<Item = (&Variable, &Value<M::Address>)> {
+    pub fn edits(&self, frame: u32) -> impl Iterator<Item = (&Variable, &Value)> {
         self.frames.get(frame as usize).into_iter().flatten()
     }
 
-    fn edits_mut(&mut self, frame: u32) -> &mut HashMap<Variable, Value<M::Address>> {
+    fn edits_mut(&mut self, frame: u32) -> &mut HashMap<Variable, Value> {
         let index = frame as usize;
         while self.frames.len() <= index {
             self.frames.push(HashMap::new());
@@ -40,7 +40,7 @@ impl<M: Memory> DirectEdits<M> {
         self.frames.get_mut(index).unwrap()
     }
 
-    pub fn write(&mut self, variable: &Variable, value: Value<M::Address>) {
+    pub fn write(&mut self, variable: &Variable, value: Value) {
         let edits = self.edits_mut(variable.frame_unwrap());
         edits.insert(variable.without_frame(), value);
     }

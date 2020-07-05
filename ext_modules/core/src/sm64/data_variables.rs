@@ -77,34 +77,34 @@ fn build_variables(builder: &mut Builder) {
 }
 
 #[derive(Debug, Clone)]
-enum Path<M: Memory> {
-    Global(GlobalDataPath<M>),
+enum Path {
+    Global(GlobalDataPath),
     Object(LocalDataPath),
     Surface(LocalDataPath),
 }
 
 #[derive(Debug, Clone)]
-struct DataVariableSpec<M: Memory> {
+struct DataVariableSpec {
     group: String,
-    path: Path<M>,
+    path: Path,
     label: Option<String>,
     flag: Option<IntValue>,
 }
 
 #[derive(Debug)]
-pub struct DataVariables<M: Memory> {
-    specs: HashMap<String, DataVariableSpec<M>>,
+pub struct DataVariables {
+    specs: HashMap<String, DataVariableSpec>,
 }
 
-impl<M: Memory> DataVariables<M> {
-    pub fn all(memory: &M) -> Result<Self, Error> {
+impl DataVariables {
+    pub fn all(memory: &impl Memory) -> Result<Self, Error> {
         let mut builder = Builder::new();
         build_variables(&mut builder);
         let specs = builder.build(memory)?;
         Ok(Self { specs })
     }
 
-    fn variable_spec(&self, variable: &str) -> Result<&DataVariableSpec<M>, Error> {
+    fn variable_spec(&self, variable: &str) -> Result<&DataVariableSpec, Error> {
         self.specs.get(variable).ok_or_else(|| {
             SM64ErrorCause::UnhandledVariable {
                 variable: variable.to_owned(),
@@ -113,11 +113,7 @@ impl<M: Memory> DataVariables<M> {
         })
     }
 
-    fn path(
-        &self,
-        state: &impl State<Memory = M>,
-        variable: &Variable,
-    ) -> Result<GlobalDataPath<M>, Error> {
+    fn path(&self, state: &impl State, variable: &Variable) -> Result<GlobalDataPath, Error> {
         let spec = self.specs.get(variable.name.as_ref()).ok_or_else(|| {
             SM64ErrorCause::UnhandledVariable {
                 variable: variable.to_string(),
@@ -150,11 +146,7 @@ impl<M: Memory> DataVariables<M> {
         }
     }
 
-    pub fn get(
-        &self,
-        state: &impl State<Memory = M>,
-        variable: &Variable,
-    ) -> Result<Value<M::Address>, Error> {
+    pub fn get(&self, state: &impl State, variable: &Variable) -> Result<Value, Error> {
         assert!(variable.frame.is_none() || variable.frame == Some(state.frame()));
 
         let spec = self.variable_spec(&variable.name)?;
@@ -171,9 +163,9 @@ impl<M: Memory> DataVariables<M> {
 
     pub fn set(
         &self,
-        state: &mut impl SlotStateMut<Memory = M>,
+        state: &mut impl SlotStateMut,
         variable: &Variable,
-        mut value: Value<M::Address>,
+        mut value: Value,
     ) -> Result<(), Error> {
         assert!(variable.frame.is_none() || variable.frame == Some(state.frame()));
 
@@ -231,7 +223,7 @@ impl Builder {
         self.groups.push(group_builder);
     }
 
-    fn build<M: Memory>(self, memory: &M) -> Result<HashMap<String, DataVariableSpec<M>>, Error> {
+    fn build(self, memory: &impl Memory) -> Result<HashMap<String, DataVariableSpec>, Error> {
         let object_struct = memory.local_path("struct Object")?.root_type();
         let surface_struct = memory.local_path("struct Surface")?.root_type();
 
