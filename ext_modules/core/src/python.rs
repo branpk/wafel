@@ -19,7 +19,6 @@ use pyo3::{
 };
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
-    convert::TryFrom,
     hash::{Hash, Hasher},
 };
 
@@ -90,8 +89,7 @@ impl PyPipeline {
     /// If the variable is a data variable, the value will be read from memory
     /// on the variable's frame.
     pub fn read(&self, py: Python<'_>, variable: &PyVariable) -> PyResult<PyObject> {
-        let variable = Variable::try_from(variable.variable.clone())?;
-        let value = self.pipeline.read(&variable)?;
+        let value = self.pipeline.read(&variable.variable)?;
         let py_object = value_to_py_object(py, &value)?;
         Ok(py_object)
     }
@@ -106,10 +104,24 @@ impl PyPipeline {
         variable: &PyVariable,
         value: PyObject,
     ) -> PyResult<()> {
-        let variable = Variable::try_from(variable.variable.clone())?;
         let value = py_object_to_value(py, &value)?;
-        self.pipeline.write(&variable, &value);
+        self.pipeline.write(&variable.variable, &value);
         Ok(())
+    }
+
+    /// Reset a variable.
+    pub fn reset(&mut self, variable: &PyVariable) {
+        self.pipeline.reset(&variable.variable);
+    }
+
+    /// Insert a new state at the given frame, shifting edits forward.
+    pub fn insert_frame(&mut self, frame: u32) {
+        self.pipeline.insert_frame(frame);
+    }
+
+    /// Delete the state at the given frame, shifting edits backward.
+    pub fn delete_frame(&mut self, frame: u32) {
+        self.pipeline.delete_frame(frame);
     }
 
     /// Set a hotspot, allowing for faster scrolling near the given frame.

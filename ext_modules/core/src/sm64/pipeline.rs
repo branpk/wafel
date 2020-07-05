@@ -66,6 +66,24 @@ impl<M: Memory> Pipeline<M> {
         controller.edits.write(variable, value.clone());
     }
 
+    /// Reset a variable.
+    pub fn reset(&mut self, variable: &Variable) {
+        let controller = self.timeline.controller_mut(variable.frame_unwrap());
+        controller.edits.reset(variable);
+    }
+
+    /// Insert a new state at the given frame, shifting edits forward.
+    pub fn insert_frame(&mut self, frame: u32) {
+        let controller = self.timeline.controller_mut(frame);
+        controller.edits.insert_frame(frame);
+    }
+
+    /// Delete the state at the given frame, shifting edits backward.
+    pub fn delete_frame(&mut self, frame: u32) {
+        let controller = self.timeline.controller_mut(frame);
+        controller.edits.delete_frame(frame);
+    }
+
     /// Get the data variables for this pipeline.
     pub fn data_variables(&self) -> &DataVariables {
         &self.timeline.controller().data_variables

@@ -75,10 +75,10 @@ class Model(VariableDisplayer, FrameSequence):
     self._max_frame = max(self._max_frame, frame)
 
   def insert_frame(self, frame: int) -> None:
-    pass
+    self._pipeline.insert_frame(frame)
 
   def delete_frame(self, frame: int) -> None:
-    pass
+    self._pipeline.delete_frame(frame)
 
   def set_hotspot(self, name: str, frame: int) -> None:
     self._pipeline.set_hotspot(name, frame)
