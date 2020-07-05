@@ -2,8 +2,10 @@ from typing import *
 import struct
 import os
 
+from ext_modules.core import Variable
+
 from wafel.input_buttons import INPUT_BUTTON_FLAGS
-from wafel.variable import Variable, VariableReader
+from wafel.variable import VariableReader
 from wafel.util import *
 from wafel.tas_metadata import TasMetadata
 
@@ -94,11 +96,11 @@ def load_m64(filename: str) -> Tuple[TasMetadata, Dict[Variable, object]]:
 
       for variable, flag in INPUT_BUTTON_FLAGS.items():
         if buttons & flag:
-          edits[variable.at(frame=frame)] = True
+          edits[variable.with_frame(frame)] = True
       if stick_x != 0:
-        edits[Variable('input-stick-x').at(frame=frame)] = stick_x
+        edits[Variable('input-stick-x').with_frame(frame)] = stick_x
       if stick_y != 0:
-        edits[Variable('input-stick-y').at(frame=frame)] = stick_y
+        edits[Variable('input-stick-y').with_frame(frame)] = stick_y
 
       prev_buttons = buttons
       prev_stick_x = stick_x

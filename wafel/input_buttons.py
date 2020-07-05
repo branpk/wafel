@@ -1,4 +1,4 @@
-from wafel.variable import Variable
+from ext_modules.core import Variable
 
 
 INPUT_BUTTON_FLAGS = {

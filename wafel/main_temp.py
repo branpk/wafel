@@ -15,6 +15,7 @@ from wafel.frame_sheet import FrameSequence, FrameSheet, CellDragHandler
 from wafel.util import *
 from wafel.range_edit import RangeEditWriter
 from wafel.window import open_window_and_run
+from wafel.format_m64 import load_m64
 
 
 class NoOpDragHandler:
@@ -33,6 +34,10 @@ class Model(VariableDisplayer, FrameSequence):
     self._selected_frame = 0
     self._max_frame = 1000
     self._pipeline = Pipeline.load('lib/libsm64/sm64_us.dll')
+
+    metadata, edits = load_m64('test_files/22stars.m64')
+    for variable, value in edits.items():
+      self._pipeline.write(variable, value)
 
   def label(self, variable: Variable) -> str:
     return variable.name
@@ -71,6 +76,7 @@ def test_frame_sheet(id: str) -> None:
   def make_sheet() -> FrameSheet:
     sheet = FrameSheet(model, model._pipeline, NoOpDragHandler(), model, DataFormatters(model._pipeline))
     for name in [
+          'input-button-s',
           'input-button-a',
           'input-button-b',
           'input-button-z',
