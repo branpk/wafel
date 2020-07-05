@@ -1,10 +1,10 @@
 use super::{SlotState, SlotStateMut, State};
 use crate::{
-    data_path::AsGlobalDataPath,
+    data_path::GlobalDataPath,
     error::Error,
     memory::{Memory, Value},
 };
-use std::{borrow::Borrow, ops::DerefMut};
+use std::ops::DerefMut;
 
 #[derive(Debug)]
 pub struct SlotStateImpl<'a, M: Memory, S: DerefMut<Target = M::Slot>> {
@@ -24,19 +24,15 @@ impl<'a, M: Memory, S: DerefMut<Target = M::Slot>> State for SlotStateImpl<'a, M
         self.frame
     }
 
-    fn address(
+    fn address_path(
         &self,
-        path: impl AsGlobalDataPath,
+        path: &GlobalDataPath,
     ) -> Result<<Self::Memory as Memory>::Address, Error> {
-        path.as_global_data_path(self.memory)?
-            .borrow()
-            .address(self.memory, &*self.slot)
+        path.address(self.memory, &*self.slot)
     }
 
-    fn read(&self, path: impl AsGlobalDataPath) -> Result<Value, Error> {
-        path.as_global_data_path(self.memory)?
-            .borrow()
-            .read(self.memory, &*self.slot)
+    fn read_path(&self, path: &GlobalDataPath) -> Result<Value, Error> {
+        path.read(self.memory, &*self.slot)
     }
 }
 
@@ -54,9 +50,7 @@ impl<'a, M: Memory, S: DerefMut<Target = M::Slot>> SlotStateMut for SlotStateImp
     }
 
     /// Write to the given path.
-    fn write(&mut self, path: impl AsGlobalDataPath, value: &Value) -> Result<(), Error> {
-        path.as_global_data_path(self.memory)?
-            .borrow()
-            .write(self.memory, &mut *self.slot, value)
+    fn write_path(&mut self, path: &GlobalDataPath, value: &Value) -> Result<(), Error> {
+        path.write(self.memory, &mut *self.slot, value)
     }
 }

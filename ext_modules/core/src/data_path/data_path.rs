@@ -206,30 +206,3 @@ fn concat_paths<R: Clone>(
         .into())
     }
 }
-
-/// A trait for objects that can be used as global data paths.
-///
-/// This allows `GlobalDataPath`s and strings to be used as paths.
-pub trait AsGlobalDataPath {
-    /// The reference type.
-    type PathRef: Borrow<GlobalDataPath>;
-
-    /// Perform the conversion.
-    fn as_global_data_path(&self, memory: &impl Memory) -> Result<Self::PathRef, Error>;
-}
-
-impl<'a> AsGlobalDataPath for &'a GlobalDataPath {
-    type PathRef = &'a GlobalDataPath;
-
-    fn as_global_data_path(&self, _memory: &impl Memory) -> Result<Self::PathRef, Error> {
-        Ok(self)
-    }
-}
-
-impl<S: AsRef<str>> AsGlobalDataPath for S {
-    type PathRef = GlobalDataPath;
-
-    fn as_global_data_path(&self, memory: &impl Memory) -> Result<Self::PathRef, Error> {
-        memory.global_path(self.as_ref())
-    }
-}

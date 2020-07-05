@@ -4,7 +4,7 @@ use crate::{data_path::GlobalDataPath, error::Error, memory::Memory, timeline::S
 /// Get the data path for an object.
 pub fn object_path(state: &impl State, object: ObjectSlot) -> Result<GlobalDataPath, Error> {
     let active_flags = state
-        .read(format!("gObjectPool[{}].activeFlags", object.0))?
+        .read(&format!("gObjectPool[{}].activeFlags", object.0))?
         .as_int()?;
 
     if active_flags == 0 {
@@ -25,7 +25,7 @@ pub fn object_behavior(
 ) -> Result<ObjectBehavior, Error> {
     let behavior_path =
         object_path.concat(&state.memory().local_path("struct Object.behavior")?)?;
-    let behavior_address = state.read(&behavior_path)?.as_address()?;
+    let behavior_address = state.read_path(&behavior_path)?.as_address()?;
     Ok(ObjectBehavior(behavior_address))
 }
 

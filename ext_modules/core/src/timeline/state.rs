@@ -1,5 +1,5 @@
 use crate::{
-    data_path::AsGlobalDataPath,
+    data_path::GlobalDataPath,
     error::Error,
     memory::{Memory, Value},
 };
@@ -16,13 +16,23 @@ pub trait State {
     fn frame(&self) -> u32;
 
     /// Get the address for the given path.
-    fn address(
+    fn address(&self, path: &str) -> Result<<Self::Memory as Memory>::Address, Error> {
+        self.address_path(&self.memory().global_path(path)?)
+    }
+
+    /// Get the address for the given path.
+    fn address_path(
         &self,
-        path: impl AsGlobalDataPath,
+        path: &GlobalDataPath,
     ) -> Result<<Self::Memory as Memory>::Address, Error>;
 
     /// Read from the given path.
-    fn read(&self, path: impl AsGlobalDataPath) -> Result<Value, Error>;
+    fn read(&self, path: &str) -> Result<Value, Error> {
+        self.read_path(&self.memory().global_path(path)?)
+    }
+
+    /// Read from the given path.
+    fn read_path(&self, path: &GlobalDataPath) -> Result<Value, Error>;
 }
 
 /// A state backed by a slot.
@@ -37,5 +47,10 @@ pub trait SlotStateMut: SlotState {
     fn slot_mut(&mut self) -> &mut <Self::Memory as Memory>::Slot;
 
     /// Write to the given path.
-    fn write(&mut self, path: impl AsGlobalDataPath, value: &Value) -> Result<(), Error>;
+    fn write(&mut self, path: &str, value: &Value) -> Result<(), Error> {
+        self.write_path(&self.memory().global_path(path)?, value)
+    }
+
+    /// Write to the given path.
+    fn write_path(&mut self, path: &GlobalDataPath, value: &Value) -> Result<(), Error>;
 }
