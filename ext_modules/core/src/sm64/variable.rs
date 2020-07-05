@@ -46,15 +46,6 @@ impl Variable {
     }
 
     /// Get the frame for the variable.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the variable does not have a specified frame.
-    pub fn frame_unwrap(&self) -> u32 {
-        self.frame.expect("variable missing frame")
-    }
-
-    /// Get the frame for the variable.
     pub fn try_frame(&self) -> Result<u32, Error> {
         self.frame.ok_or_else(|| {
             SM64ErrorCause::MissingFrame {

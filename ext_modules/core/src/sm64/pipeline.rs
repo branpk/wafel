@@ -56,20 +56,22 @@ impl<M: Memory> Pipeline<M> {
 
     /// Read a variable.
     pub fn read(&self, variable: &Variable) -> Result<Value, Error> {
-        let state = self.timeline.frame(variable.frame_unwrap())?;
+        let state = self.timeline.frame(variable.try_frame()?)?;
         self.data_variables().get(&state, &variable.without_frame())
     }
 
     /// Write a variable.
-    pub fn write(&mut self, variable: &Variable, value: &Value) {
-        let controller = self.timeline.controller_mut(variable.frame_unwrap());
-        controller.edits.write(variable, value.clone());
+    pub fn write(&mut self, variable: &Variable, value: &Value) -> Result<(), Error> {
+        let controller = self.timeline.controller_mut(variable.try_frame()?);
+        controller.edits.write(variable, value.clone())?;
+        Ok(())
     }
 
     /// Reset a variable.
-    pub fn reset(&mut self, variable: &Variable) {
-        let controller = self.timeline.controller_mut(variable.frame_unwrap());
-        controller.edits.reset(variable);
+    pub fn reset(&mut self, variable: &Variable) -> Result<(), Error> {
+        let controller = self.timeline.controller_mut(variable.try_frame()?);
+        controller.edits.reset(variable)?;
+        Ok(())
     }
 
     /// Insert a new state at the given frame, shifting edits forward.

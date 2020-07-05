@@ -105,13 +105,14 @@ impl PyPipeline {
         value: PyObject,
     ) -> PyResult<()> {
         let value = py_object_to_value(py, &value)?;
-        self.pipeline.write(&variable.variable, &value);
+        self.pipeline.write(&variable.variable, &value)?;
         Ok(())
     }
 
     /// Reset a variable.
-    pub fn reset(&mut self, variable: &PyVariable) {
-        self.pipeline.reset(&variable.variable);
+    pub fn reset(&mut self, variable: &PyVariable) -> PyResult<()> {
+        self.pipeline.reset(&variable.variable)?;
+        Ok(())
     }
 
     /// Insert a new state at the given frame, shifting edits forward.

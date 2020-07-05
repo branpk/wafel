@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::Variable;
-use crate::memory::Value;
+use crate::{error::Error, memory::Value};
 
 #[derive(Debug)]
 pub struct DirectEdits {
@@ -40,19 +40,21 @@ impl DirectEdits {
         self.frames.get_mut(index).unwrap()
     }
 
-    pub fn write(&mut self, variable: &Variable, value: Value) {
-        let edits = self.edits_mut(variable.frame_unwrap());
+    pub fn write(&mut self, variable: &Variable, value: Value) -> Result<(), Error> {
+        let edits = self.edits_mut(variable.try_frame()?);
         edits.insert(variable.without_frame(), value);
+        Ok(())
     }
 
-    pub fn edited(&self, variable: &Variable) -> bool {
-        let frame = variable.frame_unwrap();
+    pub fn edited(&self, variable: &Variable) -> Result<bool, Error> {
+        let frame = variable.try_frame()?;
         let variable = variable.without_frame();
-        return self.edits(frame).any(|(var, _)| var == &variable);
+        Ok(self.edits(frame).any(|(var, _)| var == &variable))
     }
 
-    pub fn reset(&mut self, variable: &Variable) {
-        let edits = self.edits_mut(variable.frame_unwrap());
+    pub fn reset(&mut self, variable: &Variable) -> Result<(), Error> {
+        let edits = self.edits_mut(variable.try_frame()?);
         edits.remove(&variable.without_frame());
+        Ok(())
     }
 }
