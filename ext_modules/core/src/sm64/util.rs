@@ -26,7 +26,7 @@ pub fn object_behavior(
     let behavior_path =
         object_path.concat(&state.memory().local_path("struct Object.behavior")?)?;
     let behavior_address = state.read(&behavior_path)?.as_address()?;
-    Ok(ObjectBehavior::new(behavior_address))
+    Ok(ObjectBehavior(behavior_address))
 }
 
 /// Get the data path for a surface.

@@ -73,12 +73,11 @@ impl PyPipeline {
         let pipeline = load_dll_pipeline(dll_path, NUM_BACKUP_SLOTS)?;
 
         let memory = pipeline.timeline().memory();
-        let globals = &memory.data_layout().globals;
-        // let symbols_by_address = globals
-        //     .keys()
-        //     .filter_map(|name| Some((memory.symbol_address(name).ok()?, name.to_owned())))
-        //     .collect();
-        let symbols_by_address = HashMap::new();
+        let symbols_by_address = memory
+            .all_symbol_address()
+            .into_iter()
+            .map(|(key, value)| (value, key.to_owned()))
+            .collect();
 
         Ok(Self {
             pipeline,
@@ -183,8 +182,16 @@ impl PyPipeline {
             .collect()
     }
 
+    /// Get a human readable name for the given object behavior, if possible.
     pub fn object_behavior_name(&self, behavior: &PyObjectBehavior) -> String {
-        todo!()
+        let address: dll::Address = behavior.behavior.0.into();
+        let symbol = self.symbols_by_address.get(&address);
+
+        if let Some(symbol) = symbol {
+            symbol.strip_prefix("bhv").unwrap_or(symbol).to_owned()
+        } else {
+            format!("Object[{}]", address)
+        }
     }
 }
 

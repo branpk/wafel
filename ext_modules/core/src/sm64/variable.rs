@@ -1,5 +1,5 @@
 use super::SM64ErrorCause;
-use crate::error::Error;
+use crate::{error::Error, memory::AddressValue};
 use derive_more::Display;
 use std::{
     fmt::{self, Display},
@@ -16,13 +16,7 @@ pub struct SurfaceSlot(pub usize);
 
 /// An opaque wrapper for an object behavior pointer.
 #[derive(Debug, Display, Clone, PartialEq, Eq, Hash)]
-pub struct ObjectBehavior(Rc<String>);
-
-impl ObjectBehavior {
-    pub(super) fn new<A: Display>(address: A) -> Self {
-        Self(Rc::new(address.to_string()))
-    }
-}
+pub struct ObjectBehavior(pub AddressValue);
 
 /// An abstract game variable, typically corresponding to a memory variable.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

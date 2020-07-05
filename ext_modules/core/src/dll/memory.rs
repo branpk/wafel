@@ -406,6 +406,21 @@ impl Memory {
             }
         })
     }
+
+    /// Looks up the addresses for every symbol, skipping those where lookup fails.
+    ///
+    /// This is equivalent to calling `symbol_address` one-by-one and ignoring errors,
+    /// but is faster since it skips error handling logic.
+    pub fn all_symbol_address(&self) -> HashMap<&str, Address> {
+        self.layout
+            .globals
+            .keys()
+            .filter_map(|name| {
+                let pointer = read_symbol_direct(&self.library, name).ok()?;
+                Some((name.as_ref(), Address(pointer)))
+            })
+            .collect()
+    }
 }
 
 impl MemoryTrait for Memory {
@@ -642,15 +657,20 @@ impl MemoryTrait for Memory {
     }
 }
 
-// Do not make public - violates safety assumptions in base slot's `segment_mut`.
+/// Do not make public - violates safety assumptions in base slot's `segment_mut`.
 fn read_symbol<T>(library: &Library, name: &str) -> Result<*const T, DllError> {
-    unsafe {
-        library.symbol(name).map_err(|error| {
-            DllErrorCause::SymbolReadError {
-                name: name.to_owned(),
-                source: error,
-            }
-            .into()
-        })
-    }
+    read_symbol_direct(library, name).map_err(|error| {
+        DllErrorCause::SymbolReadError {
+            name: name.to_owned(),
+            source: error,
+        }
+        .into()
+    })
+}
+
+/// Faster than read_symbol in the error path since it doesn't generate a backtrace.
+///
+/// Do not make public - violates safety assumptions in base slot's `segment_mut`.
+fn read_symbol_direct<T>(library: &Library, name: &str) -> Result<*const T, dlopen::Error> {
+    unsafe { library.symbol(name) }
 }
