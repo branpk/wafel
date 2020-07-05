@@ -9,6 +9,7 @@ use crate::{
     dll,
     error::Error,
     memory::{Memory, Value},
+    timeline::SlotState,
 };
 use derive_more::Display;
 use pyo3::{
@@ -169,6 +170,23 @@ impl PyPipeline {
             .data_variables()
             .flag(&variable.variable)?
             .is_some())
+    }
+
+    /// Translate an address into a raw pointer into the base slot.
+    ///
+    /// # Safety
+    ///
+    /// This should not be used to write to memory.
+    /// This includes any functions that are called through it.
+    ///
+    /// The pipeline must stay live while this pointer is live.
+    pub unsafe fn address_to_base_pointer(&self, address: &PyAddress) -> PyResult<usize> {
+        let timeline = self.pipeline.timeline();
+        let base_slot = timeline.base_slot(0)?;
+        let pointer: *const u8 = timeline
+            .memory()
+            .address_to_base_pointer(base_slot.slot(), &address.address)?;
+        Ok(pointer as usize)
     }
 
     /// Return a map from mario action values to human readable names.

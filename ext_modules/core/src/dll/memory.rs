@@ -657,7 +657,6 @@ impl MemoryTrait for Memory {
     }
 }
 
-/// Do not make public - violates safety assumptions in base slot's `segment_mut`.
 fn read_symbol<T>(library: &Library, name: &str) -> Result<*const T, DllError> {
     read_symbol_direct(library, name).map_err(|error| {
         DllErrorCause::SymbolReadError {
@@ -669,8 +668,6 @@ fn read_symbol<T>(library: &Library, name: &str) -> Result<*const T, DllError> {
 }
 
 /// Faster than read_symbol in the error path since it doesn't generate a backtrace.
-///
-/// Do not make public - violates safety assumptions in base slot's `segment_mut`.
 fn read_symbol_direct<T>(library: &Library, name: &str) -> Result<*const T, dlopen::Error> {
     unsafe { library.symbol(name) }
 }
