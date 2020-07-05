@@ -3,8 +3,7 @@
 //! The exposed API is **not** safe because of the assumptions made about DLL loading.
 
 use super::sm64::{
-    load_dll_pipeline, GenericFrame, GenericVariable, ObjectBehavior, ObjectSlot, Pipeline,
-    SM64ErrorCause, SurfaceSlot, Variable,
+    load_dll_pipeline, ObjectBehavior, ObjectSlot, Pipeline, SM64ErrorCause, SurfaceSlot, Variable,
 };
 use crate::{dll, error::Error, memory::Value};
 use derive_more::Display;
@@ -97,7 +96,7 @@ impl PyPipeline {
 #[pyclass(name = Variable)]
 #[derive(Debug, Display, Clone, PartialEq, Eq, Hash)]
 pub struct PyVariable {
-    variable: GenericVariable,
+    variable: Variable,
 }
 
 #[pymethods]
@@ -106,7 +105,7 @@ impl PyVariable {
     #[new]
     pub fn new(name: &str) -> Self {
         Self {
-            variable: Variable::new(name).into(),
+            variable: Variable::new(name),
         }
     }
 
@@ -119,10 +118,7 @@ impl PyVariable {
     /// Get the frame for the variable.
     #[getter]
     pub fn frame(&self) -> Option<u32> {
-        match self.variable.frame {
-            GenericFrame::Frame(frame) => Some(frame),
-            GenericFrame::Absent => None,
-        }
+        self.variable.frame
     }
 
     /// Get the object slot for the variable.

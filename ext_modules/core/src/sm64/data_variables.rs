@@ -1,4 +1,4 @@
-use super::{util, SM64ErrorCause, VariableWithoutFrame};
+use super::{util, SM64ErrorCause, Variable};
 use crate::{
     data_path::{DataPath, GlobalDataPath, LocalDataPath},
     error::Error,
@@ -116,7 +116,7 @@ impl<M: Memory> DataVariables<M> {
     fn path(
         &self,
         state: &impl State<Memory = M>,
-        variable: &VariableWithoutFrame,
+        variable: &Variable,
     ) -> Result<GlobalDataPath<M>, Error> {
         let spec = self.specs.get(variable.name.as_ref()).ok_or_else(|| {
             SM64ErrorCause::UnhandledVariable {
@@ -153,8 +153,10 @@ impl<M: Memory> DataVariables<M> {
     pub fn get(
         &self,
         state: &impl State<Memory = M>,
-        variable: &VariableWithoutFrame,
+        variable: &Variable,
     ) -> Result<Value<M::Address>, Error> {
+        assert!(variable.frame.is_none() || variable.frame == Some(state.frame()));
+
         let spec = self.variable_spec(&variable.name)?;
         let path = self.path(state, variable)?;
         let mut value = state.read(&path)?;
@@ -170,9 +172,11 @@ impl<M: Memory> DataVariables<M> {
     pub fn set(
         &self,
         state: &mut impl SlotStateMut<Memory = M>,
-        variable: &VariableWithoutFrame,
+        variable: &Variable,
         mut value: Value<M::Address>,
     ) -> Result<(), Error> {
+        assert!(variable.frame.is_none() || variable.frame == Some(state.frame()));
+
         let spec = self.variable_spec(&variable.name)?;
         let path = self.path(state, variable)?;
 

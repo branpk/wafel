@@ -89,6 +89,7 @@ def test_frame_sheet(id: str) -> None:
   def make_sheet() -> FrameSheet:
     sheet = FrameSheet(model, model._pipeline, NoOpDragHandler(), model, model)
     sheet.append_variable(Variable('global-timer'))
+    sheet.append_variable(Variable('mario-pos-y'))
     return sheet
   sheet = use_state_with('sheet', make_sheet).value
 

@@ -56,13 +56,13 @@ impl<M: Memory> Pipeline<M> {
 
     /// Read a variable.
     pub fn read(&self, variable: &Variable) -> Result<Value<M::Address>, Error> {
-        let state = self.timeline.frame(variable.frame)?;
+        let state = self.timeline.frame(variable.frame_unwrap())?;
         self.data_variables().get(&state, &variable.without_frame())
     }
 
     /// Write a variable.
     pub fn write(&mut self, variable: &Variable, value: &Value<M::Address>) {
-        let controller = self.timeline.controller_mut(variable.frame);
+        let controller = self.timeline.controller_mut(variable.frame_unwrap());
         controller.edits.write(variable, value.clone());
     }
 
