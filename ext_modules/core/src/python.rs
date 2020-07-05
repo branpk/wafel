@@ -7,7 +7,12 @@ use super::sm64::{
 };
 use crate::{dll, error::Error, memory::Value};
 use derive_more::Display;
-use pyo3::{basic::CompareOp, prelude::*, types::PyLong, PyObjectProtocol};
+use pyo3::{
+    basic::CompareOp,
+    prelude::*,
+    types::{PyFloat, PyLong},
+    PyObjectProtocol,
+};
 use std::{
     collections::hash_map::DefaultHasher,
     convert::TryFrom,
@@ -89,6 +94,25 @@ impl PyPipeline {
         let value = py_object_to_value(py, &value)?;
         self.pipeline.write(&variable, &value);
         Ok(())
+    }
+
+    /// Set a hotspot, allowing for faster scrolling near the given frame.
+    pub fn set_hotspot(&mut self, name: &str, frame: u32) {
+        self.pipeline.timeline_mut().set_hotspot(name, frame);
+    }
+
+    /// Perform housekeeping to improve scrolling near hotspots.
+    pub fn balance_distribution(&mut self, max_run_time_seconds: f32) -> PyResult<()> {
+        self.pipeline
+            .timeline_mut()
+            .balance_distribution(std::time::Duration::from_secs_f32(max_run_time_seconds))?;
+        Ok(())
+    }
+
+    /// Return the label for the variable if it has one.
+    pub fn label(&self, variable: &PyVariable) -> PyResult<Option<&str>> {
+        let label = self.pipeline.data_variables().label(&variable.variable)?;
+        Ok(label)
     }
 
     /// Return true if the variable has an integer data type.
@@ -278,6 +302,8 @@ fn value_to_py_object(py: Python<'_>, value: &Value<dll::Address>) -> PyResult<P
 fn py_object_to_value(py: Python<'_>, value: &PyObject) -> PyResult<Value<dll::Address>> {
     if let Ok(long_value) = value.cast_as::<PyLong>(py) {
         Ok(Value::Int(long_value.extract()?))
+    } else if let Ok(float_value) = value.cast_as::<PyFloat>(py) {
+        Ok(Value::Float(float_value.extract()?))
     } else if let Ok(address) = value.cast_as::<PyAny>(py)?.extract::<PyAddress>() {
         Ok(Value::Address(address.address))
     } else {

@@ -66,8 +66,19 @@ impl<M: Memory> Pipeline<M> {
         controller.edits.write(variable, value.clone());
     }
 
+    /// Get the data variables for this pipeline.
     pub fn data_variables(&self) -> &DataVariables<M> {
         &self.timeline.controller().data_variables
+    }
+
+    /// Get the timeline for this pipeline.
+    pub fn timeline(&self) -> &Timeline<M, SM64Controller<M>> {
+        &self.timeline
+    }
+
+    /// Get the timeline for this pipeline.
+    pub fn timeline_mut(&mut self) -> &mut Timeline<M, SM64Controller<M>> {
+        &mut self.timeline
     }
 }
 

@@ -40,10 +40,21 @@ class Model(VariableDisplayer, FrameSequence):
       self._pipeline.write(variable, value)
 
   def label(self, variable: Variable) -> str:
-    return variable.name
+    return assert_not_none(self._pipeline.label(variable))
 
   def column_header(self, variable: Variable) -> str:
-    return variable.name
+    if variable.object is not None:
+      if variable.object_behavior is None:
+        return str(variable.object) + '\n' + self.label(variable)
+      else:
+        behavior_name = '???' # TODO
+        return str(variable.object) + ' - ' + behavior_name + '\n' + self.label(variable)
+
+    elif variable.surface is not None:
+      return f'Surface {variable.surface}\n{self.label(variable)}'
+
+    else:
+      return self.label(variable)
 
   @property
   def selected_frame(self) -> int:
@@ -66,7 +77,7 @@ class Model(VariableDisplayer, FrameSequence):
     pass
 
   def set_hotspot(self, name: str, frame: int) -> None:
-    pass
+    self._pipeline.set_hotspot(name, frame)
 
 
 def test_frame_sheet(id: str) -> None:
@@ -108,6 +119,8 @@ def test_frame_sheet(id: str) -> None:
     print(f'mspf: {int(1000 / fps.value * 10) / 10} ({int(fps.value)} fps)')
 
   ig.pop_id()
+
+  model._pipeline.balance_distribution(1/120)
 
 
 def run():

@@ -193,6 +193,12 @@ impl<M: Memory> DataVariables<M> {
         state.write(&path, &value)
     }
 
+    /// Get the label for the given variable if it has one.
+    pub fn label(&self, variable: &Variable) -> Result<Option<&str>, Error> {
+        let spec = self.variable_spec(&variable.name)?;
+        Ok(spec.label.as_ref().map(String::as_ref))
+    }
+
     /// Get the concrete data type for the given variable.
     pub fn data_type(&self, variable: &Variable) -> Result<DataTypeRef, Error> {
         let spec = self.variable_spec(&variable.name)?;
@@ -203,6 +209,7 @@ impl<M: Memory> DataVariables<M> {
         }
     }
 
+    /// Get the bit flag for the given variable if it has one.
     pub fn flag(&self, variable: &Variable) -> Result<Option<IntValue>, Error> {
         let spec = self.variable_spec(&variable.name)?;
         Ok(spec.flag)

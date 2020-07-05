@@ -19,7 +19,7 @@ def _render_window(window, ig_renderer, render: Callable[[str], None]) -> None:
   rendering = True
 
   try:
-    clipboard_length = glfw.get_clipboard_string(window)
+    clipboard_length = len(glfw.get_clipboard_string(window))
   except:
     # Fails if the user has non-text copied
     clipboard_length = 0
