@@ -16,7 +16,7 @@ with open(config.log_file, 'a') as log_file:
   log.subscribe(append_to_log)
 
   try:
-    from wafel.main import run
+    from wafel.main_temp import run
     # import cProfile
     # cProfile.run('run()', sort='cumtime')
     run()

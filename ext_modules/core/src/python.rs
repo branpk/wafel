@@ -7,8 +7,13 @@ use super::sm64::{
     SM64ErrorCause, SurfaceSlot, Variable,
 };
 use crate::{dll, error::Error, memory::Value};
-use pyo3::{prelude::*, types::PyLong};
-use std::convert::TryFrom;
+use derive_more::Display;
+use pyo3::{basic::CompareOp, prelude::*, types::PyLong, PyObjectProtocol};
+use std::{
+    collections::hash_map::DefaultHasher,
+    convert::TryFrom,
+    hash::{Hash, Hasher},
+};
 
 // TODO: __str__, __repr__, __eq__, __hash__ for PyVariable, PyObjectBehavior, PyAddress
 
@@ -90,7 +95,7 @@ impl PyPipeline {
 
 /// An abstract game variable.
 #[pyclass(name = Variable)]
-#[derive(Debug)]
+#[derive(Debug, Display, Clone, PartialEq, Eq, Hash)]
 pub struct PyVariable {
     variable: GenericVariable,
 }
@@ -198,6 +203,23 @@ impl PyVariable {
         Self {
             variable: self.variable.without_surface().into(),
         }
+    }
+}
+
+#[pyproto]
+impl PyObjectProtocol for PyVariable {
+    fn __richcmp__(&self, other: PyVariable, op: CompareOp) -> PyResult<bool> {
+        match op {
+            CompareOp::Eq => Ok(self == &other),
+            CompareOp::Ne => Ok(self != &other),
+            _ => unimplemented!("{:?}", op),
+        }
+    }
+
+    fn __hash__(&self) -> PyResult<isize> {
+        let mut hasher = DefaultHasher::new();
+        self.hash(&mut hasher);
+        Ok(hasher.finish() as isize)
     }
 }
 

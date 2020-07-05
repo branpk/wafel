@@ -3,8 +3,10 @@ from typing import *
 from abc import abstractmethod
 from dataclasses import dataclass, field
 
+from ext_modules.core import Variable
+
 import wafel.imgui as ig
-from wafel.variable import Variable, VariablePipeline
+from wafel.variable import VariablePipeline
 from wafel.variable_display import VariableDisplayer
 from wafel.variable_format import Formatters, EmptyFormatter, VariableFormatter
 import wafel.ui as ui
@@ -88,7 +90,7 @@ class FrameSheet:
       log.error('Multiple frame sheet column mods on same frame')
       return
 
-    object_slot = variable.args.get('object')
+    object_slot = variable.object
     column = FrameSheetColumn(variable)
     if column not in self.columns:
       self.next_columns.insert(index, column)
@@ -176,7 +178,7 @@ class FrameSheet:
 
 
   def render_cell(self, frame: int, column: FrameSheetColumn) -> None:
-    cell_variable = column.variable.at(frame=frame)
+    cell_variable = column.variable.with_frame(frame)
 
     data = self.pipeline.read(cell_variable)
     formatter = EmptyFormatter() if data is None else self.formatters[cell_variable]
