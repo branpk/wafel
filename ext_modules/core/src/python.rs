@@ -5,7 +5,11 @@
 use super::sm64::{
     load_dll_pipeline, ObjectBehavior, ObjectSlot, Pipeline, SM64ErrorCause, SurfaceSlot, Variable,
 };
-use crate::{dll, error::Error, memory::Value};
+use crate::{
+    dll,
+    error::Error,
+    memory::{Memory, Value},
+};
 use derive_more::Display;
 use pyo3::{
     basic::CompareOp,
@@ -14,7 +18,7 @@ use pyo3::{
     PyObjectProtocol,
 };
 use std::{
-    collections::hash_map::DefaultHasher,
+    collections::{hash_map::DefaultHasher, HashMap},
     convert::TryFrom,
     hash::{Hash, Hasher},
 };
@@ -140,6 +144,30 @@ impl PyPipeline {
             .data_variables()
             .flag(&variable.variable)?
             .is_some())
+    }
+
+    /// Return a map from mario action values to human readable names.
+    pub fn action_names(&self) -> HashMap<u32, String> {
+        let data_layout = self.pipeline.timeline().memory().data_layout();
+        data_layout
+            .constants
+            .iter()
+            .filter(|(name, _)| {
+                name.starts_with("ACT_")
+                    && !name.starts_with("ACT_FLAG_")
+                    && !name.starts_with("ACT_GROUP_")
+                    && !name.starts_with("ACT_ID_")
+            })
+            .map(|(name, value)| {
+                (
+                    *value as u32,
+                    name.strip_prefix("ACT_")
+                        .unwrap()
+                        .replace("_", " ")
+                        .to_lowercase(),
+                )
+            })
+            .collect()
     }
 }
 

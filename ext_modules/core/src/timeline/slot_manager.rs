@@ -381,6 +381,10 @@ impl<M: Memory, C: Controller<M>> SlotManager<M, C> {
         Ok(())
     }
 
+    pub fn memory(&self) -> &M {
+        &self.memory
+    }
+
     pub fn controller(&self) -> &C {
         &self.controller
     }

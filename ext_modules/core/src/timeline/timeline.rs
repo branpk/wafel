@@ -38,6 +38,11 @@ impl<M: Memory, C: Controller<M>> Timeline<M, C> {
         self.slot_manager.into_parts()
     }
 
+    /// Get the memory that backs this timeline.
+    pub fn memory(&self) -> &M {
+        self.slot_manager.memory()
+    }
+
     /// Get the controller.
     pub fn controller(&self) -> &C {
         self.slot_manager.controller()

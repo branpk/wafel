@@ -9,7 +9,8 @@ from ext_modules.core import Variable, Pipeline
 import wafel.imgui as ig
 from wafel.variable import VariableReader, VariableWriter, VariablePipeline
 from wafel.variable_display import VariableDisplayer
-from wafel.variable_format import Formatters, DecimalIntFormatter, VariableFormatter, DataFormatters
+from wafel.variable_format import Formatters, DecimalIntFormatter, VariableFormatter, \
+  DataFormatters, EnumFormatter
 from wafel.local_state import use_state_with, use_state
 from wafel.frame_sheet import FrameSequence, FrameSheet, CellDragHandler
 from wafel.util import *
@@ -33,7 +34,10 @@ class Model(VariableDisplayer, FrameSequence):
   def __init__(self) -> None:
     self._selected_frame = 0
     self._max_frame = 1000
-    self._pipeline = Pipeline.load('lib/libsm64/sm64_us.dll')
+    self._pipeline = Pipeline.load('lib/libsm64/sm64_jp.dll')
+    self._formatters = DataFormatters(self._pipeline)
+
+    self._formatters[Variable('mario-action')] = EnumFormatter(self._pipeline.action_names())
 
     metadata, edits = load_m64('test_files/22stars.m64')
     for variable, value in edits.items():
@@ -85,7 +89,7 @@ def test_frame_sheet(id: str) -> None:
   model = use_state_with('model', lambda: Model()).value
 
   def make_sheet() -> FrameSheet:
-    sheet = FrameSheet(model, model._pipeline, NoOpDragHandler(), model, DataFormatters(model._pipeline))
+    sheet = FrameSheet(model, model._pipeline, NoOpDragHandler(), model, model._formatters)
     for name in [
           'input-button-s',
           'input-button-a',
