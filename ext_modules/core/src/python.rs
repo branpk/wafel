@@ -58,6 +58,7 @@ const NUM_BACKUP_SLOTS: usize = 100;
 #[derive(Debug)]
 pub struct PyPipeline {
     pipeline: Pipeline<dll::Memory>,
+    symbols_by_address: HashMap<dll::Address, String>,
 }
 
 #[pymethods]
@@ -70,7 +71,18 @@ impl PyPipeline {
     #[staticmethod]
     pub unsafe fn load(dll_path: &str) -> PyResult<Self> {
         let pipeline = load_dll_pipeline(dll_path, NUM_BACKUP_SLOTS)?;
-        Ok(Self { pipeline })
+
+        let memory = pipeline.timeline().memory();
+        let globals = &memory.data_layout().globals;
+        let symbols_by_address = globals
+            .keys()
+            .filter_map(|name| Some((memory.symbol_address(name).ok()?, name.to_owned())))
+            .collect();
+
+        Ok(Self {
+            pipeline,
+            symbols_by_address,
+        })
     }
 
     /// Read a variable.
@@ -168,6 +180,10 @@ impl PyPipeline {
                 )
             })
             .collect()
+    }
+
+    pub fn object_behavior_name(&self, behavior: &PyObjectBehavior) -> String {
+        todo!()
     }
 }
 
