@@ -15,10 +15,9 @@ impl DirectEdits {
 
     pub fn insert_frame(&mut self, frame: u32) {
         let index = frame as usize;
-        while self.frames.len() <= index {
-            self.frames.push(HashMap::new());
+        if index < self.frames.len() {
+            self.frames.insert(index, HashMap::new());
         }
-        self.frames.insert(index, HashMap::new());
     }
 
     pub fn delete_frame(&mut self, frame: u32) {

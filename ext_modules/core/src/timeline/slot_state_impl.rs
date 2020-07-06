@@ -24,14 +24,14 @@ impl<'a, M: Memory, S: DerefMut<Target = M::Slot>> State for SlotStateImpl<'a, M
         self.frame
     }
 
-    fn address_path(
+    fn path_address(
         &self,
         path: &GlobalDataPath,
     ) -> Result<<Self::Memory as Memory>::Address, Error> {
         path.address(self.memory, &*self.slot)
     }
 
-    fn read_path(&self, path: &GlobalDataPath) -> Result<Value, Error> {
+    fn path_read(&self, path: &GlobalDataPath) -> Result<Value, Error> {
         path.read(self.memory, &*self.slot)
     }
 }
@@ -50,7 +50,7 @@ impl<'a, M: Memory, S: DerefMut<Target = M::Slot>> SlotStateMut for SlotStateImp
     }
 
     /// Write to the given path.
-    fn write_path(&mut self, path: &GlobalDataPath, value: &Value) -> Result<(), Error> {
+    fn path_write(&mut self, path: &GlobalDataPath, value: &Value) -> Result<(), Error> {
         path.write(self.memory, &mut *self.slot, value)
     }
 }

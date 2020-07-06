@@ -25,7 +25,7 @@ pub fn object_behavior(
 ) -> Result<ObjectBehavior, Error> {
     let behavior_path =
         object_path.concat(&state.memory().local_path("struct Object.behavior")?)?;
-    let behavior_address = state.read_path(&behavior_path)?.as_address()?;
+    let behavior_address = state.path_read(&behavior_path)?.as_address()?;
     Ok(ObjectBehavior(behavior_address))
 }
 

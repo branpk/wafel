@@ -151,7 +151,7 @@ impl DataVariables {
 
         let spec = self.variable_spec(&variable.name)?;
         let path = self.path(state, variable)?;
-        let mut value = state.read_path(&path)?;
+        let mut value = state.path_read(&path)?;
 
         if let Some(flag) = spec.flag {
             let flag_set = (value.as_int()? & flag) != 0;
@@ -174,7 +174,7 @@ impl DataVariables {
 
         if let Some(flag) = spec.flag {
             let flag_set = value.as_int()? != 0;
-            let prev_value = state.read_path(&path)?.as_int()?;
+            let prev_value = state.path_read(&path)?.as_int()?;
             value = Value::Int(if flag_set {
                 prev_value | flag
             } else {
@@ -182,7 +182,7 @@ impl DataVariables {
             });
         }
 
-        state.write_path(&path, &value)
+        state.path_write(&path, &value)
     }
 
     /// Get the label for the given variable if it has one.

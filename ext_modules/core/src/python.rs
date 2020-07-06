@@ -9,7 +9,7 @@ use crate::{
     dll,
     error::Error,
     memory::{Memory, Value},
-    timeline::SlotState,
+    timeline::{SlotState, State},
 };
 use derive_more::Display;
 use pyo3::{
@@ -20,6 +20,7 @@ use pyo3::{
 };
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
+    fmt::Debug,
     hash::{Hash, Hasher},
 };
 
@@ -114,6 +115,21 @@ impl PyPipeline {
     pub fn reset(&mut self, variable: &PyVariable) -> PyResult<()> {
         self.pipeline.reset(&variable.variable)?;
         Ok(())
+    }
+
+    /// Get the address for the given path.
+    pub fn path_address(&self, path: &str, frame: u32) -> PyResult<PyAddress> {
+        let state = self.pipeline.timeline().frame(frame)?;
+        let address = state.address(path)?;
+        Ok(PyAddress { address })
+    }
+
+    /// Read from the given path.
+    pub fn path_read(&self, py: Python<'_>, path: &str, frame: u32) -> PyResult<PyObject> {
+        let state = self.pipeline.timeline().frame(frame)?;
+        let value = state.read(path)?;
+        let py_object = value_to_py_object(py, &value)?;
+        Ok(py_object)
     }
 
     /// Insert a new state at the given frame, shifting edits forward.
