@@ -4,7 +4,6 @@ use crate::{
     memory::{data_type::DataTypeRef, AddressValue, Memory, Value},
 };
 use derive_more::Display;
-use std::borrow::Borrow;
 
 /// Internal representation of a global or local data path.
 #[derive(Debug, Display, Clone)]

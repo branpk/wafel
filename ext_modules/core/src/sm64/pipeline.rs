@@ -10,8 +10,6 @@ use crate::{
     memory::{Memory, Value},
     timeline::{Controller, SlotStateMut, Timeline},
 };
-use lazy_static::lazy_static;
-use std::{collections::HashSet, sync::Mutex};
 
 /// SM64 controller implementation.
 #[derive(Debug)]
@@ -102,10 +100,6 @@ impl<M: Memory> Pipeline<M> {
     }
 }
 
-lazy_static! {
-    static ref DLL_PATHS: Mutex<HashSet<String>> = Mutex::new(HashSet::new());
-}
-
 /// Build a Pipeline using the dll path.
 ///
 /// # Safety
@@ -115,13 +109,6 @@ pub unsafe fn load_dll_pipeline(
     dll_path: &str,
     num_backup_slots: usize,
 ) -> Result<Pipeline<dll::Memory>, Error> {
-    // This is not a perfect check, it is just a sanity check for the likely scenario
-    if let Ok(mut dll_paths) = DLL_PATHS.lock() {
-        if !dll_paths.insert(dll_path.to_owned()) {
-            panic!("Same DLL loaded twice: {}", dll_path);
-        }
-    }
-
     let (mut memory, base_slot) = dll::Memory::load(dll_path, "sm64_init", "sm64_update")?;
 
     load_object_fields(

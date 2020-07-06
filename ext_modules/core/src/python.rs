@@ -1,17 +1,18 @@
 //! SM64-specific Python API for Wafel.
 //!
 //! The exposed API is **not** safe because of the assumptions made about DLL loading.
-
-use super::sm64::{
-    load_dll_pipeline, ObjectBehavior, ObjectSlot, Pipeline, SM64ErrorCause, SurfaceSlot, Variable,
-};
 use crate::{
     dll,
     error::Error,
     memory::{Memory, Value},
+    sm64::{
+        load_dll_pipeline, ObjectBehavior, ObjectSlot, Pipeline, SM64ErrorCause, SurfaceSlot,
+        Variable,
+    },
     timeline::{SlotState, State},
 };
 use derive_more::Display;
+use lazy_static::lazy_static;
 use pyo3::{
     basic::CompareOp,
     prelude::*,
@@ -22,6 +23,7 @@ use std::{
     collections::{hash_map::DefaultHasher, HashMap},
     fmt::Debug,
     hash::{Hash, Hasher},
+    sync::Mutex,
 };
 
 // TODO: __str__, __repr__, __eq__, __hash__ for PyVariable, PyObjectBehavior, PyAddress
@@ -51,28 +53,28 @@ impl From<Error> for PyErr {
 
 const NUM_BACKUP_SLOTS: usize = 100;
 
+lazy_static! {
+    static ref VALID_PIPELINES: Mutex<Vec<Py<PyPipeline>>> = Mutex::new(Vec::new());
+}
+
 /// An abstraction for reading and writing variables.
 ///
 /// Note that writing a value to a variable and then reading the variable does not
 /// necessarily result in the original value.
-#[pyclass(name = Pipeline)]
+#[pyclass(name = Pipeline, unsendable)]
 #[derive(Debug)]
 pub struct PyPipeline {
+    valid: Option<ValidPipeline>,
+}
+
+#[derive(Debug)]
+struct ValidPipeline {
     pipeline: Pipeline<dll::Memory>,
     symbols_by_address: HashMap<dll::Address, String>,
 }
 
-#[pymethods]
 impl PyPipeline {
-    /// Build a Pipeline using the dll path.
-    ///
-    /// # Safety
-    ///
-    /// See `dll::Memory::load`.
-    #[staticmethod]
-    pub unsafe fn load(dll_path: &str) -> PyResult<Self> {
-        let pipeline = load_dll_pipeline(dll_path, NUM_BACKUP_SLOTS)?;
-
+    fn new(pipeline: Pipeline<dll::Memory>) -> PyResult<Self> {
         let memory = pipeline.timeline().memory();
         let symbols_by_address = memory
             .all_symbol_address()
@@ -81,9 +83,52 @@ impl PyPipeline {
             .collect();
 
         Ok(Self {
-            pipeline,
-            symbols_by_address,
+            valid: Some(ValidPipeline {
+                pipeline,
+                symbols_by_address,
+            }),
         })
+    }
+
+    fn invalidate(&mut self) -> Option<ValidPipeline> {
+        self.valid.take()
+    }
+
+    fn get(&self) -> &ValidPipeline {
+        self.valid.as_ref().expect("pipeline has been invalidated")
+    }
+
+    fn get_mut(&mut self) -> &mut ValidPipeline {
+        self.valid.as_mut().expect("pipeline has been invalidated")
+    }
+}
+
+#[pymethods]
+impl PyPipeline {
+    /// Load a new pipeline using the given DLL.
+    ///
+    /// To help ensure DLL safety and avoid memory leaks, this method also invalidates
+    /// all existing pipelines that were created using this method.
+    ///
+    /// # Safety
+    ///
+    /// See `dll::Memory::load`. As long as the DLL is only loaded via this method,
+    /// this method is safe.
+    #[staticmethod]
+    pub unsafe fn load(py: Python<'_>, dll_path: &str) -> PyResult<Py<Self>> {
+        let mut valid_pipelines = VALID_PIPELINES.lock().unwrap();
+
+        // Drop all known existing dll::Memory instances for safety
+        for pipeline_py in valid_pipelines.drain(..) {
+            pipeline_py.borrow_mut(py).invalidate();
+        }
+
+        let pipeline = load_dll_pipeline(dll_path, NUM_BACKUP_SLOTS)?;
+        let pipeline_py = Py::new(py, PyPipeline::new(pipeline)?)?;
+
+        valid_pipelines.push(pipeline_py.clone());
+
+        Ok(pipeline_py)
     }
 
     /// Read a variable.
@@ -91,7 +136,7 @@ impl PyPipeline {
     /// If the variable is a data variable, the value will be read from memory
     /// on the variable's frame.
     pub fn read(&self, py: Python<'_>, variable: &PyVariable) -> PyResult<PyObject> {
-        let value = self.pipeline.read(&variable.variable)?;
+        let value = self.get().pipeline.read(&variable.variable)?;
         let py_object = value_to_py_object(py, &value)?;
         Ok(py_object)
     }
@@ -107,26 +152,26 @@ impl PyPipeline {
         value: PyObject,
     ) -> PyResult<()> {
         let value = py_object_to_value(py, &value)?;
-        self.pipeline.write(&variable.variable, &value)?;
+        self.get_mut().pipeline.write(&variable.variable, &value)?;
         Ok(())
     }
 
     /// Reset a variable.
     pub fn reset(&mut self, variable: &PyVariable) -> PyResult<()> {
-        self.pipeline.reset(&variable.variable)?;
+        self.get_mut().pipeline.reset(&variable.variable)?;
         Ok(())
     }
 
     /// Get the address for the given path.
     pub fn path_address(&self, path: &str, frame: u32) -> PyResult<PyAddress> {
-        let state = self.pipeline.timeline().frame(frame)?;
+        let state = self.get().pipeline.timeline().frame(frame)?;
         let address = state.address(path)?;
         Ok(PyAddress { address })
     }
 
     /// Read from the given path.
     pub fn path_read(&self, py: Python<'_>, path: &str, frame: u32) -> PyResult<PyObject> {
-        let state = self.pipeline.timeline().frame(frame)?;
+        let state = self.get().pipeline.timeline().frame(frame)?;
         let value = state.read(path)?;
         let py_object = value_to_py_object(py, &value)?;
         Ok(py_object)
@@ -134,22 +179,26 @@ impl PyPipeline {
 
     /// Insert a new state at the given frame, shifting edits forward.
     pub fn insert_frame(&mut self, frame: u32) {
-        self.pipeline.insert_frame(frame);
+        self.get_mut().pipeline.insert_frame(frame);
     }
 
     /// Delete the state at the given frame, shifting edits backward.
     pub fn delete_frame(&mut self, frame: u32) {
-        self.pipeline.delete_frame(frame);
+        self.get_mut().pipeline.delete_frame(frame);
     }
 
     /// Set a hotspot, allowing for faster scrolling near the given frame.
     pub fn set_hotspot(&mut self, name: &str, frame: u32) {
-        self.pipeline.timeline_mut().set_hotspot(name, frame);
+        self.get_mut()
+            .pipeline
+            .timeline_mut()
+            .set_hotspot(name, frame);
     }
 
     /// Perform housekeeping to improve scrolling near hotspots.
     pub fn balance_distribution(&mut self, max_run_time_seconds: f32) -> PyResult<()> {
-        self.pipeline
+        self.get_mut()
+            .pipeline
             .timeline_mut()
             .balance_distribution(std::time::Duration::from_secs_f32(max_run_time_seconds))?;
         Ok(())
@@ -157,13 +206,18 @@ impl PyPipeline {
 
     /// Return the label for the variable if it has one.
     pub fn label(&self, variable: &PyVariable) -> PyResult<Option<&str>> {
-        let label = self.pipeline.data_variables().label(&variable.variable)?;
+        let label = self
+            .get()
+            .pipeline
+            .data_variables()
+            .label(&variable.variable)?;
         Ok(label)
     }
 
     /// Return true if the variable has an integer data type.
     pub fn is_int(&self, variable: &PyVariable) -> PyResult<bool> {
         Ok(self
+            .get()
             .pipeline
             .data_variables()
             .data_type(&variable.variable)?
@@ -173,6 +227,7 @@ impl PyPipeline {
     /// Return true if the variable has a float data type.
     pub fn is_float(&self, variable: &PyVariable) -> PyResult<bool> {
         Ok(self
+            .get()
             .pipeline
             .data_variables()
             .data_type(&variable.variable)?
@@ -182,6 +237,7 @@ impl PyPipeline {
     /// Return true if the variable is a bit flag.
     pub fn is_bit_flag(&self, variable: &PyVariable) -> PyResult<bool> {
         Ok(self
+            .get()
             .pipeline
             .data_variables()
             .flag(&variable.variable)?
@@ -197,7 +253,7 @@ impl PyPipeline {
     ///
     /// The pipeline must stay live while this pointer is live.
     pub unsafe fn address_to_base_pointer(&self, address: &PyAddress) -> PyResult<usize> {
-        let timeline = self.pipeline.timeline();
+        let timeline = self.get().pipeline.timeline();
         let base_slot = timeline.base_slot(0)?;
         let pointer: *const u8 = timeline
             .memory()
@@ -207,7 +263,7 @@ impl PyPipeline {
 
     /// Return a map from mario action values to human readable names.
     pub fn action_names(&self) -> HashMap<u32, String> {
-        let data_layout = self.pipeline.timeline().memory().data_layout();
+        let data_layout = self.get().pipeline.timeline().memory().data_layout();
         data_layout
             .constants
             .iter()
@@ -232,7 +288,7 @@ impl PyPipeline {
     /// Get a human readable name for the given object behavior, if possible.
     pub fn object_behavior_name(&self, behavior: &PyObjectBehavior) -> String {
         let address: dll::Address = behavior.behavior.0.into();
-        let symbol = self.symbols_by_address.get(&address);
+        let symbol = self.get().symbols_by_address.get(&address);
 
         if let Some(symbol) = symbol {
             symbol.strip_prefix("bhv").unwrap_or(symbol).to_owned()
@@ -243,7 +299,7 @@ impl PyPipeline {
 }
 
 /// An abstract game variable.
-#[pyclass(name = Variable)]
+#[pyclass(name = Variable, unsendable)]
 #[derive(Debug, Display, Clone, PartialEq, Eq, Hash)]
 pub struct PyVariable {
     variable: Variable,
@@ -377,7 +433,7 @@ pub struct PyObjectBehavior {
 }
 
 /// An opaque representation of a memory address.
-#[pyclass(name = Address)]
+#[pyclass(name = Address, unsendable)]
 #[derive(Debug, Clone)]
 pub struct PyAddress {
     address: dll::Address,
