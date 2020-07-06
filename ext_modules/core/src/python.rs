@@ -51,7 +51,7 @@ impl From<Error> for PyErr {
     }
 }
 
-const NUM_BACKUP_SLOTS: usize = 100;
+const NUM_BACKUP_SLOTS: usize = 20;
 
 lazy_static! {
     static ref VALID_PIPELINES: Mutex<Vec<Py<PyPipeline>>> = Mutex::new(Vec::new());
