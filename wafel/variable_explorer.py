@@ -4,12 +4,10 @@ import math
 import ctypes as C
 
 import ext_modules.util as c_util
+from ext_modules.core import Variable, ObjectBehavior, Address
 
 import wafel.imgui as ig
 from wafel.model import Model
-from wafel.variable import Variable
-from wafel.object_type import ObjectType
-from wafel.core import DataPath, Address
 from wafel.variable_format import Formatters, VariableFormatter, DecimalIntFormatter, FloatFormatter, EmptyFormatter
 import wafel.ui as ui
 from wafel.util import *
@@ -72,11 +70,11 @@ class VariableExplorer:
 
   def get_tab_label(self, tab: TabId) -> str:
     if tab.object is not None:
-      object_type = self.model.get_object_type(self.model.selected_frame, tab.object)
-      if object_type is None:
+      behavior = self.model.get_object_behavior(self.model.selected_frame, tab.object)
+      if behavior is None:
         return str(tab.object)
       else:
-        return str(tab.object) + ': ' + object_type.name
+        return str(tab.object) + ': ' + self.model.pipeline.object_behavior_name(behavior)
 
     elif tab.surface is not None:
       return f'Surface {tab.surface}'
@@ -85,13 +83,17 @@ class VariableExplorer:
 
 
   def render_objects_tab(self) -> None:
-    object_types: List[Optional[ObjectType]] = []
+    behaviors: List[Optional[ObjectBehavior]] = []
 
     for slot in range(240):
       object_id = slot
-      object_types.append(self.model.get_object_type(self.model.selected_frame, object_id))
+      behaviors.append(self.model.get_object_behavior(self.model.selected_frame, object_id))
 
-    selected_slot = ui.render_object_slots('object-slots', object_types)
+    selected_slot = ui.render_object_slots(
+      'object-slots',
+      behaviors,
+      self.model.pipeline.object_behavior_name,
+    )
     if selected_slot is not None:
       object_id = selected_slot
       self.open_tab(TabId('_object', object_id))
@@ -99,14 +101,14 @@ class VariableExplorer:
 
   def get_variables_for_tab(self, tab: TabId) -> List[Variable]:
     if tab.object is not None:
-      object_type = self.model.get_object_type(self.model.selected_frame, tab.object)
-      if object_type is None:
+      behavior = self.model.get_object_behavior(self.model.selected_frame, tab.object)
+      if behavior is None:
         return []
 
       return [
-        var.at(object=tab.object, object_type=object_type)
-          for var in self.model.data_variables.group('Object')
-            if self.model.data_variables[var].label is not None
+        var.with_object(tab.object).with_object_behavior(behavior)
+          for var in self.model.pipeline.variable_group('Object')
+            if self.model.pipeline.label(var) is not None
       ]
 
     elif tab.surface is not None:
@@ -115,13 +117,13 @@ class VariableExplorer:
         return []
 
       return [
-        var.at(surface=tab.surface)
-          for var in self.model.data_variables.group('Surface')
-            if self.model.data_variables[var].label is not None
+        var.with_surface(tab.surface)
+          for var in self.model.pipeline.variable_group('Surface')
+            if self.model.pipeline.label(var) is not None
       ]
 
     else:
-      return self.model.data_variables.group(tab.name)
+      return self.model.pipeline.variable_group(tab.name)
 
 
   def render_variable(
@@ -150,8 +152,8 @@ class VariableExplorer:
 
 
   def render_stick_control(self, id: str, tab: TabId) -> None:
-    stick_x_var = Variable('input-stick-x').at(frame=self.model.selected_frame)
-    stick_y_var = Variable('input-stick-y').at(frame=self.model.selected_frame)
+    stick_x_var = Variable('input-stick-x').with_frame(self.model.selected_frame)
+    stick_y_var = Variable('input-stick-y').with_frame(self.model.selected_frame)
 
     self.render_variable(tab, stick_x_var, 60, 50)
     self.render_variable(tab, stick_y_var, 60, 50)
@@ -182,11 +184,11 @@ class VariableExplorer:
     ig.pop_item_width()
     ig.dummy(1, 10)
 
-    stick_x_var = Variable('input-stick-x').at(frame=self.model.selected_frame)
-    stick_y_var = Variable('input-stick-y').at(frame=self.model.selected_frame)
+    stick_x_var = Variable('input-stick-x').with_frame(self.model.selected_frame)
+    stick_y_var = Variable('input-stick-y').with_frame(self.model.selected_frame)
 
-    face_yaw = dcast(int, self.model.get(Variable('mario-face-yaw').at(frame=self.model.selected_frame)))
-    camera_yaw = dcast(int, self.model.get(Variable('camera-yaw').at(frame=self.model.selected_frame)) or 0)
+    face_yaw = dcast(int, self.model.get(Variable('mario-face-yaw').with_frame(self.model.selected_frame)))
+    camera_yaw = dcast(int, self.model.get(Variable('camera-yaw').with_frame(self.model.selected_frame)) or 0)
     squish_timer = dcast(int, self.model.get(self.model.selected_frame, 'gMarioState[].squishTimer'))
     active_face_yaw = face_yaw
 
@@ -310,7 +312,7 @@ class VariableExplorer:
     def render_button(button: str) -> None:
       self.render_variable(
         tab,
-        Variable('input-button-' + button).at(frame=self.model.selected_frame),
+        Variable('input-button-' + button).with_frame(self.model.selected_frame),
         10,
         25,
       )
@@ -340,7 +342,7 @@ class VariableExplorer:
     ig.dummy(1, 5)
     self.render_variable(
       self.current_tab,
-      Variable('wafel-script').at(frame=self.model.selected_frame),
+      Variable('wafel-script').with_frame(self.model.selected_frame),
       value_width=200,
     )
     ig.dummy(1, 10)
@@ -478,8 +480,8 @@ class VariableExplorer:
     events = get_frame_log(self.model.timeline, self.model.selected_frame + frame_offset.value)
 
     def string(addr: object) -> str:
-      abs_addr = dcast(Address, addr).absolute
-      return C.string_at(abs_addr).decode('utf-8')
+      pointer = self.model.pipeline.address_to_base_pointer(dcast(Address, addr))
+      return C.string_at(pointer).decode('utf-8')
 
     def round(number: object) -> str:
       assert isinstance(number, float)
@@ -517,7 +519,7 @@ class VariableExplorer:
   def render_variable_tab(self, tab: TabId) -> None:
     variables = self.get_variables_for_tab(tab)
     for variable in variables:
-      self.render_variable(tab, variable.at(frame=self.model.selected_frame))
+      self.render_variable(tab, variable.with_frame(self.model.selected_frame))
 
 
   def render_tab_contents(self, id: str, tab: TabId) -> None:

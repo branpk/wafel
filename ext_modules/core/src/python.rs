@@ -254,6 +254,16 @@ impl PyPipeline {
             .is_some())
     }
 
+    /// Get the variables
+    fn variable_group(&self, group: &str) -> Vec<PyVariable> {
+        self.get()
+            .pipeline
+            .data_variables()
+            .group(group)
+            .map(|variable| PyVariable { variable })
+            .collect()
+    }
+
     /// Translate an address into a raw pointer into the base slot.
     ///
     /// # Safety

@@ -26,6 +26,7 @@ class Model:
 
     dll_path = os.path.join(config.lib_directory, 'libsm64', 'sm64_' + game_version + '.dll')
     self.pipeline = Pipeline.load(dll_path)
+    self.action_names = self.pipeline.action_names()
 
     def base_pointer(path: str) -> int:
       address = self.pipeline.path_address(0, path)

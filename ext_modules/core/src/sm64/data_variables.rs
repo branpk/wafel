@@ -5,7 +5,7 @@ use crate::{
     memory::{data_type::DataTypeRef, IntValue, Memory, Value},
     timeline::{SlotStateMut, State},
 };
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 #[rustfmt::skip]
 fn build_variables(builder: &mut Builder) {
@@ -93,7 +93,7 @@ struct DataVariableSpec {
 
 #[derive(Debug)]
 pub struct DataVariables {
-    specs: HashMap<String, DataVariableSpec>,
+    specs: IndexMap<String, DataVariableSpec>,
 }
 
 impl DataVariables {
@@ -102,6 +102,13 @@ impl DataVariables {
         build_variables(&mut builder);
         let specs = builder.build(memory)?;
         Ok(Self { specs })
+    }
+
+    pub fn group<'a>(&'a self, group: &'a str) -> impl Iterator<Item = Variable> + 'a {
+        self.specs
+            .iter()
+            .filter(move |(_, spec)| spec.group == group)
+            .map(|(name, _)| Variable::new(name))
     }
 
     fn variable_spec(&self, variable: &str) -> Result<&DataVariableSpec, Error> {
@@ -223,11 +230,11 @@ impl Builder {
         self.groups.push(group_builder);
     }
 
-    fn build(self, memory: &impl Memory) -> Result<HashMap<String, DataVariableSpec>, Error> {
+    fn build(self, memory: &impl Memory) -> Result<IndexMap<String, DataVariableSpec>, Error> {
         let object_struct = memory.local_path("struct Object")?.root_type();
         let surface_struct = memory.local_path("struct Surface")?.root_type();
 
-        let mut specs = HashMap::new();
+        let mut specs = IndexMap::new();
         for group in self.groups {
             for variable in group.variables {
                 let path = memory.data_path(&variable.path.unwrap())?;
