@@ -31,6 +31,17 @@ import wafel.config as config
 from wafel.bindings import *
 
 
+class NoOpDragHandler:
+  def drag(self, source: Variable, source_value: object, target_frame: int) -> None:
+    pass
+
+  def release(self) -> None:
+    pass
+
+  def highlight_range(self, variable: Variable) -> Optional[Tuple[range, ig.Color4f]]:
+    return None
+
+
 DEFAULT_FRAME_SHEET_VARS = [
   'input-button-a',
   'input-button-b',
@@ -39,8 +50,8 @@ DEFAULT_FRAME_SHEET_VARS = [
   'mario-vel-f',
 ]
 
-if config.dev_mode:
-  DEFAULT_FRAME_SHEET_VARS.insert(0, 'wafel-script')
+# if config.dev_mode:
+#   DEFAULT_FRAME_SHEET_VARS.insert(0, 'wafel-script')
 
 
 class SequenceFile:
@@ -109,7 +120,7 @@ class View:
       FrameSheet(
         self.model,
         self.model.pipeline,
-        self.model.range_edit_writer,
+        NoOpDragHandler(),
         self.model,
         self.formatters,
       ),
@@ -156,18 +167,19 @@ class View:
       height=int(total_height // 2) - slider_space // 2,
       border=True,
     )
-    if config.dev_mode and in_game_view.value:
-      ui.render_game_view_in_game('game-view-1', framebuffer_size, self.model)
-      hovered_surface_1 = None
-    else:
-      hovered_surface_1 = ui.render_game_view_rotate(
-        'game-view-1',
-        framebuffer_size,
-        self.model,
-        wall_hitbox_radius.value,
-        hovered_surface.value,
-        hidden_surfaces,
-      )
+    hovered_surface_1 = None # FIXME
+    # if config.dev_mode and in_game_view.value:
+    #   ui.render_game_view_in_game('game-view-1', framebuffer_size, self.model)
+    #   hovered_surface_1 = None
+    # else:
+    #   hovered_surface_1 = ui.render_game_view_rotate(
+    #     'game-view-1',
+    #     framebuffer_size,
+    #     self.model,
+    #     wall_hitbox_radius.value,
+    #     hovered_surface.value,
+    #     hidden_surfaces,
+    #   )
 
     ig.set_cursor_pos((10.0, ig.get_window_height() - 30))
     ig.text('wall radius')
@@ -195,14 +207,15 @@ class View:
       height=int(total_height // 2) - slider_space // 2,
       border=True,
     )
-    hovered_surface_2 = ui.render_game_view_birds_eye(
-      'game-view-2',
-      framebuffer_size,
-      self.model,
-      wall_hitbox_radius.value,
-      hovered_surface.value,
-      hidden_surfaces,
-    )
+    hovered_surface_2 = None # FIXME
+    # hovered_surface_2 = ui.render_game_view_birds_eye(
+    #   'game-view-2',
+    #   framebuffer_size,
+    #   self.model,
+    #   wall_hitbox_radius.value,
+    #   hovered_surface.value,
+    #   hidden_surfaces,
+    # )
     ig.end_child()
     log.timer.end()
 
@@ -337,7 +350,7 @@ class View:
       'frame-slider',
       self.model.selected_frame,
       self.model.max_frame - 1,
-      self.model.timeline.slot_manager.get_loaded_frames() if self.show_debug_pane else [],
+      self.model.pipeline.cached_frames() if self.show_debug_pane else [],
     )
     if new_frame is not None:
       self.model.selected_frame = new_frame.value
@@ -499,7 +512,8 @@ class View:
         if not input_edit.value:
           buttons_enabled.value = False
           stick_enabled.value = False
-      self.model.timeline.on_invalidation(disable_controller)
+      # FIXME
+      # self.model.timeline.on_invalidation(disable_controller)
       def frame_change(*args, **kwargs) -> None:
         if self.model.play_speed == 0.0:
           disable_controller()
@@ -635,7 +649,7 @@ def run() -> None:
     frame_count = use_state('frame-count', 0)
     fps = use_state('fps', 0.0)
 
-    if hasattr(model, 'timeline'):
+    if hasattr(model, 'pipeline'):
       frame_count.value += 1
       if time.time() > last_fps_time.value + 5:
         fps.value = frame_count.value / (time.time() - last_fps_time.value)

@@ -214,6 +214,11 @@ impl PyPipeline {
         Ok(())
     }
 
+    /// Return the set of currently loaded frames for debugging purposes.
+    pub fn cached_frames(&self) -> Vec<u32> {
+        self.get().pipeline.timeline().cached_frames()
+    }
+
     /// Return the label for the variable if it has one.
     pub fn label(&self, variable: &PyVariable) -> PyResult<Option<&str>> {
         let label = self

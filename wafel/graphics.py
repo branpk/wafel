@@ -29,9 +29,9 @@ def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
     mario_path,
     path_frames.start,
     path_frames.stop,
-    lambda frame: model.get(frame, 'gMarioState[].pos[0]'),
-    lambda frame: model.get(frame, 'gMarioState[].pos[1]'),
-    lambda frame: model.get(frame, 'gMarioState[].pos[2]'),
+    lambda frame: model.get(frame, 'gMarioState->pos[0]'),
+    lambda frame: model.get(frame, 'gMarioState->pos[1]'),
+    lambda frame: model.get(frame, 'gMarioState->pos[2]'),
   )
   mario_path.root_index = path_frames.index(model.selected_frame)
   log.timer.end()

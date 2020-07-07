@@ -170,7 +170,7 @@ class ScriptController(Controller, VariableReader, VariableWriter):
 
     def from_dyaw(dyaw: object, int_mag: object = 32.0) -> Tuple[int, int]:
       # TODO: How to get this accurately?
-      active_face_yaw = dcast(int, state.get('gMarioState[].faceAngle[1]'))
+      active_face_yaw = dcast(int, state.get('gMarioState->faceAngle[1]'))
       int_yaw = active_face_yaw + to_int(dyaw)
       return intended_to_raw(
         state, int_yaw, to_float(int_mag), relative_to=active_face_yaw

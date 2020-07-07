@@ -1,6 +1,6 @@
 use super::{slot_manager::SlotManager, SlotState, SlotStateMut, State};
 use crate::{error::Error, memory::Memory};
-use std::{collections::HashSet, time::Duration};
+use std::time::Duration;
 
 /// Applies edits at the end of each frame to control the simulation.
 pub trait Controller<M: Memory> {
@@ -113,7 +113,7 @@ impl<M: Memory, C: Controller<M>> Timeline<M, C> {
     }
 
     /// Return the set of currently loaded frames for debugging purposes.
-    pub fn loaded_frames(&self) -> HashSet<u32> {
-        self.slot_manager.loaded_frames()
+    pub fn cached_frames(&self) -> Vec<u32> {
+        self.slot_manager.cached_frames()
     }
 }

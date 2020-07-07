@@ -42,9 +42,9 @@ def intended_to_raw(
   state: State, int_yaw: int, int_mag: float, relative_to: int
 ) -> Tuple[int, int]:
   # TODO: This doesn't account for rotation from platform displacement
-  face_yaw = dcast(int, state.get('gMarioState[].faceAngle[1]'))
-  camera_yaw = dcast(int, state.get('gMarioState[].area[].camera[].yaw'))
-  squish_timer = dcast(int, state.get('gMarioState[].squishTimer'))
+  face_yaw = dcast(int, state.get('gMarioState->faceAngle[1]'))
+  camera_yaw = dcast(int, state.get('gMarioState->area->camera->yaw'))
+  squish_timer = dcast(int, state.get('gMarioState->squishTimer'))
 
   stick_x, stick_y = c_util.stick_intended_to_raw(
     trunc_signed(int_yaw, 16),

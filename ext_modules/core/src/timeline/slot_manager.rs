@@ -412,7 +412,7 @@ impl<M: Memory, C: Controller<M>> SlotManager<M, C> {
         self.hotspots.remove(name);
     }
 
-    pub fn loaded_frames(&self) -> HashSet<u32> {
+    pub fn cached_frames(&self) -> Vec<u32> {
         self.slots
             .borrow()
             .iter()

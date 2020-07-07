@@ -28,14 +28,14 @@ class TabId:
 
 
 FIXED_TABS = [
-  TabId('Input'),
+  # TabId('Input'), # FIXME
   TabId('Mario'),
   TabId('Misc'),
   TabId('Objects'),
 ]
-if config.dev_mode:
-  FIXED_TABS.insert(1, TabId('Scripting'))
-  FIXED_TABS.insert(4, TabId('Subframe'))
+# if config.dev_mode:
+#   FIXED_TABS.insert(1, TabId('Scripting'))
+#   FIXED_TABS.insert(4, TabId('Subframe'))
 
 
 class VariableExplorer:
@@ -189,7 +189,7 @@ class VariableExplorer:
 
     face_yaw = dcast(int, self.model.get(Variable('mario-face-yaw').with_frame(self.model.selected_frame)))
     camera_yaw = dcast(int, self.model.get(Variable('camera-yaw').with_frame(self.model.selected_frame)) or 0)
-    squish_timer = dcast(int, self.model.get(self.model.selected_frame, 'gMarioState[].squishTimer'))
+    squish_timer = dcast(int, self.model.get(self.model.selected_frame, 'gMarioState->squishTimer'))
     active_face_yaw = face_yaw
 
     events = get_frame_log(self.model.timeline, self.model.selected_frame + 1)
