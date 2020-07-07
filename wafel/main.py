@@ -29,7 +29,6 @@ from wafel.local_state import use_state, use_state_with
 from wafel.util import *
 import wafel.config as config
 from wafel.bindings import *
-from wafel.loading import *
 
 
 DEFAULT_FRAME_SHEET_VARS = [
@@ -69,7 +68,6 @@ class SequenceFile:
 class View:
 
   def __init__(self, model: Model) -> None:
-    self.loading: Optional[Loading[None]] = None
     self.model = model
     self.epoch = 0
     self.tkinter_root = tkinter.Tk()
@@ -82,12 +80,6 @@ class View:
 
 
   def reload(self) -> None:
-    if self.loading is not None:
-      return
-    self.loading = self._reload()
-
-
-  def _reload(self) -> Loading[None]:
     edits: Dict[Variable, object]
     if self.file is None:
       metadata = TasMetadata('us', 'Untitled TAS', 'Unknown author(s)', 'Made using Wafel')
@@ -97,26 +89,20 @@ class View:
     else:
       raise NotImplementedError(self.file.type)
     self.metadata = metadata
-    yield from self.model.load(metadata.game_version, edits)
+    self.model.load(metadata.game_version, edits)
 
     self.reload_ui()
 
 
   def change_version(self, version: str) -> None:
-    if self.loading is not None:
-      return
-    self.loading = self._change_version(version)
-
-
-  def _change_version(self, version: str) -> Loading[None]:
     self.metadata.game_version = version
-    yield from self.model.change_version(version)
+    self.model.change_version(version)
     self.reload_ui()
 
 
   def reload_ui(self) -> None:
     self.show_debug_pane = config.dev_mode
-    self.formatters = DataFormatters(self.model.data_variables)
+    self.formatters = DataFormatters(self.model.pipeline)
     self.formatters[Variable('mario-action')] = EnumFormatter(self.model.action_names)
 
     self.frame_sheets: List[FrameSheet] = [
@@ -157,8 +143,8 @@ class View:
       use_state('hidden-surfaces', cast(Dict[Tuple[int, int], Set[int]], {})).value
 
     current_area = (
-      dcast(int, self.model.get(Variable('level-num').at(frame=self.model.selected_frame))),
-      dcast(int, self.model.get(Variable('area-index').at(frame=self.model.selected_frame))),
+      dcast(int, self.model.get(Variable('level-num').with_frame(self.model.selected_frame))),
+      dcast(int, self.model.get(Variable('area-index').with_frame(self.model.selected_frame))),
     )
     hidden_surfaces = hidden_surfaces_by_area.setdefault(current_area, set())
 
@@ -489,7 +475,7 @@ class View:
       cx = 0
     if abs(cy) < 8 / 128:
       cy = 0
-    camera_angle = dcast(int, self.model.get(Variable('camera-yaw').at(frame=self.model.selected_frame)) or 0) + 0x8000
+    camera_angle = dcast(int, self.model.get(Variable('camera-yaw').with_frame(self.model.selected_frame)) or 0) + 0x8000
     up_angle = self.model.input_up_yaw
     if up_angle is None:
       up_angle = camera_angle
@@ -547,7 +533,7 @@ class View:
       buttons_enabled.value = True
       stick_enabled.value = True
     for variable_name, new_button_value in controller_button_values.items():
-      variable = Variable(variable_name).at(frame=self.model.selected_frame)
+      variable = Variable(variable_name).with_frame(self.model.selected_frame)
       button_value = self.model.get(variable)
       if buttons_enabled.value and button_value != new_button_value:
         input_edit.value = True
@@ -562,8 +548,8 @@ class View:
       stick_enabled.value = True
       buttons_enabled.value = True
     if stick_enabled.value:
-      stick_x_var = Variable('input-stick-x').at(frame=self.model.selected_frame)
-      stick_y_var = Variable('input-stick-y').at(frame=self.model.selected_frame)
+      stick_x_var = Variable('input-stick-x').with_frame(self.model.selected_frame)
+      stick_y_var = Variable('input-stick-y').with_frame(self.model.selected_frame)
       new_stick = self.compute_stick_from_controller(*controller_stick_values)
       stick = (self.model.get(stick_x_var), self.model.get(stick_y_var))
       if stick != new_stick:
@@ -576,24 +562,6 @@ class View:
 
   def render(self) -> None:
     ig.push_id(str(self.epoch))
-
-    if self.loading is not None:
-      try:
-        progress = None
-        start_time = time.time()
-        while time.time() - start_time < 1/60:
-          progress = next(self.loading)
-          if progress.progress == 0.0:
-            break
-      except StopIteration:
-        self.loading = None
-      if progress is not None:
-        window_size = ig.get_window_size()
-        width = 500
-        ig.set_cursor_pos((window_size.x / 2 - width / 2, window_size.y / 2 - 60))
-        ui.render_loading_bar('loading-bar', progress, width)
-      ig.pop_id()
-      return
 
     if ig.is_key_pressed(ord('`')):
       self.show_debug_pane = not self.show_debug_pane
@@ -652,7 +620,6 @@ def run() -> None:
     if view is None:
       view = View(model)
       if config.dev_mode:
-        view.loading = None
         view.file = SequenceFile('test_files/22stars.m64', 'm64')
         view.reload()
     ig.push_id(id)
@@ -675,12 +642,12 @@ def run() -> None:
         last_fps_time.value = time.time()
         frame_count.value = 0
         log.info(
-          f'mspf: {int(1000 / fps.value * 10) / 10} ({int(fps.value)} fps) - ' +
-          f'cache={model.timeline.data_cache.get_size() // 1024}KB'
+          f'mspf: {int(1000 / fps.value * 10) / 10} ({int(fps.value)} fps)'
+          # f'cache={model.timeline.data_cache.get_size() // 1024}KB'
         )
 
       log.timer.begin('balance')
-      model.timeline.balance_distribution(1/120)
+      model.pipeline.balance_distribution(1/120)
       log.timer.end()
 
   # TODO: Clean up (use local_state)

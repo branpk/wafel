@@ -4,7 +4,6 @@ import ext_modules.util as c_util
 
 from wafel.core import State, DataPath, Timeline, Address
 from wafel.util import *
-from wafel.object_type import ObjectType
 
 
 def _get_event_variant(event_type: str) -> str:

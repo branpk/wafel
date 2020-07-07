@@ -1,10 +1,10 @@
 from typing import *
 
 import ext_modules.graphics as cg
+from ext_modules.core import Address
 
 from wafel.model import Model
 import wafel.config as config
-from wafel.core import DataPath, Address, AccessibleMemory
 from wafel.util import *
 
 
@@ -25,16 +25,13 @@ def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
   mario_path = cg.ObjectPath()
 
   log.timer.begin('nodes')
-  pos_x = model.game.path('gMarioState[].pos[0]')
-  pos_y = model.game.path('gMarioState[].pos[1]')
-  pos_z = model.game.path('gMarioState[].pos[2]')
   cg.object_path_add_nodes(
     mario_path,
     path_frames.start,
     path_frames.stop,
-    lambda frame: model.timeline.get(frame, pos_x),
-    lambda frame: model.timeline.get(frame, pos_y),
-    lambda frame: model.timeline.get(frame, pos_z),
+    lambda frame: model.get(frame, 'gMarioState[].pos[0]'),
+    lambda frame: model.get(frame, 'gMarioState[].pos[1]'),
+    lambda frame: model.get(frame, 'gMarioState[].pos[2]'),
   )
   mario_path.root_index = path_frames.index(model.selected_frame)
   log.timer.end()
@@ -78,9 +75,6 @@ def build_scene(
   scene.viewport = viewport
   scene.camera = camera
 
-  def get_field_offset(path: str) -> int:
-    return model.game.path(path).edges[-1].value
-
   log.timer.begin('so')
   memory = model.game.memory
   assert isinstance(memory, AccessibleMemory)
@@ -92,7 +86,7 @@ def build_scene(
         memory.address_to_location(state.slot, surface_pool_addr),
         memory.data_spec['types']['struct']['Surface']['size'],
         dcast(int, state.get('gSurfacesAllocated')),
-        get_field_offset,
+        model.pipeline.field_offset,
         list(hidden_surfaces),
       )
 
@@ -100,7 +94,7 @@ def build_scene(
       scene,
       memory.address_to_location(state.slot, state.get_addr('gObjectPool')),
       memory.data_spec['types']['struct']['Object']['size'],
-      get_field_offset,
+      model.pipeline.field_offset,
     )
   log.timer.end()
 
