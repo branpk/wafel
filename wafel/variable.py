@@ -22,8 +22,15 @@ class VariableWriter(Protocol):
   def reset(self, variable: Variable) -> None: ...
 
 
-class VariablePipeline(Protocol, VariableReader, VariableWriter):
-  pass
+class VariablePipeline(Protocol):
+  @abstractmethod
+  def read(self, variable: Variable) -> object: ...
+
+  @abstractmethod
+  def write(self, variable: Variable, value: object) -> None: ...
+
+  @abstractmethod
+  def reset(self, variable: Variable) -> None: ...
 
 
 __all__ = [

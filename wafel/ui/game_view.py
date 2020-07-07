@@ -6,14 +6,13 @@ import time
 import glfw
 
 import ext_modules.graphics as cg
+from ext_modules.core import Variable
 
 import wafel.imgui as ig
 from wafel.model import Model
 from wafel.util import *
 from wafel.local_state import use_state, use_state_with
 from wafel.graphics import render_game
-from wafel.core import DataPath, Address, AccessibleMemory
-from wafel.variable import Variable
 from wafel.bindings import input_float
 
 
@@ -97,9 +96,9 @@ def get_viewport(framebuffer_size: Tuple[int, int]) -> cg.Viewport:
 
 def get_mario_pos(model: Model) -> Vec3f:
   return (
-    dcast(float, model.get(Variable('mario-pos-x').at(frame=model.selected_frame))),
-    dcast(float, model.get(Variable('mario-pos-y').at(frame=model.selected_frame))),
-    dcast(float, model.get(Variable('mario-pos-z').at(frame=model.selected_frame))),
+    dcast(float, model.get(Variable('mario-pos-x').with_frame(model.selected_frame))),
+    dcast(float, model.get(Variable('mario-pos-y').with_frame(model.selected_frame))),
+    dcast(float, model.get(Variable('mario-pos-z').with_frame(model.selected_frame))),
   )
 
 
@@ -174,9 +173,6 @@ def get_mouse_world_pos_birds_eye(camera: cg.BirdsEyeCamera) -> Optional[Tuple[f
 
 
 def trace_ray(model: Model, ray: Tuple[Vec3f, Vec3f]) -> Optional[int]:
-  def get_field_offset(path: str) -> int:
-    return model.game.path(path).edges[-1].value
-
   memory = model.game.memory
   assert isinstance(memory, AccessibleMemory)
 
@@ -191,7 +187,7 @@ def trace_ray(model: Model, ray: Tuple[Vec3f, Vec3f]) -> Optional[int]:
       memory.address_to_location(state.slot, surface_pool_addr),
       memory.data_spec['types']['struct']['Surface']['size'],
       state.get('gSurfacesAllocated'),
-      get_field_offset,
+      model.pipeline.field_offset,
     )
 
   return None if index < 0 else index

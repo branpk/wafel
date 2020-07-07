@@ -34,4 +34,6 @@ pub enum DataPathErrorCause {
     ExpectedGlobalPath { path: String },
     #[display(fmt = "expected local path, found {}", path)]
     ExpectedLocalPath { path: String },
+    #[display(fmt = "not a struct field: {}", path)]
+    NotAField { path: String },
 }

@@ -271,6 +271,13 @@ impl PyPipeline {
         Ok(pointer as usize)
     }
 
+    /// Return the field offset for a path of the form `struct A.x`.
+    pub fn field_offset(&self, path: &str) -> PyResult<usize> {
+        let path = self.get().pipeline.timeline().memory().local_path(path)?;
+        let offset = path.field_offset()?;
+        Ok(offset)
+    }
+
     /// Return a map from mario action values to human readable names.
     pub fn action_names(&self) -> HashMap<u32, String> {
         let data_layout = self.get().pipeline.timeline().memory().data_layout();

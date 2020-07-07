@@ -91,6 +91,7 @@ def run():
   open_window_and_run(test_frame_sheet)
 
   # pipeline = Pipeline.load('lib/libsm64/sm64_jp.dll')
+  # print(pipeline.field_offset('struct Surface.normal'))
   # print(pipeline.dump_layout())
 
   # model = Model()

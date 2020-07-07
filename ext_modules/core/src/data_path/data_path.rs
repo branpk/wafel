@@ -137,6 +137,19 @@ impl LocalDataPath {
     pub fn concrete_type(&self) -> DataTypeRef {
         self.0.concrete_type.clone()
     }
+
+    /// Return the field offset for a path of the form `struct A.x`.
+    pub fn field_offset(&self) -> Result<usize, Error> {
+        if self.0.edges.len() == 1 {
+            if let Some(DataPathEdge::Offset(offset)) = self.0.edges.get(0) {
+                return Ok(*offset);
+            }
+        }
+        Err(DataPathErrorCause::NotAField {
+            path: self.to_string(),
+        }
+        .into())
+    }
 }
 
 impl DataPath {

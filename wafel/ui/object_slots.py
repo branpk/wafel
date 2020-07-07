@@ -1,10 +1,15 @@
 from typing import *
 
+from ext_modules.core import ObjectBehavior
+
 import wafel.imgui as ig
-from wafel.object_type import ObjectType
 
 
-def render_object_slots(id: str, object_types: List[Optional[ObjectType]]) -> Optional[int]:
+def render_object_slots(
+  id: str,
+  behaviors: List[Optional[ObjectBehavior]],
+  behavior_name: Callable[[ObjectBehavior], str],
+) -> Optional[int]:
   ig.push_id(id)
 
   button_size = 50
@@ -15,7 +20,7 @@ def render_object_slots(id: str, object_types: List[Optional[ObjectType]]) -> Op
 
   result = None
 
-  for slot, object_type in enumerate(object_types):
+  for slot, behavior in enumerate(behaviors):
     item_right = prev_item_right + style.item_spacing[0] + button_size
     if item_right > window_right:
       prev_item_right = window_left
@@ -23,10 +28,10 @@ def render_object_slots(id: str, object_types: List[Optional[ObjectType]]) -> Op
       ig.same_line()
     prev_item_right = prev_item_right + style.item_spacing[0] + button_size
 
-    if object_type is None:
+    if behavior is None:
       label = str(slot)
     else:
-      label = str(slot) + '\n' + object_type.name
+      label = str(slot) + '\n' + behavior_name(behavior)
 
     if ig.button(label + '##slot-' + str(slot), button_size, button_size):
       result = slot
