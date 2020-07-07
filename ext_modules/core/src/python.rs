@@ -3,11 +3,11 @@
 //! The exposed API is **not** safe because of the assumptions made about DLL loading.
 use crate::{
     dll,
-    error::Error,
+    error::{Error, ErrorCause},
     memory::{Memory, Value},
     sm64::{
-        load_dll_pipeline, ObjectBehavior, ObjectSlot, Pipeline, SM64ErrorCause, SurfaceSlot,
-        Variable,
+        load_dll_pipeline, object_behavior, object_path, ObjectBehavior, ObjectSlot, Pipeline,
+        SM64ErrorCause, SurfaceSlot, Variable,
     },
     timeline::{SlotState, State},
 };
@@ -131,6 +131,16 @@ impl PyPipeline {
         Ok(pipeline_py)
     }
 
+    /// Print the data layout to a string for debugging.
+    pub fn dump_layout(&self) -> String {
+        self.get()
+            .pipeline
+            .timeline()
+            .memory()
+            .data_layout()
+            .to_string()
+    }
+
     /// Read a variable.
     ///
     /// If the variable is a data variable, the value will be read from memory
@@ -163,14 +173,14 @@ impl PyPipeline {
     }
 
     /// Get the address for the given path.
-    pub fn path_address(&self, path: &str, frame: u32) -> PyResult<PyAddress> {
+    pub fn path_address(&self, frame: u32, path: &str) -> PyResult<PyAddress> {
         let state = self.get().pipeline.timeline().frame(frame)?;
         let address = state.address(path)?;
         Ok(PyAddress { address })
     }
 
     /// Read from the given path.
-    pub fn path_read(&self, py: Python<'_>, path: &str, frame: u32) -> PyResult<PyObject> {
+    pub fn path_read(&self, py: Python<'_>, frame: u32, path: &str) -> PyResult<PyObject> {
         let state = self.get().pipeline.timeline().frame(frame)?;
         let value = state.read(path)?;
         let py_object = value_to_py_object(py, &value)?;
@@ -283,6 +293,25 @@ impl PyPipeline {
                 )
             })
             .collect()
+    }
+
+    /// Get the object behavior for an object, or None if the object is not active.
+    pub fn object_behavior(&self, frame: u32, object: usize) -> PyResult<Option<PyObjectBehavior>> {
+        let state = self.get().pipeline.timeline().frame(frame)?;
+
+        match object_path(&state, ObjectSlot(object)) {
+            Ok(object_path) => {
+                let behavior = object_behavior(&state, &object_path)?;
+                Ok(Some(PyObjectBehavior { behavior }))
+            }
+            Err(error) => {
+                if let ErrorCause::SM64Error(SM64ErrorCause::InactiveObject { .. }) = &error.cause {
+                    Ok(None)
+                } else {
+                    Err(error.into())
+                }
+            }
+        }
     }
 
     /// Get a human readable name for the given object behavior, if possible.

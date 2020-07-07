@@ -2,6 +2,7 @@
 
 pub use error::*;
 pub use pipeline::*;
+pub use util::*;
 pub use variable::*;
 
 mod data_variables;

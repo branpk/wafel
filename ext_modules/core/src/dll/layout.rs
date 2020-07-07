@@ -520,11 +520,12 @@ where
         Ok(())
     }
 
-    fn read_subprogram(
-        &mut self,
-        _node: EntriesTreeNode<'_, '_, '_, R>,
-    ) -> Result<(), LayoutError> {
+    fn read_subprogram(&mut self, node: EntriesTreeNode<'_, '_, '_, R>) -> Result<(), LayoutError> {
         // TODO: Functions
+        let entry = node.entry();
+        if let Some(name) = self.attr_string(entry, gimli::DW_AT_name)? {
+            self.global_defns.insert(name, ShallowDataType::Void);
+        }
         Ok(())
     }
 

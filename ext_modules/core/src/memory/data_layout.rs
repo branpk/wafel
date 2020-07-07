@@ -84,6 +84,9 @@ impl fmt::Display for DataLayout {
         for (name, data_type) in &self.globals {
             writeln!(f, "{}: {}", name, data_type)?;
         }
+        for (name, value) in &self.constants {
+            writeln!(f, "{} := {}", name, value)?;
+        }
         Ok(())
     }
 }
