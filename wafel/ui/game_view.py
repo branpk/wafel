@@ -6,7 +6,7 @@ import time
 import glfw
 
 import ext_modules.graphics as cg
-from ext_modules.core import Variable
+from ext_modules.core import Variable, Address
 
 import wafel.imgui as ig
 from wafel.model import Model
@@ -173,22 +173,21 @@ def get_mouse_world_pos_birds_eye(camera: cg.BirdsEyeCamera) -> Optional[Tuple[f
 
 
 def trace_ray(model: Model, ray: Tuple[Vec3f, Vec3f]) -> Optional[int]:
-  memory = model.game.memory
-  assert isinstance(memory, AccessibleMemory)
-
-  with model.timeline.request_base(model.selected_frame) as state:
-    surface_pool_addr = dcast(Address, state.get('sSurfacePool'))
-    if surface_pool_addr.is_null:
-      return None
-
-    index = cg.trace_ray_to_surface(
-      cg.vec3(*ray[0]),
-      cg.vec3(*ray[1]),
-      memory.address_to_location(state.slot, surface_pool_addr),
-      memory.data_spec['types']['struct']['Surface']['size'],
-      state.get('gSurfacesAllocated'),
-      model.pipeline.field_offset,
-    )
+  frame = model.selected_frame
+  surface_pool_addr = dcast(Address, model.pipeline.path_read(frame, 'sSurfacePool'))
+  # TODO: Check if surface_pool_addr is null
+  surfaces_allocated = dcast(int, model.pipeline.path_read(frame, 'gSurfacesAllocated'))
+  # Do not mutate timeline while surface_pool_pointer is alive
+  surface_pool_pointer = model.pipeline.address_to_base_pointer(frame, surface_pool_addr)
+  index = cg.trace_ray_to_surface(
+    cg.vec3(*ray[0]),
+    cg.vec3(*ray[1]),
+    surface_pool_pointer,
+    assert_not_none(model.pipeline.pointer_or_array_stride('sSurfacePool')),
+    surfaces_allocated,
+    lambda field: model.pipeline.field_offset(field),
+  )
+  del surface_pool_pointer
 
   return None if index < 0 else index
 

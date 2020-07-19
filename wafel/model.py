@@ -30,7 +30,7 @@ class Model:
 
     def base_pointer(path: str) -> int:
       address = self.pipeline.path_address(0, path)
-      return self.pipeline.address_to_base_pointer(address)
+      return self.pipeline.address_to_base_pointer(0, address)
     c_util.init(base_pointer)
 
     self._set_edits(edits)

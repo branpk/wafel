@@ -148,10 +148,10 @@ static s32 trace_ray_to_surface(
   function<size_t(const string &)> get_field_offset)
 {
   // TODO: Helper function/iterator for extracting Surface / general struct
-  size_t f_normal = get_field_offset("sSurfacePool[].normal");
-  size_t f_vertex1 = get_field_offset("sSurfacePool[].vertex1");
-  size_t f_vertex2 = get_field_offset("sSurfacePool[].vertex2");
-  size_t f_vertex3 = get_field_offset("sSurfacePool[].vertex3");
+  size_t f_normal = get_field_offset("struct Surface.normal");
+  size_t f_vertex1 = get_field_offset("struct Surface.vertex1");
+  size_t f_vertex2 = get_field_offset("struct Surface.vertex2");
+  size_t f_vertex3 = get_field_offset("struct Surface.vertex3");
 
   f32 min_dist = std::numeric_limits<f32>::infinity();
   s32 index = -1;

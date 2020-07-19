@@ -25,6 +25,8 @@ pub enum MemoryErrorCause {
     NonBaseSlot { slot: String },
     #[display(fmt = "using slot allocated from wrong memory")]
     SlotFromDifferentMemory,
+    #[display(fmt = "not an array or pointer: {}", data_type)]
+    NotAnArrayOrPointer { data_type: DataTypeRef },
 }
 
 #[derive(Debug, Display, Error)]

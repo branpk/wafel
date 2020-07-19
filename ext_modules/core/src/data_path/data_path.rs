@@ -190,6 +190,14 @@ impl DataPath {
             .into())
         }
     }
+
+    /// Get the concrete data type that the path points to.
+    pub fn concrete_type(&self) -> DataTypeRef {
+        match self {
+            DataPath::Global(path) => path.concrete_type(),
+            DataPath::Local(path) => path.concrete_type(),
+        }
+    }
 }
 
 fn concat_paths<R: Clone>(

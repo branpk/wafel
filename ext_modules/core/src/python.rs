@@ -275,11 +275,17 @@ impl PyPipeline {
     ///
     /// This should not be used to write to memory.
     /// This includes any functions that are called through it.
+    /// If the given address does not point to static data, no states should be requested from
+    /// the timeline while the pointer is alive.
     ///
     /// The pipeline must stay live while this pointer is live.
-    pub unsafe fn address_to_base_pointer(&self, address: &PyAddress) -> PyResult<usize> {
+    pub unsafe fn address_to_base_pointer(
+        &self,
+        frame: u32,
+        address: &PyAddress,
+    ) -> PyResult<usize> {
         let timeline = self.get().pipeline.timeline();
-        let base_slot = timeline.base_slot(0)?;
+        let base_slot = timeline.base_slot(frame)?;
         let pointer: *const u8 = timeline
             .memory()
             .address_to_base_pointer(base_slot.slot(), &address.address)?;
@@ -291,6 +297,13 @@ impl PyPipeline {
         let path = self.get().pipeline.timeline().memory().local_path(path)?;
         let offset = path.field_offset()?;
         Ok(offset)
+    }
+
+    /// Return the stride of the pointer or array that the path points to.
+    pub fn pointer_or_array_stride(&self, path: &str) -> PyResult<Option<usize>> {
+        let path = self.get().pipeline.timeline().memory().data_path(path)?;
+        let stride = path.concrete_type().stride()?;
+        Ok(stride)
     }
 
     /// Return a map from mario action values to human readable names.

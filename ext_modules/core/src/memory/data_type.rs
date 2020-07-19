@@ -1,5 +1,7 @@
 //! Types and functions for representing C data types.
 
+use super::MemoryErrorCause;
+use crate::error::Error;
 use derive_more::Display;
 use itertools::Itertools;
 use std::{collections::HashMap, fmt::Debug, hash::Hash, sync::Arc};
@@ -251,6 +253,18 @@ impl DataType {
             true
         } else {
             false
+        }
+    }
+
+    /// Return the stride for an array or pointer type.
+    pub fn stride(&self) -> Result<Option<usize>, Error> {
+        match self {
+            DataType::Pointer { stride, .. } => Ok(*stride),
+            DataType::Array { stride, .. } => Ok(Some(*stride)),
+            _ => Err(MemoryErrorCause::NotAnArrayOrPointer {
+                data_type: DataTypeRef::new(self.clone()),
+            }
+            .into()),
         }
     }
 }

@@ -43,19 +43,20 @@ def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
 
   quarter_steps = []
   for i in range(num_steps):
-    quarter_step_value = dcast(dict, model.get(qstep_frame, f'gQStepsInfo.steps[{i}]'))
-    quarter_step = cg.QuarterStep()
-    quarter_step.intended_pos = cg.vec3(
-      quarter_step_value['intendedPos'][0],
-      quarter_step_value['intendedPos'][1],
-      quarter_step_value['intendedPos'][2],
-    )
-    quarter_step.result_pos = cg.vec3(
-      quarter_step_value['resultPos'][0],
-      quarter_step_value['resultPos'][1],
-      quarter_step_value['resultPos'][2],
-    )
-    quarter_steps.append(quarter_step)
+    pass # TODO
+    # quarter_step_value = dcast(dict, model.get(qstep_frame, f'gQStepsInfo.steps[{i}]'))
+    # quarter_step = cg.QuarterStep()
+    # quarter_step.intended_pos = cg.vec3(
+    #   quarter_step_value['intendedPos'][0],
+    #   quarter_step_value['intendedPos'][1],
+    #   quarter_step_value['intendedPos'][2],
+    # )
+    # quarter_step.result_pos = cg.vec3(
+    #   quarter_step_value['resultPos'][0],
+    #   quarter_step_value['resultPos'][1],
+    #   quarter_step_value['resultPos'][2],
+    # )
+    # quarter_steps.append(quarter_step)
 
   cg.object_path_set_qsteps(
     mario_path, path_frames.index(model.selected_frame), quarter_steps
@@ -76,26 +77,32 @@ def build_scene(
   scene.camera = camera
 
   log.timer.begin('so')
-  memory = model.game.memory
-  assert isinstance(memory, AccessibleMemory)
-  with model.timeline.request_base(model.selected_frame) as state:
-    surface_pool_addr = dcast(Address, state.get('sSurfacePool'))
-    if not surface_pool_addr.is_null:
-      cg.scene_add_surfaces(
-        scene,
-        memory.address_to_location(state.slot, surface_pool_addr),
-        memory.data_spec['types']['struct']['Surface']['size'],
-        dcast(int, state.get('gSurfacesAllocated')),
-        model.pipeline.field_offset,
-        list(hidden_surfaces),
-      )
+  frame = model.selected_frame
+  surface_pool_addr = dcast(Address, model.pipeline.path_read(frame, 'sSurfacePool'))
+  # TODO: Check if surface_pool_addr is null
+  surfaces_allocated = dcast(int, model.pipeline.path_read(frame, 'gSurfacesAllocated'))
+  # Do not mutate timeline while surface_pool_pointer is alive
+  surface_pool_pointer = model.pipeline.address_to_base_pointer(frame, surface_pool_addr)
+  cg.scene_add_surfaces(
+    scene,
+    surface_pool_pointer,
+    assert_not_none(model.pipeline.pointer_or_array_stride('sSurfacePool')),
+    surfaces_allocated,
+    lambda field: model.pipeline.field_offset(field),
+    list(hidden_surfaces),
+  )
+  del surface_pool_pointer
 
-    cg.scene_add_objects(
-      scene,
-      memory.address_to_location(state.slot, state.get_addr('gObjectPool')),
-      memory.data_spec['types']['struct']['Object']['size'],
-      model.pipeline.field_offset,
-    )
+  object_pool_addr = model.pipeline.path_address(frame, 'gObjectPool')
+  # Do not mutate timeline while object_pool_pointer is alive
+  object_pool_pointer = model.pipeline.address_to_base_pointer(frame, object_pool_addr)
+  cg.scene_add_objects(
+    scene,
+    object_pool_pointer,
+    assert_not_none(model.pipeline.pointer_or_array_stride('gObjectPool')),
+    lambda field: model.pipeline.field_offset(field),
+  )
+  del object_pool_pointer
   log.timer.end()
 
   if model.play_speed <= 0 or not model.playback_mode:
