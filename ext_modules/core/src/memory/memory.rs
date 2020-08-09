@@ -10,6 +10,7 @@ use crate::{
 };
 use derive_more::Display;
 use std::{
+    collections::HashMap,
     fmt::{Debug, Display},
     ops::Add,
 };
@@ -183,6 +184,8 @@ pub trait Memory: Sized {
         address: &Self::Address,
         data_type: &DataTypeRef,
     ) -> Result<Value, Error> {
+        let data_type = self.data_layout().concrete_type(data_type)?;
+
         Ok(match data_type.as_ref() {
             DataType::Int(int_type) => {
                 let address = self.classify_address(address)?;
@@ -195,6 +198,28 @@ pub trait Memory: Sized {
             DataType::Pointer { .. } => {
                 let address = self.classify_address(address)?;
                 Value::Address(self.read_address(slot, &address)?.into())
+            }
+            DataType::Struct { fields } => {
+                let field_values: HashMap<String, Value> = fields
+                    .iter()
+                    .map(|(name, field)| {
+                        self.read_value(slot, &(address.clone() + field.offset), &field.data_type)
+                            .map(|value| (name.clone(), value))
+                    })
+                    .collect::<Result<_, Error>>()?;
+                Value::Struct {
+                    fields: field_values,
+                }
+            }
+            DataType::Array {
+                base,
+                length: Some(length),
+                stride,
+            } => {
+                let values: Vec<Value> = (0..*length)
+                    .map(|index| self.read_value(slot, &(address.clone() + index * *stride), base))
+                    .collect::<Result<_, Error>>()?;
+                Value::Array(values)
             }
             _ => Err(MemoryErrorCause::UnreadableValue {
                 data_type: data_type.clone(),

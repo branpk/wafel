@@ -43,20 +43,19 @@ def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
 
   quarter_steps = []
   for i in range(num_steps):
-    pass # TODO
-    # quarter_step_value = dcast(dict, model.get(qstep_frame, f'gQStepsInfo.steps[{i}]'))
-    # quarter_step = cg.QuarterStep()
-    # quarter_step.intended_pos = cg.vec3(
-    #   quarter_step_value['intendedPos'][0],
-    #   quarter_step_value['intendedPos'][1],
-    #   quarter_step_value['intendedPos'][2],
-    # )
-    # quarter_step.result_pos = cg.vec3(
-    #   quarter_step_value['resultPos'][0],
-    #   quarter_step_value['resultPos'][1],
-    #   quarter_step_value['resultPos'][2],
-    # )
-    # quarter_steps.append(quarter_step)
+    quarter_step_value = dcast(dict, model.get(qstep_frame, f'gQStepsInfo.steps[{i}]'))
+    quarter_step = cg.QuarterStep()
+    quarter_step.intended_pos = cg.vec3(
+      quarter_step_value['intendedPos'][0],
+      quarter_step_value['intendedPos'][1],
+      quarter_step_value['intendedPos'][2],
+    )
+    quarter_step.result_pos = cg.vec3(
+      quarter_step_value['resultPos'][0],
+      quarter_step_value['resultPos'][1],
+      quarter_step_value['resultPos'][2],
+    )
+    quarter_steps.append(quarter_step)
 
   cg.object_path_set_qsteps(
     mario_path, path_frames.index(model.selected_frame), quarter_steps

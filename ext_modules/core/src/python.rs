@@ -16,7 +16,7 @@ use lazy_static::lazy_static;
 use pyo3::{
     basic::CompareOp,
     prelude::*,
-    types::{PyFloat, PyLong},
+    types::{IntoPyDict, PyDict, PyFloat, PyList, PyLong},
     PyObjectProtocol,
 };
 use std::{
@@ -259,7 +259,7 @@ impl PyPipeline {
             .is_some())
     }
 
-    /// Get the variables
+    /// Get the variables in the given group.
     fn variable_group(&self, group: &str) -> Vec<PyVariable> {
         self.get()
             .pipeline
@@ -511,10 +511,19 @@ fn value_to_py_object(py: Python<'_>, value: &Value) -> PyResult<PyObject> {
             address: (*address).into(),
         }
         .into_py(py)),
-        _ => Err(Error::from(SM64ErrorCause::ValueToPython {
-            value: value.to_string(),
-        })
-        .into()),
+        Value::Struct { fields } => Ok(fields
+            .iter()
+            .map(|(name, value)| value_to_py_object(py, value).map(|object| (name, object)))
+            .collect::<PyResult<Vec<_>>>()?
+            .into_py_dict(py)
+            .to_object(py)),
+        Value::Array(items) => {
+            let objects: Vec<PyObject> = items
+                .iter()
+                .map(|value| value_to_py_object(py, value))
+                .collect::<PyResult<_>>()?;
+            Ok(PyList::new(py, objects).to_object(py))
+        }
     }
 }
 
