@@ -6,7 +6,7 @@ use crate::{
     error::{Error, ErrorCause},
     memory::{Memory, Value},
     sm64::{
-        load_dll_pipeline, object_behavior, try_object_path, ObjectBehavior, ObjectSlot, Pipeline,
+        load_dll_pipeline, object_behavior, object_path, ObjectBehavior, ObjectSlot, Pipeline,
         SM64ErrorCause, SurfaceSlot, Variable,
     },
     timeline::{SlotState, State},
@@ -334,12 +334,18 @@ impl PyPipeline {
     pub fn object_behavior(&self, frame: u32, object: usize) -> PyResult<Option<PyObjectBehavior>> {
         let state = self.get().pipeline.timeline().frame(frame)?;
 
-        match try_object_path(&state, ObjectSlot(object))? {
-            Some(object_path) => {
+        match object_path(&state, ObjectSlot(object)) {
+            Ok(object_path) => {
                 let behavior = object_behavior(&state, &object_path)?;
                 Ok(Some(PyObjectBehavior { behavior }))
             }
-            None => Ok(None),
+            Err(error) => {
+                if let ErrorCause::SM64Error(SM64ErrorCause::InactiveObject { .. }) = &error.cause {
+                    Ok(None)
+                } else {
+                    Err(error.into())
+                }
+            }
         }
     }
 

@@ -3,29 +3,19 @@ use crate::{data_path::GlobalDataPath, error::Error, memory::Memory, timeline::S
 
 /// Get the data path for an object.
 pub fn object_path(state: &impl State, object: ObjectSlot) -> Result<GlobalDataPath, Error> {
-    try_object_path(state, object)?.ok_or_else(|| SM64ErrorCause::InactiveObject { object }.into())
-}
-
-/// Get the data path for an object, or None if the object is inactive.
-///
-/// This is faster than `object_path` if inactive objects are common.
-pub fn try_object_path(
-    state: &impl State,
-    object: ObjectSlot,
-) -> Result<Option<GlobalDataPath>, Error> {
     let active_flags = state
         .read(&format!("gObjectPool[{}].activeFlags", object.0))?
         .as_int()?;
 
     if active_flags == 0 {
-        return Ok(None);
+        Err(SM64ErrorCause::InactiveObject { object })?;
     }
 
     let object_path = state
         .memory()
         .global_path(&format!("gObjectPool[{}]", object.0))?;
 
-    Ok(Some(object_path))
+    Ok(object_path)
 }
 
 /// Get the behavior address for an object.
