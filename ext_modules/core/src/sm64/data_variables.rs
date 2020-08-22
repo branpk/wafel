@@ -255,7 +255,8 @@ impl Builder {
                 let flag = variable
                     .flag
                     .map(|flag_name| memory.data_layout().get_constant(&flag_name))
-                    .transpose()?;
+                    .transpose()?
+                    .map(|constant| constant.value);
 
                 let spec = DataVariableSpec {
                     group: group.name.clone(),

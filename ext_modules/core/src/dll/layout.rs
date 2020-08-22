@@ -7,7 +7,7 @@ use crate::memory::{
         build_data_types, get_size_from_pre_types, PreDataType, PreDataTypeSize, ShallowDataType,
         ShallowField,
     },
-    DataLayout,
+    Constant, ConstantSource, DataLayout, IntValue,
 };
 use derive_more::Display;
 use gimli::{
@@ -158,6 +158,8 @@ struct UnitReader<'a, R: Reader> {
     type_defns: HashMap<TypeName, ShallowDataType<TypeId<R::Offset>>>,
     /// Named variable definitions.
     global_defns: HashMap<String, ShallowDataType<TypeId<R::Offset>>>,
+    /// Constant values.
+    constants: HashMap<String, Constant>,
 }
 
 impl<'a, R> UnitReader<'a, R>
@@ -172,6 +174,7 @@ where
             pre_types: HashMap::new(),
             type_defns: HashMap::new(),
             global_defns: HashMap::new(),
+            constants: HashMap::new(),
         }
     }
 
@@ -237,6 +240,12 @@ where
             let data_type = shallow_type.resolve_direct(get_type, &get_size, name)?;
             layout.globals.insert(name.clone(), data_type);
         }
+
+        layout.constants.extend(
+            self.constants
+                .iter()
+                .map(|(name, constant)| (name.clone(), constant.clone())),
+        );
 
         Ok(())
     }
@@ -439,18 +448,34 @@ where
         &mut self,
         node: EntriesTreeNode<'_, '_, '_, R>,
     ) -> Result<(), LayoutError> {
-        // TODO: Extract constants
         let entry = node.entry();
+        let name = self.attr_string(entry, gimli::DW_AT_name)?;
+
         self.pre_types.insert(
             TypeId::Offset(entry.offset().0),
             PreDataType {
-                debug_name: self.attr_string(entry, gimli::DW_AT_name)?,
+                debug_name: name.clone(),
                 shallow_type: ShallowDataType::Alias(
                     self.req_attr_type_id(entry, gimli::DW_AT_type)?,
                 ),
                 size: PreDataTypeSize::Known(self.req_attr_usize(entry, gimli::DW_AT_byte_size)?),
             },
         );
+
+        // Read constant values
+        let mut children = node.children();
+        while let Some(variant_node) = children.next()? {
+            let variant_entry = variant_node.entry();
+            self.expect_tag(variant_entry, gimli::DW_TAG_enumerator)?;
+            let variant_name = self.req_attr_string(variant_entry, gimli::DW_AT_name)?;
+
+            let value = IntValue::from(self.req_attr_i64(variant_entry, gimli::DW_AT_const_value)?);
+            let source = ConstantSource::Enum { name: name.clone() };
+
+            self.constants
+                .insert(variant_name, Constant { value, source });
+        }
+
         Ok(())
     }
 
@@ -582,6 +607,18 @@ where
             .and_then(|attr| attr.udata_value().map(|udata| udata as usize)))
     }
 
+    /// Read a signed int attribute from `entry`.
+    //
+    /// Return None if the attribute is not present.
+    /// Return an error if the attribute is present but not a signed int.
+    fn attr_i64(
+        &self,
+        entry: &DebuggingInformationEntry<'_, '_, R>,
+        attr_name: DwAt,
+    ) -> Result<Option<i64>, LayoutError> {
+        Ok(entry.attr(attr_name)?.and_then(|attr| attr.sdata_value()))
+    }
+
     /// Read a string attribute from `entry`.
     ///
     /// Return an error if the attribute is not present or is not a string.
@@ -603,6 +640,18 @@ where
         attr_name: DwAt,
     ) -> Result<usize, LayoutError> {
         self.attr_usize(entry, attr_name)?
+            .ok_or_else(|| self.missing_attribute(entry, attr_name))
+    }
+
+    /// Read a signed int attribute from `entry`.
+    ///
+    /// Return an error if the attribute is not present or is not an signed int.
+    fn req_attr_i64(
+        &self,
+        entry: &DebuggingInformationEntry<'_, '_, R>,
+        attr_name: DwAt,
+    ) -> Result<i64, LayoutError> {
+        self.attr_i64(entry, attr_name)?
             .ok_or_else(|| self.missing_attribute(entry, attr_name))
     }
 

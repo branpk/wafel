@@ -52,21 +52,20 @@ class VariableExplorer:
     # if config.dev_mode:
     #   self.current_tab = TabId('Subframe')
 
-
   def open_tab(self, tab: TabId) -> None:
     if tab not in self.open_tabs:
       self.open_tabs.append(tab)
     self.current_tab = tab
 
+  def open_object_tab(self, object: int) -> None:
+    self.open_tab(TabId('_object', object=object))
 
   def open_surface_tab(self, surface: int) -> None:
     self.open_tab(TabId('_surface', surface=surface))
 
-
   def close_tab(self, tab: TabId) -> None:
     if tab in self.open_tabs:
       self.open_tabs.remove(tab)
-
 
   def get_tab_label(self, tab: TabId) -> str:
     if tab.object is not None:
@@ -81,7 +80,6 @@ class VariableExplorer:
 
     return tab.name
 
-
   def render_objects_tab(self) -> None:
     behaviors: List[Optional[ObjectBehavior]] = []
 
@@ -94,8 +92,7 @@ class VariableExplorer:
       self.model.pipeline.object_behavior_name,
     )
     if selected_slot is not None:
-      self.open_tab(TabId('_object', selected_slot))
-
+      self.open_object_tab(selected_slot)
 
   def get_variables_for_tab(self, tab: TabId) -> List[Variable]:
     if tab.object is not None:
@@ -123,7 +120,6 @@ class VariableExplorer:
     else:
       return self.model.pipeline.variable_group(tab.name)
 
-
   def render_variable(
     self,
     tab: TabId,
@@ -148,7 +144,6 @@ class VariableExplorer:
     if clear_edit:
       self.model.reset(variable)
 
-
   def render_stick_control(self, id: str, tab: TabId) -> None:
     stick_x_var = Variable('input-stick-x').with_frame(self.model.selected_frame)
     stick_y_var = Variable('input-stick-y').with_frame(self.model.selected_frame)
@@ -169,7 +164,6 @@ class VariableExplorer:
 
       self.model.set(stick_x_var, new_stick_x)
       self.model.set(stick_y_var, new_stick_y)
-
 
   def render_intended_stick_control(self, id: str) -> None:
     up_options = ['3d view', 'mario yaw', 'stick y', 'world x']
@@ -295,7 +289,6 @@ class VariableExplorer:
 
       self.model.set(stick_x_var, new_raw_stick_x)
       self.model.set(stick_y_var, new_raw_stick_y)
-
 
   def render_input_tab(self, tab: TabId) -> None:
     column_sizes = [170, 370, 200]

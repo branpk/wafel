@@ -3,7 +3,7 @@ use crate::{
     error::Error,
     memory::{
         data_type::{DataType, DataTypeRef, Field, FloatType, IntType, Namespace, TypeName},
-        DataLayout, IntValue,
+        Constant, ConstantSource, DataLayout, IntValue,
     },
 };
 use serde_json::{Map, Value as JsonValue};
@@ -46,10 +46,24 @@ pub fn load_constants(layout: &mut DataLayout, json_source: &[u8]) -> Result<(),
     let json: JsonValue = serde_json::from_slice(json_source).map_err(SerdeError)?;
 
     for (name, info) in as_object(&json)? {
-        let value = field(as_object(info)?, "value")?;
-        if let Some(value) = value.as_i64() {
-            layout.constants.insert(name.clone(), IntValue::from(value));
-        }
+        let info = as_object(info)?;
+        let value_field = field(info, "value")?;
+        let source_field = field(info, "source")?;
+
+        let value = if let Some(value) = value_field.as_i64() {
+            IntValue::from(value)
+        } else {
+            continue;
+        };
+
+        let source = match source_field.as_str() {
+            Some("macro") => ConstantSource::Macro,
+            _ => unimplemented!("{:?}", source_field),
+        };
+
+        layout
+            .constants
+            .insert(name.clone(), Constant { value, source });
     }
 
     Ok(())

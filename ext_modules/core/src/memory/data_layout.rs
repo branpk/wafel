@@ -6,6 +6,7 @@ use super::{
     MemoryErrorCause::*,
 };
 use crate::error::Error;
+use derive_more::Display;
 use std::{collections::HashMap, fmt};
 
 /// A description of accessible variables and types.
@@ -16,7 +17,37 @@ pub struct DataLayout {
     /// The types of global variables and functions.
     pub globals: HashMap<String, DataTypeRef>,
     /// The values of integer constants.
-    pub constants: HashMap<String, IntValue>,
+    pub constants: HashMap<String, Constant>,
+}
+
+/// A constant's value and source.
+#[derive(Debug, Display, Clone, PartialEq, Eq, Hash)]
+#[display(fmt = "{} ({})", value, source)]
+pub struct Constant {
+    /// The integer value for the constant.
+    pub value: IntValue,
+    /// The source for the constant.
+    pub source: ConstantSource,
+}
+
+/// The source for a constant value.
+#[derive(Debug, Display, Clone, PartialEq, Eq, Hash)]
+pub enum ConstantSource {
+    /// The constant is defined as an enum variant.
+    #[display(
+        fmt = "{}",
+        "name
+            .as_deref()
+            .map(|name| format!(\"enum {}\", name))
+            .unwrap_or(\"anonymous enum\".to_owned())"
+    )]
+    Enum {
+        /// The name of the enum, or None for an anonymous enum.
+        name: Option<String>,
+    },
+    /// The constant is defined as a macro.
+    #[display(fmt = "macro")]
+    Macro,
 }
 
 impl DataLayout {
@@ -66,8 +97,8 @@ impl DataLayout {
     }
 
     /// Look up the value of a constant.
-    pub fn get_constant(&self, name: &str) -> Result<IntValue, Error> {
-        self.constants.get(name).cloned().ok_or_else(|| {
+    pub fn get_constant(&self, name: &str) -> Result<&Constant, Error> {
+        self.constants.get(name).ok_or_else(|| {
             UndefinedConstant {
                 name: name.to_owned(),
             }

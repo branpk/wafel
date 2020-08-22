@@ -4,7 +4,7 @@
 use crate::{
     dll,
     error::{Error, ErrorCause},
-    memory::{Memory, Value},
+    memory::{IntValue, Memory, Value},
     sm64::{
         load_dll_pipeline, object_behavior, object_path, ObjectBehavior, ObjectSlot, Pipeline,
         SM64ErrorCause, SurfaceSlot, Variable,
@@ -318,9 +318,9 @@ impl PyPipeline {
                     && !name.starts_with("ACT_GROUP_")
                     && !name.starts_with("ACT_ID_")
             })
-            .map(|(name, value)| {
+            .map(|(name, constant)| {
                 (
-                    *value as u32,
+                    constant.value as u32,
                     name.strip_prefix("ACT_")
                         .unwrap()
                         .replace("_", " ")
@@ -359,6 +359,19 @@ impl PyPipeline {
         } else {
             format!("Object[{}]", address)
         }
+    }
+
+    /// Get the wafel frame log for a frame of gameplay.
+    ///
+    /// The events in the frame log occurred on the previous frame.
+    pub fn frame_log(&self, frame: u32) -> PyResult<Vec<HashMap<String, PyObject>>> {
+        let data_layout = self.get().pipeline.timeline().memory().data_layout();
+        // let event_types: HashMap<IntValue, String> = data_layout
+        // .constants
+        // .iter()
+        // .filter(|(name, value))
+
+        todo!()
     }
 }
 
