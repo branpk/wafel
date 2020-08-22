@@ -1,8 +1,7 @@
 use super::{
     data_variables::DataVariables,
-    direct_edits::DirectEdits,
     layout_extensions::{load_constants, load_object_fields},
-    Variable,
+    RangeEdits, Variable,
 };
 use crate::{
     dll,
@@ -15,7 +14,7 @@ use crate::{
 #[derive(Debug)]
 pub struct SM64Controller {
     data_variables: DataVariables,
-    edits: DirectEdits,
+    edits: RangeEdits,
 }
 
 impl SM64Controller {
@@ -23,7 +22,7 @@ impl SM64Controller {
     pub fn new(data_variables: DataVariables) -> Self {
         Self {
             data_variables,
-            edits: DirectEdits::new(),
+            edits: RangeEdits::new(),
         }
     }
 }

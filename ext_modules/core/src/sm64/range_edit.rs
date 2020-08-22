@@ -7,13 +7,13 @@ use std::{
 };
 
 #[derive(Debug, Default)]
-pub struct VariableRangeEdits {
+pub struct RangeEdits {
     ranges: HashMap<Variable, Ranges>,
     values: HashMap<Variable, HashMap<RangeId, Value>>,
     drag_state: Option<DragState>,
 }
 
-impl VariableRangeEdits {
+impl RangeEdits {
     pub fn new() -> Self {
         Self {
             ranges: HashMap::new(),
@@ -22,7 +22,18 @@ impl VariableRangeEdits {
         }
     }
 
-    pub fn write(&mut self, variable: &Variable, value: &Value) -> Result<(), Error> {
+    pub fn edits(&self, frame: u32) -> Vec<(&Variable, &Value)> {
+        let mut edits = Vec::new();
+        for column in self.ranges.keys() {
+            if let Some(range_id) = self.find_range(column, frame) {
+                let value = &self.values[column][&range_id];
+                edits.push((column, value))
+            }
+        }
+        edits
+    }
+
+    pub fn write(&mut self, variable: &Variable, value: Value) -> Result<(), Error> {
         self.rollback_drag();
 
         let column = variable.without_frame();
@@ -32,29 +43,48 @@ impl VariableRangeEdits {
         let values = self.values.entry(column.clone()).or_default();
 
         let range_id = ranges.find_or_create_range(frame as usize);
-        values.insert(range_id, value.clone());
+        values.insert(range_id, value);
 
         Ok(())
+    }
+
+    pub fn reset(&mut self, variable: &Variable) -> Result<(), Error> {
+        self.rollback_drag();
+
+        todo!()
+    }
+
+    pub fn insert_frame(&mut self, frame: u32) {
+        self.rollback_drag();
+        for range in self.ranges.values_mut() {
+            range.insert(frame as usize, 1);
+        }
+    }
+
+    pub fn delete_frame(&mut self, frame: u32) {
+        self.rollback_drag();
+        for range in self.ranges.values_mut() {
+            range.remove(frame as usize, 1);
+        }
+    }
+
+    fn find_range(&self, column: &Variable, frame: u32) -> Option<RangeId> {
+        assert!(column.frame.is_none());
+
+        self.ranges.get(&column).and_then(|ranges| {
+            if let Some(drag_state) = &self.drag_state {
+                if &drag_state.column == column {
+                    return drag_state.preview.find_range(ranges, frame as usize);
+                }
+            }
+            ranges.find_range(frame as usize)
+        })
     }
 
     pub fn range_key(&self, variable: &Variable) -> Result<Option<usize>, Error> {
         let column = variable.without_frame();
         let frame = variable.try_frame()?;
-
-        match self.ranges.get(&column) {
-            Some(ranges) => {
-                if let Some(drag_state) = &self.drag_state {
-                    if drag_state.column == column {
-                        return Ok(drag_state
-                            .preview
-                            .find_range(ranges, frame as usize)
-                            .map(|range_id| range_id.0));
-                    }
-                }
-                Ok(ranges.find_range(frame as usize).map(|range_id| range_id.0))
-            }
-            None => Ok(None),
-        }
+        Ok(self.find_range(&column, frame).map(|range_id| range_id.0))
     }
 
     pub fn begin_drag(
@@ -130,20 +160,6 @@ impl VariableRangeEdits {
             for range_id in deleted_ranges {
                 values.remove(&range_id);
             }
-        }
-    }
-
-    pub fn insert(&mut self, start_index: usize, count: usize) {
-        self.rollback_drag();
-        for range in self.ranges.values_mut() {
-            range.insert(start_index, count);
-        }
-    }
-
-    pub fn remove(&mut self, start_index: usize, count: usize) {
-        self.rollback_drag();
-        for range in self.ranges.values_mut() {
-            range.insert(start_index, count);
         }
     }
 }

@@ -38,10 +38,12 @@ class DragHandler:
     self.pipeline = pipeline
 
   def drag(self, source: Variable, source_value: object, target_frame: int) -> None:
-    self.pipeline.range_edit_drag(source, source_value, target_frame)
+    # self.pipeline.range_edit_drag(source, source_value, target_frame)
+    pass
 
   def release(self) -> None:
-    self.pipeline.range_edit_release()
+    # self.pipeline.range_edit_release()
+    pass
 
   def highlight_range(self, variable: Variable) -> Optional[Tuple[range, ig.Color4f]]:
     return None
