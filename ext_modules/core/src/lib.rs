@@ -6,6 +6,8 @@
 #![feature(try_blocks)]
 #![feature(ptr_wrapping_offset_from)]
 #![feature(backtrace)]
+#![feature(option_expect_none)]
+#![feature(range_is_empty)]
 
 // TODO: Fix exports
 

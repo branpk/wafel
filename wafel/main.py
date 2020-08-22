@@ -14,6 +14,8 @@ import glfw
 from imgui.integrations.glfw import GlfwRenderer
 from OpenGL import GL as gl
 
+from ext_modules.core import Pipeline
+
 import wafel.imgui as ig
 from wafel.core import *
 from wafel.model import Model
@@ -31,12 +33,15 @@ import wafel.config as config
 from wafel.bindings import *
 
 
-class NoOpDragHandler:
+class DragHandler:
+  def __init__(self, pipeline: Pipeline) -> None:
+    self.pipeline = pipeline
+
   def drag(self, source: Variable, source_value: object, target_frame: int) -> None:
-    pass
+    self.pipeline.range_edit_drag(source, source_value, target_frame)
 
   def release(self) -> None:
-    pass
+    self.pipeline.range_edit_release()
 
   def highlight_range(self, variable: Variable) -> Optional[Tuple[range, ig.Color4f]]:
     return None
@@ -120,7 +125,7 @@ class View:
       FrameSheet(
         self.model,
         self.model.pipeline,
-        NoOpDragHandler(),
+        DragHandler(self.model.pipeline),
         self.model,
         self.formatters,
       ),
