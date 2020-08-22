@@ -28,7 +28,7 @@ class TabId:
 
 
 FIXED_TABS = [
-  # TabId('Input'), # FIXME
+  TabId('Input'),
   TabId('Mario'),
   TabId('Misc'),
   TabId('Objects'),
@@ -49,8 +49,6 @@ class VariableExplorer:
       self.open_tab(tab)
 
     self.current_tab = self.open_tabs[0]
-    if config.dev_mode:
-      self.current_tab = TabId('Subframe')
 
   def open_tab(self, tab: TabId) -> None:
     if tab not in self.open_tabs:
@@ -184,7 +182,7 @@ class VariableExplorer:
     squish_timer = dcast(int, self.model.get(self.model.selected_frame, 'gMarioState->squishTimer'))
     active_face_yaw = face_yaw
 
-    events = get_frame_log(self.model.timeline, self.model.selected_frame + 1)
+    events = self.model.pipeline.frame_log(self.model.selected_frame + 1)
 
     active_face_yaw_action = None
     for event in events:
@@ -265,7 +263,7 @@ class VariableExplorer:
         target_mag = intended_mag
 
       new_raw_stick_x, new_raw_stick_y = intended_to_raw(
-        self.model.timeline[self.model.selected_frame], target_yaw, target_mag, relative_to
+        face_yaw, camera_yaw, squish_timer, target_yaw, target_mag, relative_to
       )
 
       self.model.set(stick_x_var, new_raw_stick_x)
@@ -284,7 +282,7 @@ class VariableExplorer:
       new_intended_mag = 32 * math.sqrt(new_n[0]**2 + new_n[1]**2)
 
       new_raw_stick_x, new_raw_stick_y = intended_to_raw(
-        self.model.timeline[self.model.selected_frame], new_intended_yaw, new_intended_mag, relative_to=0
+        face_yaw, camera_yaw, squish_timer, new_intended_yaw, new_intended_mag, relative_to=0
       )
 
       self.model.set(stick_x_var, new_raw_stick_x)

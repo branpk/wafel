@@ -39,12 +39,14 @@ def get_frame_log(timeline: Timeline, frame: int) -> List[Dict[str, Any]]:
 
 
 def intended_to_raw(
-  state: State, int_yaw: int, int_mag: float, relative_to: int
+  face_yaw: int,
+  camera_yaw: int,
+  squish_timer: int,
+  int_yaw: int,
+  int_mag: float,
+  relative_to: int,
 ) -> Tuple[int, int]:
-  # TODO: This doesn't account for rotation from platform displacement
-  face_yaw = dcast(int, state.get('gMarioState->faceAngle[1]'))
-  camera_yaw = dcast(int, state.get('gMarioState->area->camera->yaw'))
-  squish_timer = dcast(int, state.get('gMarioState->squishTimer'))
+  # TODO: This doesn't account for rotation from platform displacement (if face yaw is at start of frame)
 
   stick_x, stick_y = c_util.stick_intended_to_raw(
     trunc_signed(int_yaw, 16),
