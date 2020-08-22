@@ -3,7 +3,7 @@
 use super::{AddressValue, MemoryErrorCause};
 use crate::error::Error;
 use derive_more::Display;
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::TryFrom};
 
 /// A dynamically typed value.
 #[derive(Debug, Display, Clone)]
@@ -12,6 +12,9 @@ pub enum Value {
     Int(IntValue),
     /// A float value, regardless of the underlying `FloatType` size.
     Float(FloatValue),
+    /// A string value.
+    #[display(fmt = "{:?}", _0)]
+    String(String),
     /// An address value.
     Address(AddressValue),
     /// A struct value.
@@ -72,6 +75,20 @@ impl Value {
         }
     }
 
+    /// Convert the value to a usize.
+    ///
+    /// Return an error if the value is not an int or the value is out of range.
+    pub fn as_usize(&self) -> Result<usize, Error> {
+        let value = self.as_int()?;
+        usize::try_from(value).map_err(|_| {
+            MemoryErrorCause::ValueTypeError {
+                value: self.to_string(),
+                expected: "usize".to_owned(),
+            }
+            .into()
+        })
+    }
+
     /// Convert the value to a float.
     //
     /// Return an error if the value is not a float.
@@ -97,6 +114,21 @@ impl Value {
             Err(MemoryErrorCause::ValueTypeError {
                 value: self.to_string(),
                 expected: "address".to_owned(),
+            }
+            .into())
+        }
+    }
+
+    /// Convert the value to a struct and return its fields.
+    //
+    /// Return an error if the value is not an address.
+    pub fn as_struct(&self) -> Result<&HashMap<String, Value>, Error> {
+        if let Value::Struct { fields } = self {
+            Ok(fields)
+        } else {
+            Err(MemoryErrorCause::ValueTypeError {
+                value: self.to_string(),
+                expected: "struct".to_owned(),
             }
             .into())
         }

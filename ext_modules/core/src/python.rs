@@ -4,10 +4,10 @@
 use crate::{
     dll,
     error::{Error, ErrorCause},
-    memory::{IntValue, Memory, Value},
+    memory::{ConstantSource, IntValue, Memory, Value},
     sm64::{
-        load_dll_pipeline, object_behavior, object_path, ObjectBehavior, ObjectSlot, Pipeline,
-        SM64ErrorCause, SurfaceSlot, Variable,
+        frame_log, load_dll_pipeline, object_behavior, object_path, ObjectBehavior, ObjectSlot,
+        Pipeline, SM64ErrorCause, SurfaceSlot, Variable,
     },
     timeline::{SlotState, State},
 };
@@ -21,6 +21,7 @@ use pyo3::{
 };
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
+    convert::TryFrom,
     fmt::Debug,
     hash::{Hash, Hasher},
     sync::Mutex,
@@ -364,14 +365,22 @@ impl PyPipeline {
     /// Get the wafel frame log for a frame of gameplay.
     ///
     /// The events in the frame log occurred on the previous frame.
-    pub fn frame_log(&self, frame: u32) -> PyResult<Vec<HashMap<String, PyObject>>> {
-        let data_layout = self.get().pipeline.timeline().memory().data_layout();
-        // let event_types: HashMap<IntValue, String> = data_layout
-        // .constants
-        // .iter()
-        // .filter(|(name, value))
+    pub fn frame_log(
+        &self,
+        py: Python<'_>,
+        frame: u32,
+    ) -> PyResult<Vec<HashMap<String, PyObject>>> {
+        let state = self.get().pipeline.timeline().frame(frame)?;
+        let events = frame_log(&state)?;
 
-        todo!()
+        let convert_event = |event: HashMap<String, Value>| -> PyResult<HashMap<String, PyObject>> {
+            event
+                .into_iter()
+                .map(|(key, value)| -> PyResult<_> { Ok((key, value_to_py_object(py, &value)?)) })
+                .collect()
+        };
+
+        events.into_iter().map(convert_event).collect()
     }
 }
 
@@ -520,6 +529,7 @@ fn value_to_py_object(py: Python<'_>, value: &Value) -> PyResult<PyObject> {
     match value {
         Value::Int(n) => Ok(n.to_object(py)),
         Value::Float(r) => Ok(r.to_object(py)),
+        Value::String(s) => Ok(s.to_object(py)),
         Value::Address(address) => Ok(PyAddress {
             address: (*address).into(),
         }

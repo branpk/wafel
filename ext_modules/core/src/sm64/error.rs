@@ -3,7 +3,11 @@
 #![allow(missing_docs)]
 
 use super::{ObjectBehavior, ObjectSlot, SurfaceSlot};
-use crate::{data_path::LocalDataPath, error::Error, memory::data_type::DataTypeRef};
+use crate::{
+    data_path::LocalDataPath,
+    error::Error,
+    memory::{data_type::DataTypeRef, IntValue},
+};
 use derive_more::{Display, Error, From};
 use std::io;
 
@@ -34,6 +38,8 @@ pub enum SM64ErrorCause {
     ValueToPython { value: String },
     #[display(fmt = "unsupported conversion from {} to data value", value)]
     ValueFromPython { value: String },
+    #[display(fmt = "invalid frame log event type: {}", value)]
+    InvalidFrameLogEventType { value: IntValue },
 }
 
 #[derive(Debug, Display, Error, From)]

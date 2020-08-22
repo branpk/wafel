@@ -33,9 +33,9 @@ FIXED_TABS = [
   TabId('Misc'),
   TabId('Objects'),
 ]
-# if config.dev_mode:
+if config.dev_mode:
 #   FIXED_TABS.insert(1, TabId('Scripting'))
-#   FIXED_TABS.insert(4, TabId('Subframe'))
+  FIXED_TABS.insert(4, TabId('Subframe'))
 
 
 class VariableExplorer:
@@ -49,8 +49,8 @@ class VariableExplorer:
       self.open_tab(tab)
 
     self.current_tab = self.open_tabs[0]
-    # if config.dev_mode:
-    #   self.current_tab = TabId('Subframe')
+    if config.dev_mode:
+      self.current_tab = TabId('Subframe')
 
   def open_tab(self, tab: TabId) -> None:
     if tab not in self.open_tabs:
@@ -324,7 +324,6 @@ class VariableExplorer:
     ig.columns(1)
     ig.end_child()
 
-
   def render_script_segments_tab(self, id: str) -> None:
     ig.push_id(id)
 
@@ -397,7 +396,6 @@ class VariableExplorer:
 
     ig.pop_id()
 
-
   def render_script_variables_tab(self, id: str) -> None:
     ig.push_id(id)
 
@@ -443,7 +441,6 @@ class VariableExplorer:
 
     ig.pop_id()
 
-
   def render_script_tab(self) -> None:
     ui.render_tabs(
       'tabs',
@@ -452,7 +449,6 @@ class VariableExplorer:
         ui.TabInfo('variables', 'Variables', False, self.render_script_variables_tab),
       ]
     )
-
 
   def render_frame_log_tab(self) -> None:
     frame_offset = use_state('frame-offset', 1)
@@ -468,50 +464,59 @@ class VariableExplorer:
     _, round_numbers.value = ig.checkbox('Round##round-numbers', round_numbers.value)
     ig.dummy(1, 10)
 
-    events = get_frame_log(self.model.timeline, self.model.selected_frame + frame_offset.value)
+    events = self.model.pipeline.frame_log(self.model.selected_frame + frame_offset.value)
 
     def string(addr: object) -> str:
-      pointer = self.model.pipeline.address_to_base_pointer(dcast(Address, addr))
+      pointer = self.model.pipeline.address_to_base_pointer(0, dcast(Address, addr))
       return C.string_at(pointer).decode('utf-8')
 
-    def round(number: object) -> str:
+    def f32(number: object) -> str:
       assert isinstance(number, float)
       if round_numbers.value:
         return '%.3f' % number
       else:
         return str(number)
 
+    def vec3f(vector: object) -> str:
+      return '(' + ', '.join(map(f32, dcast(list, vector))) + ')'
+
+    def action(action: object) -> str:
+      return self.model.action_names[dcast(int, action)]
+
     indent = 0
+    action_indent = 0
 
     def show_text(text: str) -> None:
       ig.text('    ' * indent + text)
 
     for event in events:
       if event['type'] == 'FLT_CHANGE_ACTION':
-        from_action = self.model.action_names[event['from']]
-        to_action = self.model.action_names[event['to']]
-        show_text(f'change action: {from_action} -> {to_action}')
+        show_text(f'change action: {action(event["from"])} -> {action(event["to"])}')
       elif event['type'] == 'FLT_CHANGE_FORWARD_VEL':
-        show_text(f'change f vel: {round(event["from"])} -> {round(event["to"])} ({string(event["reason"])})')
+        show_text(f'change f vel: {f32(event["from"])} -> {f32(event["to"])} ({string(event["reason"])})')
       elif event['type'] == 'FLT_WALL_PUSH':
-        from_pos = ', '.join(map(round, event['from']))
-        to_pos = ', '.join(map(round, event['to']))
-        show_text(f'wall push: ({from_pos}) -> ({to_pos}) (surface {event["surface"]})')
+        show_text(f'wall push: {vec3f(event["from"])} -> {vec3f(event["to"])} (surface {event["surface"]})')
       elif event['type'] == 'FLT_BEGIN_MOVEMENT_STEP':
         type_ = { 1: 'air', 2: 'ground', 3: 'water' }[event['stepType']]
         show_text(f'{type_} step {event["stepNum"]}:')
         indent += 1
       elif event['type'] == 'FLT_END_MOVEMENT_STEP':
         indent -= 1
+      elif event['type'] == 'FLT_EXECUTE_ACTION':
+        indent -= action_indent
+        action_indent = 0
+        show_text(f'execute action: {action(event["action"])}')
+        indent += 1
+        action_indent += 1
       else:
-        show_text(str(event))
-
+        sorted_event = { 'type': event['type'] }
+        sorted_event.update(sorted(event.items()))
+        show_text(str(sorted_event))
 
   def render_variable_tab(self, tab: TabId) -> None:
     variables = self.get_variables_for_tab(tab)
     for variable in variables:
       self.render_variable(tab, variable.with_frame(self.model.selected_frame))
-
 
   def render_tab_contents(self, id: str, tab: TabId) -> None:
     ig.push_id(id)
@@ -526,7 +531,6 @@ class VariableExplorer:
     else:
       self.render_variable_tab(tab)
     ig.pop_id()
-
 
   def render(self, id: str) -> None:
     ig.push_id(id)
