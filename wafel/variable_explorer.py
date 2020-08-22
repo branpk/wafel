@@ -86,8 +86,7 @@ class VariableExplorer:
     behaviors: List[Optional[ObjectBehavior]] = []
 
     for slot in range(240):
-      object_id = slot
-      behaviors.append(self.model.get_object_behavior(self.model.selected_frame, object_id))
+      behaviors.append(self.model.get_object_behavior(self.model.selected_frame, slot))
 
     selected_slot = ui.render_object_slots(
       'object-slots',
@@ -95,8 +94,7 @@ class VariableExplorer:
       self.model.pipeline.object_behavior_name,
     )
     if selected_slot is not None:
-      object_id = selected_slot
-      self.open_tab(TabId('_object', object_id))
+      self.open_tab(TabId('_object', selected_slot))
 
 
   def get_variables_for_tab(self, tab: TabId) -> List[Variable]:
