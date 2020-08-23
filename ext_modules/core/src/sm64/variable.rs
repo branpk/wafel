@@ -1,35 +1,40 @@
 use super::SM64ErrorCause;
 use crate::{error::Error, memory::AddressValue};
 use derive_more::Display;
+use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Display},
     rc::Rc,
 };
 
 /// A wrapper for an object slot index.
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ObjectSlot(pub usize);
 
 /// A wrapper for a surface slot index.
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SurfaceSlot(pub usize);
 
 /// An opaque wrapper for an object behavior pointer.
-#[derive(Debug, Display, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Display, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ObjectBehavior(pub AddressValue);
 
 /// An abstract game variable, typically corresponding to a memory variable.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Variable {
     /// The internal name of the variable.
     pub name: Rc<String>,
     /// The frame that the variable is taken on.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub frame: Option<u32>,
     /// The object slot for object variables.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub object: Option<ObjectSlot>,
     /// The accepted object behavior for object variables.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub object_behavior: Option<ObjectBehavior>,
     /// The surface slot for surface variables.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub surface: Option<SurfaceSlot>,
 }
 

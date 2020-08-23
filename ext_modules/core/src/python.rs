@@ -16,7 +16,7 @@ use lazy_static::lazy_static;
 use pyo3::{
     basic::CompareOp,
     prelude::*,
-    types::{IntoPyDict, PyFloat, PyList, PyLong},
+    types::{IntoPyDict, PyBytes, PyFloat, PyList, PyLong},
     PyObjectProtocol,
 };
 use std::{
@@ -26,7 +26,7 @@ use std::{
     sync::Mutex,
 };
 
-// TODO: __str__, __repr__, __eq__, __hash__ for PyVariable, PyObjectBehavior, PyAddress
+// TODO: __str__, __repr__, __eq__, __hash__ for PyObjectBehavior, PyAddress
 
 #[pymodule]
 fn core(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
@@ -433,6 +433,21 @@ impl PyVariable {
         }
     }
 
+    /// Deserialize a variable from bytes.
+    #[staticmethod]
+    pub fn from_bytes(src: &[u8]) -> PyResult<PyVariable> {
+        let variable: Variable = serde_json::from_slice(src)
+            .map_err(|error| Error::from(SM64ErrorCause::VariableSerdeError(error)))?;
+        Ok(PyVariable { variable })
+    }
+
+    /// Serialize a variable to bytes.
+    pub fn to_bytes<'p>(&self, py: Python<'p>) -> PyResult<&'p PyBytes> {
+        let bytes = serde_json::to_vec(&self.variable)
+            .map_err(|error| Error::from(SM64ErrorCause::VariableSerdeError(error)))?;
+        Ok(PyBytes::new(py, &bytes))
+    }
+
     /// Get the name of the variable.
     #[getter]
     pub fn name(&self) -> &str {
@@ -528,18 +543,26 @@ impl PyVariable {
 
 #[pyproto]
 impl PyObjectProtocol for PyVariable {
-    fn __richcmp__(&self, other: PyVariable, op: CompareOp) -> PyResult<bool> {
+    fn __richcmp__(&self, other: PyVariable, op: CompareOp) -> bool {
         match op {
-            CompareOp::Eq => Ok(self == &other),
-            CompareOp::Ne => Ok(self != &other),
+            CompareOp::Eq => self == &other,
+            CompareOp::Ne => self != &other,
             _ => unimplemented!("{:?}", op),
         }
     }
 
-    fn __hash__(&self) -> PyResult<isize> {
+    fn __hash__(&self) -> u64 {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
-        Ok(hasher.finish() as isize)
+        hasher.finish()
+    }
+
+    fn __str__(&'p self) -> String {
+        self.variable.to_string()
+    }
+
+    fn __repr__(&'p self) -> String {
+        format!("Variable({})", self.variable)
     }
 }
 

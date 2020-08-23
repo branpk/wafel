@@ -88,6 +88,8 @@ class FrameSheet:
 
 
   def _insert_variable(self, index: int, variable: Variable) -> None:
+    variable = variable.without_frame()
+
     if self.columns != self.next_columns:
       log.error('Multiple frame sheet column mods on same frame')
       return

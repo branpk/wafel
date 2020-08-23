@@ -11,7 +11,7 @@ use crate::{
 use derive_more::{Display, Error, From};
 use std::io;
 
-#[derive(Debug, Display, Error)]
+#[derive(Debug, Display, Error, From)]
 pub enum SM64ErrorCause {
     #[display(fmt = "inactive object: {}", object)]
     InactiveObject { object: ObjectSlot },
@@ -40,6 +40,8 @@ pub enum SM64ErrorCause {
     ValueFromPython { value: String },
     #[display(fmt = "invalid frame log event type: {}", value)]
     InvalidFrameLogEventType { value: IntValue },
+    #[from]
+    VariableSerdeError(serde_json::Error),
 }
 
 #[derive(Debug, Display, Error, From)]

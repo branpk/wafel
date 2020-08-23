@@ -9,6 +9,7 @@ use crate::{
     error::Error,
 };
 use derive_more::Display;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     fmt::{Debug, Display},
@@ -317,6 +318,6 @@ pub enum ClassifiedAddress<M: Memory> {
 }
 
 /// A non-generic representation of an address.
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[display(fmt = "{:#X}", _0)]
 pub struct AddressValue(pub usize);
