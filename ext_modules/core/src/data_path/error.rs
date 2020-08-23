@@ -15,6 +15,8 @@ pub enum DataPathErrorCause {
     NotAnArray,
     #[display(fmt = "out of bounds: index {} in array of length {}", index, length)]
     IndexOutOfBounds { index: usize, length: usize },
+    #[display(fmt = "nullable ? operator can only be used on a pointer")]
+    NullableNotAPointer,
     #[display(fmt = "indexing through pointer with unsized base type")]
     UnsizedBaseType,
     #[display(

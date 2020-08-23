@@ -16,7 +16,7 @@ pub trait State {
     fn frame(&self) -> u32;
 
     /// Get the address for the given path.
-    fn address(&self, path: &str) -> Result<<Self::Memory as Memory>::Address, Error> {
+    fn address(&self, path: &str) -> Result<Option<<Self::Memory as Memory>::Address>, Error> {
         self.path_address(&self.memory().global_path(path)?)
     }
 
@@ -24,7 +24,7 @@ pub trait State {
     fn path_address(
         &self,
         path: &GlobalDataPath,
-    ) -> Result<<Self::Memory as Memory>::Address, Error>;
+    ) -> Result<Option<<Self::Memory as Memory>::Address>, Error>;
 
     /// Read from the given path.
     fn read(&self, path: &str) -> Result<Value, Error> {

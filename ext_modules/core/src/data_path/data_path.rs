@@ -1,7 +1,7 @@
 use super::{compile, DataPathErrorCause};
 use crate::{
-    error::Error,
-    memory::{data_type::DataTypeRef, AddressValue, Memory, Value},
+    error::{Error, ErrorCause},
+    memory::{data_type::DataTypeRef, AddressValue, Memory, MemoryErrorCause, Value},
 };
 use derive_more::Display;
 
@@ -26,6 +26,7 @@ pub(super) struct DataPathImpl<R> {
 pub(super) enum DataPathEdge {
     Offset(usize),
     Deref,
+    Nullable,
 }
 
 /// A data path starting from a global variable address.
@@ -68,29 +69,56 @@ impl GlobalDataPath {
     /// Evaluate the path and return the address of the variable.
     ///
     /// Note that this will read from memory if the path passes through a pointer.
-    pub fn address<M: Memory>(&self, memory: &M, slot: &M::Slot) -> Result<M::Address, Error> {
-        let result: Result<_, Error> = try {
-            let mut address: M::Address = self.0.root.clone().into();
-            for edge in &self.0.edges {
-                match edge {
-                    DataPathEdge::Offset(offset) => address = address + *offset,
-                    DataPathEdge::Deref => {
-                        let classified = memory.classify_address(&address)?;
-                        address = memory.read_address(slot, &classified)?;
+    ///
+    /// None will only be returned if `?` is used in the data path.
+    pub fn address<M: Memory>(
+        &self,
+        memory: &M,
+        slot: &M::Slot,
+    ) -> Result<Option<M::Address>, Error> {
+        self.address_impl(memory, slot)
+            .map_err(|error| error.context(format!("path {}", self.0.source)))
+    }
+
+    fn address_impl<M: Memory>(
+        &self,
+        memory: &M,
+        slot: &M::Slot,
+    ) -> Result<Option<M::Address>, Error> {
+        let mut address: M::Address = self.0.root.clone().into();
+        for edge in &self.0.edges {
+            match edge {
+                DataPathEdge::Offset(offset) => address = address + *offset,
+                DataPathEdge::Deref => {
+                    let classified = memory.classify_address(&address)?;
+                    address = memory.read_address(slot, &classified)?;
+                }
+                DataPathEdge::Nullable => {
+                    let classified = memory.classify_address(&address)?;
+                    let address_value = memory.read_address(slot, &classified)?;
+
+                    if let Err(error) = memory.classify_address(&address_value) {
+                        if let ErrorCause::MemoryError(MemoryErrorCause::InvalidAddress {
+                            ..
+                        }) = error.cause
+                        {
+                            return Ok(None);
+                        }
                     }
                 }
             }
-            address
-        };
-        result.map_err(|error| error.context(format!("path {}", self.0.source)))
+        }
+        Ok(Some(address))
     }
 
     /// Evaluate the path and return the value stored in the variable.
     pub fn read<M: Memory>(&self, memory: &M, slot: &M::Slot) -> Result<Value, Error> {
-        let address = self.address(memory, slot)?;
-        memory
-            .read_value(slot, &address, &self.0.concrete_type)
-            .map_err(|error| error.context(format!("path {}", self.0.source)))
+        match self.address(memory, slot)? {
+            Some(address) => memory
+                .read_value(slot, &address, &self.0.concrete_type)
+                .map_err(|error| error.context(format!("path {}", self.0.source))),
+            None => Ok(Value::Null),
+        }
     }
 
     /// Evaluate the path and write `value` to the variable.
@@ -100,10 +128,12 @@ impl GlobalDataPath {
         slot: &mut M::Slot,
         value: &Value,
     ) -> Result<(), Error> {
-        let address = self.address(memory, slot)?;
-        memory
-            .write_value(slot, &address, &self.0.concrete_type, value)
-            .map_err(|error| error.context(format!("path {}", self.0.source)))
+        match self.address(memory, slot)? {
+            Some(address) => memory
+                .write_value(slot, &address, &self.0.concrete_type, value)
+                .map_err(|error| error.context(format!("path {}", self.0.source))),
+            None => Ok(()),
+        }
     }
 
     /// Get the concrete data type that the path points to.

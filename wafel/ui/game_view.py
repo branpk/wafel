@@ -174,11 +174,14 @@ def get_mouse_world_pos_birds_eye(camera: cg.BirdsEyeCamera) -> Optional[Tuple[f
 
 def trace_ray(model: Model, ray: Tuple[Vec3f, Vec3f]) -> Optional[int]:
   frame = model.selected_frame
-  surface_pool_addr = dcast(Address, model.pipeline.path_read(frame, 'sSurfacePool'))
-  # TODO: Check if surface_pool_addr is null
+  surface_pool_addr = model.pipeline.path_read(frame, 'sSurfacePool?')
+  if surface_pool_addr is None:
+    return None
+
   surfaces_allocated = dcast(int, model.pipeline.path_read(frame, 'gSurfacesAllocated'))
   # Do not mutate timeline while surface_pool_pointer is alive
-  surface_pool_pointer = model.pipeline.address_to_base_pointer(frame, surface_pool_addr)
+  surface_pool_pointer = \
+    model.pipeline.address_to_base_pointer(frame, dcast(Address, surface_pool_addr))
   index = cg.trace_ray_to_surface(
     cg.vec3(*ray[0]),
     cg.vec3(*ray[1]),

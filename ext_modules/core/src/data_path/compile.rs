@@ -111,6 +111,13 @@ fn follow_edge<T>(
             }
             follow_subscript(layout, path, index)
         }
+        EdgeAst::Nullable => {
+            if !path.concrete_type.is_pointer() {
+                Err(DataPathErrorCause::NullableNotAPointer)?;
+            }
+            path.edges.push(DataPathEdge::Nullable);
+            Ok(path)
+        }
     }
 }
 
@@ -184,6 +191,7 @@ enum RootAst {
 enum EdgeAst {
     Field(String),
     Subscript(usize),
+    Nullable,
 }
 
 fn to_path_error<'a>(source: &'a str, error: Err<VerboseError<&'a str>>) -> Error {
@@ -232,7 +240,7 @@ fn parse_namespace<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, N
 }
 
 fn parse_edge<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, EdgeAst, E> {
-    alt((parse_field, parse_subscript))(i)
+    alt((parse_field, parse_subscript, parse_nullable))(i)
 }
 
 fn parse_field<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, EdgeAst, E> {
@@ -246,6 +254,10 @@ fn parse_subscript<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, E
         preceded(tag("["), terminated(parse_int, tag("]"))),
         |index| EdgeAst::Subscript(index),
     )(i)
+}
+
+fn parse_nullable<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, EdgeAst, E> {
+    map(tag("?"), |_| EdgeAst::Nullable)(i)
 }
 
 fn parse_name<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {

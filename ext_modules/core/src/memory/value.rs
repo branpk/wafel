@@ -8,6 +8,12 @@ use std::{collections::HashMap, convert::TryFrom};
 /// A dynamically typed value.
 #[derive(Debug, Display, Clone)]
 pub enum Value {
+    /// Represents a null value.
+    ///
+    /// When evaluating a data path, this only occurs when `?` is used on an invalid
+    /// pointer. Otherwise, `Value::Address` will be used (or an error will be thrown
+    /// when it is dereferenced).
+    Null,
     /// An integer value, regardless of the underlying `IntType` size.
     Int(IntValue),
     /// A float value, regardless of the underlying `FloatType` size.

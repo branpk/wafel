@@ -111,14 +111,12 @@ impl<M: Memory> Pipeline<M> {
     /// The ranges will appear to be updated, but won't be committed until `release_drag` is
     /// called.
     pub fn update_drag(&mut self, target_frame: u32) {
-        // FIXME: Check frame invalidation for all methods - and avoid unnecessary invalidation
         self.timeline
             .with_controller_mut(|controller| controller.edits.update_drag(target_frame));
     }
 
     /// End the drag operation, committing range changes.
     pub fn release_drag(&mut self) {
-        // FIXME: Invalidation
         self.timeline
             .with_controller_mut(|controller| controller.edits.release_drag());
     }

@@ -43,7 +43,7 @@ fn build_variables(builder: &mut Builder) {
     });
     builder.group("Misc", |group| {
         group.variable("global-timer").path("gGlobalTimer").label("global timer");
-        group.variable("camera-yaw").path("gMarioState->area->camera->yaw").label("camera yaw");
+        group.variable("camera-yaw").path("gMarioState->area?->camera->yaw").label("camera yaw");
         group.variable("level-num").path("gCurrLevelNum").label("level");
         group.variable("area-index").path("gCurrAreaIndex").label("area");
     });

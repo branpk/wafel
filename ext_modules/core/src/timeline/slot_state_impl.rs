@@ -27,7 +27,7 @@ impl<'a, M: Memory, S: DerefMut<Target = M::Slot>> State for SlotStateImpl<'a, M
     fn path_address(
         &self,
         path: &GlobalDataPath,
-    ) -> Result<<Self::Memory as Memory>::Address, Error> {
+    ) -> Result<Option<<Self::Memory as Memory>::Address>, Error> {
         path.address(self.memory, &*self.slot)
     }
 

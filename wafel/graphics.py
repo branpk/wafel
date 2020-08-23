@@ -77,20 +77,21 @@ def build_scene(
 
   log.timer.begin('so')
   frame = model.selected_frame
-  surface_pool_addr = dcast(Address, model.pipeline.path_read(frame, 'sSurfacePool'))
-  # TODO: Check if surface_pool_addr is null
-  surfaces_allocated = dcast(int, model.pipeline.path_read(frame, 'gSurfacesAllocated'))
-  # Do not mutate timeline while surface_pool_pointer is alive
-  surface_pool_pointer = model.pipeline.address_to_base_pointer(frame, surface_pool_addr)
-  cg.scene_add_surfaces(
-    scene,
-    surface_pool_pointer,
-    assert_not_none(model.pipeline.pointer_or_array_stride('sSurfacePool')),
-    surfaces_allocated,
-    lambda field: model.pipeline.field_offset(field),
-    list(hidden_surfaces),
-  )
-  del surface_pool_pointer
+  surface_pool_addr = model.pipeline.path_read(frame, 'sSurfacePool?')
+  if surface_pool_addr is not None:
+    surfaces_allocated = dcast(int, model.pipeline.path_read(frame, 'gSurfacesAllocated'))
+    # Do not mutate timeline while surface_pool_pointer is alive
+    surface_pool_pointer = \
+      model.pipeline.address_to_base_pointer(frame, dcast(Address, surface_pool_addr))
+    cg.scene_add_surfaces(
+      scene,
+      surface_pool_pointer,
+      assert_not_none(model.pipeline.pointer_or_array_stride('sSurfacePool')),
+      surfaces_allocated,
+      lambda field: model.pipeline.field_offset(field),
+      list(hidden_surfaces),
+    )
+    del surface_pool_pointer
 
   object_pool_addr = model.pipeline.path_address(frame, 'gObjectPool')
   # Do not mutate timeline while object_pool_pointer is alive

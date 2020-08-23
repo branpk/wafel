@@ -127,7 +127,7 @@ class Timer:
 
   def get_summaries(self) -> Dict[Tuple[str, ...], Summary]:
     result = {}
-    min_count = min(map(len, self.samples.values()))
+    min_count = min(map(len, self.samples.values()), default=0)
     for path, samples in sorted(self.samples.items()):
       samples = samples[:min_count]
       result[path] = Summary.average(samples)

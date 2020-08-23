@@ -18,6 +18,8 @@
 //! There are a few differences:
 //! - `p.x` automatically dereferences a pointer type `p`
 //! - `*` is not used for pointer dereferencing. Instead you can use `[0]`, `->`, or `.`
+//! - `?` denotes that a pointer may be null (or another invalid address). If so, the entire
+//!   expression returns `Value::Null`. If `?` is not used, an error is thrown instead.
 
 pub use cache::*;
 pub use data_path::*;

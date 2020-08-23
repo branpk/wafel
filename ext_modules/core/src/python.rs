@@ -176,7 +176,6 @@ impl PyPipeline {
     /// If the variable is a data variable, the value will be read from memory
     /// on the variable's frame.
     pub fn read(&self, py: Python<'_>, variable: &PyVariable) -> PyResult<PyObject> {
-        // FIXME: Null pointers
         let value = self.get().pipeline.read(&variable.variable)?;
         let py_object = value_to_py_object(py, &value)?;
         Ok(py_object)
@@ -204,10 +203,12 @@ impl PyPipeline {
     }
 
     /// Get the address for the given path.
-    pub fn path_address(&self, frame: u32, path: &str) -> PyResult<PyAddress> {
+    ///
+    /// None is only returned if `?` is used in the path.
+    pub fn path_address(&self, frame: u32, path: &str) -> PyResult<Option<PyAddress>> {
         let state = self.get().pipeline.timeline().frame(frame)?;
-        let address = state.address(path)?;
-        Ok(PyAddress { address })
+        let address = state.address(path)?.map(|address| PyAddress { address });
+        Ok(address)
     }
 
     /// Read from the given path.
@@ -647,6 +648,7 @@ impl PyEditRange {
 
 fn value_to_py_object(py: Python<'_>, value: &Value) -> PyResult<PyObject> {
     match value {
+        Value::Null => Ok(py.None()),
         Value::Int(n) => Ok(n.to_object(py)),
         Value::Float(r) => Ok(r.to_object(py)),
         Value::String(s) => Ok(s.to_object(py)),
@@ -671,7 +673,9 @@ fn value_to_py_object(py: Python<'_>, value: &Value) -> PyResult<PyObject> {
 }
 
 fn py_object_to_value(py: Python<'_>, value: &PyObject) -> PyResult<Value> {
-    if let Ok(long_value) = value.cast_as::<PyLong>(py) {
+    if value.is_none(py) {
+        Ok(Value::Null)
+    } else if let Ok(long_value) = value.cast_as::<PyLong>(py) {
         Ok(Value::Int(long_value.extract()?))
     } else if let Ok(float_value) = value.cast_as::<PyFloat>(py) {
         Ok(Value::Float(float_value.extract()?))

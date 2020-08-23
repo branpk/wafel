@@ -20,8 +20,6 @@ pub enum DllErrorCause {
     MissingSegment { name: String },
     #[display(fmt = "overlapping DLL segments: {} and {}", name1, name2)]
     OverlappingSegments { name1: String, name2: String },
-    #[display(fmt = "address outside of DLL bounds: {}", address)]
-    InvalidAddress { address: String },
 }
 
 pub type LayoutError = WithContext<LayoutErrorCause>;
