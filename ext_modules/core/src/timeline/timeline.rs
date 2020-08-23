@@ -49,11 +49,11 @@ impl<M: Memory, C: Controller<M>> Timeline<M, C> {
     }
 
     /// Get a mutable reference to the controller.
-    ///
-    /// `invalidated_frame` should be the first frame whose state may change
-    /// as a result of mutations to the controller.
-    pub fn controller_mut(&mut self, invalidated_frame: u32) -> &mut C {
-        self.slot_manager.controller_mut(invalidated_frame)
+    pub fn with_controller_mut(&mut self, func: impl FnOnce(&mut C) -> InvalidatedFrames) {
+        let invalidated_frames = func(self.slot_manager.controller_mut());
+        if let InvalidatedFrames::StartingAt(frame) = invalidated_frames {
+            self.slot_manager.invalidate_frame(frame);
+        }
     }
 
     /// Get a slot containing the state for a given frame.
@@ -115,5 +115,38 @@ impl<M: Memory, C: Controller<M>> Timeline<M, C> {
     /// Return the set of currently loaded frames for debugging purposes.
     pub fn cached_frames(&self) -> Vec<u32> {
         self.slot_manager.cached_frames()
+    }
+}
+
+/// A set of frames that should be invalidated after a controller mutation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[must_use]
+pub enum InvalidatedFrames {
+    /// Invalidate states at and after the given frame.
+    StartingAt(u32),
+    /// No frames need to be invalidated.
+    None,
+}
+
+impl InvalidatedFrames {
+    /// Set `self` to None.
+    pub fn clear(&mut self) {
+        *self = InvalidatedFrames::None;
+    }
+
+    /// Include `frame` in the set.
+    pub fn include(&mut self, frame: u32) {
+        match self {
+            Self::StartingAt(prev_frame) => *prev_frame = frame.min(*prev_frame),
+            Self::None => *self = Self::StartingAt(frame),
+        }
+    }
+
+    /// The union of two sets of frames.
+    pub fn union(mut self, other: Self) -> Self {
+        if let Self::StartingAt(frame) = other {
+            self.include(frame);
+        }
+        self
     }
 }

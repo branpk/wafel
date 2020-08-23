@@ -1,7 +1,7 @@
 //! Implementation of range editing (drag and drop in the frame sheet).
 
 use super::Variable;
-use crate::{error::Error, memory::Value};
+use crate::{memory::Value, timeline::InvalidatedFrames};
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
@@ -53,46 +53,47 @@ impl RangeEdits {
     /// If the cell is in an edit range, the entire edit range is given the
     /// value.
     /// Otherwise a new range containing only the cell is created.
-    pub fn write(&mut self, variable: &Variable, value: Value) -> Result<(), Error> {
-        self.rollback_drag();
+    pub fn write(&mut self, column: &Variable, frame: u32, value: Value) -> InvalidatedFrames {
+        let invalidated = self.rollback_drag();
 
-        let ranges = self.ranges.entry(variable.without_frame()).or_default();
-        ranges.set_value_or_create_range(
-            variable.try_frame()?,
+        let ranges = self.ranges.entry(column.without_frame()).or_default();
+        invalidated.union(ranges.set_value_or_create_range(
+            frame,
             value,
             range_id_generator(&mut self.next_range_id),
-        );
-
-        Ok(())
+        ))
     }
 
     /// Reset the value for a given cell.
     ///
     /// If the cell is in an edit range, the edit range is split into two.
-    pub fn reset(&mut self, _variable: &Variable) -> Result<(), Error> {
-        self.rollback_drag();
-
+    pub fn reset(&mut self, _column: &Variable, _frame: u32) -> InvalidatedFrames {
+        let mut _invalidated = self.rollback_drag();
         todo!()
     }
 
     /// Insert a frame, shifting all lower rows downward.
-    pub fn insert_frame(&mut self, frame: u32) {
-        self.rollback_drag();
+    pub fn insert_frame(&mut self, frame: u32) -> InvalidatedFrames {
+        let invalidated = self.rollback_drag();
         for range in self.ranges.values_mut() {
             range.insert(frame, 1);
         }
+        invalidated.union(InvalidatedFrames::StartingAt(frame))
     }
 
     /// Delete a frame, shifting all lower frames upward.
-    pub fn delete_frame(&mut self, frame: u32) {
-        self.rollback_drag();
+    pub fn delete_frame(&mut self, frame: u32) -> InvalidatedFrames {
+        let invalidated = self.rollback_drag();
         for range in self.ranges.values_mut() {
             range.remove(frame, 1);
         }
+        invalidated.union(InvalidatedFrames::StartingAt(frame))
     }
 
-    fn find_range(&self, column: &Variable, frame: u32) -> Option<&EditRange> {
-        self.ranges.get(column).and_then(|ranges| {
+    /// Find the edit range containing a cell.
+    pub fn find_range(&self, column: &Variable, frame: u32) -> Option<&EditRange> {
+        let ranges = self.ranges.get(&column.without_frame());
+        ranges.and_then(|ranges| {
             if let Some(drag_state) = &self.drag_state {
                 if &drag_state.column == column {
                     return drag_state.preview.find_range(ranges, frame);
@@ -102,52 +103,55 @@ impl RangeEdits {
         })
     }
 
-    /// Find the edit range containing a cell.
-    pub fn find_variable_range(&self, variable: &Variable) -> Result<Option<&EditRange>, Error> {
-        Ok(self.find_range(&variable.without_frame(), variable.try_frame()?))
-    }
-
-    /// Begin a drag operation starting at `source_variable`.
+    /// Begin a drag operation in `column` starting at `source_frame`.
     pub fn begin_drag(
         &mut self,
-        source_variable: &Variable,
+        column: &Variable,
+        source_frame: u32,
         source_value: &Value,
-    ) -> Result<(), Error> {
-        self.rollback_drag();
+    ) -> InvalidatedFrames {
+        let invalidated = self.rollback_drag();
 
         self.drag_state = Some(DragState {
-            column: source_variable.without_frame(),
+            column: column.without_frame(),
             preview: RangeEditPreview::new(
-                source_variable.try_frame()?,
+                source_frame,
                 source_value.clone(),
                 range_id_generator(&mut self.next_range_id),
             ),
         });
 
-        Ok(())
+        invalidated
     }
 
     /// Drag from `source_variable` to `target_frame`.
     ///
     /// The ranges will appear to be updated, but won't be committed until `release_drag` is
     /// called.
-    pub fn update_drag(&mut self, target_frame: u32) {
+    pub fn update_drag(&mut self, target_frame: u32) -> InvalidatedFrames {
         if let Some(DragState { column, preview }) = &mut self.drag_state {
-            let ranges = self.ranges.entry(column.clone()).or_default();
-            preview.update_drag_target(&ranges, target_frame);
+            let ranges = self.ranges.entry(column.without_frame()).or_default();
+            preview.update_drag_target(&ranges, target_frame)
+        } else {
+            InvalidatedFrames::None
         }
     }
 
     /// End the drag operation, committing range changes.
-    pub fn release_drag(&mut self) {
+    pub fn release_drag(&mut self) -> InvalidatedFrames {
         if let Some(DragState { column, preview }) = self.drag_state.take() {
-            let ranges = self.ranges.entry(column.clone()).or_default();
+            let ranges = self.ranges.entry(column.without_frame()).or_default();
             preview.commit(ranges);
         }
+        InvalidatedFrames::None
     }
 
-    fn rollback_drag(&mut self) {
-        self.drag_state = None;
+    fn rollback_drag(&mut self) -> InvalidatedFrames {
+        if let Some(DragState { preview, .. }) = self.drag_state.take() {
+            preview.rollback()
+        } else {
+            InvalidatedFrames::None
+        }
     }
 }
 
@@ -194,10 +198,12 @@ impl Ranges {
         frame: u32,
         value: Value,
         mut gen_range_id: impl FnMut() -> EditRangeId,
-    ) {
+    ) -> InvalidatedFrames {
         match self.find_range_id(frame) {
             Some(range_id) => {
-                self.ranges.get_mut(&range_id).unwrap().value = value;
+                let range = self.ranges.get_mut(&range_id).unwrap();
+                range.value = value;
+                InvalidatedFrames::StartingAt(range.frames.start)
             }
             None => {
                 let range_id = gen_range_id();
@@ -210,6 +216,7 @@ impl Ranges {
                     },
                 );
                 self.ranges_by_frame.insert(frame, range_id);
+                InvalidatedFrames::StartingAt(frame)
             }
         }
     }
@@ -223,12 +230,6 @@ impl Ranges {
             }
         };
 
-        self.ranges_by_frame = self
-            .ranges_by_frame
-            .drain()
-            .map(|(frame, range_id)| (shift(frame), range_id))
-            .collect();
-
         self.ranges = self
             .ranges
             .drain()
@@ -237,6 +238,13 @@ impl Ranges {
                 (range_id, range)
             })
             .collect();
+
+        self.ranges_by_frame.clear();
+        for (range_id, range) in &self.ranges {
+            for frame in range.frames.clone() {
+                self.ranges_by_frame.insert(frame, range_id.clone());
+            }
+        }
     }
 
     fn remove(&mut self, start_frame: u32, count: usize) {
@@ -294,6 +302,8 @@ struct RangeEditPreview {
     ranges_override: HashMap<EditRangeId, EditRange>,
     ranges_by_frame_override: HashMap<u32, Option<EditRangeId>>,
     reserved_range_id: EditRangeId,
+    prev_drag_target: Option<u32>,
+    invalidated_frames: InvalidatedFrames,
 }
 
 impl RangeEditPreview {
@@ -308,12 +318,20 @@ impl RangeEditPreview {
             ranges_override: HashMap::new(),
             ranges_by_frame_override: HashMap::new(),
             reserved_range_id: gen_range_id(),
+            prev_drag_target: None,
+            invalidated_frames: InvalidatedFrames::None,
         }
     }
 
-    fn update_drag_target(&mut self, parent: &Ranges, drag_target: u32) {
+    fn update_drag_target(&mut self, parent: &Ranges, drag_target: u32) -> InvalidatedFrames {
+        if self.prev_drag_target == Some(drag_target) {
+            return InvalidatedFrames::None;
+        }
+        self.prev_drag_target = Some(drag_target);
+
         self.ranges_override.clear();
         self.ranges_by_frame_override.clear();
+        self.invalidated_frames.clear();
 
         match parent.find_range_id(self.drag_source) {
             Some(existing_range_id) => {
@@ -403,6 +421,8 @@ impl RangeEditPreview {
                 }
             }
         }
+
+        self.invalidated_frames
     }
 
     fn range<'a>(&'a self, parent: &'a Ranges, range_id: EditRangeId) -> &'a EditRange {
@@ -463,6 +483,7 @@ impl RangeEditPreview {
         if let Some(parent_range) = parent.try_range(range_id) {
             for frame in parent_range.frames.clone() {
                 self.ranges_by_frame_override.insert(frame, None);
+                self.invalidated_frames.include(frame);
             }
         }
 
@@ -476,6 +497,7 @@ impl RangeEditPreview {
         );
         for frame in frames {
             self.ranges_by_frame_override.insert(frame, Some(range_id));
+            self.invalidated_frames.include(frame);
         }
     }
 
@@ -500,5 +522,16 @@ impl RangeEditPreview {
         }
 
         parent.validate();
+    }
+
+    fn rollback(&self) -> InvalidatedFrames {
+        let mut invalidated_frames = InvalidatedFrames::None;
+        for frame in self.ranges_by_frame_override.keys() {
+            invalidated_frames.include(*frame);
+        }
+        for range in self.ranges_override.values() {
+            invalidated_frames.include(range.frames.start);
+        }
+        invalidated_frames
     }
 }

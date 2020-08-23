@@ -59,15 +59,20 @@ impl<M: Memory> Pipeline<M> {
 
     /// Write a variable.
     pub fn write(&mut self, variable: &Variable, value: &Value) -> Result<(), Error> {
-        let controller = self.controller_mut(variable)?;
-        controller.edits.write(variable, value.clone())?;
+        let column = variable.without_frame();
+        let frame = variable.try_frame()?;
+        self.timeline.with_controller_mut(|controller| {
+            controller.edits.write(&column, frame, value.clone())
+        });
         Ok(())
     }
 
     /// Reset a variable.
     pub fn reset(&mut self, variable: &Variable) -> Result<(), Error> {
-        let controller = self.timeline.controller_mut(variable.try_frame()?);
-        controller.edits.reset(variable)?;
+        let column = variable.without_frame();
+        let frame = variable.try_frame()?;
+        self.timeline
+            .with_controller_mut(|controller| controller.edits.reset(&column, frame));
         Ok(())
     }
 
@@ -77,9 +82,14 @@ impl<M: Memory> Pipeline<M> {
         source_variable: &Variable,
         source_value: &Value,
     ) -> Result<(), Error> {
-        self.controller_mut(source_variable)?
-            .edits
-            .begin_drag(source_variable, source_value)
+        let column = source_variable.without_frame();
+        let source_frame = source_variable.try_frame()?;
+        self.timeline.with_controller_mut(|controller| {
+            controller
+                .edits
+                .begin_drag(&column, source_frame, source_value)
+        });
+        Ok(())
     }
 
     /// Drag from `source_variable` to `target_frame`.
@@ -88,33 +98,35 @@ impl<M: Memory> Pipeline<M> {
     /// called.
     pub fn update_drag(&mut self, target_frame: u32) {
         // FIXME: Check frame invalidation for all methods - and avoid unnecessary invalidation
-        let controller = self.timeline.controller_mut(target_frame);
-        controller.edits.update_drag(target_frame);
+        self.timeline
+            .with_controller_mut(|controller| controller.edits.update_drag(target_frame));
     }
 
     /// End the drag operation, committing range changes.
     pub fn release_drag(&mut self) {
         // FIXME: Invalidation
-        let controller = self.timeline.controller_mut(1000000);
-        controller.edits.release_drag();
+        self.timeline
+            .with_controller_mut(|controller| controller.edits.release_drag());
     }
 
     /// Find the edit range containing a variable, if present.
     pub fn find_edit_range(&self, variable: &Variable) -> Result<Option<&EditRange>, Error> {
         let controller = self.timeline.controller();
-        controller.edits.find_variable_range(variable)
+        Ok(controller
+            .edits
+            .find_range(&variable.without_frame(), variable.try_frame()?))
     }
 
     /// Insert a new state at the given frame, shifting edits forward.
     pub fn insert_frame(&mut self, frame: u32) {
-        let controller = self.timeline.controller_mut(frame);
-        controller.edits.insert_frame(frame);
+        self.timeline
+            .with_controller_mut(|controller| controller.edits.insert_frame(frame));
     }
 
     /// Delete the state at the given frame, shifting edits backward.
     pub fn delete_frame(&mut self, frame: u32) {
-        let controller = self.timeline.controller_mut(frame);
-        controller.edits.delete_frame(frame);
+        self.timeline
+            .with_controller_mut(|controller| controller.edits.delete_frame(frame));
     }
 
     /// Get the data variables for this pipeline.
@@ -130,18 +142,6 @@ impl<M: Memory> Pipeline<M> {
     /// Get the timeline for this pipeline.
     pub fn timeline_mut(&mut self) -> &mut Timeline<M, SM64Controller> {
         &mut self.timeline
-    }
-
-    fn controller_mut(&mut self, variable: &Variable) -> Result<&mut SM64Controller, Error> {
-        let range = self
-            .timeline
-            .controller()
-            .edits
-            .find_variable_range(variable)?;
-        let range_min = range
-            .map(|range| range.frames.start)
-            .unwrap_or(variable.try_frame()?);
-        Ok(self.timeline.controller_mut(range_min))
     }
 }
 

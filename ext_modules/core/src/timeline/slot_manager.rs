@@ -389,12 +389,11 @@ impl<M: Memory, C: Controller<M>> SlotManager<M, C> {
         &self.controller
     }
 
-    pub fn controller_mut(&mut self, invalidated_frame: u32) -> &mut C {
-        self.invalidate_frame(invalidated_frame);
+    pub fn controller_mut(&mut self) -> &mut C {
         &mut self.controller
     }
 
-    fn invalidate_frame(&mut self, invalidated_frame: u32) {
+    pub fn invalidate_frame(&mut self, invalidated_frame: u32) {
         for slot in self.slots.get_mut().iter_mut() {
             if let Frame::At(slot_frame) = slot.frame {
                 if slot_frame >= invalidated_frame {
