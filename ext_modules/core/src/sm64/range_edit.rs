@@ -452,7 +452,9 @@ impl RangeEditPreview {
             let existing_range = parent.range(existing_range_id);
 
             // Reset near top of range
-            if self.drag_source < existing_range.frames.start + 2 {
+            if self.drag_source
+                < existing_range.frames.start + (existing_range.frames.len() / 2) as u32
+            {
                 self.set_range(
                     parent,
                     existing_range_id,
