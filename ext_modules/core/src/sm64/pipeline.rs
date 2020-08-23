@@ -71,6 +71,7 @@ impl<M: Memory> Pipeline<M> {
         Ok(())
     }
 
+    /// Begin a drag operation starting at `source_variable`.
     pub fn begin_drag(
         &mut self,
         source_variable: &Variable,
@@ -81,18 +82,24 @@ impl<M: Memory> Pipeline<M> {
             .begin_drag(source_variable, source_value)
     }
 
+    /// Drag from `source_variable` to `target_frame`.
+    ///
+    /// The ranges will appear to be updated, but won't be committed until `release_drag` is
+    /// called.
     pub fn update_drag(&mut self, target_frame: u32) {
         // FIXME: Check frame invalidation for all methods - and avoid unnecessary invalidation
         let controller = self.timeline.controller_mut(target_frame);
         controller.edits.update_drag(target_frame);
     }
 
+    /// End the drag operation, committing range changes.
     pub fn release_drag(&mut self) {
         // FIXME: Invalidation
         let controller = self.timeline.controller_mut(1000000);
         controller.edits.release_drag();
     }
 
+    /// Find the edit range containing a variable, if present.
     pub fn find_edit_range(&self, variable: &Variable) -> Result<Option<&EditRange>, Error> {
         let controller = self.timeline.controller();
         controller.edits.find_variable_range(variable)

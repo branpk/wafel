@@ -4,7 +4,7 @@
 use crate::{
     dll,
     error::{Error, ErrorCause},
-    memory::{ConstantSource, IntValue, Memory, Value},
+    memory::{Memory, Value},
     sm64::{
         frame_log, load_dll_pipeline, object_behavior, object_path, EditRange, ObjectBehavior,
         ObjectSlot, Pipeline, SM64ErrorCause, SurfaceSlot, Variable,
@@ -21,7 +21,6 @@ use pyo3::{
 };
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
-    convert::TryFrom,
     fmt::Debug,
     hash::{Hash, Hasher},
     sync::Mutex,
@@ -198,6 +197,7 @@ impl PyPipeline {
         self.get_mut().pipeline.delete_frame(frame);
     }
 
+    /// Begin a drag operation starting at `source_variable`.
     pub fn begin_drag(
         &mut self,
         py: Python<'_>,
@@ -211,14 +211,20 @@ impl PyPipeline {
         Ok(())
     }
 
+    /// Drag from `source_variable` to `target_frame`.
+    ///
+    /// The ranges will appear to be updated, but won't be committed until `release_drag` is
+    /// called.
     pub fn update_drag(&mut self, target_frame: u32) {
         self.get_mut().pipeline.update_drag(target_frame);
     }
 
+    /// End the drag operation, committing range changes.
     pub fn release_drag(&mut self) {
         self.get_mut().pipeline.release_drag();
     }
 
+    /// Find the edit range containing a variable, if present.
     pub fn find_edit_range(&self, variable: &PyVariable) -> PyResult<Option<PyEditRange>> {
         let range = self.get().pipeline.find_edit_range(&variable.variable)?;
         Ok(range.cloned().map(|range| PyEditRange { range }))
@@ -551,6 +557,7 @@ pub struct PyAddress {
     address: dll::Address,
 }
 
+/// Information about a variable edit range.
 #[pyclass(name = EditRange)]
 #[derive(Debug)]
 pub struct PyEditRange {
@@ -559,21 +566,25 @@ pub struct PyEditRange {
 
 #[pymethods]
 impl PyEditRange {
+    /// The id of the range.
     #[getter]
     pub fn id(&self) -> usize {
         self.range.id.0
     }
 
+    /// The start frame of the range (inclusive).
     #[getter]
     pub fn start(&self) -> u32 {
         self.range.frames.start
     }
 
+    /// The end frame of the range (exclusive).
     #[getter]
     pub fn end(&self) -> u32 {
         self.range.frames.end
     }
 
+    /// The value that is applied to the range.
     #[getter]
     pub fn value(&self, py: Python<'_>) -> PyResult<PyObject> {
         value_to_py_object(py, &self.range.value)

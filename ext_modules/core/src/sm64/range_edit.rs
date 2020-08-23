@@ -1,3 +1,5 @@
+//! Implementation of range editing (drag and drop in the frame sheet).
+
 use super::Variable;
 use crate::{error::Error, memory::Value};
 use std::{
