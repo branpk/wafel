@@ -20,14 +20,12 @@ pub struct EditRange {
 pub struct RangeEdits {
     ranges: HashMap<Variable, Ranges>,
     drag_state: Option<DragState>,
+    next_range_id: usize,
 }
 
 impl RangeEdits {
     pub fn new() -> Self {
-        Self {
-            ranges: HashMap::new(),
-            drag_state: None,
-        }
+        Default::default()
     }
 
     pub fn edits(&self, frame: u32) -> Vec<(&Variable, &Value)> {
@@ -43,11 +41,12 @@ impl RangeEdits {
     pub fn write(&mut self, variable: &Variable, value: Value) -> Result<(), Error> {
         self.rollback_drag();
 
-        let column = variable.without_frame();
-        let frame = variable.try_frame()?;
-
-        let ranges = self.ranges.entry(column.clone()).or_default();
-        ranges.set_value_or_create_range(frame, value);
+        let ranges = self.ranges.entry(variable.without_frame()).or_default();
+        ranges.set_value_or_create_range(
+            variable.try_frame()?,
+            value,
+            range_id_generator(&mut self.next_range_id),
+        );
 
         Ok(())
     }
@@ -94,15 +93,12 @@ impl RangeEdits {
     ) -> Result<(), Error> {
         self.rollback_drag();
 
-        let column = source_variable.without_frame();
-        let ranges = self.ranges.entry(column.clone()).or_default();
-
         self.drag_state = Some(DragState {
-            column,
+            column: source_variable.without_frame(),
             preview: RangeEditPreview::new(
-                ranges,
                 source_variable.try_frame()?,
                 source_value.clone(),
+                range_id_generator(&mut self.next_range_id),
             ),
         });
 
@@ -128,6 +124,14 @@ impl RangeEdits {
     }
 }
 
+fn range_id_generator<'a>(next_range_id: &'a mut usize) -> impl FnMut() -> EditRangeId + 'a {
+    move || {
+        let range_id = EditRangeId(*next_range_id);
+        *next_range_id += 1;
+        range_id
+    }
+}
+
 #[derive(Debug)]
 struct DragState {
     column: Variable,
@@ -138,7 +142,6 @@ struct DragState {
 struct Ranges {
     ranges: HashMap<EditRangeId, EditRange>,
     ranges_by_frame: HashMap<u32, EditRangeId>,
-    next_range_id: usize,
 }
 
 impl Ranges {
@@ -159,13 +162,18 @@ impl Ranges {
             .map(|range_id| self.range(range_id))
     }
 
-    fn set_value_or_create_range(&mut self, frame: u32, value: Value) {
+    fn set_value_or_create_range(
+        &mut self,
+        frame: u32,
+        value: Value,
+        mut gen_range_id: impl FnMut() -> EditRangeId,
+    ) {
         match self.find_range_id(frame) {
             Some(range_id) => {
                 self.ranges.get_mut(&range_id).unwrap().value = value;
             }
             None => {
-                let range_id = self.reserve_range_id();
+                let range_id = gen_range_id();
                 self.ranges.insert(
                     range_id,
                     EditRange {
@@ -238,12 +246,6 @@ impl Ranges {
             .collect();
     }
 
-    fn reserve_range_id(&mut self) -> EditRangeId {
-        let range_id = EditRangeId(self.next_range_id);
-        self.next_range_id += 1;
-        range_id
-    }
-
     fn validate(&self) {
         for (range_id, range) in &self.ranges {
             assert!(!range.frames.is_empty());
@@ -268,13 +270,17 @@ struct RangeEditPreview {
 }
 
 impl RangeEditPreview {
-    fn new(parent: &mut Ranges, drag_source: u32, source_value: Value) -> Self {
+    fn new(
+        drag_source: u32,
+        source_value: Value,
+        mut gen_range_id: impl FnMut() -> EditRangeId,
+    ) -> Self {
         Self {
             drag_source,
             source_value,
             ranges_override: HashMap::new(),
             ranges_by_frame_override: HashMap::new(),
-            reserved_range_id: parent.reserve_range_id(),
+            reserved_range_id: gen_range_id(),
         }
     }
 
