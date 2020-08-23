@@ -7,7 +7,7 @@ use crate::{
     dll,
     error::Error,
     memory::{Memory, Value},
-    timeline::{Controller, SlotStateMut, Timeline},
+    timeline::{Controller, InvalidatedFrames, SlotStateMut, Timeline},
 };
 
 /// SM64 controller implementation.
@@ -49,6 +49,20 @@ impl<M: Memory> Pipeline<M> {
     /// Create a new pipeline over the given timeline.
     pub fn new(timeline: Timeline<M, SM64Controller>) -> Self {
         Self { timeline }
+    }
+
+    /// Destroy the pipeline, returning its variable edits.
+    pub fn into_edits(self) -> Result<RangeEdits, Error> {
+        let (_, _, controller) = self.timeline.into_parts()?;
+        Ok(controller.edits)
+    }
+
+    /// Overwrite all edits with the given edits.
+    pub fn set_edits(&mut self, edits: RangeEdits) {
+        self.timeline.with_controller_mut(|controller| {
+            controller.edits = edits;
+            InvalidatedFrames::StartingAt(0)
+        })
     }
 
     /// Read a variable.

@@ -22,10 +22,22 @@ class Model:
     self.input_up_yaw: Optional[int] = None
 
   def load(self, game_version: str, edits: Dict[Variable, object]) -> None:
+    selected_frame = 1580 if config.dev_mode else 0
+    self._load_game_version(game_version, selected_frame)
+    self._set_edits(edits)
+
+  def change_version(self, game_version: str) -> None:
+    self._load_game_version(game_version, self._selected_frame, self.pipeline)
+
+  def _load_game_version(self, game_version: str, selected_frame: int, prev_pipeline: Pipeline = None) -> None:
     self.game_version = game_version
 
     dll_path = os.path.join(config.lib_directory, 'libsm64', 'sm64_' + game_version + '.dll')
-    self.pipeline = Pipeline.load(dll_path)
+    if prev_pipeline:
+      self.pipeline = Pipeline.load_reusing_edits(dll_path, prev_pipeline)
+    else:
+      self.pipeline = Pipeline.load(dll_path)
+
     self.action_names = self.pipeline.action_names()
 
     def base_pointer(path: str) -> int:
@@ -33,20 +45,7 @@ class Model:
       return self.pipeline.address_to_base_pointer(0, address)
     c_util.init(base_pointer)
 
-    self._set_edits(edits)
-
-  def change_version(self, game_version: str) -> None:
-    raise NotImplementedError # FIXME
-    self.load(game_version, self.edits)
-
-  def _set_edits(self, edits: Dict[Variable, object]) -> None:
-    for variable, value in edits.items():
-      self.pipeline.write(variable, value)
-    self._max_frame = max((variable.frame or 0 for variable in edits), default=0)
-
-    self._selected_frame = 0
-    if config.dev_mode:
-      self._selected_frame = 1580
+    self._selected_frame = selected_frame
     self.selected_frame_callbacks: List[Callable[[int], None]] = []
 
     self.play_speed = 0.0
@@ -56,6 +55,11 @@ class Model:
       self.pipeline.set_hotspot('selected-frame', frame)
     self.on_selected_frame_change(set_hotspot)
     set_hotspot(self._selected_frame)
+
+  def _set_edits(self, edits: Dict[Variable, object]) -> None:
+    for variable, value in edits.items():
+      self.pipeline.write(variable, value)
+    self._max_frame = max((variable.frame or 0 for variable in edits), default=0)
 
   # FrameSequence
 

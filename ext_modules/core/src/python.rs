@@ -131,6 +131,36 @@ impl PyPipeline {
         Ok(pipeline_py)
     }
 
+    /// Load a new pipeline using the given DLL, reusing the edits of the given pipeline.
+    ///
+    /// This method invalidates `prev_pipeline`.
+    ///
+    /// # Safety
+    ///
+    /// See `PyPipeline::load`.
+    #[staticmethod]
+    pub unsafe fn load_reusing_edits(
+        py: Python<'_>,
+        dll_path: &str,
+        prev_pipeline: Py<PyPipeline>,
+    ) -> PyResult<Py<Self>> {
+        let edits = prev_pipeline
+            .borrow_mut(py)
+            .invalidate()
+            .expect("pipeline has been invalidated")
+            .pipeline
+            .into_edits()?;
+
+        let py_pipeline = Self::load(py, dll_path)?;
+        py_pipeline
+            .borrow_mut(py)
+            .get_mut()
+            .pipeline
+            .set_edits(edits);
+
+        Ok(py_pipeline)
+    }
+
     /// Print the data layout to a string for debugging.
     pub fn dump_layout(&self) -> String {
         self.get()
@@ -146,6 +176,7 @@ impl PyPipeline {
     /// If the variable is a data variable, the value will be read from memory
     /// on the variable's frame.
     pub fn read(&self, py: Python<'_>, variable: &PyVariable) -> PyResult<PyObject> {
+        // FIXME: Null pointers
         let value = self.get().pipeline.read(&variable.variable)?;
         let py_object = value_to_py_object(py, &value)?;
         Ok(py_object)

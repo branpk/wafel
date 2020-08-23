@@ -22,6 +22,7 @@ COUNTRY_CODES = {
 
 
 def save_m64(filename: str, metadata: TasMetadata, reader: VariableReader, length: int) -> None:
+  # FIXME: Saving to m64
   with open(filename, 'wb') as f:
     # TODO: Remove blank frames at end
     f.write(b'\x4d\x36\x34\x1a')
