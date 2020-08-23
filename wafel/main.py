@@ -686,7 +686,7 @@ def run() -> None:
         frame_count.value = 0
         log.info(
           f'mspf: {int(1000 / fps.value * 10) / 10} ({int(fps.value)} fps)'
-          # f'cache={model.timeline.data_cache.get_size() // 1024}KB'
+          f' - cache={model.pipeline.data_cache_size() // 1024}KB'
         )
 
       log.timer.begin('balance')

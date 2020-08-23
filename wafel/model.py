@@ -53,6 +53,7 @@ class Model:
 
     def set_hotspot(frame: int) -> None:
       self.pipeline.set_hotspot('selected-frame', frame)
+      self.pipeline.set_hotspot('selected-frame-lookahead', frame + 60)
     self.on_selected_frame_change(set_hotspot)
     set_hotspot(self._selected_frame)
 

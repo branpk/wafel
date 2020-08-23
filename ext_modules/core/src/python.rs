@@ -51,7 +51,7 @@ impl From<Error> for PyErr {
     }
 }
 
-const NUM_BACKUP_SLOTS: usize = 20;
+const NUM_BACKUP_SLOTS: usize = 30;
 
 lazy_static! {
     static ref VALID_PIPELINES: Mutex<Vec<Py<PyPipeline>>> = Mutex::new(Vec::new());
@@ -292,6 +292,11 @@ impl PyPipeline {
     /// Return the number of slot copies since the timeline was created.
     pub fn num_copies(&self) -> usize {
         self.get().pipeline.timeline().num_copies()
+    }
+
+    /// Return the size of the data cache in bytes.
+    pub fn data_cache_size(&self) -> usize {
+        self.get().pipeline.timeline().data_size_cache()
     }
 
     /// Return the label for the variable if it has one.

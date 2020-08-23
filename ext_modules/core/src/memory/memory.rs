@@ -209,7 +209,7 @@ pub trait Memory: Sized {
                     })
                     .collect::<Result<_, Error>>()?;
                 Value::Struct {
-                    fields: field_values,
+                    fields: Box::new(field_values),
                 }
             }
             DataType::Array {

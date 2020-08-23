@@ -58,6 +58,11 @@ impl GlobalDataPath {
         Ok(compile::data_path(memory, source)?.into_global()?)
     }
 
+    /// Get the source for the path.
+    pub fn source(&self) -> &str {
+        &self.0.source
+    }
+
     /// Concatenate a global and local path.
     ///
     /// An error will be returned if the result type of `self` doesn't match the root type

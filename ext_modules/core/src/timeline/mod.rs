@@ -3,6 +3,7 @@
 pub use state::*;
 pub use timeline::*;
 
+mod data_cache;
 mod slot_manager;
 mod slot_state_impl;
 mod state;

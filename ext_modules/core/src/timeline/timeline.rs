@@ -1,6 +1,10 @@
-use super::{slot_manager::SlotManager, SlotState, SlotStateMut, State};
-use crate::{error::Error, memory::Memory};
-use std::time::Duration;
+use super::{data_cache::DataCache, slot_manager::SlotManager, SlotState, SlotStateMut, State};
+use crate::{
+    data_path::GlobalDataPath,
+    error::Error,
+    memory::{Memory, Value},
+};
+use std::{cell::RefCell, time::Duration};
 
 /// Applies edits at the end of each frame to control the simulation.
 pub trait Controller<M: Memory> {
@@ -12,6 +16,7 @@ pub trait Controller<M: Memory> {
 #[derive(Debug)]
 pub struct Timeline<M: Memory, C: Controller<M>> {
     slot_manager: SlotManager<M, C>,
+    data_cache: RefCell<DataCache>,
 }
 
 impl<M: Memory, C: Controller<M>> Timeline<M, C> {
@@ -28,6 +33,7 @@ impl<M: Memory, C: Controller<M>> Timeline<M, C> {
     ) -> Result<Self, Error> {
         Ok(Self {
             slot_manager: SlotManager::new(memory, base_slot, controller, num_backup_slots)?,
+            data_cache: RefCell::new(DataCache::new()),
         })
     }
 
@@ -53,19 +59,41 @@ impl<M: Memory, C: Controller<M>> Timeline<M, C> {
         let invalidated_frames = func(self.slot_manager.controller_mut());
         if let InvalidatedFrames::StartingAt(frame) = invalidated_frames {
             self.slot_manager.invalidate_frame(frame);
+            self.data_cache.borrow_mut().invalidate_frame(frame);
         }
     }
 
-    /// Get a slot containing the state for a given frame.
-    ///
-    /// This method takes `&self` to be semantically correct, but it currently
-    /// doesn't support overlapping calls due to the way the internal caching works.
-    ///
-    /// # Panics
-    ///
-    /// Panics if a different `State` is still in scope when this method is called.
-    pub fn frame<'a>(&'a self, frame: u32) -> Result<impl State<Memory = M> + 'a, Error> {
+    fn frame_uncached<'a>(&'a self, frame: u32) -> Result<impl State<Memory = M> + 'a, Error> {
         self.slot_manager.frame(frame)
+    }
+
+    /// Get the state for a given frame.
+    ///
+    /// Generally, only one state should be kept alive at a time. Accessing one of the states
+    /// may result in a panic.
+    pub fn frame<'a>(&'a self, frame: u32) -> Result<impl State<Memory = M> + 'a, Error> {
+        Ok(TimelineState {
+            timeline: self,
+            frame,
+        })
+    }
+
+    fn path_read_cached(&self, frame: u32, path: &GlobalDataPath) -> Result<Value, Error> {
+        let cached_value = self.data_cache.borrow_mut().get(frame, path);
+        match cached_value {
+            Some(value) => Ok(value),
+            None => {
+                let state = self.frame_uncached(frame)?;
+                let mut data_cache = self.data_cache.borrow_mut();
+
+                data_cache.preload_frame(&state);
+
+                let value = state.path_read(path)?;
+                data_cache.insert(frame, path, value.clone());
+
+                Ok(value)
+            }
+        }
     }
 
     /// Get an immutable view of the base slot.
@@ -75,7 +103,7 @@ impl<M: Memory, C: Controller<M>> Timeline<M, C> {
     ///
     /// # Panics
     ///
-    /// See the `frame` method documentation.
+    /// Panics if another slot is requested while this one is still held.
     pub fn base_slot<'a>(&'a self, frame: u32) -> Result<impl SlotState<Memory = M> + 'a, Error> {
         self.slot_manager.base_slot(frame)
     }
@@ -126,6 +154,11 @@ impl<M: Memory, C: Controller<M>> Timeline<M, C> {
     pub fn num_copies(&self) -> usize {
         self.slot_manager.num_copies()
     }
+
+    /// Return the size of the data cache in bytes.
+    pub fn data_size_cache(&self) -> usize {
+        self.data_cache.borrow().byte_size()
+    }
 }
 
 /// A set of frames that should be invalidated after a controller mutation.
@@ -158,5 +191,35 @@ impl InvalidatedFrames {
             self.include(frame);
         }
         self
+    }
+}
+
+#[derive(Debug)]
+struct TimelineState<'a, M: Memory, C: Controller<M>> {
+    timeline: &'a Timeline<M, C>,
+    frame: u32,
+}
+
+impl<'a, M: Memory, C: Controller<M>> State for TimelineState<'a, M, C> {
+    type Memory = M;
+
+    fn memory(&self) -> &Self::Memory {
+        self.timeline.memory()
+    }
+
+    fn frame(&self) -> u32 {
+        self.frame
+    }
+
+    fn path_address(&self, path: &GlobalDataPath) -> Result<Option<M::Address>, Error> {
+        // Uncached for now (could also skip frame request in common case)
+        Ok(self
+            .timeline
+            .frame_uncached(self.frame)?
+            .path_address(path)?)
+    }
+
+    fn path_read(&self, path: &GlobalDataPath) -> Result<Value, Error> {
+        self.timeline.path_read_cached(self.frame, path)
     }
 }

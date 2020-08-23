@@ -30,7 +30,7 @@ pub enum Value {
         ///
         /// If a field's name is present in the original struct definition, it will match the
         /// name used here. Anonymous fields will be given a name, typically `__anon`.
-        fields: HashMap<String, Value>,
+        fields: Box<HashMap<String, Value>>,
     },
     /// An array value.
     #[display(fmt = "{}", "display_array(_0)")]
