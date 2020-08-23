@@ -41,7 +41,7 @@ class Model:
     self.action_names = self.pipeline.action_names()
 
     def base_pointer(path: str) -> int:
-      address = self.pipeline.path_address(0, path)
+      address = assert_not_none(self.pipeline.path_address(0, path))
       return self.pipeline.address_to_base_pointer(0, address)
     c_util.init(base_pointer)
 

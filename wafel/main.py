@@ -726,8 +726,8 @@ def run() -> None:
 
     try:
       if hasattr(model, 'pipeline'):
-        log.timer.get_num_copies = model.pipeline.num_copies
-        log.timer.get_num_updates = model.pipeline.num_advances
+        log.timer.get_num_copies = lambda: model.pipeline.num_copies()
+        log.timer.get_num_updates = lambda: model.pipeline.num_advances()
 
       log.timer.begin_frame()
       ig.try_render(lambda: do_render(id))

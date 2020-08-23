@@ -347,6 +347,7 @@ def render_game_view_in_game(
   camera = use_rotational_camera(framebuffer_size, model)
   model.rotational_camera_yaw = int(camera.yaw * 0x8000 / math.pi)
 
+  # FIXME: In-game view
   # Invalidate frame to ensure no rendering state gets copied to other slots
   prev_frame = max(model.selected_frame - 1, 0)
   with model.timeline.request_base(prev_frame, invalidate=True) as state:
