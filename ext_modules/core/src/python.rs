@@ -39,9 +39,9 @@ fn core(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
 
 #[allow(missing_docs)]
 mod wafel_error {
-    use pyo3::{create_exception, exceptions::Exception};
+    use pyo3::{create_exception, exceptions};
 
-    create_exception!(wafel, WafelError, Exception);
+    create_exception!(wafel, WafelError, exceptions::Exception);
 }
 use wafel_error::*;
 
