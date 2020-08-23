@@ -7,7 +7,6 @@ pub use util::*;
 pub use variable::*;
 
 mod data_variables;
-mod direct_edits;
 mod error;
 mod layout_extensions;
 mod pipeline;
