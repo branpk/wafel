@@ -579,7 +579,7 @@ impl MemoryTrait for Memory {
     }
 
     fn classify_address(&self, address: &Self::Address) -> Result<ClassifiedAddress<Self>, Error> {
-        let offset = address.0.wrapping_offset_from(self.base_pointer) as usize;
+        let offset = (address.0 as usize).wrapping_sub(self.base_pointer as usize);
         if offset >= self.base_size {
             Err(DllErrorCause::InvalidAddress {
                 address: address.to_string(),
