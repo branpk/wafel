@@ -6,8 +6,8 @@ use crate::{
     error::{Error, ErrorCause},
     memory::{ConstantSource, IntValue, Memory, Value},
     sm64::{
-        frame_log, load_dll_pipeline, object_behavior, object_path, ObjectBehavior, ObjectSlot,
-        Pipeline, SM64ErrorCause, SurfaceSlot, Variable,
+        frame_log, load_dll_pipeline, object_behavior, object_path, EditRange, ObjectBehavior,
+        ObjectSlot, Pipeline, SM64ErrorCause, SurfaceSlot, Variable,
     },
     timeline::{SlotState, State},
 };
@@ -219,8 +219,9 @@ impl PyPipeline {
         self.get_mut().pipeline.release_drag();
     }
 
-    pub fn range_edit_key(&self, variable: &PyVariable) -> PyResult<Option<usize>> {
-        Ok(self.get().pipeline.range_edit_key(&variable.variable)?)
+    pub fn find_edit_range(&self, variable: &PyVariable) -> PyResult<Option<PyEditRange>> {
+        let range = self.get().pipeline.find_edit_range(&variable.variable)?;
+        Ok(range.cloned().map(|range| PyEditRange { range }))
     }
 
     /// Set a hotspot, allowing for faster scrolling near the given frame.
@@ -548,6 +549,35 @@ pub struct PyObjectBehavior {
 #[derive(Debug, Clone)]
 pub struct PyAddress {
     address: dll::Address,
+}
+
+#[pyclass(name = EditRange)]
+#[derive(Debug)]
+pub struct PyEditRange {
+    range: EditRange,
+}
+
+#[pymethods]
+impl PyEditRange {
+    #[getter]
+    pub fn id(&self) -> usize {
+        self.range.id.0
+    }
+
+    #[getter]
+    pub fn start(&self) -> u32 {
+        self.range.frames.start
+    }
+
+    #[getter]
+    pub fn end(&self) -> u32 {
+        self.range.frames.end
+    }
+
+    #[getter]
+    pub fn value(&self, py: Python<'_>) -> PyResult<PyObject> {
+        value_to_py_object(py, &self.range.value)
+    }
 }
 
 fn value_to_py_object(py: Python<'_>, value: &Value) -> PyResult<PyObject> {

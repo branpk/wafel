@@ -6,6 +6,16 @@ use std::{
     ops::Range,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct EditRangeId(pub usize);
+
+#[derive(Debug, Clone)]
+pub struct EditRange {
+    pub id: EditRangeId,
+    pub frames: Range<u32>,
+    pub value: Value,
+}
+
 #[derive(Debug, Default)]
 pub struct RangeEdits {
     ranges: HashMap<Variable, Ranges>,
@@ -73,17 +83,8 @@ impl RangeEdits {
         })
     }
 
-    pub fn range_key(&self, variable: &Variable) -> Result<Option<usize>, Error> {
-        Ok(self
-            .find_range(&variable.without_frame(), variable.try_frame()?)
-            .map(|range| range.id.0))
-    }
-
-    pub fn range_min(&self, variable: &Variable) -> Result<u32, Error> {
-        Ok(self
-            .find_range(&variable.without_frame(), variable.try_frame()?)
-            .map(|range| range.frames.start)
-            .unwrap_or(variable.try_frame()?))
+    pub fn find_variable_range(&self, variable: &Variable) -> Result<Option<&EditRange>, Error> {
+        Ok(self.find_range(&variable.without_frame(), variable.try_frame()?))
     }
 
     pub fn begin_drag(
@@ -131,16 +132,6 @@ impl RangeEdits {
 struct DragState {
     column: Variable,
     preview: RangeEditPreview,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct EditRangeId(usize);
-
-#[derive(Debug, Clone)]
-struct EditRange {
-    id: EditRangeId,
-    frames: Range<u32>,
-    value: Value,
 }
 
 #[derive(Debug, Clone, Default)]

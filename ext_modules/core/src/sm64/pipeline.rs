@@ -1,7 +1,7 @@
 use super::{
     data_variables::DataVariables,
     layout_extensions::{load_constants, load_object_fields},
-    RangeEdits, Variable,
+    EditRange, RangeEdits, Variable,
 };
 use crate::{
     dll,
@@ -93,9 +93,9 @@ impl<M: Memory> Pipeline<M> {
         controller.edits.release_drag();
     }
 
-    pub fn range_edit_key(&self, variable: &Variable) -> Result<Option<usize>, Error> {
+    pub fn find_edit_range(&self, variable: &Variable) -> Result<Option<&EditRange>, Error> {
         let controller = self.timeline.controller();
-        controller.edits.range_key(variable)
+        controller.edits.find_variable_range(variable)
     }
 
     /// Insert a new state at the given frame, shifting edits forward.
@@ -126,7 +126,14 @@ impl<M: Memory> Pipeline<M> {
     }
 
     fn controller_mut(&mut self, variable: &Variable) -> Result<&mut SM64Controller, Error> {
-        let range_min = self.timeline.controller().edits.range_min(variable)?;
+        let range = self
+            .timeline
+            .controller()
+            .edits
+            .find_variable_range(variable)?;
+        let range_min = range
+            .map(|range| range.frames.start)
+            .unwrap_or(variable.try_frame()?);
         Ok(self.timeline.controller_mut(range_min))
     }
 }

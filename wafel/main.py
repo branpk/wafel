@@ -33,6 +33,17 @@ import wafel.config as config
 from wafel.bindings import *
 
 
+RANGE_COLORS = [
+  (0.4, 0.9, 0.0, 0.3),
+  (0.6, 0.4, 0.0, 0.3),
+  (0.4, 0.9, 0.5, 0.3),
+  (0.5, 0.5, 0.5, 0.3),
+  (0.2, 0.6, 0.0, 0.3),
+  (0.7, 0.7, 0.3, 0.3),
+  (0.3, 0.3, 0.7, 0.3),
+]
+
+
 class DragHandler:
   def __init__(self, pipeline: Pipeline) -> None:
     self.pipeline = pipeline
@@ -47,10 +58,13 @@ class DragHandler:
     self.pipeline.release_drag()
 
   def highlight_range(self, variable: Variable) -> Optional[Tuple[range, ig.Color4f]]:
-    key = self.pipeline.range_edit_key(variable)
-    if key is None:
+    edit_range = self.pipeline.find_edit_range(variable)
+    if edit_range is None:
       return None
-    return (range(variable.frame, variable.frame + 1), (0.0, 0.0, 0.5, 1.0))
+    return (
+      range(edit_range.start, edit_range.end),
+      RANGE_COLORS[edit_range.id % len(RANGE_COLORS)],
+    )
 
 
 DEFAULT_FRAME_SHEET_VARS = [
