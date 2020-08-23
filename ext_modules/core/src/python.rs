@@ -198,6 +198,31 @@ impl PyPipeline {
         self.get_mut().pipeline.delete_frame(frame);
     }
 
+    pub fn begin_drag(
+        &mut self,
+        py: Python<'_>,
+        source_variable: &PyVariable,
+        source_value: PyObject,
+    ) -> PyResult<()> {
+        let source_value = py_object_to_value(py, &source_value)?;
+        self.get_mut()
+            .pipeline
+            .begin_drag(&source_variable.variable, &source_value)?;
+        Ok(())
+    }
+
+    pub fn update_drag(&mut self, target_frame: u32) {
+        self.get_mut().pipeline.update_drag(target_frame);
+    }
+
+    pub fn release_drag(&mut self) {
+        self.get_mut().pipeline.release_drag();
+    }
+
+    pub fn range_edit_key(&self, variable: &PyVariable) -> PyResult<Option<usize>> {
+        Ok(self.get().pipeline.range_edit_key(&variable.variable)?)
+    }
+
     /// Set a hotspot, allowing for faster scrolling near the given frame.
     pub fn set_hotspot(&mut self, name: &str, frame: u32) {
         self.get_mut()

@@ -81,10 +81,31 @@ impl RangeEdits {
         })
     }
 
+    fn range(&self, column: &Variable, range_id: RangeId) -> Range<usize> {
+        assert!(column.frame.is_none());
+
+        let ranges = self.ranges.get(&column).unwrap();
+        if let Some(drag_state) = &self.drag_state {
+            if &drag_state.column == column {
+                return drag_state.preview.range(ranges, range_id);
+            }
+        }
+        return ranges.range(range_id);
+    }
+
     pub fn range_key(&self, variable: &Variable) -> Result<Option<usize>, Error> {
         let column = variable.without_frame();
         let frame = variable.try_frame()?;
         Ok(self.find_range(&column, frame).map(|range_id| range_id.0))
+    }
+
+    pub fn range_min(&self, variable: &Variable) -> Result<u32, Error> {
+        let column = variable.without_frame();
+        let frame = variable.try_frame()?;
+        Ok(self
+            .find_range(&column, frame)
+            .map(|range_id| self.range(&column, range_id).start as u32)
+            .unwrap_or(frame))
     }
 
     pub fn begin_drag(
@@ -108,7 +129,7 @@ impl RangeEdits {
         Ok(())
     }
 
-    pub fn update_drag(&mut self, target: usize) {
+    pub fn update_drag(&mut self, target_frame: u32) {
         if let Some(DragState {
             column,
             source_value,
@@ -118,7 +139,7 @@ impl RangeEdits {
             let ranges = self.ranges.entry(column.clone()).or_default();
             let values = self.values.entry(column.clone()).or_default();
 
-            let op = preview.update_drag_target(&ranges, target);
+            let op = preview.update_drag_target(&ranges, target_frame as usize);
 
             // Initialize value of any new ranges
             if let Some(SetRangeValue { range_id, op }) = op {
@@ -219,11 +240,59 @@ impl Ranges {
     }
 
     fn insert(&mut self, start_index: usize, count: usize) {
-        todo!()
+        let shift = |index| {
+            if index >= start_index {
+                index + count
+            } else {
+                index
+            }
+        };
+
+        self.ranges_by_index = self
+            .ranges_by_index
+            .drain()
+            .map(|(index, range_id)| (shift(index), range_id))
+            .collect();
+
+        self.ranges = self
+            .ranges
+            .drain()
+            .map(|(range_id, range)| (range_id, shift(range.start)..shift(range.end - 1) + 1))
+            .collect();
     }
 
     fn remove(&mut self, start_index: usize, count: usize) {
-        todo!()
+        let shift = |index| {
+            if index >= start_index + count {
+                Some(index - count)
+            } else if index >= start_index {
+                None
+            } else {
+                Some(index)
+            }
+        };
+
+        self.ranges_by_index = self
+            .ranges_by_index
+            .drain()
+            .filter_map(|(index, range_id)| shift(index).map(|index| (index, range_id)))
+            .collect();
+
+        self.ranges = self
+            .ranges
+            .drain()
+            .filter_map(|(range_id, range)| {
+                let start = shift(range.start).unwrap_or(start_index);
+                let end = shift(range.end).unwrap_or(start_index);
+                let range = start..end;
+
+                if range.is_empty() {
+                    None
+                } else {
+                    Some((range_id, range))
+                }
+            })
+            .collect();
     }
 
     fn reserve_range_id(&mut self) -> RangeId {
@@ -273,13 +342,17 @@ impl RangeEditPreview {
                 let existing_range = parent.range(existing_range_id);
 
                 // Dragging top of range
-                if existing_range.start == self.drag_source {
+                if existing_range.start == self.drag_source
+                    && (existing_range.len() > 1 || drag_target < self.drag_source)
+                {
                     self.clear_indices_shrink_upward(parent, drag_target..existing_range.start);
                     self.override_range(parent, existing_range_id, drag_target..existing_range.end);
                     None
                 }
                 // Dragging bottom of range
-                else if existing_range.end - 1 == self.drag_source {
+                else if existing_range.end - 1 == self.drag_source
+                    && (existing_range.len() > 1 || drag_target > self.drag_source)
+                {
                     self.clear_indices_shrink_downward(parent, existing_range.end..drag_target + 1);
                     self.override_range(
                         parent,
@@ -403,7 +476,10 @@ impl RangeEditPreview {
             }
         }
 
-        self.ranges_override.insert(range_id, new_range);
+        self.ranges_override.insert(range_id, new_range.clone());
+        for index in new_range {
+            self.ranges_by_index_override.insert(index, Some(range_id));
+        }
     }
 
     fn commit(&self, parent: &mut Ranges) -> HashSet<RangeId> {

@@ -37,16 +37,20 @@ class DragHandler:
   def __init__(self, pipeline: Pipeline) -> None:
     self.pipeline = pipeline
 
-  def drag(self, source: Variable, source_value: object, target_frame: int) -> None:
-    # self.pipeline.range_edit_drag(source, source_value, target_frame)
-    pass
+  def begin_drag(self, source_variable: Variable, source_value: object) -> None:
+    self.pipeline.begin_drag(source_variable, source_value)
 
-  def release(self) -> None:
-    # self.pipeline.range_edit_release()
-    pass
+  def update_drag(self, target_frame: int) -> None:
+    self.pipeline.update_drag(target_frame)
+
+  def release_drag(self) -> None:
+    self.pipeline.release_drag()
 
   def highlight_range(self, variable: Variable) -> Optional[Tuple[range, ig.Color4f]]:
-    return None
+    key = self.pipeline.range_edit_key(variable)
+    if key is None:
+      return None
+    return (range(variable.frame, variable.frame + 1), (0.0, 0.0, 0.5, 1.0))
 
 
 DEFAULT_FRAME_SHEET_VARS = [

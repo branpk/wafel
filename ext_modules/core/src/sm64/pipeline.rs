@@ -59,7 +59,7 @@ impl<M: Memory> Pipeline<M> {
 
     /// Write a variable.
     pub fn write(&mut self, variable: &Variable, value: &Value) -> Result<(), Error> {
-        let controller = self.timeline.controller_mut(variable.try_frame()?);
+        let controller = self.controller_mut(variable)?;
         controller.edits.write(variable, value.clone())?;
         Ok(())
     }
@@ -69,6 +69,33 @@ impl<M: Memory> Pipeline<M> {
         let controller = self.timeline.controller_mut(variable.try_frame()?);
         controller.edits.reset(variable)?;
         Ok(())
+    }
+
+    pub fn begin_drag(
+        &mut self,
+        source_variable: &Variable,
+        source_value: &Value,
+    ) -> Result<(), Error> {
+        self.controller_mut(source_variable)?
+            .edits
+            .begin_drag(source_variable, source_value)
+    }
+
+    pub fn update_drag(&mut self, target_frame: u32) {
+        // FIXME: Check frame invalidation for all methods - and avoid unnecessary invalidation
+        let controller = self.timeline.controller_mut(target_frame);
+        controller.edits.update_drag(target_frame);
+    }
+
+    pub fn release_drag(&mut self) {
+        // FIXME: Invalidation
+        let controller = self.timeline.controller_mut(1000000);
+        controller.edits.release_drag();
+    }
+
+    pub fn range_edit_key(&self, variable: &Variable) -> Result<Option<usize>, Error> {
+        let controller = self.timeline.controller();
+        controller.edits.range_key(variable)
     }
 
     /// Insert a new state at the given frame, shifting edits forward.
@@ -96,6 +123,11 @@ impl<M: Memory> Pipeline<M> {
     /// Get the timeline for this pipeline.
     pub fn timeline_mut(&mut self) -> &mut Timeline<M, SM64Controller> {
         &mut self.timeline
+    }
+
+    fn controller_mut(&mut self, variable: &Variable) -> Result<&mut SM64Controller, Error> {
+        let range_min = self.timeline.controller().edits.range_min(variable)?;
+        Ok(self.timeline.controller_mut(range_min))
     }
 }
 

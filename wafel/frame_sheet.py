@@ -40,10 +40,13 @@ class FrameSequence(Protocol):
 
 class CellDragHandler(Protocol):
   @abstractmethod
-  def drag(self, source: Variable, source_value: object, target_frame: int) -> None: ...
+  def begin_drag(self, source_variable: Variable, source_value: object) -> None: ...
 
   @abstractmethod
-  def release(self) -> None: ...
+  def update_drag(self, target_frame: int) -> None: ...
+
+  @abstractmethod
+  def release_drag(self) -> None: ...
 
   @abstractmethod
   def highlight_range(self, variable: Variable) -> Optional[Tuple[range, ig.Color4f]]: ...
@@ -78,8 +81,7 @@ class FrameSheet:
     self.row_height = 30
     self.frame_column_width = 60
 
-    self.drag_source: Optional[Variable] = None
-    self.drag_target: Optional[int] = None
+    self.dragging = False
 
     self.prev_selected_frame: Optional[int] = None
     self.scroll_delta = 0.0
@@ -199,7 +201,8 @@ class FrameSheet:
     if selected:
       self.sequence.set_selected_frame(frame)
     if pressed:
-      self.drag_source = cell_variable
+      self.drag_handler.begin_drag(cell_variable, self.pipeline.read(cell_variable))
+      self.dragging = True
 
     return None
 
@@ -226,8 +229,8 @@ class FrameSheet:
       ig.set_cursor_pos(row_pos)
 
       mouse_in_row = mouse_pos[1] > row_pos[1] and mouse_pos[1] <= row_pos[1] + self.row_height
-      if mouse_in_row:
-        self.drag_target = row
+      if mouse_in_row and self.dragging:
+        self.drag_handler.update_drag(row)
 
       if len(self.columns) > 0:
         ig.set_column_width(-1, self.frame_column_width)
@@ -305,17 +308,10 @@ class FrameSheet:
     min_frame = int(ig.get_scroll_y()) // self.row_height - 1
     self.sequence.set_hotspot('frame-sheet-min', max(min_frame, 0))
 
-    if self.drag_source is not None and not ig.is_mouse_down():
-      self.drag_handler.release()
-      self.drag_source = None
-    self.drag_target = None
+    if self.dragging and not ig.is_mouse_down():
+      self.drag_handler.release_drag()
+      self.dragging = False
     self.render_rows()
-    if self.drag_source is not None and self.drag_target is not None:
-      self.drag_handler.drag(
-        self.drag_source,
-        self.pipeline.read(self.drag_source),
-        self.drag_target,
-      )
 
     ig.end_child()
 
