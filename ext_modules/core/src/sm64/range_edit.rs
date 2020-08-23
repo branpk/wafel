@@ -451,12 +451,18 @@ impl RangeEditPreview {
         if let Some(existing_range_id) = parent.find_range_id(self.drag_source) {
             let existing_range = parent.range(existing_range_id);
 
-            // Reset top of range
-            if existing_range.frames.start == self.drag_source {
+            // Reset near top of range
+            if self.drag_source < existing_range.frames.start + 2 {
                 self.set_range(
                     parent,
                     existing_range_id,
                     self.drag_source + 1..existing_range.frames.end,
+                    existing_range.value.clone(),
+                );
+                self.set_range(
+                    parent,
+                    self.reserved_range_id,
+                    existing_range.frames.start..self.drag_source,
                     existing_range.value.clone(),
                 );
             }

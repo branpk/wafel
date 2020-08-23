@@ -47,6 +47,7 @@ RANGE_COLORS = [
 class DragHandler:
   def __init__(self, pipeline: Pipeline) -> None:
     self.pipeline = pipeline
+    self.input_group = set(variable.name for variable in pipeline.variable_group('Input'))
 
   def begin_drag(self, source_variable: Variable, source_value: object) -> None:
     self.pipeline.begin_drag(source_variable, source_value)
@@ -61,8 +62,13 @@ class DragHandler:
     edit_range = self.pipeline.find_edit_range(variable)
     if edit_range is None:
       return None
+
+    frames = range(edit_range.start, edit_range.end)
+    if len(frames) == 1 and variable.name in self.input_group:
+      return None
+
     return (
-      range(edit_range.start, edit_range.end),
+      frames,
       RANGE_COLORS[edit_range.id % len(RANGE_COLORS)],
     )
 
