@@ -67,9 +67,27 @@ impl RangeEdits {
     /// Reset the value for a given cell.
     ///
     /// If the cell is in an edit range, the edit range is split into two.
-    pub fn reset(&mut self, _column: &Variable, _frame: u32) -> InvalidatedFrames {
-        let mut _invalidated = self.rollback_drag();
-        todo!()
+    pub fn reset(&mut self, column: &Variable, frame: u32) -> InvalidatedFrames {
+        match self.find_range(column, frame) {
+            Some(range) => {
+                let range = range.clone();
+                let mut invalidated = self.rollback_drag();
+
+                let ranges = self.ranges.entry(column.without_frame()).or_default();
+
+                // Simulate a reset by dragging the cell up or down.
+                let mut preview = RangeEditPreview::new(
+                    frame,
+                    range.value,
+                    range_id_generator(&mut self.next_range_id),
+                );
+                invalidated = invalidated.union(preview.reset_source(ranges));
+                preview.commit(ranges);
+
+                invalidated
+            }
+            None => InvalidatedFrames::None,
+        }
     }
 
     /// Insert a frame, shifting all lower rows downward.
@@ -425,6 +443,43 @@ impl RangeEditPreview {
         self.invalidated_frames
     }
 
+    fn reset_source(&mut self, parent: &Ranges) -> InvalidatedFrames {
+        self.ranges_override.clear();
+        self.ranges_by_frame_override.clear();
+        self.invalidated_frames.clear();
+
+        if let Some(existing_range_id) = parent.find_range_id(self.drag_source) {
+            let existing_range = parent.range(existing_range_id);
+
+            // Reset top of range
+            if existing_range.frames.start == self.drag_source {
+                self.set_range(
+                    parent,
+                    existing_range_id,
+                    self.drag_source + 1..existing_range.frames.end,
+                    existing_range.value.clone(),
+                );
+            }
+            // Reset middle or bottom of range
+            else {
+                self.set_range(
+                    parent,
+                    existing_range_id,
+                    existing_range.frames.start..self.drag_source,
+                    existing_range.value.clone(),
+                );
+                self.set_range(
+                    parent,
+                    self.reserved_range_id,
+                    self.drag_source + 1..existing_range.frames.end,
+                    existing_range.value.clone(),
+                );
+            }
+        }
+
+        self.invalidated_frames
+    }
+
     fn range<'a>(&'a self, parent: &'a Ranges, range_id: EditRangeId) -> &'a EditRange {
         self.ranges_override
             .get(&range_id)
@@ -501,7 +556,7 @@ impl RangeEditPreview {
         }
     }
 
-    fn commit(&self, parent: &mut Ranges) {
+    fn commit(self, parent: &mut Ranges) {
         for (&frame, &range_id) in &self.ranges_by_frame_override {
             match range_id {
                 Some(range_id) => {
@@ -524,7 +579,7 @@ impl RangeEditPreview {
         parent.validate();
     }
 
-    fn rollback(&self) -> InvalidatedFrames {
+    fn rollback(self) -> InvalidatedFrames {
         let mut invalidated_frames = InvalidatedFrames::None;
         for frame in self.ranges_by_frame_override.keys() {
             invalidated_frames.include(*frame);
