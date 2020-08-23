@@ -6,16 +6,22 @@ use std::{
     ops::Range,
 };
 
+/// A unique identifier for an edit range.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct EditRangeId(pub usize);
 
+/// A range of contiguous cells in a single column which are edited to the same value.
 #[derive(Debug, Clone)]
 pub struct EditRange {
+    /// The id of the range.
     pub id: EditRangeId,
+    /// The frames included in the range.
     pub frames: Range<u32>,
+    /// The value that each variable in the range is edited to.
     pub value: Value,
 }
 
+/// Manages all of the active edit ranges.
 #[derive(Debug, Default)]
 pub struct RangeEdits {
     ranges: HashMap<Variable, Ranges>,
@@ -24,10 +30,12 @@ pub struct RangeEdits {
 }
 
 impl RangeEdits {
+    /// An empty set of edit ranges.
     pub fn new() -> Self {
         Default::default()
     }
 
+    /// Find all the edits for a given frame, across columns.
     pub fn edits(&self, frame: u32) -> Vec<(&Variable, &Value)> {
         let mut edits = Vec::new();
         for column in self.ranges.keys() {
@@ -38,6 +46,11 @@ impl RangeEdits {
         edits
     }
 
+    /// Edit the value of a given cell.
+    ///
+    /// If the cell is in an edit range, the entire edit range is given the
+    /// value.
+    /// Otherwise a new range containing only the cell is created.
     pub fn write(&mut self, variable: &Variable, value: Value) -> Result<(), Error> {
         self.rollback_drag();
 
@@ -51,12 +64,16 @@ impl RangeEdits {
         Ok(())
     }
 
-    pub fn reset(&mut self, variable: &Variable) -> Result<(), Error> {
+    /// Reset the value for a given cell.
+    ///
+    /// If the cell is in an edit range, the edit range is split into two.
+    pub fn reset(&mut self, _variable: &Variable) -> Result<(), Error> {
         self.rollback_drag();
 
         todo!()
     }
 
+    /// Insert a frame, shifting all lower rows downward.
     pub fn insert_frame(&mut self, frame: u32) {
         self.rollback_drag();
         for range in self.ranges.values_mut() {
@@ -64,6 +81,7 @@ impl RangeEdits {
         }
     }
 
+    /// Delete a frame, shifting all lower frames upward.
     pub fn delete_frame(&mut self, frame: u32) {
         self.rollback_drag();
         for range in self.ranges.values_mut() {
@@ -82,10 +100,12 @@ impl RangeEdits {
         })
     }
 
+    /// Find the edit range containing a cell.
     pub fn find_variable_range(&self, variable: &Variable) -> Result<Option<&EditRange>, Error> {
         Ok(self.find_range(&variable.without_frame(), variable.try_frame()?))
     }
 
+    /// Begin a drag operation starting at `source_variable`.
     pub fn begin_drag(
         &mut self,
         source_variable: &Variable,
@@ -105,6 +125,10 @@ impl RangeEdits {
         Ok(())
     }
 
+    /// Drag from `source_variable` to `target_frame`.
+    ///
+    /// The ranges will appear to be updated, but won't be committed until `release_drag` is
+    /// called.
     pub fn update_drag(&mut self, target_frame: u32) {
         if let Some(DragState { column, preview }) = &mut self.drag_state {
             let ranges = self.ranges.entry(column.clone()).or_default();
@@ -112,6 +136,7 @@ impl RangeEdits {
         }
     }
 
+    /// End the drag operation, committing range changes.
     pub fn release_drag(&mut self) {
         if let Some(DragState { column, preview }) = self.drag_state.take() {
             let ranges = self.ranges.entry(column.clone()).or_default();
@@ -404,12 +429,9 @@ impl RangeEditPreview {
 
         for range_id in range_ids {
             let range = self.range(parent, range_id);
-            self.set_range(
-                parent,
-                range_id,
-                range.frames.start..frames.start,
-                range.value.clone(),
-            );
+            let new_frames = range.frames.start..frames.start;
+            let value = range.value.clone();
+            self.set_range(parent, range_id, new_frames, value);
         }
     }
 
@@ -421,12 +443,9 @@ impl RangeEditPreview {
 
         for range_id in range_ids {
             let range = self.range(parent, range_id);
-            self.set_range(
-                parent,
-                range_id,
-                frames.end..range.frames.end,
-                range.value.clone(),
-            );
+            let new_frames = frames.end..range.frames.end;
+            let value = range.value.clone();
+            self.set_range(parent, range_id, new_frames, value);
         }
     }
 
