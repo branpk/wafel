@@ -708,7 +708,6 @@ def run() -> None:
         max(map(len, lines)) * 10,
         (len(lines) + 1) * ig.get_text_line_height() + 6,
       )
-      ig.text('The horribleness of Mupen may also somehow factor into this.')
 
       ig.dummy(10, 10)
 
