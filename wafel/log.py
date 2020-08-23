@@ -84,11 +84,17 @@ class Timer:
     self.samples: Dict[Tuple[str, ...], List[Summary]] = {}
     self.active: Dict[Tuple[str, ...], Summary] = {}
     self.stack: List[str] = []
+    self.get_num_copies = lambda: 0
+    self.get_num_updates = lambda: 0
 
   def begin(self, name: str) -> None:
     self.stack.append(name)
     path = tuple(self.stack)
-    self.active[path] = Summary(time=time.time())
+    self.active[path] = Summary(
+      time = time.time(),
+      copies = self.get_num_copies(),
+      updates = self.get_num_updates(),
+    )
 
   def end(self) -> None:
     path = tuple(self.stack)
@@ -97,6 +103,8 @@ class Timer:
       self.samples[path] = []
     sample = self.active.pop(path)
     sample.time = (time.time() - sample.time) * 1000
+    sample.copies = self.get_num_copies() - sample.copies
+    sample.updates = self.get_num_updates() - sample.updates
     self.samples[path].append(sample)
 
   def begin_frame(self) -> None:
@@ -112,18 +120,6 @@ class Timer:
         samples.append(Summary())
       while len(samples) > Timer.WINDOW:
         samples.pop(0)
-
-  def record_copy(self) -> None:
-    for sample in self.active.values():
-      sample.copies += 1
-
-  def record_update(self) -> None:
-    for sample in self.active.values():
-      sample.updates += 1
-
-  def record_request(self) -> None:
-    for sample in self.active.values():
-      sample.requests += 1
 
   def get_summaries(self) -> Dict[Tuple[str, ...], Summary]:
     result = {}

@@ -116,6 +116,16 @@ impl<M: Memory, C: Controller<M>> Timeline<M, C> {
     pub fn cached_frames(&self) -> Vec<u32> {
         self.slot_manager.cached_frames()
     }
+
+    /// Return the number of frame advances since the timeline was created.
+    pub fn num_advances(&self) -> usize {
+        self.slot_manager.num_advances()
+    }
+
+    /// Return the number of slot copies since the timeline was created.
+    pub fn num_copies(&self) -> usize {
+        self.slot_manager.num_copies()
+    }
 }
 
 /// A set of frames that should be invalidated after a controller mutation.

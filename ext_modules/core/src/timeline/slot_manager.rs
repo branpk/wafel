@@ -40,6 +40,10 @@ struct Slots<M: Memory> {
     power_on: SlotWrapper<M::Slot>,
     base: SlotWrapper<M::Slot>,
     backups: Vec<SlotWrapper<M::Slot>>,
+    /// Debug stat counting number of frame advances.
+    num_advances: usize,
+    /// Debug stat counting number of slot copies.
+    num_copies: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -95,6 +99,7 @@ fn copy_slot<M: Memory>(
 
         memory.copy_slot(&mut dst.slot, &src.slot)?;
         dst.frame = src.frame;
+        slots.num_copies = slots.num_copies.wrapping_add(1);
     }
     Ok(())
 }
@@ -117,6 +122,7 @@ fn advance_frame<M: Memory, C: Controller<M>>(
         Frame::At(frame) => {
             memory.advance_base_slot(&mut base.slot)?;
             new_frame = frame + 1;
+            slots.num_advances = slots.num_advances.wrapping_add(1);
         }
         _ => panic!("base.frame = Frame::Unknown"),
     };
@@ -247,6 +253,8 @@ impl<M: Memory, C: Controller<M>> SlotManager<M, C> {
                 power_on: power_on_slot,
                 base: base_slot,
                 backups: backup_slots,
+                num_advances: 0,
+                num_copies: 0,
             }),
             hotspots: HashMap::new(),
         })
@@ -421,5 +429,13 @@ impl<M: Memory, C: Controller<M>> SlotManager<M, C> {
                 Frame::Unknown => None,
             })
             .collect()
+    }
+
+    pub fn num_advances(&self) -> usize {
+        self.slots.borrow().num_advances
+    }
+
+    pub fn num_copies(&self) -> usize {
+        self.slots.borrow().num_copies
     }
 }

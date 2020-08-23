@@ -284,6 +284,16 @@ impl PyPipeline {
         self.get().pipeline.timeline().cached_frames()
     }
 
+    /// Return the number of frame advances since the timeline was created.
+    pub fn num_advances(&self) -> usize {
+        self.get().pipeline.timeline().num_advances()
+    }
+
+    /// Return the number of slot copies since the timeline was created.
+    pub fn num_copies(&self) -> usize {
+        self.get().pipeline.timeline().num_copies()
+    }
+
     /// Return the label for the variable if it has one.
     pub fn label(&self, variable: &PyVariable) -> PyResult<Option<&str>> {
         let label = self
