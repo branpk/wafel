@@ -47,6 +47,7 @@ use wafel_error::*;
 
 impl From<Error> for PyErr {
     fn from(err: Error) -> PyErr {
+        // TODO: Include backtrace?
         PyErr::new::<WafelError, _>(err.to_string())
     }
 }
