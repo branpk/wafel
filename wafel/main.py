@@ -17,7 +17,6 @@ from OpenGL import GL as gl
 from ext_modules.core import Pipeline
 
 import wafel.imgui as ig
-from wafel.core import *
 from wafel.model import Model
 from wafel.frame_sheet import FrameSheet
 from wafel.variable import Variable

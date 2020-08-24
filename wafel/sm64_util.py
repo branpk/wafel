@@ -2,40 +2,7 @@ from typing import *
 
 import ext_modules.util as c_util
 
-from wafel.core import State, DataPath, Timeline, Address
 from wafel.util import *
-
-
-def _get_event_variant(event_type: str) -> str:
-  variant = event_type.lower()
-  if variant.startswith('flt_'):
-    variant = variant[len('flt_'):]
-  parts = variant.split('_')
-  variant = parts[0] + ''.join(map(str.capitalize, parts[1:]))
-  return variant
-
-
-def get_frame_log(timeline: Timeline, frame: int) -> List[Dict[str, Any]]:
-  event_types: Dict[int, str] = {
-    constant['value']: constant_name
-      for constant_name, constant in timeline.game.memory.data_spec['constants'].items()
-        if constant['source'] == 'enum' and constant['enum_name'] == 'FrameLogEventType'
-  }
-
-  events: List[Dict[str, object]] = []
-
-  log_length = dcast(int, timeline.get(frame, 'gFrameLogLength'))
-  for i in range(log_length):
-    event_type_value = dcast(int, timeline.get(frame, f'gFrameLog[{i}].type'))
-    event_type = event_types[event_type_value]
-    variant_name = _get_event_variant(event_type)
-    event_data = dcast(dict, timeline.get(frame, f'gFrameLog[{i}].__anon.{variant_name}'))
-
-    event: Dict[str, object] = { 'type': event_type }
-    event.update(event_data)
-    events.append(event)
-
-  return events
 
 
 def intended_to_raw(
@@ -60,15 +27,6 @@ def intended_to_raw(
   return cast(Tuple[int, int], (stick_x, stick_y))
 
 
-def get_object_behavior(state: State, object_slot: int) -> Optional[Address]:
-  active_flags = dcast(int, state.get(f'gObjectPool[{object_slot}].activeFlags'))
-  if not active_flags:
-    return None
-  return dcast(Address, state.get(f'gObjectPool[{object_slot}].behavior'))
-
-
 __all__ = [
-  'get_frame_log',
   'intended_to_raw',
-  'get_object_behavior',
 ]
