@@ -133,6 +133,8 @@ impl DataVariables {
                 let object = variable.try_object()?;
                 let object_path = util::object_path(state, object)?;
 
+                // FIXME: get/set to inactive object / wrong object type should behave as NULL
+                // (and test edit ranges between different objects) - and check surfaces
                 if let Some(expected_behavior) = &variable.object_behavior {
                     let actual_behavior = util::object_behavior(state, &object_path)?;
                     if &actual_behavior != expected_behavior {
