@@ -31,11 +31,11 @@ FIXED_TABS = [
   TabId('Input'),
   TabId('Mario'),
   TabId('Misc'),
+  TabId('Subframe'),
   TabId('Objects'),
 ]
 if config.dev_mode:
-#   FIXED_TABS.insert(1, TabId('Scripting'))
-  FIXED_TABS.insert(4, TabId('Subframe'))
+  FIXED_TABS.insert(1, TabId('Scripting'))
 
 
 class VariableExplorer:
