@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from wafel.util import assert_not_none, log
 
 
-version = (0, 4, 2)
+version = (0, 5, 0)
 
 dev_mode: bool
 assets_directory: str
