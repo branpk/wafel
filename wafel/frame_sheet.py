@@ -11,6 +11,7 @@ from wafel.variable_display import VariableDisplayer
 from wafel.variable_format import Formatters, EmptyFormatter, VariableFormatter
 import wafel.ui as ui
 from wafel.util import *
+from wafel.model import Model
 
 
 class FrameSequence(Protocol):
@@ -62,6 +63,7 @@ class FrameSheet:
 
   def __init__(
     self,
+    model: Model,
     sequence: FrameSequence,
     pipeline: VariablePipeline,
     drag_handler: CellDragHandler,
@@ -69,6 +71,7 @@ class FrameSheet:
     formatters: Formatters,
   ) -> None:
     super().__init__()
+    self.model = model
     self.sequence = sequence
     self.pipeline = pipeline
     self.drag_handler = drag_handler
@@ -197,7 +200,7 @@ class FrameSheet:
       self.drag_handler.highlight_range(cell_variable),
     )
     if changed_data is not None:
-      self.pipeline.write(cell_variable, changed_data.value)
+      self.model.set(cell_variable, changed_data.value)
     if clear_edit:
       self.pipeline.reset(cell_variable)
     if selected:

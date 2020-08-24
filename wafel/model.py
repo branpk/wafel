@@ -48,6 +48,8 @@ class Model:
     self._selected_frame = selected_frame
     self.selected_frame_callbacks: List[Callable[[int], None]] = []
 
+    self.edit_callbacks: List[Callable[[], None]] = []
+
     self.play_speed = 0.0
     self.playback_mode = False
 
@@ -101,6 +103,9 @@ class Model:
   def set_hotspot(self, name: str, frame: int) -> None:
     self.pipeline.set_hotspot(name, frame)
 
+  def on_edit(self, callback: Callable[[], None]) -> None:
+    self.edit_callbacks.append(callback)
+
   @overload
   def get(self, frame: int, path: str) -> object:
     ...
@@ -121,6 +126,8 @@ class Model:
 
   def set(self, variable: Variable, value: object) -> None:
     self.pipeline.write(variable, value)
+    for callback in self.edit_callbacks:
+      callback()
 
   def reset(self, variable: Variable) -> None:
     self.pipeline.reset(variable)

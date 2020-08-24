@@ -150,6 +150,7 @@ class View:
     self.frame_sheets: List[FrameSheet] = [
       FrameSheet(
         self.model,
+        self.model,
         self.model.pipeline,
         DragHandler(self.model.pipeline),
         self.model,
@@ -541,8 +542,8 @@ class View:
         if not input_edit.value:
           buttons_enabled.value = False
           stick_enabled.value = False
-      # FIXME
-      # self.model.timeline.on_invalidation(disable_controller)
+      self.model.on_edit(disable_controller)
+
       def frame_change(*args, **kwargs) -> None:
         if self.model.play_speed == 0.0:
           disable_controller()
