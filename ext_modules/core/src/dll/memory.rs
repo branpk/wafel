@@ -18,6 +18,7 @@ use dlopen::raw::{AddressInfoObtainer, Library};
 use itertools::Itertools;
 use std::{
     collections::HashMap,
+    env,
     fmt::Display,
     mem,
     ops::Add,
@@ -25,6 +26,7 @@ use std::{
     slice,
     sync::atomic::{AtomicUsize, Ordering},
 };
+use winapi::um::{dbghelp::SymCleanup, processthreadsapi::GetCurrentProcess};
 
 static NEXT_MEMORY_ID: AtomicUsize = AtomicUsize::new(1);
 
@@ -184,6 +186,17 @@ impl Memory {
             let layout = load_layout_from_dll(dll_path.as_ref())?;
 
             let library = Library::open(dll_path.as_ref())?;
+
+            // When a backtrace is created, SymInitializeW is called. This causes an error
+            // when AddressInfoObtainer calls the same function.
+            let backtrace_enabled = match env::var("RUST_BACKTRACE").as_deref() {
+                Ok("0") | Ok("") | Ok("false") | Err(_) => false,
+                _ => true,
+            };
+            if backtrace_enabled {
+                // Only do this if backtraces are enabled, since it's hacky and could break things.
+                SymCleanup(GetCurrentProcess());
+            }
 
             // dlopen API requires looking up a symbol to get the base address
             let init_function: *const () = read_symbol(&library, init_function)?;

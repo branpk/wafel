@@ -7,6 +7,7 @@
 #![feature(backtrace)]
 #![feature(option_expect_none)]
 #![feature(range_is_empty)]
+#![feature(inner_deref)]
 
 // TODO: Fix exports
 
