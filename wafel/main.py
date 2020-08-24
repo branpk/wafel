@@ -167,7 +167,7 @@ class View:
   def save(self) -> None:
     assert self.file is not None
     if self.file.type == 'm64':
-      save_m64(self.file.filename, self.metadata, self.model.pipeline.reader, self.model.max_frame - 1)
+      save_m64(self.file.filename, self.metadata, self.model.pipeline, self.model.max_frame - 1)
     else:
       raise NotImplementedError(self.file.type)
 

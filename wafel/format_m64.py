@@ -2,7 +2,7 @@ from typing import *
 import struct
 import os
 
-from ext_modules.core import Variable
+from ext_modules.core import Variable, Pipeline
 
 from wafel.input_buttons import INPUT_BUTTON_FLAGS
 from wafel.variable import VariableReader
@@ -21,8 +21,7 @@ COUNTRY_CODES = {
 }
 
 
-def save_m64(filename: str, metadata: TasMetadata, reader: VariableReader, length: int) -> None:
-  # FIXME: Saving to m64
+def save_m64(filename: str, metadata: TasMetadata, pipeline: Pipeline, length: int) -> None:
   with open(filename, 'wb') as f:
     # TODO: Remove blank frames at end
     f.write(b'\x4d\x36\x34\x1a')
@@ -51,9 +50,9 @@ def save_m64(filename: str, metadata: TasMetadata, reader: VariableReader, lengt
     f.write(bytes_to_buffer(metadata.description.encode('utf-8'), 256))
 
     for frame in range(length):
-      buttons = dcast(int, reader.read(Variable('input-buttons').at(frame=frame)))
-      stick_x = dcast(int, reader.read(Variable('input-stick-x').at(frame=frame)))
-      stick_y = dcast(int, reader.read(Variable('input-stick-y').at(frame=frame)))
+      buttons = dcast(int, pipeline.read(Variable('input-buttons').with_frame(frame)))
+      stick_x = dcast(int, pipeline.read(Variable('input-stick-x').with_frame(frame)))
+      stick_y = dcast(int, pipeline.read(Variable('input-stick-y').with_frame(frame)))
 
       f.write(struct.pack(b'>H', buttons & 0xFFFF))
       f.write(struct.pack(b'=B', stick_x & 0xFF))
