@@ -3,7 +3,7 @@
 //! The exposed API is **not** safe because of the assumptions made about DLL loading.
 use crate::{
     dll,
-    error::{Error, ErrorCause},
+    error::Error,
     memory::{Memory, Value},
     sm64::{
         frame_log, load_dll_pipeline, object_behavior, object_path, EditRange, ObjectBehavior,
@@ -418,19 +418,12 @@ impl PyPipeline {
     /// Get the object behavior for an object, or None if the object is not active.
     pub fn object_behavior(&self, frame: u32, object: usize) -> PyResult<Option<PyObjectBehavior>> {
         let state = self.get().pipeline.timeline().frame(frame)?;
-
-        match object_path(&state, ObjectSlot(object)) {
-            Ok(object_path) => {
+        match object_path(&state, ObjectSlot(object))? {
+            Some(object_path) => {
                 let behavior = object_behavior(&state, &object_path)?;
                 Ok(Some(PyObjectBehavior { behavior }))
             }
-            Err(error) => {
-                if let ErrorCause::SM64Error(SM64ErrorCause::InactiveObject { .. }) = &error.cause {
-                    Ok(None)
-                } else {
-                    Err(error.into())
-                }
-            }
+            None => Ok(None),
         }
     }
 

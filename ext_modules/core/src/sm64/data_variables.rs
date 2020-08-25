@@ -120,7 +120,11 @@ impl DataVariables {
         })
     }
 
-    fn path(&self, state: &impl State, variable: &Variable) -> Result<GlobalDataPath, Error> {
+    fn path(
+        &self,
+        state: &impl State,
+        variable: &Variable,
+    ) -> Result<Option<GlobalDataPath>, Error> {
         let spec = self.specs.get(variable.name.as_ref()).ok_or_else(|| {
             SM64ErrorCause::UnhandledVariable {
                 variable: variable.to_string(),
@@ -128,29 +132,29 @@ impl DataVariables {
         })?;
 
         match &spec.path {
-            Path::Global(path) => Ok(path.clone()),
+            Path::Global(path) => Ok(Some(path.clone())),
             Path::Object(path) => {
                 let object = variable.try_object()?;
-                let object_path = util::object_path(state, object)?;
+                match util::object_path(state, object)? {
+                    Some(object_path) => {
+                        if let Some(expected_behavior) = &variable.object_behavior {
+                            let actual_behavior = util::object_behavior(state, &object_path)?;
+                            if &actual_behavior != expected_behavior {
+                                return Ok(None);
+                            }
+                        }
 
-                // FIXME: get/set to inactive object / wrong object type should behave as NULL
-                // (and test edit ranges between different objects) - and check surfaces
-                if let Some(expected_behavior) = &variable.object_behavior {
-                    let actual_behavior = util::object_behavior(state, &object_path)?;
-                    if &actual_behavior != expected_behavior {
-                        Err(SM64ErrorCause::IncorrectObjectBehavior {
-                            expected: expected_behavior.clone(),
-                            actual: actual_behavior.clone(),
-                        })?;
+                        Ok(Some(object_path.concat(path)?))
                     }
+                    None => Ok(None),
                 }
-
-                Ok(object_path.concat(path)?)
             }
             Path::Surface(path) => {
                 let surface = variable.try_surface()?;
-                let surface_path = util::surface_path(state, surface)?;
-                Ok(surface_path.concat(path)?)
+                match util::surface_path(state, surface)? {
+                    Some(surface_path) => Ok(Some(surface_path.concat(path)?)),
+                    None => Ok(None),
+                }
             }
         }
     }
@@ -160,14 +164,19 @@ impl DataVariables {
 
         let spec = self.variable_spec(&variable.name)?;
         let path = self.path(state, variable)?;
-        let mut value = state.path_read(&path)?;
+        match path {
+            Some(path) => {
+                let mut value = state.path_read(&path)?;
 
-        if let Some(flag) = spec.flag {
-            let flag_set = (value.as_int()? & flag) != 0;
-            value = Value::Int(flag_set as IntValue);
+                if let Some(flag) = spec.flag {
+                    let flag_set = (value.as_int()? & flag) != 0;
+                    value = Value::Int(flag_set as IntValue);
+                }
+
+                Ok(value)
+            }
+            None => Ok(Value::Null),
         }
-
-        Ok(value)
     }
 
     pub fn set(
@@ -179,19 +188,22 @@ impl DataVariables {
         assert!(variable.frame.is_none() || variable.frame == Some(state.frame()));
 
         let spec = self.variable_spec(&variable.name)?;
-        let path = self.path(state, variable)?;
+        match self.path(state, variable)? {
+            Some(path) => {
+                if let Some(flag) = spec.flag {
+                    let flag_set = value.as_int()? != 0;
+                    let prev_value = state.path_read(&path)?.as_int()?;
+                    value = Value::Int(if flag_set {
+                        prev_value | flag
+                    } else {
+                        prev_value & !flag
+                    });
+                }
 
-        if let Some(flag) = spec.flag {
-            let flag_set = value.as_int()? != 0;
-            let prev_value = state.path_read(&path)?.as_int()?;
-            value = Value::Int(if flag_set {
-                prev_value | flag
-            } else {
-                prev_value & !flag
-            });
+                state.path_write(&path, &value)
+            }
+            None => Ok(()),
         }
-
-        state.path_write(&path, &value)
     }
 
     /// Get the label for the given variable if it has one.

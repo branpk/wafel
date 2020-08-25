@@ -2,7 +2,6 @@
 
 #![allow(missing_docs)]
 
-use super::{ObjectBehavior, ObjectSlot, SurfaceSlot};
 use crate::{
     data_path::LocalDataPath,
     error::Error,
@@ -13,15 +12,6 @@ use std::io;
 
 #[derive(Debug, Display, Error, From)]
 pub enum SM64ErrorCause {
-    #[display(fmt = "inactive object: {}", object)]
-    InactiveObject { object: ObjectSlot },
-    #[display(fmt = "inactive surface: {}", surface)]
-    InactiveSurface { surface: SurfaceSlot },
-    #[display(fmt = "expected object type {}, found {}", expected, actual)]
-    IncorrectObjectBehavior {
-        expected: ObjectBehavior,
-        actual: ObjectBehavior,
-    },
     #[display(fmt = "unhandled variable: {}", variable)]
     UnhandledVariable { variable: String },
     #[display(fmt = "variable is missing frame: {}", variable)]
