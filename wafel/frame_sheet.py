@@ -2,6 +2,7 @@ import sys
 from typing import *
 from abc import abstractmethod
 from dataclasses import dataclass, field
+import time
 
 from ext_modules.core import Variable
 
@@ -85,6 +86,7 @@ class FrameSheet:
     self.frame_column_width = 60
 
     self.dragging = False
+    self.time_started_dragging = 0.0
 
     self.prev_selected_frame: Optional[int] = None
     self.scroll_delta = 0.0
@@ -208,6 +210,7 @@ class FrameSheet:
     if pressed:
       self.drag_handler.begin_drag(cell_variable, self.pipeline.read(cell_variable))
       self.dragging = True
+      self.time_started_dragging = time.time()
 
     return None
 
@@ -234,7 +237,7 @@ class FrameSheet:
       ig.set_cursor_pos(row_pos)
 
       mouse_in_row = mouse_pos[1] > row_pos[1] and mouse_pos[1] <= row_pos[1] + self.row_height
-      if mouse_in_row and self.dragging:
+      if mouse_in_row and self.dragging and time.time() - self.time_started_dragging > 0.1:
         self.drag_handler.update_drag(row)
 
       if len(self.columns) > 0:
