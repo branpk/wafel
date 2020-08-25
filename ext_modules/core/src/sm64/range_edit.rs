@@ -349,7 +349,6 @@ impl RangeEditPreview {
 
         self.ranges_override.clear();
         self.ranges_by_frame_override.clear();
-        self.invalidated_frames.clear();
 
         match parent.find_range_id(self.drag_source) {
             Some(existing_range_id) => {
@@ -446,7 +445,6 @@ impl RangeEditPreview {
     fn reset_source(&mut self, parent: &Ranges) -> InvalidatedFrames {
         self.ranges_override.clear();
         self.ranges_by_frame_override.clear();
-        self.invalidated_frames.clear();
 
         if let Some(existing_range_id) = parent.find_range_id(self.drag_source) {
             let existing_range = parent.range(existing_range_id);

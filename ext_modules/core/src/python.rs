@@ -20,6 +20,7 @@ use pyo3::{
     PyObjectProtocol,
 };
 use std::{
+    backtrace::BacktraceStatus,
     collections::{hash_map::DefaultHasher, HashMap},
     fmt::Debug,
     hash::{Hash, Hasher},
@@ -47,7 +48,10 @@ use wafel_error::*;
 
 impl From<Error> for PyErr {
     fn from(err: Error) -> PyErr {
-        // TODO: Include backtrace?
+        // TODO: Include backtrace in log
+        if let BacktraceStatus::Captured = err.backtrace.status() {
+            eprintln!("{}", err.backtrace);
+        }
         PyErr::new::<WafelError, _>(err.to_string())
     }
 }
