@@ -22,7 +22,6 @@ use std::{
     env,
     fmt::Display,
     mem,
-    ops::Add,
     path::Path,
     slice,
     sync::{
@@ -115,14 +114,6 @@ impl Slot {
             Slot::Base(slot) => slot.segment_mut(index),
             Slot::Buffer(slot) => slot.segment_mut(index),
         }
-    }
-}
-
-impl Add<usize> for Address {
-    type Output = Self;
-
-    fn add(self, rhs: usize) -> Self::Output {
-        Self(self.0.wrapping_add(rhs))
     }
 }
 

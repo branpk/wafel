@@ -10,7 +10,7 @@ use crate::{
 };
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt::Debug};
+use std::{collections::HashMap, fmt::Debug, ops::Add};
 
 /// A trait that defines the interface for interacting with a target program's memory.
 ///
@@ -305,6 +305,14 @@ pub trait Memory: Sized {
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[display(fmt = "{:#X}", _0)]
 pub struct Address(pub usize);
+
+impl Add<usize> for Address {
+    type Output = Self;
+
+    fn add(self, rhs: usize) -> Self::Output {
+        Self(self.0.wrapping_add(rhs))
+    }
+}
 
 /// An address that has been classified as either static or relocatable.
 #[derive(Debug)]
