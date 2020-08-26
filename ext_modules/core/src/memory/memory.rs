@@ -88,6 +88,7 @@ pub trait Memory: Sized {
         match address {
             ClassifiedAddress::Static(address) => self.read_static_int(address, int_type),
             ClassifiedAddress::Relocatable(address) => self.read_slot_int(slot, address, int_type),
+            ClassifiedAddress::Invalid => Err(MemoryErrorCause::InvalidAddress.into()),
         }
     }
 
@@ -103,6 +104,7 @@ pub trait Memory: Sized {
             ClassifiedAddress::Relocatable(address) => {
                 self.read_slot_float(slot, address, float_type)
             }
+            ClassifiedAddress::Invalid => Err(MemoryErrorCause::InvalidAddress.into()),
         }
     }
 
@@ -115,6 +117,7 @@ pub trait Memory: Sized {
         match address {
             ClassifiedAddress::Static(address) => self.read_static_address(address),
             ClassifiedAddress::Relocatable(address) => self.read_slot_address(slot, address),
+            ClassifiedAddress::Invalid => Err(MemoryErrorCause::InvalidAddress.into()),
         }
     }
 
@@ -153,12 +156,18 @@ pub trait Memory: Sized {
     ) -> Result<(), Error>;
 
     /// Determine whether an address is static or can be relocated to a slot.
-    fn classify_address(&self, address: &Address) -> Result<ClassifiedAddress<Self>, Error>;
+    ///
+    /// This method should return ClassifiedAddress::Invalid for a null or invalid
+    /// address, rather than returning an error.
+    fn classify_address(&self, address: &Address) -> ClassifiedAddress<Self>;
 
     /// Read a value of type `data_type` from either slot or static memory.
     ///
     /// The default implementation only handles a subset of data types, and returns
-    /// MemoryError::UnreadableValue for the rest.
+    /// `MemoryError::UnreadableValue` for the rest.
+    ///
+    /// If `address` is null or invalid (according to `classify_address`),
+    /// `MemoryError::InvalidAddress` is returned.
     fn read_value(
         &self,
         slot: &Self::Slot,
@@ -169,15 +178,15 @@ pub trait Memory: Sized {
 
         Ok(match data_type.as_ref() {
             DataType::Int(int_type) => {
-                let address = self.classify_address(address)?;
+                let address = self.classify_address(address);
                 Value::Int(self.read_int(slot, &address, *int_type)?)
             }
             DataType::Float(float_type) => {
-                let address = self.classify_address(address)?;
+                let address = self.classify_address(address);
                 Value::Float(self.read_float(slot, &address, *float_type)?)
             }
             DataType::Pointer { .. } => {
-                let address = self.classify_address(address)?;
+                let address = self.classify_address(address);
                 Value::Address(self.read_address(slot, &address)?.into())
             }
             DataType::Struct { fields } => {
@@ -215,6 +224,9 @@ pub trait Memory: Sized {
     ///
     /// It is not currently allowed to write to static memory since it can lead
     /// to unexpected results.
+    ///
+    /// If `address` is null or invalid (according to `classify_address`),
+    /// `MemoryError::InvalidAddress` is returned.
     fn write_value(
         &self,
         slot: &mut Self::Slot,
@@ -222,14 +234,12 @@ pub trait Memory: Sized {
         data_type: &DataTypeRef,
         value: &Value,
     ) -> Result<(), Error> {
-        let to_relocatable = |address| {
-            self.classify_address(address)
-                .and_then(|address| match address {
-                    ClassifiedAddress::Static(_) => {
-                        Err(MemoryErrorCause::WriteToStaticAddress.into())
-                    }
-                    ClassifiedAddress::Relocatable(address) => Ok(address),
-                })
+        let to_relocatable = |address| -> Result<_, Error> {
+            match self.classify_address(address) {
+                ClassifiedAddress::Static(_) => Err(MemoryErrorCause::WriteToStaticAddress.into()),
+                ClassifiedAddress::Relocatable(address) => Ok(address),
+                ClassifiedAddress::Invalid => Err(MemoryErrorCause::InvalidAddress.into()),
+            }
         };
 
         Ok(match data_type.as_ref() {
@@ -288,6 +298,14 @@ pub trait Memory: Sized {
     fn advance_base_slot(&self, base_slot: &mut Self::Slot) -> Result<(), Error>;
 }
 
+/// A raw pointer value that can be stored in memory.
+///
+/// Having a single numeric type is convenient so that `Value` doesn't have to be generic
+/// on a `Memory` implementation.
+#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[display(fmt = "{:#X}", _0)]
+pub struct Address(pub usize);
+
 /// An address that has been classified as either static or relocatable.
 #[derive(Debug)]
 pub enum ClassifiedAddress<M: Memory> {
@@ -295,12 +313,6 @@ pub enum ClassifiedAddress<M: Memory> {
     Static(M::StaticAddress),
     /// An address that can be relocated to a specific slot.
     Relocatable(M::RelocatableAddress),
+    /// A null or invalid address.
+    Invalid,
 }
-
-/// A raw pointer value that can be stored in memory.
-///
-/// This is convenient so that `Value` doesn't have to be generic on a `Memory`
-/// implementation.
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[display(fmt = "{:#X}", _0)]
-pub struct Address(pub usize);

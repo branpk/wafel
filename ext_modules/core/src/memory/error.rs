@@ -27,8 +27,8 @@ pub enum MemoryErrorCause {
     SlotFromDifferentMemory,
     #[display(fmt = "not an array or pointer: {}", data_type)]
     NotAnArrayOrPointer { data_type: DataTypeRef },
-    #[display(fmt = "null or invalid address: {}", address)]
-    InvalidAddress { address: String },
+    #[display(fmt = "null or invalid address")]
+    InvalidAddress,
 }
 
 #[derive(Debug, Display, Error)]

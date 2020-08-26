@@ -1,7 +1,7 @@
 use super::{compile, DataPathErrorCause};
 use crate::{
-    error::{Error, ErrorCause},
-    memory::{data_type::DataTypeRef, Address, Memory, MemoryErrorCause, Value},
+    error::Error,
+    memory::{data_type::DataTypeRef, Address, ClassifiedAddress, Memory, Value},
 };
 use derive_more::Display;
 
@@ -91,20 +91,15 @@ impl GlobalDataPath {
             match edge {
                 DataPathEdge::Offset(offset) => address = address + *offset,
                 DataPathEdge::Deref => {
-                    let classified = memory.classify_address(&address)?;
+                    let classified = memory.classify_address(&address);
                     address = memory.read_address(slot, &classified)?;
                 }
                 DataPathEdge::Nullable => {
-                    let classified = memory.classify_address(&address)?;
+                    let classified = memory.classify_address(&address);
                     let address_value = memory.read_address(slot, &classified)?;
 
-                    if let Err(error) = memory.classify_address(&address_value) {
-                        if let ErrorCause::MemoryError(MemoryErrorCause::InvalidAddress {
-                            ..
-                        }) = error.cause
-                        {
-                            return Ok(None);
-                        }
+                    if let ClassifiedAddress::Invalid = memory.classify_address(&address_value) {
+                        return Ok(None);
                     }
                 }
             }

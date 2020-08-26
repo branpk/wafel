@@ -296,20 +296,11 @@ impl Memory {
         }
     }
 
-    fn validate_offset<T, A: Display>(
-        &self,
-        address: A,
-        offset: usize,
-        range_size: usize,
-    ) -> Result<(), Error> {
+    fn validate_offset<T>(&self, offset: usize, range_size: usize) -> Result<(), Error> {
         if offset + mem::size_of::<T>() > range_size {
-            Err(MemoryErrorCause::InvalidAddress {
-                address: address.to_string(),
-            })?
+            Err(MemoryErrorCause::InvalidAddress)?
         } else if offset % mem::align_of::<T>() != 0 {
-            Err(MemoryErrorCause::InvalidAddress {
-                address: address.to_string(),
-            })?
+            Err(MemoryErrorCause::InvalidAddress)?
         } else {
             Ok(())
         }
@@ -321,7 +312,7 @@ impl Memory {
     /// Dereferencing should be safe provided junk data is acceptable in T.
     fn static_to_pointer<T>(&self, address: StaticAddress) -> Result<*const T, Error> {
         let offset = address.0;
-        self.validate_offset::<T, _>(address, offset, self.base_size)?;
+        self.validate_offset::<T>(offset, self.base_size)?;
         Ok(self.base_pointer.0.wrapping_add(offset) as *const T)
     }
 
@@ -336,12 +327,10 @@ impl Memory {
     ) -> Result<*const T, Error> {
         self.validate_slot(slot)?;
         unsafe {
-            let segment =
-                slot.segment(address.segment)
-                    .ok_or_else(|| MemoryErrorCause::InvalidAddress {
-                        address: address.to_string(),
-                    })?;
-            self.validate_offset::<T, _>(address, address.offset, segment.len())?;
+            let segment = slot
+                .segment(address.segment)
+                .ok_or_else(|| MemoryErrorCause::InvalidAddress)?;
+            self.validate_offset::<T>(address.offset, segment.len())?;
             Ok(&segment[address.offset] as *const u8 as *const T)
         }
     }
@@ -357,12 +346,10 @@ impl Memory {
     ) -> Result<*mut T, Error> {
         self.validate_slot(slot)?;
         unsafe {
-            let segment = slot.segment_mut(address.segment).ok_or_else(|| {
-                MemoryErrorCause::InvalidAddress {
-                    address: address.to_string(),
-                }
-            })?;
-            self.validate_offset::<T, _>(address, address.offset, segment.len())?;
+            let segment = slot
+                .segment_mut(address.segment)
+                .ok_or_else(|| MemoryErrorCause::InvalidAddress)?;
+            self.validate_offset::<T>(address.offset, segment.len())?;
             Ok(&mut segment[address.offset] as *mut u8 as *mut T)
         }
     }
@@ -373,7 +360,7 @@ impl Memory {
     /// Dereferencing should be safe provided junk data is acceptable in T.
     fn static_to_pointer_mut<T>(&self, address: StaticAddress) -> Result<*mut T, Error> {
         let offset = address.0;
-        self.validate_offset::<T, _>(address, offset, self.base_size)?;
+        self.validate_offset::<T>(offset, self.base_size)?;
         Ok(self.base_pointer.0.wrapping_add(offset) as *mut T)
     }
 
@@ -390,13 +377,13 @@ impl Memory {
         address: &Address,
     ) -> Result<*const T, Error> {
         self.validate_base_slot(base_slot)?;
-        let address = self.classify_address(address)?;
-        Ok(match address {
-            ClassifiedAddress::Static(address) => self.static_to_pointer(address)?,
+        match self.classify_address(address) {
+            ClassifiedAddress::Static(address) => Ok(self.static_to_pointer(address)?),
             ClassifiedAddress::Relocatable(address) => {
-                self.relocatable_to_pointer(base_slot, address)?
+                Ok(self.relocatable_to_pointer(base_slot, address)?)
             }
-        })
+            ClassifiedAddress::Invalid => Err(MemoryErrorCause::InvalidAddress.into()),
+        }
     }
 
     /// Translate an address to a mutable pointer.
@@ -412,13 +399,13 @@ impl Memory {
         address: &Address,
     ) -> Result<*mut T, Error> {
         self.validate_base_slot(base_slot)?;
-        let address = self.classify_address(address)?;
-        Ok(match address {
-            ClassifiedAddress::Static(address) => self.static_to_pointer_mut(address)?,
+        match self.classify_address(address) {
+            ClassifiedAddress::Static(address) => Ok(self.static_to_pointer_mut(address)?),
             ClassifiedAddress::Relocatable(address) => {
-                self.relocatable_to_pointer_mut(base_slot, address)?
+                Ok(self.relocatable_to_pointer_mut(base_slot, address)?)
             }
-        })
+            ClassifiedAddress::Invalid => Err(MemoryErrorCause::InvalidAddress.into()),
+        }
     }
 
     /// Looks up the addresses for every symbol, skipping those where lookup fails.
@@ -596,12 +583,10 @@ impl MemoryTrait for Memory {
         }
     }
 
-    fn classify_address(&self, address: &Address) -> Result<ClassifiedAddress<Self>, Error> {
+    fn classify_address(&self, address: &Address) -> ClassifiedAddress<Self> {
         let offset = (address.0 as usize).wrapping_sub(self.base_pointer.0 as usize);
         if offset >= self.base_size {
-            Err(MemoryErrorCause::InvalidAddress {
-                address: address.to_string(),
-            })?
+            return ClassifiedAddress::Invalid;
         }
 
         let segment = self
@@ -614,13 +599,13 @@ impl MemoryTrait for Memory {
             })
             .next();
 
-        Ok(match segment {
+        match segment {
             Some((i, segment)) => ClassifiedAddress::Relocatable(RelocatableAddress {
                 segment: i,
                 offset: offset - segment.virtual_address,
             }),
             None => ClassifiedAddress::Static(StaticAddress(offset)),
-        })
+        }
     }
 
     fn data_layout(&self) -> &DataLayout {
