@@ -9,8 +9,6 @@
 #![feature(range_is_empty)]
 #![feature(inner_deref)]
 
-// TODO: Fix exports
-
 pub mod data_path;
 pub mod dll;
 pub mod error;
