@@ -16,6 +16,7 @@ use crate::{
 use derive_more::Display;
 use dlopen::raw::{AddressInfoObtainer, Library};
 use itertools::Itertools;
+use lazy_static::lazy_static;
 use std::{
     collections::HashMap,
     env,
@@ -24,11 +25,16 @@ use std::{
     ops::Add,
     path::Path,
     slice,
-    sync::atomic::{AtomicUsize, Ordering},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Mutex,
+    },
 };
 use winapi::um::{dbghelp::SymCleanup, processthreadsapi::GetCurrentProcess};
 
-static NEXT_MEMORY_ID: AtomicUsize = AtomicUsize::new(1);
+lazy_static! {
+    static ref NEXT_MEMORY_ID: Mutex<usize> = Mutex::new(1);
+}
 
 /// A backup buffer that can hold the data segments of the DLL.
 #[derive(Debug, Display)]
@@ -54,7 +60,7 @@ impl BufferSlot {
 #[display(fmt = "base")]
 pub struct BaseSlot {
     memory_id: usize,
-    base_pointer: *mut u8,
+    base_pointer: BasePointer,
     base_size: usize,
     data_segments: Vec<DllSegment>,
 }
@@ -64,7 +70,7 @@ impl BaseSlot {
     /// No other pointers should write to the DLL memory while the slice is live.
     unsafe fn segment(&self, index: usize) -> Option<&[u8]> {
         let info = self.data_segments.get(index)?;
-        let segment_pointer = self.base_pointer.wrapping_add(info.virtual_address);
+        let segment_pointer = self.base_pointer.0.wrapping_add(info.virtual_address);
         Some(slice::from_raw_parts(segment_pointer, info.virtual_size))
     }
 
@@ -72,7 +78,7 @@ impl BaseSlot {
     /// No other pointers should access the DLL memory while the slice is live.
     unsafe fn segment_mut(&mut self, index: usize) -> Option<&mut [u8]> {
         let info = self.data_segments.get(index)?;
-        let segment_pointer = self.base_pointer.wrapping_add(info.virtual_address);
+        let segment_pointer = self.base_pointer.0.wrapping_add(info.virtual_address);
         Some(slice::from_raw_parts_mut(
             segment_pointer,
             info.virtual_size,
@@ -150,6 +156,14 @@ pub struct RelocatableAddress {
     offset: usize,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct BasePointer(*mut u8);
+
+// The DLL's memory is always accessed via a Slot object (read-write) or
+// a static address (read-only), so Rust's borrow rules enforce safe accesses.
+unsafe impl Send for BasePointer {}
+unsafe impl Sync for BasePointer {}
+
 /// Memory management for a loaded DLL and backup slots.
 ///
 /// Please note that working with DLLs in this way is inherently unsafe (in the Rust sense),
@@ -160,7 +174,7 @@ pub struct Memory {
     id: usize,
     /// The loaded DLL
     library: Library,
-    base_pointer: *mut u8,
+    base_pointer: BasePointer,
     base_size: usize,
     /// Info on the segments that are included in backup slots (.data and .bss).
     data_segments: Vec<DllSegment>,
@@ -203,9 +217,9 @@ impl Memory {
             let addr_info = AddressInfoObtainer::new().obtain(init_function)?;
             let base_pointer = addr_info.dll_base_addr;
 
-            // This is UB, but there's not really a way to avoid it when doing this kind of thing
-            // with a DLL
-            let base_pointer = base_pointer as *mut u8;
+            // This cast is UB, but there's not really a way to avoid it when doing this kind of
+            // thing with a DLL
+            let base_pointer = BasePointer(base_pointer as *mut u8);
 
             let base_size = layout
                 .segments
@@ -251,8 +265,10 @@ impl Memory {
             let update_function: *const () = read_symbol(&library, update_function)?;
             let update_function: unsafe extern "C" fn() = mem::transmute(update_function);
 
-            let id = NEXT_MEMORY_ID.fetch_add(1, Ordering::SeqCst);
-            assert!(id < isize::MAX as usize); // Prevent overflow
+            let mut next_memory_id = NEXT_MEMORY_ID.lock().unwrap();
+            *next_memory_id = next_memory_id.checked_add(1).unwrap();
+            let id = *next_memory_id;
+
             let memory = Self {
                 id,
                 library,
@@ -264,12 +280,14 @@ impl Memory {
                 update_function,
                 data_path_cache: DataPathCache::new(),
             };
+
             let base_slot = Slot::Base(BaseSlot {
                 memory_id: memory.id,
                 base_pointer,
                 base_size,
                 data_segments,
             });
+
             (memory, base_slot)
         };
         result.map_err(|error| error.context(format!("{}", dll_path)).into())
@@ -321,7 +339,7 @@ impl Memory {
     fn static_to_pointer<T>(&self, address: StaticAddress) -> Result<*const T, Error> {
         let offset = address.0;
         self.validate_offset::<T, _>(address, offset, self.base_size)?;
-        Ok(self.base_pointer.wrapping_add(offset) as *const T)
+        Ok(self.base_pointer.0.wrapping_add(offset) as *const T)
     }
 
     /// Translate the relocatable address to a pointer.
@@ -373,7 +391,7 @@ impl Memory {
     fn static_to_pointer_mut<T>(&self, address: StaticAddress) -> Result<*mut T, Error> {
         let offset = address.0;
         self.validate_offset::<T, _>(address, offset, self.base_size)?;
-        Ok(self.base_pointer.wrapping_add(offset) as *mut T)
+        Ok(self.base_pointer.0.wrapping_add(offset) as *mut T)
     }
 
     /// Translate an address to a pointer.
@@ -592,7 +610,7 @@ impl MemoryTrait for Memory {
     }
 
     fn classify_address(&self, address: &Self::Address) -> Result<ClassifiedAddress<Self>, Error> {
-        let offset = (address.0 as usize).wrapping_sub(self.base_pointer as usize);
+        let offset = (address.0 as usize).wrapping_sub(self.base_pointer.0 as usize);
         if offset >= self.base_size {
             Err(MemoryErrorCause::InvalidAddress {
                 address: address.to_string(),
