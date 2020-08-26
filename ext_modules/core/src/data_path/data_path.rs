@@ -1,7 +1,7 @@
 use super::{compile, DataPathErrorCause};
 use crate::{
     error::{Error, ErrorCause},
-    memory::{data_type::DataTypeRef, AddressValue, Memory, MemoryErrorCause, Value},
+    memory::{data_type::DataTypeRef, Address, Memory, MemoryErrorCause, Value},
 };
 use derive_more::Display;
 
@@ -33,7 +33,7 @@ pub(super) enum DataPathEdge {
 ///
 /// See module documentation for more information.
 #[derive(Debug, Display, Clone)]
-pub struct GlobalDataPath(pub(super) DataPathImpl<AddressValue>);
+pub struct GlobalDataPath(pub(super) DataPathImpl<Address>);
 
 /// A data path starting from a type, such as a specific struct.
 ///
@@ -76,11 +76,7 @@ impl GlobalDataPath {
     /// Note that this will read from memory if the path passes through a pointer.
     ///
     /// None will only be returned if `?` is used in the data path.
-    pub fn address<M: Memory>(
-        &self,
-        memory: &M,
-        slot: &M::Slot,
-    ) -> Result<Option<M::Address>, Error> {
+    pub fn address<M: Memory>(&self, memory: &M, slot: &M::Slot) -> Result<Option<Address>, Error> {
         self.address_impl(memory, slot)
             .map_err(|error| error.context(format!("path {}", self.0.source)))
     }
@@ -89,8 +85,8 @@ impl GlobalDataPath {
         &self,
         memory: &M,
         slot: &M::Slot,
-    ) -> Result<Option<M::Address>, Error> {
-        let mut address: M::Address = self.0.root.clone().into();
+    ) -> Result<Option<Address>, Error> {
+        let mut address: Address = self.0.root.clone().into();
         for edge in &self.0.edges {
             match edge {
                 DataPathEdge::Offset(offset) => address = address + *offset,

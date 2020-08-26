@@ -2,7 +2,7 @@ use super::{SlotState, SlotStateMut, State};
 use crate::{
     data_path::GlobalDataPath,
     error::Error,
-    memory::{Memory, Value},
+    memory::{Address, Memory, Value},
 };
 use std::ops::DerefMut;
 
@@ -24,10 +24,7 @@ impl<'a, M: Memory, S: DerefMut<Target = M::Slot>> State for SlotStateImpl<'a, M
         self.frame
     }
 
-    fn path_address(
-        &self,
-        path: &GlobalDataPath,
-    ) -> Result<Option<<Self::Memory as Memory>::Address>, Error> {
+    fn path_address(&self, path: &GlobalDataPath) -> Result<Option<Address>, Error> {
         path.address(self.memory, &*self.slot)
     }
 

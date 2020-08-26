@@ -4,7 +4,7 @@
 use crate::{
     dll,
     error::Error,
-    memory::{Memory, Value},
+    memory::{Address, Memory, Value},
     sm64::{
         frame_log, load_dll_pipeline, object_behavior, object_path, EditRange, ObjectBehavior,
         ObjectSlot, Pipeline, SM64ErrorCause, SurfaceSlot, Variable,
@@ -75,7 +75,7 @@ pub struct PyPipeline {
 #[derive(Debug)]
 struct ValidPipeline {
     pipeline: Pipeline<dll::Memory>,
-    symbols_by_address: HashMap<dll::Address, String>,
+    symbols_by_address: HashMap<Address, String>,
 }
 
 impl PyPipeline {
@@ -429,7 +429,7 @@ impl PyPipeline {
 
     /// Get a human readable name for the given object behavior, if possible.
     pub fn object_behavior_name(&self, behavior: &PyObjectBehavior) -> String {
-        let address: dll::Address = behavior.behavior.0.into();
+        let address = behavior.behavior.0;
         let symbol = self.get().symbols_by_address.get(&address);
 
         if let Some(symbol) = symbol {
@@ -622,7 +622,7 @@ pub struct PyObjectBehavior {
 #[pyclass(name = Address, unsendable)]
 #[derive(Debug, Clone)]
 pub struct PyAddress {
-    address: dll::Address,
+    address: Address,
 }
 
 /// Information about a variable edit range.

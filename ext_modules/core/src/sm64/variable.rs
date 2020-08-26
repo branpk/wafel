@@ -1,5 +1,5 @@
 use super::SM64ErrorCause;
-use crate::{error::Error, memory::AddressValue};
+use crate::{error::Error, memory::Address};
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -17,7 +17,7 @@ pub struct SurfaceSlot(pub usize);
 
 /// An opaque wrapper for an object behavior pointer.
 #[derive(Debug, Display, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ObjectBehavior(pub AddressValue);
+pub struct ObjectBehavior(pub Address);
 
 /// An abstract game variable, typically corresponding to a memory variable.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

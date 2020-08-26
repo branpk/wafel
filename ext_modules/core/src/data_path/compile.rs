@@ -5,7 +5,7 @@ use crate::{
     error::Error,
     memory::{
         data_type::{DataType, DataTypeRef, Field, Namespace, TypeName},
-        AddressValue, DataLayout, Memory,
+        Address, DataLayout, Memory,
     },
 };
 use nom::{
@@ -28,7 +28,7 @@ pub fn data_path<M: Memory>(memory: &M, source: &str) -> Result<DataPath, Error>
 
         match ast.root {
             RootAst::Global(root_name) => {
-                let root: AddressValue = memory.symbol_address(&root_name)?.into();
+                let root: Address = memory.symbol_address(&root_name)?.into();
                 let root_type = layout.get_global(&root_name)?;
                 let root_type = layout.concrete_type(root_type)?;
 

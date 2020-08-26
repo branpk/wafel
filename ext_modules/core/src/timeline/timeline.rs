@@ -2,7 +2,7 @@ use super::{data_cache::DataCache, slot_manager::SlotManager, SlotState, SlotSta
 use crate::{
     data_path::GlobalDataPath,
     error::Error,
-    memory::{Memory, Value},
+    memory::{Address, Memory, Value},
 };
 use std::{cell::RefCell, time::Duration};
 
@@ -211,7 +211,7 @@ impl<'a, M: Memory, C: Controller<M>> State for TimelineState<'a, M, C> {
         self.frame
     }
 
-    fn path_address(&self, path: &GlobalDataPath) -> Result<Option<M::Address>, Error> {
+    fn path_address(&self, path: &GlobalDataPath) -> Result<Option<Address>, Error> {
         // Uncached for now (could also skip frame request in common case)
         Ok(self
             .timeline

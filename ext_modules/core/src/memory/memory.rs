@@ -10,11 +10,7 @@ use crate::{
 };
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    fmt::{Debug, Display},
-    ops::Add,
-};
+use std::{collections::HashMap, fmt::Debug};
 
 /// A trait that defines the interface for interacting with a target program's memory.
 ///
@@ -22,27 +18,11 @@ use std::{
 /// each slot represents a physical buffer that contains a copy of the target program's
 /// memory. There may also be static memory that doesn't reside in any slot.
 ///
-/// The memory has one or more "base slots" that are capable of being advanced,
+/// The memory has one or more "base slots" that are capable of being frame advanced,
 /// but can create backup slots to hold copies of the base slot's data.
 pub trait Memory: Sized {
-    // TODO: Remove Sized?
-
     /// The type of a slot.
     type Slot: Debug;
-
-    /// A raw pointer value that can be stored in memory.
-    ///
-    /// This will likely be independent of slot and so can't be dereferenced
-    /// without knowing which slot to relocate it to.
-    ///
-    /// `Address` must implement `Add<usize, Output=Address>` so that offsets (field offsets and
-    /// array/pointer stride) can be added to it.
-    type Address: Debug
-        + Display
-        + Clone
-        + Add<usize, Output = Self::Address>
-        + Into<AddressValue>
-        + From<AddressValue>;
 
     /// The type of a static address that lies outside of slot memory.
     type StaticAddress;
@@ -75,7 +55,7 @@ pub trait Memory: Sized {
         &self,
         slot: &Self::Slot,
         address: &Self::RelocatableAddress,
-    ) -> Result<Self::Address, Error>;
+    ) -> Result<Address, Error>;
 
     /// Read an integer from static memory.
     ///
@@ -96,7 +76,7 @@ pub trait Memory: Sized {
     ) -> Result<FloatValue, Error>;
 
     /// Read an address from static memory.
-    fn read_static_address(&self, address: &Self::StaticAddress) -> Result<Self::Address, Error>;
+    fn read_static_address(&self, address: &Self::StaticAddress) -> Result<Address, Error>;
 
     /// Read an int from either static or slot memory.
     fn read_int(
@@ -131,7 +111,7 @@ pub trait Memory: Sized {
         &self,
         slot: &Self::Slot,
         address: &ClassifiedAddress<Self>,
-    ) -> Result<Self::Address, Error> {
+    ) -> Result<Address, Error> {
         match address {
             ClassifiedAddress::Static(address) => self.read_static_address(address),
             ClassifiedAddress::Relocatable(address) => self.read_slot_address(slot, address),
@@ -169,11 +149,11 @@ pub trait Memory: Sized {
         &self,
         slot: &mut Self::Slot,
         address: &Self::RelocatableAddress,
-        value: &Self::Address,
+        value: &Address,
     ) -> Result<(), Error>;
 
     /// Determine whether an address is static or can be relocated to a slot.
-    fn classify_address(&self, address: &Self::Address) -> Result<ClassifiedAddress<Self>, Error>;
+    fn classify_address(&self, address: &Address) -> Result<ClassifiedAddress<Self>, Error>;
 
     /// Read a value of type `data_type` from either slot or static memory.
     ///
@@ -182,7 +162,7 @@ pub trait Memory: Sized {
     fn read_value(
         &self,
         slot: &Self::Slot,
-        address: &Self::Address,
+        address: &Address,
         data_type: &DataTypeRef,
     ) -> Result<Value, Error> {
         let data_type = self.data_layout().concrete_type(data_type)?;
@@ -238,7 +218,7 @@ pub trait Memory: Sized {
     fn write_value(
         &self,
         slot: &mut Self::Slot,
-        address: &Self::Address,
+        address: &Address,
         data_type: &DataTypeRef,
         value: &Value,
     ) -> Result<(), Error> {
@@ -278,7 +258,7 @@ pub trait Memory: Sized {
     fn data_layout_mut(&mut self) -> &mut DataLayout;
 
     /// Look up the address for a global variable by name.
-    fn symbol_address(&self, symbol: &str) -> Result<Self::Address, Error>;
+    fn symbol_address(&self, symbol: &str) -> Result<Address, Error>;
 
     /// Return a data path cache.
     fn data_path_cache(&self) -> &DataPathCache;
@@ -317,7 +297,10 @@ pub enum ClassifiedAddress<M: Memory> {
     Relocatable(M::RelocatableAddress),
 }
 
-/// A non-generic representation of an address.
+/// A raw pointer value that can be stored in memory.
+///
+/// This is convenient so that `Value` doesn't have to be generic on a `Memory`
+/// implementation.
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[display(fmt = "{:#X}", _0)]
-pub struct AddressValue(pub usize);
+pub struct Address(pub usize);

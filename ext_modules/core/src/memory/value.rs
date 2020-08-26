@@ -1,6 +1,6 @@
 //! Dynamically typed value used for reading and writing to memory.
 
-use super::{AddressValue, MemoryErrorCause};
+use super::{Address, MemoryErrorCause};
 use crate::error::Error;
 use derive_more::Display;
 use std::{collections::HashMap, convert::TryFrom};
@@ -22,7 +22,7 @@ pub enum Value {
     #[display(fmt = "{:?}", _0)]
     String(String),
     /// An address value.
-    Address(AddressValue),
+    Address(Address),
     /// A struct value.
     #[display(fmt = "{}", "display_struct(fields)")]
     Struct {
@@ -113,7 +113,7 @@ impl Value {
     /// Convert the value to an address.
     //
     /// Return an error if the value is not an address.
-    pub fn as_address(&self) -> Result<AddressValue, Error> {
+    pub fn as_address(&self) -> Result<Address, Error> {
         if let Value::Address(address) = self {
             Ok(address.clone())
         } else {

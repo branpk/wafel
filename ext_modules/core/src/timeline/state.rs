@@ -1,7 +1,7 @@
 use crate::{
     data_path::GlobalDataPath,
     error::Error,
-    memory::{Memory, Value},
+    memory::{Address, Memory, Value},
 };
 
 /// An abstract state of the simulation on a given frame.
@@ -16,15 +16,12 @@ pub trait State {
     fn frame(&self) -> u32;
 
     /// Get the address for the given path.
-    fn address(&self, path: &str) -> Result<Option<<Self::Memory as Memory>::Address>, Error> {
+    fn address(&self, path: &str) -> Result<Option<Address>, Error> {
         self.path_address(&self.memory().global_path(path)?)
     }
 
     /// Get the address for the given path.
-    fn path_address(
-        &self,
-        path: &GlobalDataPath,
-    ) -> Result<Option<<Self::Memory as Memory>::Address>, Error>;
+    fn path_address(&self, path: &GlobalDataPath) -> Result<Option<Address>, Error>;
 
     /// Read from the given path.
     fn read(&self, path: &str) -> Result<Value, Error> {

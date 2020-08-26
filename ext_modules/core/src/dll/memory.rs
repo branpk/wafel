@@ -9,7 +9,7 @@ use crate::{
     error::Error,
     memory::{
         data_type::{FloatType, IntType},
-        AddressValue, ClassifiedAddress, DataLayout, FloatValue, IntValue, Memory as MemoryTrait,
+        Address, ClassifiedAddress, DataLayout, FloatValue, IntValue, Memory as MemoryTrait,
         MemoryErrorCause,
     },
 };
@@ -118,28 +118,11 @@ impl Slot {
     }
 }
 
-/// A raw address that can be stored in the DLL.
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash)]
-#[display(fmt = "{:?}", _0)]
-pub struct Address(*const u8);
-
 impl Add<usize> for Address {
     type Output = Self;
 
     fn add(self, rhs: usize) -> Self::Output {
         Self(self.0.wrapping_add(rhs))
-    }
-}
-
-impl From<Address> for AddressValue {
-    fn from(address: Address) -> Self {
-        AddressValue(address.0 as usize)
-    }
-}
-
-impl From<AddressValue> for Address {
-    fn from(value: AddressValue) -> Self {
-        Self(value.0 as *const u8)
     }
 }
 
@@ -447,8 +430,8 @@ impl Memory {
             .globals
             .keys()
             .filter_map(|name| {
-                let pointer = read_symbol_direct(&self.library, name).ok()?;
-                Some((name.as_ref(), Address(pointer)))
+                let pointer: *const u8 = read_symbol_direct(&self.library, name).ok()?;
+                Some((name.as_ref(), Address(pointer as usize)))
             })
             .collect()
     }
@@ -456,7 +439,6 @@ impl Memory {
 
 impl MemoryTrait for Memory {
     type Slot = Slot;
-    type Address = Address;
     type StaticAddress = StaticAddress;
     type RelocatableAddress = RelocatableAddress;
 
@@ -498,10 +480,10 @@ impl MemoryTrait for Memory {
         &self,
         slot: &Self::Slot,
         address: &Self::RelocatableAddress,
-    ) -> Result<Self::Address, Error> {
+    ) -> Result<Address, Error> {
         unsafe {
             let pointer = *self.relocatable_to_pointer::<*const u8>(slot, *address)?;
-            Ok(Address(pointer))
+            Ok(Address(pointer as usize))
         }
     }
 
@@ -537,10 +519,10 @@ impl MemoryTrait for Memory {
         }
     }
 
-    fn read_static_address(&self, address: &Self::StaticAddress) -> Result<Self::Address, Error> {
+    fn read_static_address(&self, address: &Self::StaticAddress) -> Result<Address, Error> {
         unsafe {
             let pointer = *self.static_to_pointer::<*const u8>(*address)?;
-            Ok(Address(pointer))
+            Ok(Address(pointer as usize))
         }
     }
 
@@ -604,12 +586,17 @@ impl MemoryTrait for Memory {
         &self,
         slot: &mut Self::Slot,
         address: &Self::RelocatableAddress,
-        value: &Self::Address,
+        value: &Address,
     ) -> Result<(), Error> {
-        unsafe { Ok(*self.relocatable_to_pointer_mut::<*const u8>(slot, *address)? = value.0) }
+        unsafe {
+            Ok(
+                *self.relocatable_to_pointer_mut::<*const u8>(slot, *address)? =
+                    value.0 as *const u8,
+            )
+        }
     }
 
-    fn classify_address(&self, address: &Self::Address) -> Result<ClassifiedAddress<Self>, Error> {
+    fn classify_address(&self, address: &Address) -> Result<ClassifiedAddress<Self>, Error> {
         let offset = (address.0 as usize).wrapping_sub(self.base_pointer.0 as usize);
         if offset >= self.base_size {
             Err(MemoryErrorCause::InvalidAddress {
@@ -644,9 +631,9 @@ impl MemoryTrait for Memory {
         &mut self.layout
     }
 
-    fn symbol_address(&self, symbol: &str) -> Result<Self::Address, Error> {
-        let pointer = read_symbol(&self.library, symbol)?;
-        Ok(Address(pointer))
+    fn symbol_address(&self, symbol: &str) -> Result<Address, Error> {
+        let pointer: *const u8 = read_symbol(&self.library, symbol)?;
+        Ok(Address(pointer as usize))
     }
 
     fn data_path_cache(&self) -> &DataPathCache {
