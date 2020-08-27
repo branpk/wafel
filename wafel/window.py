@@ -14,7 +14,7 @@ from wafel.util import *
 rendering = False
 
 
-def _render_window(renderer: Renderer, render: Callable[[str], None]) -> object:
+def _render_window(window_size: Tuple[int, int], render: Callable[[str], None]) -> object:
   global rendering
   if rendering:
     return
@@ -29,8 +29,6 @@ def _render_window(renderer: Renderer, render: Callable[[str], None]) -> object:
 
   style = ig.get_style()
   style.window_rounding = 0
-
-  window_size = (800, 600) #glfw.get_window_size(window)
 
   ig.get_style().colors[ig.COLOR_WINDOW_BACKGROUND] = (0, 0, 0, 0)
   ig.new_frame()
@@ -57,7 +55,7 @@ def _render_window(renderer: Renderer, render: Callable[[str], None]) -> object:
 
 
 def open_window_and_run(render: Callable[[str], None], maximize = False) -> None:
-  # glfw.init()
+  glfw.init()
 
   # glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
   # glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
@@ -79,6 +77,7 @@ def open_window_and_run(render: Callable[[str], None], maximize = False) -> None
   renderer = Renderer.new()
   ig.get_io().ini_filename = None
 
-  renderer.run(lambda: _render_window(renderer, render))
+  renderer.run(lambda window_size: _render_window(window_size, render))
 
   ig.destroy_context(ig_context)
+  glfw.destroy()

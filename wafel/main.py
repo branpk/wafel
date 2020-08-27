@@ -644,7 +644,7 @@ class View:
       ig.end_popup_modal()
 
     ig.columns(2)
-    self.render_left_column(window_size)
+    # self.render_left_column(window_size)
     ig.next_column()
     self.render_right_column()
     ig.columns(1)

@@ -49,8 +49,8 @@ impl PyRenderer {
 
             let window = WindowBuilder::new()
                 .with_title("Wafel") // TODO: Version number
-                // .with_maximized(true)
-                .with_inner_size(PhysicalSize::new(800, 600))
+                .with_maximized(true)
+                // .with_inner_size(PhysicalSize::new(800, 600))
                 .build(&event_loop)
                 .expect("failed to open window");
 
@@ -75,14 +75,14 @@ impl PyRenderer {
                 .await
                 .unwrap();
 
-            let swap_chain_descriptor = wgpu::SwapChainDescriptor {
+            let mut swap_chain_desc = wgpu::SwapChainDescriptor {
                 usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
                 format: wgpu::TextureFormat::Bgra8Unorm,
                 width: window.inner_size().width,
                 height: window.inner_size().height,
                 present_mode: wgpu::PresentMode::Mailbox,
             };
-            let mut swap_chain = device.create_swap_chain(&surface, &swap_chain_descriptor);
+            let mut swap_chain = device.create_swap_chain(&surface, &swap_chain_desc);
 
             let gil = Python::acquire_gil();
             let py = gil.python();
@@ -162,7 +162,7 @@ impl PyRenderer {
                 rasterization_state: None,
                 primitive_topology: wgpu::PrimitiveTopology::TriangleList,
                 color_states: &[wgpu::ColorStateDescriptor {
-                    format: swap_chain_descriptor.format,
+                    format: swap_chain_desc.format,
                     alpha_blend: wgpu::BlendDescriptor::REPLACE,
                     color_blend: wgpu::BlendDescriptor {
                         src_factor: wgpu::BlendFactor::SrcAlpha,
@@ -286,12 +286,13 @@ impl PyRenderer {
             io.getattr("fonts")?.call_method0("clear_tex_data")?;
 
             event_loop.run(move |event, _, control_flow| {
-                let gil = Python::acquire_gil();
-                let py = gil.python();
-
                 match event {
                     Event::WindowEvent { event, .. } => match event {
-                        WindowEvent::Resized(_) => {}
+                        WindowEvent::Resized(size) => {
+                            swap_chain_desc.width = size.width;
+                            swap_chain_desc.height = size.height;
+                            swap_chain = device.create_swap_chain(&surface, &swap_chain_desc);
+                        }
                         WindowEvent::CloseRequested => {
                             *control_flow = ControlFlow::Exit;
                         }
@@ -299,498 +300,176 @@ impl PyRenderer {
                     },
                     Event::MainEventsCleared => window.request_redraw(),
                     Event::RedrawRequested(_) => {
-                        let result: PyResult<()> = try {
-                            let draw_data = render_func.as_ref(py).call0()?;
+                        if swap_chain_desc.width > 0 && swap_chain_desc.height > 0 {
+                            let gil = Python::acquire_gil();
+                            let py = gil.python();
 
-                            let proj_matrix: [[f32; 4]; 4] = [
-                                [2.0 / 800.0, 0.0, 0.0, 0.0],
-                                [0.0, -2.0 / 600.0, 0.0, 0.0],
-                                [0.0, 0.0, -1.0, 0.0],
-                                [-1.0, 1.0, 0.0, 1.0],
-                            ];
-                            let proj_matrix_buffer =
-                                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                                    label: None,
-                                    contents: cast_slice(&proj_matrix),
-                                    usage: wgpu::BufferUsage::UNIFORM,
-                                });
-                            let proj_bind_group =
-                                device.create_bind_group(&wgpu::BindGroupDescriptor {
-                                    label: None,
-                                    layout: &proj_bind_group_layout,
-                                    entries: &[
-                                        // u_Proj
-                                        wgpu::BindGroupEntry {
-                                            binding: 0,
-                                            resource: wgpu::BindingResource::Buffer {
-                                                buffer: &proj_matrix_buffer,
-                                                offset: 0,
-                                                size: None,
-                                            },
-                                        },
-                                    ],
-                                });
+                            let result: PyResult<()> = try {
+                                let ig = PyModule::import(py, "imgui")?;
+                                let io = ig.call_method0("get_io")?;
 
-                            // fn vtx(pos: [f32; 2], tex_coord: [f32; 2], color: [u8; 4]) -> Vertex {
-                            //     Vertex {
-                            //         pos,
-                            //         tex_coord,
-                            //         color,
-                            //     }
-                            // }
+                                let display_size = (swap_chain_desc.width, swap_chain_desc.height);
+                                io.setattr("display_size", display_size)?;
 
-                            // let indices: Vec<u16> = vec![
-                            //     0, 1, 2, 0, 2, 3, 7, 4, 6, 6, 9, 7, 8, 5, 4, 4, 7, 8, 10, 7, 9, 9,
-                            //     12, 10, 11, 8, 7, 7, 10, 11, 13, 10, 12, 12, 15, 13, 14, 11, 10,
-                            //     10, 13, 14, 4, 13, 15, 15, 6, 4, 5, 14, 13, 13, 4, 5, 16, 17, 18,
-                            //     16, 18, 19, 20, 21, 22, 20, 22, 23, 24, 25, 26, 24, 26, 27, 28, 29,
-                            //     30, 28, 30, 31, 32, 33, 34, 32, 34, 35, 36, 37, 38, 36, 38, 39, 40,
-                            //     41, 42, 40, 42, 43, 44, 45, 46, 44, 46, 47, 48, 49, 50, 48, 50, 51,
-                            //     52, 53, 54, 52, 54, 55,
-                            // ];
-                            // let index_buffer =
-                            //     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            //         label: None,
-                            //         contents: cast_slice(&indices),
-                            //         usage: wgpu::BufferUsage::INDEX,
-                            //     });
+                                let draw_data = render_func.as_ref(py).call1((display_size,))?;
 
-                            // let vertices = vec![
-                            //     Vertex {
-                            //         pos: [0.0, 0.0],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [36, 36, 36, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [800.0, 0.0],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [36, 36, 36, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [800.0, 19.0],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [36, 36, 36, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [0.0, 19.0],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [36, 36, 36, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [0.5, 0.5],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [110, 110, 128, 128],
-                            //     },
-                            //     Vertex {
-                            //         pos: [-0.5, -0.5],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [110, 110, 128, 0],
-                            //     },
-                            //     Vertex {
-                            //         pos: [1.5, 1.5],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [110, 110, 128, 0],
-                            //     },
-                            //     Vertex {
-                            //         pos: [799.5, 0.5],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [110, 110, 128, 128],
-                            //     },
-                            //     Vertex {
-                            //         pos: [800.5, -0.5],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [110, 110, 128, 0],
-                            //     },
-                            //     Vertex {
-                            //         pos: [798.5, 1.5],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [110, 110, 128, 0],
-                            //     },
-                            //     Vertex {
-                            //         pos: [799.5, 599.5],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [110, 110, 128, 128],
-                            //     },
-                            //     Vertex {
-                            //         pos: [800.5, 600.5],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [110, 110, 128, 0],
-                            //     },
-                            //     Vertex {
-                            //         pos: [798.5, 598.5],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [110, 110, 128, 0],
-                            //     },
-                            //     Vertex {
-                            //         pos: [0.5, 599.5],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [110, 110, 128, 128],
-                            //     },
-                            //     Vertex {
-                            //         pos: [-0.5, 600.5],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [110, 110, 128, 0],
-                            //     },
-                            //     Vertex {
-                            //         pos: [1.5, 598.5],
-                            //         tex_coord: [0.0009765625, 0.0078125],
-                            //         color: [110, 110, 128, 0],
-                            //     },
-                            //     Vertex {
-                            //         pos: [9.0, 29.0],
-                            //         tex_coord: [0.76953125, 0.1875],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [14.0, 29.0],
-                            //         tex_coord: [0.7792969, 0.1875],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [14.0, 38.0],
-                            //         tex_coord: [0.7792969, 0.328125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [9.0, 38.0],
-                            //         tex_coord: [0.76953125, 0.328125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [16.0, 32.0],
-                            //         tex_coord: [0.234375, 0.4375],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [21.0, 32.0],
-                            //         tex_coord: [0.24414063, 0.4375],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [21.0, 38.0],
-                            //         tex_coord: [0.24414063, 0.53125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [16.0, 38.0],
-                            //         tex_coord: [0.234375, 0.53125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [24.0, 29.0],
-                            //         tex_coord: [0.91015625, 0.1875],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [26.0, 29.0],
-                            //         tex_coord: [0.9140625, 0.1875],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [26.0, 38.0],
-                            //         tex_coord: [0.9140625, 0.328125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [24.0, 38.0],
-                            //         tex_coord: [0.91015625, 0.328125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [31.0, 29.0],
-                            //         tex_coord: [0.91015625, 0.1875],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [33.0, 29.0],
-                            //         tex_coord: [0.9140625, 0.1875],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [33.0, 38.0],
-                            //         tex_coord: [0.9140625, 0.328125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [31.0, 38.0],
-                            //         tex_coord: [0.91015625, 0.328125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [37.0, 32.0],
-                            //         tex_coord: [0.19921875, 0.4375],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [42.0, 32.0],
-                            //         tex_coord: [0.20898438, 0.4375],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [42.0, 38.0],
-                            //         tex_coord: [0.20898438, 0.53125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [37.0, 38.0],
-                            //         tex_coord: [0.19921875, 0.53125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [50.0, 32.0],
-                            //         tex_coord: [0.15234375, 0.4375],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [57.0, 32.0],
-                            //         tex_coord: [0.16601563, 0.4375],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [57.0, 38.0],
-                            //         tex_coord: [0.16601563, 0.53125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [50.0, 38.0],
-                            //         tex_coord: [0.15234375, 0.53125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [58.0, 32.0],
-                            //         tex_coord: [0.19921875, 0.4375],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [63.0, 32.0],
-                            //         tex_coord: [0.20898438, 0.4375],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [63.0, 38.0],
-                            //         tex_coord: [0.20898438, 0.53125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [58.0, 38.0],
-                            //         tex_coord: [0.19921875, 0.53125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [65.0, 32.0],
-                            //         tex_coord: [0.31640625, 0.4375],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [70.0, 32.0],
-                            //         tex_coord: [0.32617188, 0.4375],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [70.0, 38.0],
-                            //         tex_coord: [0.32617188, 0.53125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [65.0, 38.0],
-                            //         tex_coord: [0.31640625, 0.53125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [73.0, 29.0],
-                            //         tex_coord: [0.91015625, 0.1875],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [75.0, 29.0],
-                            //         tex_coord: [0.9140625, 0.1875],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [75.0, 38.0],
-                            //         tex_coord: [0.9140625, 0.328125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [73.0, 38.0],
-                            //         tex_coord: [0.91015625, 0.328125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [79.0, 29.0],
-                            //         tex_coord: [0.72265625, 0.1875],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [84.0, 29.0],
-                            //         tex_coord: [0.7324219, 0.1875],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [84.0, 38.0],
-                            //         tex_coord: [0.7324219, 0.328125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            //     Vertex {
-                            //         pos: [79.0, 38.0],
-                            //         tex_coord: [0.72265625, 0.328125],
-                            //         color: [255, 255, 255, 255],
-                            //     },
-                            // ];
-                            // let vertex_buffer =
-                            //     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            //         label: None,
-                            //         contents: cast_slice(&vertices),
-                            //         usage: wgpu::BufferUsage::VERTEX,
-                            //     });
-
-                            // let output_view = &swap_chain.get_current_frame().unwrap().output.view;
-
-                            // let mut encoder = device
-                            //     .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-
-                            // {
-                            //     let mut render_pass =
-                            //         encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                            //             color_attachments: &[
-                            //                 wgpu::RenderPassColorAttachmentDescriptor {
-                            //                     attachment: output_view,
-                            //                     resolve_target: None,
-                            //                     ops: wgpu::Operations {
-                            //                         load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                            //                         store: true,
-                            //                     },
-                            //                 },
-                            //             ],
-                            //             depth_stencil_attachment: None,
-                            //         });
-                            //     render_pass.set_pipeline(&pipeline);
-                            //     render_pass.set_bind_group(0, &proj_bind_group, &[]);
-                            //     render_pass.set_bind_group(1, &texture_bind_group, &[]);
-                            //     render_pass.set_index_buffer(index_buffer.slice(..));
-                            //     render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-                            //     render_pass.draw_indexed(0..indices.len() as u32, 0, 0..1);
-                            // }
-
-                            let mut command_lists: Vec<(wgpu::Buffer, wgpu::Buffer, Vec<&PyAny>)> =
-                                Vec::new();
-                            for commands in draw_data.getattr("commands_lists")?.iter()? {
-                                let commands = commands?;
-
-                                let index_buffer_size: usize =
-                                    commands.getattr("idx_buffer_size")?.extract()?;
-                                let index_buffer_pointer: usize =
-                                    commands.getattr("idx_buffer_data")?.extract()?;
-                                let index_slice = unsafe {
-                                    slice::from_raw_parts(
-                                        index_buffer_pointer as *const u8,
-                                        index_buffer_size * index_size,
-                                    )
-                                };
-                                let index_buffer =
+                                let proj_matrix: [[f32; 4]; 4] = [
+                                    [2.0 / swap_chain_desc.width as f32, 0.0, 0.0, 0.0],
+                                    [0.0, -2.0 / swap_chain_desc.height as f32, 0.0, 0.0],
+                                    [0.0, 0.0, -1.0, 0.0],
+                                    [-1.0, 1.0, 0.0, 1.0],
+                                ];
+                                let proj_matrix_buffer =
                                     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                                         label: None,
-                                        contents: index_slice,
-                                        usage: wgpu::BufferUsage::INDEX,
+                                        contents: cast_slice(&proj_matrix),
+                                        usage: wgpu::BufferUsage::UNIFORM,
                                     });
-
-                                let vertex_buffer_size: usize =
-                                    commands.getattr("vtx_buffer_size")?.extract()?;
-                                let vertex_buffer_pointer: usize =
-                                    commands.getattr("vtx_buffer_data")?.extract()?;
-                                let vertex_slice = unsafe {
-                                    slice::from_raw_parts(
-                                        vertex_buffer_pointer as *const u8,
-                                        vertex_buffer_size * vertex_size,
-                                    )
-                                };
-                                let vertex_buffer =
-                                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                                let proj_bind_group =
+                                    device.create_bind_group(&wgpu::BindGroupDescriptor {
                                         label: None,
-                                        contents: vertex_slice,
-                                        usage: wgpu::BufferUsage::VERTEX,
-                                    });
-
-                                let commands = commands
-                                    .getattr("commands")?
-                                    .iter()?
-                                    .collect::<PyResult<Vec<_>>>()?;
-
-                                command_lists.push((index_buffer, vertex_buffer, commands));
-                            }
-
-                            let output_view = &swap_chain.get_current_frame().unwrap().output.view;
-
-                            let mut encoder = device
-                                .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-
-                            {
-                                let mut render_pass =
-                                    encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                                        color_attachments: &[
-                                            wgpu::RenderPassColorAttachmentDescriptor {
-                                                attachment: output_view,
-                                                resolve_target: None,
-                                                ops: wgpu::Operations {
-                                                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                                                    store: true,
+                                        layout: &proj_bind_group_layout,
+                                        entries: &[
+                                            // u_Proj
+                                            wgpu::BindGroupEntry {
+                                                binding: 0,
+                                                resource: wgpu::BindingResource::Buffer {
+                                                    buffer: &proj_matrix_buffer,
+                                                    offset: 0,
+                                                    size: None,
                                                 },
                                             },
                                         ],
-                                        depth_stencil_attachment: None,
                                     });
-                                render_pass.set_pipeline(&pipeline);
-                                render_pass.set_bind_group(0, &proj_bind_group, &[]);
-                                render_pass.set_bind_group(1, &texture_bind_group, &[]);
 
-                                for (index_buffer, vertex_buffer, commands) in &command_lists {
-                                    render_pass.set_index_buffer(index_buffer.slice(..));
-                                    render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+                                let mut command_lists: Vec<(
+                                    wgpu::Buffer,
+                                    wgpu::Buffer,
+                                    Vec<&PyAny>,
+                                )> = Vec::new();
+                                for commands in draw_data.getattr("commands_lists")?.iter()? {
+                                    let commands = commands?;
 
-                                    let mut initial_index = 0;
+                                    let index_buffer_size: usize =
+                                        commands.getattr("idx_buffer_size")?.extract()?;
+                                    let index_buffer_pointer: usize =
+                                        commands.getattr("idx_buffer_data")?.extract()?;
+                                    let index_slice = unsafe {
+                                        slice::from_raw_parts(
+                                            index_buffer_pointer as *const u8,
+                                            index_buffer_size * index_size,
+                                        )
+                                    };
+                                    let index_buffer = device.create_buffer_init(
+                                        &wgpu::util::BufferInitDescriptor {
+                                            label: None,
+                                            contents: index_slice,
+                                            usage: wgpu::BufferUsage::INDEX,
+                                        },
+                                    );
 
-                                    for command in commands {
-                                        let texture_id: usize =
-                                            command.getattr("texture_id")?.extract()?;
-                                        assert_eq!(texture_id, 0);
+                                    let vertex_buffer_size: usize =
+                                        commands.getattr("vtx_buffer_size")?.extract()?;
+                                    let vertex_buffer_pointer: usize =
+                                        commands.getattr("vtx_buffer_data")?.extract()?;
+                                    let vertex_slice = unsafe {
+                                        slice::from_raw_parts(
+                                            vertex_buffer_pointer as *const u8,
+                                            vertex_buffer_size * vertex_size,
+                                        )
+                                    };
+                                    let vertex_buffer = device.create_buffer_init(
+                                        &wgpu::util::BufferInitDescriptor {
+                                            label: None,
+                                            contents: vertex_slice,
+                                            usage: wgpu::BufferUsage::VERTEX,
+                                        },
+                                    );
 
-                                        let elem_count: usize =
-                                            command.getattr("elem_count")?.extract()?;
+                                    let commands = commands
+                                        .getattr("commands")?
+                                        .iter()?
+                                        .collect::<PyResult<Vec<_>>>()?;
 
-                                        render_pass.draw_indexed(
-                                            initial_index as u32
-                                                ..(initial_index + elem_count) as u32,
-                                            0,
-                                            0..1,
-                                        );
+                                    command_lists.push((index_buffer, vertex_buffer, commands));
+                                }
 
-                                        initial_index += elem_count;
+                                let output_view =
+                                    &swap_chain.get_current_frame().unwrap().output.view;
 
-                                        // println!("  cmd:");
-                                        // println!(
-                                        //     "    clip_rect = {}",
-                                        //     command.getattr("clip_rect")?
-                                        // );
-                                        // println!(
-                                        //     "    texture_id = {}",
-                                        //     command.getattr("texture_id")?
-                                        // );
-                                        // println!(
-                                        //     "    elem_count = {}",
-                                        //     command.getattr("elem_count")?
-                                        // );
+                                let mut encoder = device.create_command_encoder(
+                                    &wgpu::CommandEncoderDescriptor::default(),
+                                );
+
+                                {
+                                    let mut render_pass =
+                                        encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                            color_attachments: &[
+                                                wgpu::RenderPassColorAttachmentDescriptor {
+                                                    attachment: output_view,
+                                                    resolve_target: None,
+                                                    ops: wgpu::Operations {
+                                                        load: wgpu::LoadOp::Clear(
+                                                            wgpu::Color::BLACK,
+                                                        ),
+                                                        store: true,
+                                                    },
+                                                },
+                                            ],
+                                            depth_stencil_attachment: None,
+                                        });
+                                    render_pass.set_pipeline(&pipeline);
+                                    render_pass.set_bind_group(0, &proj_bind_group, &[]);
+                                    render_pass.set_bind_group(1, &texture_bind_group, &[]);
+
+                                    for (index_buffer, vertex_buffer, commands) in &command_lists {
+                                        render_pass.set_index_buffer(index_buffer.slice(..));
+                                        render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+
+                                        let mut initial_index = 0;
+
+                                        for command in commands {
+                                            let texture_id: usize =
+                                                command.getattr("texture_id")?.extract()?;
+                                            assert_eq!(texture_id, 0);
+
+                                            let elem_count: usize =
+                                                command.getattr("elem_count")?.extract()?;
+
+                                            render_pass.draw_indexed(
+                                                initial_index as u32
+                                                    ..(initial_index + elem_count) as u32,
+                                                0,
+                                                0..1,
+                                            );
+
+                                            initial_index += elem_count;
+
+                                            // println!("  cmd:");
+                                            // println!(
+                                            //     "    clip_rect = {}",
+                                            //     command.getattr("clip_rect")?
+                                            // );
+                                            // println!(
+                                            //     "    texture_id = {}",
+                                            //     command.getattr("texture_id")?
+                                            // );
+                                            // println!(
+                                            //     "    elem_count = {}",
+                                            //     command.getattr("elem_count")?
+                                            // );
+                                        }
                                     }
                                 }
-                            }
 
-                            let command_buffer = encoder.finish();
-                            queue.submit(iter::once(command_buffer));
-                        };
-                        result.unwrap();
-                        // if let Err(error) = result {
-                        //     error.restore(py);
-                        // }
-                        // *control_flow = ControlFlow::Exit;
+                                let command_buffer = encoder.finish();
+                                queue.submit(iter::once(command_buffer));
+                            };
+                            if let Err(error) = result {
+                                error.print(py);
+                                *control_flow = ControlFlow::Exit;
+                            }
+                        }
                     }
                     _ => {}
                 }
