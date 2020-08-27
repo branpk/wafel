@@ -289,7 +289,7 @@ impl PyRenderer {
             io.getattr("fonts")?.setattr("texture_id", 0)?;
             io.getattr("fonts")?.call_method0("clear_tex_data")?;
 
-            let key_map: Vec<(&str, &str)> = vec![
+            let key_map = vec![
                 ("KEY_TAB", "KEY_TAB"),
                 ("KEY_LEFT_ARROW", "KEY_LEFT"),
                 ("KEY_RIGHT_ARROW", "KEY_RIGHT"),
@@ -322,6 +322,18 @@ impl PyRenderer {
                 let glfw_key: u32 = glfw.getattr(glfw_name)?.extract()?;
                 winit_to_glfw_key.insert(*winit_key, glfw_key);
             }
+
+            let modifier_key = |imgui_name, glfw_key_name_l, glfw_key_name_r| -> PyResult<_> {
+                let glfw_key_l: u32 = glfw.getattr(glfw_key_name_l)?.extract()?;
+                let glfw_key_r: u32 = glfw.getattr(glfw_key_name_r)?.extract()?;
+                Ok((imgui_name, glfw_key_l, glfw_key_r))
+            };
+            let modifier_keys = vec![
+                modifier_key("key_ctrl", "KEY_LEFT_CONTROL", "KEY_RIGHT_CONTROL")?,
+                modifier_key("key_alt", "KEY_LEFT_ALT", "KEY_RIGHT_ALT")?,
+                modifier_key("key_shift", "KEY_LEFT_SHIFT", "KEY_RIGHT_SHIFT")?,
+                modifier_key("key_super", "KEY_LEFT_SUPER", "KEY_RIGHT_SUPER")?,
+            ];
 
             let mut last_frame_time = Instant::now();
 
@@ -384,6 +396,14 @@ impl PyRenderer {
                                     if let Some(&glfw_key) = winit_to_glfw_key.get(&winit_key) {
                                         io.getattr("keys_down")?.set_item(glfw_key, is_down)?;
                                     }
+                                }
+
+                                for (imgui_prop, glfw_key_l, glfw_key_r) in &modifier_keys {
+                                    let down_l: u32 =
+                                        io.getattr("keys_down")?.get_item(glfw_key_l)?.extract()?;
+                                    let down_r: u32 =
+                                        io.getattr("keys_down")?.get_item(glfw_key_r)?.extract()?;
+                                    io.setattr(imgui_prop, down_l != 0 || down_r != 0)?;
                                 }
                             }
                             WindowEvent::ReceivedCharacter(c) => {
