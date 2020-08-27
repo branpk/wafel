@@ -526,6 +526,15 @@ impl PyRenderer {
                                                 command.getattr("texture_id")?.extract()?;
                                             assert_eq!(texture_id, 0);
 
+                                            let clip: (f32, f32, f32, f32) =
+                                                command.getattr("clip_rect")?.extract()?;
+                                            render_pass.set_scissor_rect(
+                                                clip.0 as u32,
+                                                clip.1 as u32,
+                                                (clip.2 - clip.0) as u32,
+                                                (clip.3 - clip.1) as u32,
+                                            );
+
                                             let elem_count: usize =
                                                 command.getattr("elem_count")?.extract()?;
 
@@ -537,20 +546,6 @@ impl PyRenderer {
                                             );
 
                                             initial_index += elem_count;
-
-                                            // println!("  cmd:");
-                                            // println!(
-                                            //     "    clip_rect = {}",
-                                            //     command.getattr("clip_rect")?
-                                            // );
-                                            // println!(
-                                            //     "    texture_id = {}",
-                                            //     command.getattr("texture_id")?
-                                            // );
-                                            // println!(
-                                            //     "    elem_count = {}",
-                                            //     command.getattr("elem_count")?
-                                            // );
                                         }
                                     }
                                 }
