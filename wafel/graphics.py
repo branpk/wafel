@@ -11,14 +11,16 @@ from wafel.util import *
 _renderer: Optional[cg.Renderer] = None
 
 def get_renderer() -> cg.Renderer:
-  global _renderer
-  if _renderer is None:
-    cg.init_opengl()
-    _renderer = cg.Renderer(config.assets_directory)
-  return _renderer
+  # global _renderer
+  # if _renderer is None:
+  #   cg.init_opengl()
+  #   _renderer = cg.Renderer(config.assets_directory)
+  # return _renderer
+  return None
 
 def render_scene(scene: cg.Scene) -> None:
-  get_renderer().render(scene)
+  pass
+  # get_renderer().render(scene)
 
 
 def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:

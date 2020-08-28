@@ -2,6 +2,10 @@
 //!
 //! The exposed API is **not** safe because of the assumptions made about DLL loading.
 
+use crate::{
+    graphics::{ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, IMGUI_FONT_TEXTURE_ID},
+    window,
+};
 use bytemuck::{cast_slice, Pod, Zeroable};
 pub use pipeline::*;
 use pyo3::prelude::*;
@@ -49,15 +53,52 @@ impl PyRenderer {
         Self {}
     }
 
-    pub fn run(&mut self, render_func: PyObject) -> PyResult<()> {
+    pub fn run(&mut self, update_func: PyObject) -> PyResult<()> {
+        let imgui_config = load_imgui_config()?;
+        let imgui_config_clone = imgui_config.clone();
+
+        let mut last_frame_time = Instant::now();
+
+        let update = move |display_size: (u32, u32)| {
+            let gil = Python::acquire_gil();
+            let py = gil.python();
+
+            let result: PyResult<_> = try {
+                let ig = PyModule::import(py, "imgui")?;
+                let io = ig.call_method0("get_io")?;
+
+                let delta_time = last_frame_time.elapsed().as_secs_f64();
+                last_frame_time = Instant::now();
+                io.setattr("delta_time", delta_time)?;
+
+                io.setattr("display_size", display_size)?;
+
+                let draw_data = update_func.as_ref(py).call1((display_size,))?;
+
+                extract_imgui_draw_data(&imgui_config_clone, draw_data)?
+            };
+
+            match result {
+                Ok(result) => result,
+                Err(error) => {
+                    error.print(py);
+                    todo!()
+                }
+            }
+        };
+
+        window::run("Wafel", &imgui_config, update); // TODO: Version number
+    }
+
+    pub fn run_old(&mut self, render_func: PyObject) -> PyResult<()> {
         // TODO: Error handling (and/or make sure panics show up in log)
         futures::executor::block_on(async {
             let event_loop = EventLoop::new();
 
             let window = WindowBuilder::new()
                 .with_title("Wafel") // TODO: Version number
+                .with_inner_size(PhysicalSize::new(800, 600))
                 .with_maximized(true)
-                // .with_inner_size(PhysicalSize::new(800, 600))
                 .build(&event_loop)
                 .expect("failed to open window");
 
@@ -472,11 +513,12 @@ impl PyRenderer {
                                             index_buffer_pointer as *const u8,
                                             index_buffer_size * index_size,
                                         )
-                                    };
+                                    }
+                                    .to_owned();
                                     let index_buffer = device.create_buffer_init(
                                         &wgpu::util::BufferInitDescriptor {
                                             label: None,
-                                            contents: index_slice,
+                                            contents: &index_slice,
                                             usage: wgpu::BufferUsage::INDEX,
                                         },
                                     );
@@ -490,11 +532,12 @@ impl PyRenderer {
                                             vertex_buffer_pointer as *const u8,
                                             vertex_buffer_size * vertex_size,
                                         )
-                                    };
+                                    }
+                                    .to_owned();
                                     let vertex_buffer = device.create_buffer_init(
                                         &wgpu::util::BufferInitDescriptor {
                                             label: None,
-                                            contents: vertex_slice,
+                                            contents: &vertex_slice,
                                             usage: wgpu::BufferUsage::VERTEX,
                                         },
                                     );
@@ -720,3 +763,89 @@ const GLFW_WINIT_KEY_MAP: &[(&'static str, VirtualKeyCode)] = &[
     ("KEY_RIGHT_SUPER", VirtualKeyCode::RWin), // ?
                                                // ("KEY_MENU", VirtualKeyCode::MENU),
 ];
+
+fn load_imgui_config() -> PyResult<ImguiConfig> {
+    let gil = Python::acquire_gil();
+    let py = gil.python();
+
+    let ig = PyModule::import(py, "imgui")?;
+    let io = ig.call_method0("get_io")?;
+
+    let font_texture = io
+        .getattr("fonts")?
+        .call_method0("get_tex_data_as_rgba32")?;
+    let (width, height, data): (u32, u32, &[u8]) = font_texture.extract()?;
+
+    let imgui_config = ImguiConfig {
+        index_size: ig.getattr("INDEX_SIZE")?.extract()?,
+
+        vertex_size: ig.getattr("VERTEX_SIZE")?.extract()?,
+        vertex_pos_offset: ig.getattr("VERTEX_BUFFER_POS_OFFSET")?.extract()?,
+        vertex_tex_coord_offset: ig.getattr("VERTEX_BUFFER_UV_OFFSET")?.extract()?,
+        vertex_color_offset: ig.getattr("VERTEX_BUFFER_COL_OFFSET")?.extract()?,
+
+        font_texture_width: width,
+        font_texture_height: height,
+        font_texture_data: data.to_owned(),
+    };
+
+    io.getattr("fonts")?
+        .setattr("texture_id", IMGUI_FONT_TEXTURE_ID)?;
+    io.getattr("fonts")?.call_method0("clear_tex_data")?;
+
+    Ok(imgui_config)
+}
+
+fn extract_imgui_draw_data(config: &ImguiConfig, draw_data: &PyAny) -> PyResult<ImguiDrawData> {
+    let mut command_lists = Vec::new();
+    for command_list in draw_data.getattr("commands_lists")?.iter()? {
+        let command_list = command_list?;
+        command_lists.push(extract_imgui_command_list(config, command_list)?);
+    }
+    Ok(ImguiDrawData { command_lists })
+}
+
+fn extract_imgui_command_list(
+    config: &ImguiConfig,
+    command_list: &PyAny,
+) -> PyResult<ImguiCommandList> {
+    let index_buffer_size: usize = command_list.getattr("idx_buffer_size")?.extract()?;
+    let index_buffer_pointer: usize = command_list.getattr("idx_buffer_data")?.extract()?;
+    let index_buffer = unsafe {
+        slice::from_raw_parts(
+            index_buffer_pointer as *const u8,
+            index_buffer_size * config.index_size,
+        )
+    }
+    .to_owned();
+
+    let vertex_buffer_size: usize = command_list.getattr("vtx_buffer_size")?.extract()?;
+    let vertex_buffer_pointer: usize = command_list.getattr("vtx_buffer_data")?.extract()?;
+    let vertex_buffer = unsafe {
+        slice::from_raw_parts(
+            vertex_buffer_pointer as *const u8,
+            vertex_buffer_size * config.vertex_size,
+        )
+    }
+    .to_owned();
+
+    let mut commands = Vec::new();
+    for command in command_list.getattr("commands")?.iter()? {
+        let command = command?;
+        commands.push(extract_imgui_command(command)?);
+    }
+
+    Ok(ImguiCommandList {
+        index_buffer,
+        vertex_buffer,
+        commands,
+    })
+}
+
+fn extract_imgui_command(command: &PyAny) -> PyResult<ImguiCommand> {
+    Ok(ImguiCommand {
+        texture_id: command.getattr("texture_id")?.extract()?,
+        clip_rect: command.getattr("clip_rect")?.extract()?,
+        elem_count: command.getattr("elem_count")?.extract()?,
+    })
+}
