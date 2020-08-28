@@ -12,10 +12,11 @@ from wafel.util import *
 
 
 rendering = False
+first_render = True
 
 
 def _render_window(render: Callable[[str], None]) -> object:
-  global rendering
+  global rendering, first_render
   if rendering:
     return
   rendering = True
@@ -41,7 +42,11 @@ def _render_window(render: Callable[[str], None]) -> object:
     ig.WINDOW_NO_SAVED_SETTINGS | ig.WINDOW_NO_RESIZE | ig.WINDOW_NO_TITLE_BAR | ig.WINDOW_MENU_BAR |
       ig.WINDOW_NO_BRING_TO_FRONT_ON_FOCUS,
   )
-  render('root')
+  if first_render:
+    # First render should be quick to avoid showing garbage for too long
+    first_render = False
+  else:
+    render('root')
   ig.end()
 
   ig.end_frame()

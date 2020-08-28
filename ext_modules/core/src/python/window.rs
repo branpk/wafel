@@ -22,7 +22,6 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
         let event_loop = EventLoop::new();
         let window = WindowBuilder::new()
             .with_title(title)
-            .with_inner_size(PhysicalSize::new(800, 600))
             .with_maximized(true)
             .with_visible(false)
             .build(&event_loop)
@@ -64,10 +63,6 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
         let imgui_renderer =
             ImguiRenderer::new(&device, &queue, swap_chain_desc.format, &imgui_config);
 
-        // Get the slow first frame out of the way before making the window visible to reduce
-        // the amount of time that the window shows garbage.
-        imgui_input.set_display_size((swap_chain_desc.width, swap_chain_desc.height))?;
-        update_fn.as_ref(Python::acquire_gil().python()).call0()?;
         window.set_visible(true);
 
         let mut last_frame_time = Instant::now();
