@@ -13,9 +13,7 @@ pub struct ImguiInput {
 }
 
 impl ImguiInput {
-    pub fn new() -> PyResult<Self> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
+    pub fn new(py: Python<'_>) -> PyResult<Self> {
         let glfw = PyModule::import(py, "glfw")?;
 
         let mut winit_to_glfw_key = HashMap::new();
@@ -42,10 +40,7 @@ impl ImguiInput {
         })
     }
 
-    pub fn set_key_map(&mut self) -> PyResult<()> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
+    pub fn set_key_map(&mut self, py: Python<'_>) -> PyResult<()> {
         let ig = PyModule::import(py, "imgui")?;
         let io = ig.call_method0("get_io")?;
 
@@ -59,10 +54,7 @@ impl ImguiInput {
         Ok(())
     }
 
-    pub fn set_delta_time(&mut self, delta_time: f64) -> PyResult<()> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
+    pub fn set_delta_time(&mut self, py: Python<'_>, delta_time: f64) -> PyResult<()> {
         let ig = PyModule::import(py, "imgui")?;
         let io = ig.call_method0("get_io")?;
 
@@ -70,10 +62,7 @@ impl ImguiInput {
         Ok(())
     }
 
-    pub fn set_display_size(&mut self, display_size: (u32, u32)) -> PyResult<()> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
+    pub fn set_display_size(&mut self, py: Python<'_>, display_size: (u32, u32)) -> PyResult<()> {
         let ig = PyModule::import(py, "imgui")?;
         let io = ig.call_method0("get_io")?;
 
@@ -81,10 +70,7 @@ impl ImguiInput {
         Ok(())
     }
 
-    pub fn handle_event(&mut self, event: &WindowEvent<'_>) -> PyResult<()> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
+    pub fn handle_event(&mut self, py: Python<'_>, event: &WindowEvent<'_>) -> PyResult<()> {
         let ig = PyModule::import(py, "imgui")?;
         let io = ig.call_method0("get_io")?;
 

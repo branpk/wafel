@@ -56,8 +56,11 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
         };
         let mut swap_chain = device.create_swap_chain(&surface, &swap_chain_desc);
 
-        let mut imgui_input = ImguiInput::new()?;
-        imgui_input.set_key_map()?;
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let mut imgui_input = ImguiInput::new(py)?;
+        imgui_input.set_key_map(py)?;
 
         let imgui_config = load_imgui_config()?;
         let imgui_renderer =
@@ -74,7 +77,7 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
             let result: PyResult<()> = try {
                 match event {
                     Event::WindowEvent { event, .. } => {
-                        imgui_input.handle_event(&event)?;
+                        imgui_input.handle_event(py, &event)?;
                         match event {
                             WindowEvent::Resized(size) => {
                                 swap_chain_desc.width = size.width;
@@ -89,10 +92,10 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
                     Event::RedrawRequested(_) => {
                         let delta_time = last_frame_time.elapsed().as_secs_f64();
                         last_frame_time = Instant::now();
-                        imgui_input.set_delta_time(delta_time)?;
+                        imgui_input.set_delta_time(py, delta_time)?;
 
                         let output_size = (swap_chain_desc.width, swap_chain_desc.height);
-                        imgui_input.set_display_size(output_size)?;
+                        imgui_input.set_display_size(py, output_size)?;
 
                         let py_draw_data = update_fn.as_ref(py).call0()?;
                         let imgui_draw_data = extract_imgui_draw_data(&imgui_config, py_draw_data)?;
