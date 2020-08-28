@@ -4,7 +4,7 @@ import glfw
 from imgui.integrations.glfw import GlfwRenderer
 from OpenGL import GL as gl
 
-from ext_modules.core import Renderer
+import ext_modules.core as core
 
 import wafel.imgui as ig
 import wafel.config as config
@@ -14,7 +14,7 @@ from wafel.util import *
 rendering = False
 
 
-def _render_window(window_size: Tuple[int, int], render: Callable[[str], None]) -> object:
+def _render_window(render: Callable[[str], None]) -> object:
   global rendering
   if rendering:
     return
@@ -34,7 +34,7 @@ def _render_window(window_size: Tuple[int, int], render: Callable[[str], None]) 
   ig.new_frame()
 
   ig.set_next_window_position(0, 0)
-  ig.set_next_window_size(*window_size)
+  ig.set_next_window_size(*ig.get_io().display_size)
   ig.begin(
     'Main',
     False,
@@ -74,10 +74,12 @@ def open_window_and_run(render: Callable[[str], None], maximize = False) -> None
   # glfw.swap_interval(0)
 
   ig_context = ig.create_context()
-  renderer = Renderer.new()
   ig.get_io().ini_filename = None
 
-  renderer.run(lambda window_size: _render_window(window_size, render))
+  core.open_window_and_run(
+    'Wafel ' + config.version_str('.'),
+    lambda: _render_window(render),
+  )
 
   ig.destroy_context(ig_context)
   glfw.destroy()

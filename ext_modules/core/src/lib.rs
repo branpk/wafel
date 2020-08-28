@@ -17,4 +17,3 @@ pub mod memory;
 pub mod python;
 pub mod sm64;
 pub mod timeline;
-pub mod window;
