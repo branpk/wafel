@@ -3,7 +3,7 @@
 //! The exposed API is **not** safe because of the assumptions made about DLL loading.
 
 use crate::graphics::{
-    ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, Scene, Viewport,
+    BirdsEyeCamera, ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, Scene, Viewport,
     IMGUI_FONT_TEXTURE_ID,
 };
 use bytemuck::{cast_slice, Pod, Zeroable};
@@ -47,6 +47,7 @@ fn core(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyRenderer>()?;
     m.add_class::<Scene>()?;
     m.add_class::<Viewport>()?;
+    m.add_class::<BirdsEyeCamera>()?;
     m.add_wrapped(wrap_pyfunction!(open_window_and_run))?;
     Ok(())
 }

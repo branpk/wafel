@@ -1,7 +1,7 @@
 from typing import *
 
 import ext_modules.graphics as cg
-from ext_modules.core import Scene, Viewport
+from ext_modules.core import Scene, Viewport, BirdsEyeCamera
 
 from wafel.model import Model
 import wafel.config as config
@@ -127,14 +127,26 @@ def render_game(
   # render_scene(scene)
   # log.timer.end()
 
+  # print(
+  #   model.get(model.selected_frame, 'gMarioState->pos[0]'),
+  #   model.get(model.selected_frame, 'gMarioState->pos[1]'),
+  #   model.get(model.selected_frame, 'gMarioState->pos[2]'),
+  # )
+
   viewport2 = Viewport()
   viewport2.x = viewport.pos.x
   viewport2.y = viewport.pos.y
   viewport2.width = viewport.size.x
   viewport2.height = viewport.size.y
 
+  camera = camera.birds_eye_camera
+  camera2 = BirdsEyeCamera()
+  camera2.pos = [camera.pos.x, camera.pos.y, camera.pos.z]
+  camera2.span_y = camera.span_y
+
   scene = Scene()
   scene.viewport = viewport2
+  scene.camera = camera2
 
   scenes.append(scene)
 
