@@ -587,7 +587,8 @@ class View:
       input_float('n64->') - input_float('n64-<'),
       input_float('n64-^') - input_float('n64-v'),
     )
-    if any(controller_stick_values):
+    # Require a larger magnitude for enabling controller since dead zone may be too small
+    if any(abs(v) > 0.1 for v in controller_stick_values):
       stick_enabled.value = True
       buttons_enabled.value = True
     if stick_enabled.value:
