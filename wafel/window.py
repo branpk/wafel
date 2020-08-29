@@ -9,6 +9,7 @@ import ext_modules.core as core
 import wafel.imgui as ig
 import wafel.config as config
 from wafel.util import *
+import wafel.graphics as graphics
 
 
 rendering = False
@@ -56,7 +57,7 @@ def _render_window(render: Callable[[str], None]) -> object:
   # ig_renderer.render(draw_data)
 
   rendering = False
-  return draw_data
+  return draw_data, graphics.take_scenes()
 
 
 def open_window_and_run(render: Callable[[str], None], maximize = False) -> None:

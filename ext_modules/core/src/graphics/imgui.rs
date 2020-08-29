@@ -298,7 +298,7 @@ impl ImguiRenderer {
                     attachment: output_view,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                        load: wgpu::LoadOp::Load,
                         store: true,
                     },
                 }],

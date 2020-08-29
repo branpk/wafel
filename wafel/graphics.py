@@ -1,26 +1,20 @@
 from typing import *
 
 import ext_modules.graphics as cg
-from ext_modules.core import Address
+from ext_modules.core import Scene, Viewport
 
 from wafel.model import Model
 import wafel.config as config
 from wafel.util import *
 
 
-_renderer: Optional[cg.Renderer] = None
+scenes: List[Scene] = []
 
-def get_renderer() -> cg.Renderer:
-  # global _renderer
-  # if _renderer is None:
-  #   cg.init_opengl()
-  #   _renderer = cg.Renderer(config.assets_directory)
-  # return _renderer
-  return None
-
-def render_scene(scene: cg.Scene) -> None:
-  pass
-  # get_renderer().render(scene)
+def take_scenes() -> List[Scene]:
+  global scenes
+  result = scenes
+  scenes = []
+  return result
 
 
 def build_mario_path(model: Model, path_frames: range) -> cg.ObjectPath:
@@ -124,14 +118,28 @@ def render_game(
   hovered_surface: Optional[int] = None,
   hidden_surfaces: Set[int] = set(),
 ) -> None:
-  log.timer.begin('scene')
-  scene = build_scene(model, viewport, camera, hidden_surfaces)
-  scene.wall_hitbox_radius = wall_hitbox_radius
-  scene.hovered_surface = -1 if hovered_surface is None else hovered_surface
-  log.timer.end()
-  log.timer.begin('render')
-  render_scene(scene)
-  log.timer.end()
+  # log.timer.begin('scene')
+  # scene = build_scene(model, viewport, camera, hidden_surfaces)
+  # scene.wall_hitbox_radius = wall_hitbox_radius
+  # scene.hovered_surface = -1 if hovered_surface is None else hovered_surface
+  # log.timer.end()
+  # log.timer.begin('render')
+  # render_scene(scene)
+  # log.timer.end()
+
+  viewport2 = Viewport()
+  viewport2.x = viewport.pos.x
+  viewport2.y = viewport.pos.y
+  viewport2.width = viewport.size.x
+  viewport2.height = viewport.size.y
+
+  scene = Scene()
+  scene.viewport = viewport2
+
+  scenes.append(scene)
 
 
-__all__ = ['render_game']
+__all__ = [
+  'get_scenes',
+  'render_game',
+]

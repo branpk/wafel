@@ -87,7 +87,7 @@ def get_viewport(framebuffer_size: Tuple[int, int]) -> cg.Viewport:
 
   viewport = cg.Viewport()
   viewport.pos.x = window_pos[0]
-  viewport.pos.y = framebuffer_size[1] - window_pos[1] - window_size[1]
+  viewport.pos.y = window_pos[1]
   viewport.size.x = window_size[0]
   viewport.size.y = window_size[1]
 

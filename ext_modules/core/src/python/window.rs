@@ -1,6 +1,6 @@
 use crate::{
     graphics::{
-        ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, ImguiRenderer,
+        ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, ImguiRenderer, Renderer, Scene,
         IMGUI_FONT_TEXTURE_ID,
     },
     python::ImguiInput,
@@ -65,6 +65,7 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
         let imgui_config = load_imgui_config()?;
         let imgui_renderer =
             ImguiRenderer::new(&device, &queue, swap_chain_desc.format, &imgui_config);
+        let renderer = Renderer::new(&device, &queue, swap_chain_desc.format);
 
         window.set_visible(true);
 
@@ -97,11 +98,22 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
                         let output_size = (swap_chain_desc.width, swap_chain_desc.height);
                         imgui_input.set_display_size(py, output_size)?;
 
-                        let py_draw_data = update_fn.as_ref(py).call0()?;
-                        let imgui_draw_data = extract_imgui_draw_data(&imgui_config, py_draw_data)?;
+                        let (py_imgui_draw_data, scenes): (&PyAny, Vec<Scene>) =
+                            update_fn.as_ref(py).call0()?.extract()?;
+                        let imgui_draw_data =
+                            extract_imgui_draw_data(&imgui_config, py_imgui_draw_data)?;
 
                         if output_size.0 > 0 && output_size.1 > 0 {
                             let output_view = &swap_chain.get_current_frame().unwrap().output.view;
+
+                            renderer.render(
+                                &device,
+                                &queue,
+                                output_view,
+                                output_size,
+                                swap_chain_desc.format,
+                                &scenes,
+                            );
 
                             imgui_renderer.render(
                                 &device,
