@@ -1,93 +1,22 @@
-use bytemuck::cast_slice;
+use super::{Scene, SurfaceType};
+use bytemuck::{cast_slice, offset_of, Pod, Zeroable};
 use nalgebra::SliceStorage;
 use pyo3::prelude::*;
-use std::iter;
+use std::{iter, mem::size_of};
 use wgpu::util::DeviceExt;
-
-#[pyclass]
-#[derive(Debug, Clone, Default)]
-pub struct Scene {
-    #[pyo3(get, set)]
-    pub viewport: Viewport,
-    pub camera: BirdsEyeCamera,
-    pub surfaces: Vec<Surface>,
-}
-
-#[pymethods]
-impl Scene {
-    #[new]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    #[getter]
-    pub fn get_camera(&self, py: Python<'_>) -> PyObject {
-        self.camera.clone().into_py(py)
-    }
-
-    #[setter]
-    pub fn set_camera(&mut self, camera: &PyAny) -> PyResult<()> {
-        self.camera = camera.extract()?;
-        Ok(())
-    }
-}
-
-#[pyclass]
-#[derive(Debug, Clone, Default)]
-pub struct Viewport {
-    #[pyo3(get, set)]
-    pub x: f32,
-    #[pyo3(get, set)]
-    pub y: f32,
-    #[pyo3(get, set)]
-    pub width: f32,
-    #[pyo3(get, set)]
-    pub height: f32,
-}
-
-#[pymethods]
-impl Viewport {
-    #[new]
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
-#[pyclass]
-#[derive(Debug, Clone, Default)]
-pub struct BirdsEyeCamera {
-    #[pyo3(get, set)]
-    pub pos: [f32; 3],
-    #[pyo3(get, set)]
-    pub span_y: f32,
-}
-
-#[pymethods]
-impl BirdsEyeCamera {
-    #[new]
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Surface {
-    pub ty: SurfaceType,
-    pub vertices: [[f32; 3]; 3],
-    pub normal: [f32; 3],
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum SurfaceType {
-    Floor,
-    Ceiling,
-    WallXProj,
-    WallZProj,
-}
 
 type Matrix4f = nalgebra::Matrix4<f32>;
 type Vector3f = nalgebra::Vector3<f32>;
 type Vector4f = nalgebra::Vector4<f32>;
+
+#[derive(Debug, Clone, Copy, Default)]
+struct Vertex {
+    pos: [f32; 3],
+    color: [f32; 4],
+}
+
+unsafe impl Zeroable for Vertex {}
+unsafe impl Pod for Vertex {}
 
 struct SceneBundle {
     transform_bind_group: wgpu::BindGroup,
@@ -96,7 +25,7 @@ struct SceneBundle {
 
 pub struct Renderer {
     transform_bind_group_layout: wgpu::BindGroupLayout,
-    pipeline: wgpu::RenderPipeline,
+    surface_pipeline: wgpu::RenderPipeline,
 }
 
 impl Renderer {
@@ -132,7 +61,7 @@ impl Renderer {
                 ],
             });
 
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        let surface_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
             layout: Some(
                 &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -143,13 +72,13 @@ impl Renderer {
             ),
             vertex_stage: wgpu::ProgrammableStageDescriptor {
                 module: &device.create_shader_module(wgpu::include_spirv!(
-                    "../../bin/shaders/simple.vert.spv"
+                    "../../bin/shaders/surface.vert.spv"
                 )),
                 entry_point: "main",
             },
             fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
                 module: &device.create_shader_module(wgpu::include_spirv!(
-                    "../../bin/shaders/simple.frag.spv"
+                    "../../bin/shaders/surface.frag.spv"
                 )),
                 entry_point: "main",
             }),
@@ -160,13 +89,22 @@ impl Renderer {
             vertex_state: wgpu::VertexStateDescriptor {
                 index_format: wgpu::IndexFormat::Uint16,
                 vertex_buffers: &[wgpu::VertexBufferDescriptor {
-                    stride: 12,
+                    stride: size_of::<Vertex>() as wgpu::BufferAddress,
                     step_mode: wgpu::InputStepMode::Vertex,
-                    attributes: &[wgpu::VertexAttributeDescriptor {
-                        offset: 0,
-                        format: wgpu::VertexFormat::Float3,
-                        shader_location: 0,
-                    }],
+                    attributes: &[
+                        // a_Pos
+                        wgpu::VertexAttributeDescriptor {
+                            offset: offset_of!(Vertex, pos) as wgpu::BufferAddress,
+                            format: wgpu::VertexFormat::Float3,
+                            shader_location: 0,
+                        },
+                        // a_Color
+                        wgpu::VertexAttributeDescriptor {
+                            offset: offset_of!(Vertex, color) as wgpu::BufferAddress,
+                            format: wgpu::VertexFormat::Float4,
+                            shader_location: 1,
+                        },
+                    ],
                 }],
             },
             sample_count: 1,
@@ -176,7 +114,7 @@ impl Renderer {
 
         Self {
             transform_bind_group_layout,
-            pipeline,
+            surface_pipeline,
         }
     }
 
@@ -189,17 +127,6 @@ impl Renderer {
         output_format: wgpu::TextureFormat,
         scenes: &[Scene],
     ) {
-        let vertices: Vec<[f32; 3]> = vec![
-            [-1428.0, 260.0, 4244.0],
-            [-1228.0, 260.0, 4344.0],
-            [-1328.0, 260.0, 4244.0],
-        ];
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: None,
-            contents: cast_slice(&vertices),
-            usage: wgpu::BufferUsage::VERTEX,
-        });
-
         let scene_bundles: Vec<SceneBundle> = scenes
             .iter()
             .map(|scene| {
@@ -251,9 +178,18 @@ impl Renderer {
                     ],
                 });
 
-                let mut surface_vertices: Vec<[f32; 3]> = Vec::new();
+                let mut surface_vertices: Vec<Vertex> = Vec::new();
                 for surface in &scene.surfaces {
-                    surface_vertices.extend_from_slice(&surface.vertices);
+                    let color = match surface.ty {
+                        SurfaceType::Floor => [0.5, 0.5, 1.0, 1.0],
+                        SurfaceType::Ceiling => [1.0, 0.5, 0.5, 1.0],
+                        SurfaceType::WallXProj => [0.3, 0.8, 0.3, 1.0],
+                        SurfaceType::WallZProj => [0.15, 0.4, 0.15, 1.0],
+                    };
+
+                    for pos in &surface.vertices {
+                        surface_vertices.push(Vertex { pos: *pos, color });
+                    }
                 }
                 let surface_vertex_buffer = (
                     surface_vertices.len(),
@@ -308,7 +244,7 @@ impl Renderer {
                     viewport.height as u32,
                 );
 
-                render_pass.set_pipeline(&self.pipeline);
+                render_pass.set_pipeline(&self.surface_pipeline);
                 render_pass.set_bind_group(0, &bundle.transform_bind_group, &[]);
 
                 render_pass.set_vertex_buffer(0, bundle.surface_vertex_buffer.1.slice(..));
