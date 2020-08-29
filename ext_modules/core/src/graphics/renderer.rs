@@ -1,11 +1,12 @@
-use super::{Scene, SurfaceType};
+use super::{BirdsEyeCamera, Camera, RotateCamera, Scene, SurfaceType};
 use bytemuck::{cast_slice, offset_of, Pod, Zeroable};
-use nalgebra::SliceStorage;
+use nalgebra::{distance, SliceStorage};
 use pyo3::prelude::*;
-use std::{iter, mem::size_of};
+use std::{f32::consts::PI, iter, mem::size_of};
 use wgpu::util::DeviceExt;
 
 type Matrix4f = nalgebra::Matrix4<f32>;
+type Point3f = nalgebra::Point3<f32>;
 type Vector3f = nalgebra::Vector3<f32>;
 type Vector4f = nalgebra::Vector4<f32>;
 
@@ -130,24 +131,10 @@ impl Renderer {
         let scene_bundles: Vec<SceneBundle> = scenes
             .iter()
             .map(|scene| {
-                let camera = &scene.camera;
-
-                // world x = screen up, world z = screen right
-                let rotation = Matrix4f::from_columns(&[
-                    Vector4f::y(),
-                    -Vector4f::z(),
-                    Vector4f::x(),
-                    Vector4f::w(),
-                ]);
-                let scaling = Matrix4f::new_nonuniform_scaling(&Vector3f::new(
-                    2.0 / (camera.span_y * output_size.0 as f32 / output_size.1 as f32),
-                    2.0 / camera.span_y,
-                    1.0 / 40_000.0,
-                ));
-                let proj_matrix = scaling * rotation;
-
-                let view_matrix =
-                    Matrix4f::new_translation(&-Vector3f::from_row_slice(&camera.pos));
+                let (proj_matrix, view_matrix) = match &scene.camera {
+                    Camera::Rotate(camera) => rotate_transforms(camera, output_size),
+                    Camera::BirdsEye(camera) => birds_eye_transforms(camera, output_size),
+                };
 
                 let proj_matrix_buffer =
                     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -256,4 +243,46 @@ impl Renderer {
         let command_buffer = encoder.finish();
         queue.submit(iter::once(command_buffer));
     }
+}
+
+fn rotate_transforms(camera: &RotateCamera, output_size: (u32, u32)) -> (Matrix4f, Matrix4f) {
+    let camera_pos = Point3f::new(camera.pos[0], camera.pos[1], camera.pos[2]);
+    let target_pos = Point3f::new(camera.target[0], camera.target[1], camera.target[2]);
+
+    let dist_to_target = distance(&camera_pos, &target_pos);
+    let dist_to_far_corner = distance(
+        &Point3f::from(camera_pos.coords.abs()),
+        &Point3f::new(-8191.0, -8191.0, -8191.0),
+    );
+    let far = dist_to_far_corner * 0.95;
+    let near = (dist_to_target * 0.1).min(1000.0);
+    let proj_matrix = Matrix4f::new_perspective(
+        output_size.0 as f32 / output_size.1 as f32,
+        camera.fov_y,
+        near,
+        far,
+    );
+
+    let view_matrix = Matrix4f::new_rotation(PI * Vector3f::y())
+        * Matrix4f::new_rotation(camera.pitch * Vector3f::x())
+        * Matrix4f::new_rotation(-camera.yaw * Vector3f::y())
+        * Matrix4f::new_translation(&-camera_pos.coords);
+
+    (proj_matrix, view_matrix)
+}
+
+fn birds_eye_transforms(camera: &BirdsEyeCamera, output_size: (u32, u32)) -> (Matrix4f, Matrix4f) {
+    // world x = screen up, world z = screen right
+    let rotation =
+        Matrix4f::from_columns(&[Vector4f::y(), -Vector4f::z(), Vector4f::x(), Vector4f::w()]);
+    let scaling = Matrix4f::new_nonuniform_scaling(&Vector3f::new(
+        2.0 / (camera.span_y * output_size.0 as f32 / output_size.1 as f32),
+        2.0 / camera.span_y,
+        1.0 / 40_000.0,
+    ));
+    let proj_matrix = scaling * rotation;
+
+    let view_matrix = Matrix4f::new_translation(&-Vector3f::from_row_slice(&camera.pos));
+
+    (proj_matrix, view_matrix)
 }

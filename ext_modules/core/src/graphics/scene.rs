@@ -5,7 +5,7 @@ use pyo3::prelude::*;
 pub struct Scene {
     #[pyo3(get, set)]
     pub viewport: Viewport,
-    pub camera: BirdsEyeCamera,
+    pub camera: Camera,
     pub surfaces: Vec<Surface>,
 }
 
@@ -18,12 +18,19 @@ impl Scene {
 
     #[getter]
     pub fn get_camera(&self, py: Python<'_>) -> PyObject {
-        self.camera.clone().into_py(py)
+        match self.camera.clone() {
+            Camera::Rotate(camera) => camera.into_py(py),
+            Camera::BirdsEye(camera) => camera.into_py(py),
+        }
     }
 
     #[setter]
     pub fn set_camera(&mut self, camera: &PyAny) -> PyResult<()> {
-        self.camera = camera.extract()?;
+        if let Ok(rotate_camera) = camera.extract::<RotateCamera>() {
+            self.camera = Camera::Rotate(rotate_camera);
+        } else {
+            self.camera = Camera::BirdsEye(camera.extract()?);
+        }
         Ok(())
     }
 }
@@ -43,6 +50,41 @@ pub struct Viewport {
 
 #[pymethods]
 impl Viewport {
+    #[new]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Camera {
+    Rotate(RotateCamera),
+    BirdsEye(BirdsEyeCamera),
+}
+
+impl Default for Camera {
+    fn default() -> Self {
+        Self::BirdsEye(BirdsEyeCamera::default())
+    }
+}
+
+#[pyclass]
+#[derive(Debug, Clone, Default)]
+pub struct RotateCamera {
+    #[pyo3(get, set)]
+    pub pos: [f32; 3],
+    #[pyo3(get, set)]
+    pub target: [f32; 3],
+    #[pyo3(get, set)]
+    pub pitch: f32, // TODO: Can compute pitch and yaw from target
+    #[pyo3(get, set)]
+    pub yaw: f32,
+    #[pyo3(get, set)]
+    pub fov_y: f32,
+}
+
+#[pymethods]
+impl RotateCamera {
     #[new]
     pub fn new() -> Self {
         Self::default()

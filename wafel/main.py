@@ -202,7 +202,7 @@ class View:
       ui.render_game_view_in_game('game-view-1', framebuffer_size, self.model)
       hovered_surface_1 = None
     else:
-      hovered_surface_1 = ui.render_game_view_birds_eye(
+      hovered_surface_1 = ui.render_game_view_rotate(
         'game-view-1',
         framebuffer_size,
         self.model,

@@ -1,7 +1,7 @@
 from typing import *
 
 import ext_modules.graphics as cg
-from ext_modules.core import Scene, Viewport, BirdsEyeCamera
+from ext_modules.core import Scene, Viewport, BirdsEyeCamera, RotateCamera
 
 from wafel.model import Model
 import wafel.config as config
@@ -139,10 +139,19 @@ def render_game(
   viewport2.width = viewport.size.x
   viewport2.height = viewport.size.y
 
-  camera = camera.birds_eye_camera
-  camera2 = BirdsEyeCamera()
-  camera2.pos = [camera.pos.x, camera.pos.y, camera.pos.z]
-  camera2.span_y = camera.span_y
+  if camera.mode == cg.CameraMode.ROTATE:
+    camera = camera.rotate_camera
+    camera2 = RotateCamera()
+    camera2.pos = [camera.pos.x, camera.pos.y, camera.pos.z]
+    camera2.target = [camera.target.x, camera.target.y, camera.target.z]
+    camera2.pitch = camera.pitch
+    camera2.yaw = camera.yaw
+    camera2.fov_y = camera.fov_y
+  else:
+    camera = camera.birds_eye_camera
+    camera2 = BirdsEyeCamera()
+    camera2.pos = [camera.pos.x, camera.pos.y, camera.pos.z]
+    camera2.span_y = camera.span_y
 
   scene = Scene()
   scene.viewport = viewport2
