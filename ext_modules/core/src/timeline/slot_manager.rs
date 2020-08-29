@@ -325,7 +325,7 @@ impl<M: Memory, C: Controller<M>> SlotManager<M, C> {
         })
     }
 
-    pub fn frame<'a>(&'a self, frame: u32) -> Result<impl State<Memory = M> + 'a, Error> {
+    pub fn frame<'a>(&'a self, frame: u32) -> Result<impl SlotState<Memory = M> + 'a, Error> {
         self.borrow_slot_state(frame, false)
     }
 

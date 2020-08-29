@@ -2,8 +2,12 @@ use super::{ObjectBehavior, ObjectSlot, SM64ErrorCause, SurfaceSlot};
 use crate::{
     data_path::GlobalDataPath,
     error::Error,
-    memory::{ConstantSource, IntValue, Memory, Value},
-    timeline::State,
+    graphics::{Scene, Surface, SurfaceType},
+    memory::{
+        data_type::{FloatType, IntType},
+        ConstantSource, IntValue, Memory, Value,
+    },
+    timeline::{SlotState, State},
 };
 use std::collections::HashMap;
 
@@ -113,4 +117,86 @@ fn frame_log_event_variant_name(event_type: &str) -> String {
             }
         })
         .collect()
+}
+
+pub fn read_surfaces_to_scene(scene: &mut Scene, state: &impl SlotState) -> Result<(), Error> {
+    let memory = state.memory();
+
+    let surface_pool_addr = state.read("sSurfacePool?")?;
+    if surface_pool_addr.is_null() {
+        return Ok(());
+    }
+    let surface_pool_addr = surface_pool_addr.as_address()?;
+
+    let surfaces_allocated = state.read("gSurfacesAllocated")?.as_int()? as usize;
+
+    let surface_size = memory
+        .global_path("sSurfacePool")?
+        .concrete_type()
+        .stride()?
+        .ok_or_else(|| SM64ErrorCause::UnsizedSurfacePoolPointer)?;
+
+    let offset = |path| -> Result<usize, Error> { Ok(memory.local_path(path)?.field_offset()?) };
+    let o_normal = offset("struct Surface.normal")?;
+    let o_vertex1 = offset("struct Surface.vertex1")?;
+    let o_vertex2 = offset("struct Surface.vertex2")?;
+    let o_vertex3 = offset("struct Surface.vertex3")?;
+
+    let read_f32 = |address| -> Result<f32, Error> {
+        let classified_address = memory.classify_address(&address);
+        let result = memory.read_float(state.slot(), &classified_address, FloatType::F32)? as f32;
+        Ok(result)
+    };
+    let read_f32_3 = |address| -> Result<[f32; 3], Error> {
+        Ok([
+            read_f32(address + 0)?,
+            read_f32(address + 4)?,
+            read_f32(address + 8)?,
+        ])
+    };
+
+    let read_s16 = |address| -> Result<i16, Error> {
+        let classified_address = memory.classify_address(&address);
+        let result = memory.read_int(state.slot(), &classified_address, IntType::S16)? as i16;
+        Ok(result)
+    };
+    let read_s16_3 = |address| -> Result<[i16; 3], Error> {
+        Ok([
+            read_s16(address + 0)?,
+            read_s16(address + 2)?,
+            read_s16(address + 4)?,
+        ])
+    };
+
+    scene.surfaces.clear();
+    for index in 0..surfaces_allocated {
+        let surface_address = surface_pool_addr + index * surface_size;
+
+        let normal = read_f32_3(surface_address + o_normal)?;
+        let vertex1 = read_s16_3(surface_address + o_vertex1)?;
+        let vertex2 = read_s16_3(surface_address + o_vertex2)?;
+        let vertex3 = read_s16_3(surface_address + o_vertex3)?;
+
+        let ty = if normal[1] > 0.01 {
+            SurfaceType::Floor
+        } else if normal[1] < -0.01 {
+            SurfaceType::Ceiling
+        } else if normal[0] < -0.707 || normal[0] > 0.707 {
+            SurfaceType::WallXProj
+        } else {
+            SurfaceType::WallZProj
+        };
+
+        scene.surfaces.push(Surface {
+            ty,
+            vertices: [
+                [vertex1[0] as f32, vertex1[1] as f32, vertex1[2] as f32],
+                [vertex2[0] as f32, vertex2[1] as f32, vertex2[2] as f32],
+                [vertex3[0] as f32, vertex3[1] as f32, vertex3[2] as f32],
+            ],
+            normal,
+        });
+    }
+
+    Ok(())
 }

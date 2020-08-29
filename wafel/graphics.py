@@ -148,6 +148,8 @@ def render_game(
   scene.viewport = viewport2
   scene.camera = camera2
 
+  model.pipeline.read_surfaces_to_scene(scene, model.selected_frame)
+
   scenes.append(scene)
 
 

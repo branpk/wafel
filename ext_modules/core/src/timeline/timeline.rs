@@ -63,11 +63,22 @@ impl<M: Memory, C: Controller<M>> Timeline<M, C> {
         }
     }
 
-    fn frame_uncached<'a>(&'a self, frame: u32) -> Result<impl State<Memory = M> + 'a, Error> {
+    /// Get the state for a given frame.
+    ///
+    /// This method bypasses the data cache.
+    ///
+    /// Generally, only one state should be kept alive at a time. Accessing one of the states
+    /// may result in a panic.
+    pub fn frame_uncached<'a>(
+        &'a self,
+        frame: u32,
+    ) -> Result<impl SlotState<Memory = M> + 'a, Error> {
         self.slot_manager.frame(frame)
     }
 
     /// Get the state for a given frame.
+    ///
+    /// This method uses the data cache when accessing data.
     ///
     /// Generally, only one state should be kept alive at a time. Accessing one of the states
     /// may result in a panic.

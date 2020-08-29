@@ -4,8 +4,13 @@ use super::{
 };
 use crate::{
     dll,
+    error::Error,
+    graphics::{Scene, Surface, SurfaceType},
     memory::{Address, Memory, Value},
-    sm64::{frame_log, load_dll_pipeline, object_behavior, object_path, ObjectSlot, Pipeline},
+    sm64::{
+        frame_log, load_dll_pipeline, object_behavior, object_path, read_surfaces_to_scene,
+        ObjectSlot, Pipeline, SM64ErrorCause,
+    },
     timeline::{SlotState, State},
 };
 use lazy_static::lazy_static;
@@ -414,5 +419,11 @@ impl PyPipeline {
         };
 
         events.into_iter().map(convert_event).collect()
+    }
+
+    pub fn read_surfaces_to_scene(&self, scene: &mut Scene, frame: u32) -> PyResult<()> {
+        let state = self.get().pipeline.timeline().frame_uncached(frame)?;
+        read_surfaces_to_scene(scene, &state)?;
+        Ok(())
     }
 }

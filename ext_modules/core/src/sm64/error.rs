@@ -32,6 +32,8 @@ pub enum SM64ErrorCause {
     InvalidFrameLogEventType { value: IntValue },
     #[from]
     VariableSerdeError(serde_json::Error),
+    #[display(fmt = "surface pool pointer does not have a stride")]
+    UnsizedSurfacePoolPointer,
 }
 
 #[derive(Debug, Display, Error, From)]

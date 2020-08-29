@@ -9,7 +9,8 @@ use wgpu::util::DeviceExt;
 pub struct Scene {
     #[pyo3(get, set)]
     pub viewport: Viewport,
-    camera: BirdsEyeCamera,
+    pub camera: BirdsEyeCamera,
+    pub surfaces: Vec<Surface>,
 }
 
 #[pymethods]
@@ -69,12 +70,28 @@ impl BirdsEyeCamera {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Surface {
+    pub ty: SurfaceType,
+    pub vertices: [[f32; 3]; 3],
+    pub normal: [f32; 3],
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum SurfaceType {
+    Floor,
+    Ceiling,
+    WallXProj,
+    WallZProj,
+}
+
 type Matrix4f = nalgebra::Matrix4<f32>;
 type Vector3f = nalgebra::Vector3<f32>;
 type Vector4f = nalgebra::Vector4<f32>;
 
 struct SceneBundle {
     transform_bind_group: wgpu::BindGroup,
+    surface_vertex_buffer: (usize, wgpu::Buffer),
 }
 
 pub struct Renderer {
@@ -234,8 +251,22 @@ impl Renderer {
                     ],
                 });
 
+                let mut surface_vertices: Vec<[f32; 3]> = Vec::new();
+                for surface in &scene.surfaces {
+                    surface_vertices.extend_from_slice(&surface.vertices);
+                }
+                let surface_vertex_buffer = (
+                    surface_vertices.len(),
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: None,
+                        contents: cast_slice(&surface_vertices),
+                        usage: wgpu::BufferUsage::VERTEX,
+                    }),
+                );
+
                 SceneBundle {
                     transform_bind_group,
+                    surface_vertex_buffer,
                 }
             })
             .collect();
@@ -280,9 +311,9 @@ impl Renderer {
                 render_pass.set_pipeline(&self.pipeline);
                 render_pass.set_bind_group(0, &bundle.transform_bind_group, &[]);
 
-                render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+                render_pass.set_vertex_buffer(0, bundle.surface_vertex_buffer.1.slice(..));
 
-                render_pass.draw(0..vertices.len() as u32, 0..1);
+                render_pass.draw(0..bundle.surface_vertex_buffer.0 as u32, 0..1);
             }
         }
 

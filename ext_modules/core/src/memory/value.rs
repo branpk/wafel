@@ -66,6 +66,15 @@ fn display_array(elements: &Vec<Value>) -> String {
 }
 
 impl Value {
+    /// Return true if the value is null.
+    pub fn is_null(&self) -> bool {
+        if let Value::Null = self {
+            true
+        } else {
+            false
+        }
+    }
+
     /// Convert the value to an int.
     //
     /// Return an error if the value is not an int.
@@ -110,6 +119,13 @@ impl Value {
         }
     }
 
+    /// Convert the value to a float and then truncate to an f32.
+    //
+    /// Return an error if the value is not a float.
+    pub fn as_f32(&self) -> Result<f32, Error> {
+        Ok(self.as_float()? as f32)
+    }
+
     /// Convert the value to an address.
     //
     /// Return an error if the value is not an address.
@@ -138,5 +154,60 @@ impl Value {
             }
             .into())
         }
+    }
+
+    /// Convert the value to an array and return its elements.
+    ///
+    /// Return an error if the value is not an array.
+    pub fn as_array(&self) -> Result<&[Value], Error> {
+        if let Value::Array(elements) = self {
+            Ok(elements)
+        } else {
+            Err(MemoryErrorCause::ValueTypeError {
+                value: self.to_string(),
+                expected: "array".to_owned(),
+            }
+            .into())
+        }
+    }
+
+    /// Convert the value to an array and return its elements.
+    ///
+    /// Return an error if the value is not an array of the specified length.
+    pub fn as_array_with_len(&self, length: usize) -> Result<&[Value], Error> {
+        let elements = self.as_array()?;
+        if elements.len() == length {
+            Ok(elements)
+        } else {
+            Err(MemoryErrorCause::ValueTypeError {
+                value: self.to_string(),
+                expected: format!("array of length {}", length),
+            }
+            .into())
+        }
+    }
+
+    /// Convert the value to an array of three i16s.
+    ///
+    /// Return an error if the value is not an array of three ints.
+    pub fn as_i16_3(&self) -> Result<[i16; 3], Error> {
+        let elements = self.as_array_with_len(3)?;
+        Ok([
+            elements[0].as_int()? as i16,
+            elements[1].as_int()? as i16,
+            elements[2].as_int()? as i16,
+        ])
+    }
+
+    /// Convert the value to an array of three f32s.
+    ///
+    /// Return an error if the value is not an array of three floats.
+    pub fn as_f32_3(&self) -> Result<[f32; 3], Error> {
+        let elements = self.as_array_with_len(3)?;
+        Ok([
+            elements[0].as_float()? as f32,
+            elements[1].as_float()? as f32,
+            elements[2].as_float()? as f32,
+        ])
     }
 }
