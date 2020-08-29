@@ -10,6 +10,8 @@ type Point3f = nalgebra::Point3<f32>;
 type Vector3f = nalgebra::Vector3<f32>;
 type Vector4f = nalgebra::Vector4<f32>;
 
+const DEPTH_TEXTURE_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth24Plus;
+
 #[derive(Debug, Clone, Copy, Default)]
 struct Vertex {
     pos: [f32; 3],
@@ -25,6 +27,7 @@ struct SceneBundle {
 }
 
 pub struct Renderer {
+    depth_texture: Option<((u32, u32), wgpu::Texture)>,
     transform_bind_group_layout: wgpu::BindGroupLayout,
     surface_pipeline: wgpu::RenderPipeline,
 }
@@ -86,7 +89,12 @@ impl Renderer {
             rasterization_state: None,
             primitive_topology: wgpu::PrimitiveTopology::TriangleList,
             color_states: &[wgpu::ColorStateDescriptor::from(output_format)],
-            depth_stencil_state: None,
+            depth_stencil_state: Some(wgpu::DepthStencilStateDescriptor {
+                format: DEPTH_TEXTURE_FORMAT,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::LessEqual,
+                stencil: wgpu::StencilStateDescriptor::default(),
+            }),
             vertex_state: wgpu::VertexStateDescriptor {
                 index_format: wgpu::IndexFormat::Uint16,
                 vertex_buffers: &[wgpu::VertexBufferDescriptor {
@@ -114,13 +122,14 @@ impl Renderer {
         });
 
         Self {
+            depth_texture: None,
             transform_bind_group_layout,
             surface_pipeline,
         }
     }
 
     pub fn render(
-        &self,
+        &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         output_view: &wgpu::TextureView,
@@ -128,6 +137,21 @@ impl Renderer {
         output_format: wgpu::TextureFormat,
         scenes: &[Scene],
     ) {
+        if self
+            .depth_texture
+            .as_ref()
+            .filter(|(size, _)| size == &output_size)
+            .is_none()
+        {
+            self.depth_texture = Some((output_size, create_depth_texture(device, output_size)));
+        }
+        let depth_texture_view = self
+            .depth_texture
+            .as_ref()
+            .unwrap()
+            .1
+            .create_view(&wgpu::TextureViewDescriptor::default());
+
         let scene_bundles: Vec<SceneBundle> = scenes
             .iter()
             .map(|scene| {
@@ -211,7 +235,14 @@ impl Renderer {
                         store: true,
                     },
                 }],
-                depth_stencil_attachment: None,
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
+                    attachment: &depth_texture_view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: true,
+                    }),
+                    stencil_ops: None,
+                }),
             });
 
             for (scene, bundle) in scenes.iter().zip(&scene_bundles) {
@@ -243,6 +274,22 @@ impl Renderer {
         let command_buffer = encoder.finish();
         queue.submit(iter::once(command_buffer));
     }
+}
+
+fn create_depth_texture(device: &wgpu::Device, output_size: (u32, u32)) -> wgpu::Texture {
+    device.create_texture(&wgpu::TextureDescriptor {
+        label: None,
+        size: wgpu::Extent3d {
+            width: output_size.0,
+            height: output_size.1,
+            depth: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: DEPTH_TEXTURE_FORMAT,
+        usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
+    })
 }
 
 fn rotate_transforms(camera: &RotateCamera, output_size: (u32, u32)) -> (Matrix4f, Matrix4f) {
