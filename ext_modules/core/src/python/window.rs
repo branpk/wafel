@@ -1,6 +1,7 @@
+use super::Scene;
 use crate::{
     graphics::{
-        ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, ImguiRenderer, Renderer, Scene,
+        ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, ImguiRenderer, Renderer,
         IMGUI_FONT_TEXTURE_ID,
     },
     python::ImguiInput,

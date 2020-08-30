@@ -1,11 +1,10 @@
 use super::{
     value::{py_object_to_value, value_to_py_object},
-    PyAddress, PyEditRange, PyObjectBehavior, PyVariable,
+    PyAddress, PyEditRange, PyObjectBehavior, PyVariable, Scene,
 };
 use crate::{
     dll,
     error::Error,
-    graphics::{Scene, Surface, SurfaceType},
     memory::{Address, Memory, Value},
     sm64::{
         frame_log, load_dll_pipeline, object_behavior, object_path, read_surfaces_to_scene,

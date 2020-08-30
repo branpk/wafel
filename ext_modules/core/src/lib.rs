@@ -12,6 +12,7 @@
 pub mod data_path;
 pub mod dll;
 pub mod error;
+pub mod geo;
 pub mod graphics;
 pub mod memory;
 pub mod python;

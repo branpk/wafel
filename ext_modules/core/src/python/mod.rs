@@ -3,8 +3,7 @@
 //! The exposed API is **not** safe because of the assumptions made about DLL loading.
 
 use crate::graphics::{
-    BirdsEyeCamera, ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, RotateCamera,
-    Scene, Viewport, IMGUI_FONT_TEXTURE_ID,
+    ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, IMGUI_FONT_TEXTURE_ID,
 };
 use bytemuck::{cast_slice, Pod, Zeroable};
 pub use imgui_input::*;
@@ -18,6 +17,7 @@ use std::{
 pub use variable::*;
 use wgpu::util::DeviceExt;
 // pub use window::*;
+pub use scene::*;
 pub use window::*;
 use winit::{
     dpi::PhysicalSize,
@@ -32,6 +32,7 @@ use winit::{
 mod error;
 mod imgui_input;
 mod pipeline;
+mod scene;
 mod value;
 mod variable;
 mod window;

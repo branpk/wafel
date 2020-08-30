@@ -2,11 +2,11 @@ use super::{ObjectBehavior, ObjectSlot, SM64ErrorCause, SurfaceSlot};
 use crate::{
     data_path::GlobalDataPath,
     error::Error,
-    graphics::{Scene, Surface, SurfaceType},
     memory::{
         data_type::{FloatType, IntType},
         ConstantSource, IntValue, Memory, Value,
     },
+    python::{Scene, Surface, SurfaceType},
     timeline::{SlotState, State},
 };
 use std::collections::HashMap;
