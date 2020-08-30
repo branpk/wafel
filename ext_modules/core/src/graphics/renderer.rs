@@ -190,13 +190,24 @@ impl Renderer {
                 });
 
                 let mut surface_vertices: Vec<Vertex> = Vec::new();
-                for surface in &scene.surfaces {
-                    let color = match surface.ty {
+                for (i, surface) in scene.surfaces.iter().enumerate() {
+                    let mut color = match surface.ty {
                         SurfaceType::Floor => [0.5, 0.5, 1.0, 1.0],
                         SurfaceType::Ceiling => [1.0, 0.5, 0.5, 1.0],
                         SurfaceType::WallXProj => [0.3, 0.8, 0.3, 1.0],
                         SurfaceType::WallZProj => [0.15, 0.4, 0.15, 1.0],
                     };
+
+                    if scene.hovered_surface == Some(i) {
+                        let boost = if surface.ty == SurfaceType::Floor {
+                            0.08
+                        } else {
+                            0.2
+                        };
+                        color[0] += boost;
+                        color[1] += boost;
+                        color[2] += boost;
+                    }
 
                     for pos in &surface.vertices {
                         surface_vertices.push(Vertex { pos: *pos, color });

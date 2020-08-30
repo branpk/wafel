@@ -7,6 +7,8 @@ pub struct Scene {
     pub viewport: Viewport,
     pub camera: Camera,
     pub surfaces: Vec<Surface>,
+    #[pyo3(get, set)]
+    pub hovered_surface: Option<usize>,
 }
 
 #[pymethods]
@@ -115,7 +117,7 @@ pub struct Surface {
     pub normal: [f32; 3],
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SurfaceType {
     Floor,
     Ceiling,
