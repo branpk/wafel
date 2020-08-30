@@ -159,6 +159,7 @@ def render_game(
 
   model.pipeline.read_surfaces_to_scene(scene, model.selected_frame)
   scene.hovered_surface = hovered_surface
+  scene.hidden_surfaces = hidden_surfaces
 
   scenes.append(scene)
 

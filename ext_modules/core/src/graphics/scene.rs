@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+use std::collections::HashSet;
 
 #[pyclass]
 #[derive(Debug, Clone, Default)]
@@ -9,6 +10,8 @@ pub struct Scene {
     pub surfaces: Vec<Surface>,
     #[pyo3(get, set)]
     pub hovered_surface: Option<usize>,
+    #[pyo3(get, set)]
+    pub hidden_surfaces: HashSet<usize>,
 }
 
 #[pymethods]

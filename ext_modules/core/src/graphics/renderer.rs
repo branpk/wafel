@@ -24,12 +24,14 @@ unsafe impl Pod for Vertex {}
 struct SceneBundle {
     transform_bind_group: wgpu::BindGroup,
     surface_vertex_buffer: (usize, wgpu::Buffer),
+    hidden_surface_vertex_buffer: (usize, wgpu::Buffer),
 }
 
 pub struct Renderer {
     depth_texture: Option<((u32, u32), wgpu::Texture)>,
     transform_bind_group_layout: wgpu::BindGroupLayout,
     surface_pipeline: wgpu::RenderPipeline,
+    hidden_surface_pipeline: wgpu::RenderPipeline,
 }
 
 impl Renderer {
@@ -65,66 +67,16 @@ impl Renderer {
                 ],
             });
 
-        let surface_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: None,
-            layout: Some(
-                &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: None,
-                    bind_group_layouts: &[&transform_bind_group_layout],
-                    push_constant_ranges: &[],
-                }),
-            ),
-            vertex_stage: wgpu::ProgrammableStageDescriptor {
-                module: &device.create_shader_module(wgpu::include_spirv!(
-                    "../../bin/shaders/surface.vert.spv"
-                )),
-                entry_point: "main",
-            },
-            fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
-                module: &device.create_shader_module(wgpu::include_spirv!(
-                    "../../bin/shaders/surface.frag.spv"
-                )),
-                entry_point: "main",
-            }),
-            rasterization_state: None,
-            primitive_topology: wgpu::PrimitiveTopology::TriangleList,
-            color_states: &[wgpu::ColorStateDescriptor::from(output_format)],
-            depth_stencil_state: Some(wgpu::DepthStencilStateDescriptor {
-                format: DEPTH_TEXTURE_FORMAT,
-                depth_write_enabled: true,
-                depth_compare: wgpu::CompareFunction::LessEqual,
-                stencil: wgpu::StencilStateDescriptor::default(),
-            }),
-            vertex_state: wgpu::VertexStateDescriptor {
-                index_format: wgpu::IndexFormat::Uint16,
-                vertex_buffers: &[wgpu::VertexBufferDescriptor {
-                    stride: size_of::<Vertex>() as wgpu::BufferAddress,
-                    step_mode: wgpu::InputStepMode::Vertex,
-                    attributes: &[
-                        // a_Pos
-                        wgpu::VertexAttributeDescriptor {
-                            offset: offset_of!(Vertex, pos) as wgpu::BufferAddress,
-                            format: wgpu::VertexFormat::Float3,
-                            shader_location: 0,
-                        },
-                        // a_Color
-                        wgpu::VertexAttributeDescriptor {
-                            offset: offset_of!(Vertex, color) as wgpu::BufferAddress,
-                            format: wgpu::VertexFormat::Float4,
-                            shader_location: 1,
-                        },
-                    ],
-                }],
-            },
-            sample_count: 1,
-            sample_mask: !0,
-            alpha_to_coverage_enabled: false,
-        });
+        let surface_pipeline =
+            create_surface_pipeline(device, &transform_bind_group_layout, output_format, true);
+        let hidden_surface_pipeline =
+            create_surface_pipeline(device, &transform_bind_group_layout, output_format, false);
 
         Self {
             depth_texture: None,
             transform_bind_group_layout,
             surface_pipeline,
+            hidden_surface_pipeline,
         }
     }
 
@@ -190,7 +142,12 @@ impl Renderer {
                 });
 
                 let mut surface_vertices: Vec<Vertex> = Vec::new();
+                let mut hidden_surface_vertices: Vec<Vertex> = Vec::new();
+
                 for (i, surface) in scene.surfaces.iter().enumerate() {
+                    let hidden = scene.hidden_surfaces.contains(&i);
+                    let hovered = scene.hovered_surface == Some(i);
+
                     let mut color = match surface.ty {
                         SurfaceType::Floor => [0.5, 0.5, 1.0, 1.0],
                         SurfaceType::Ceiling => [1.0, 0.5, 0.5, 1.0],
@@ -198,7 +155,15 @@ impl Renderer {
                         SurfaceType::WallZProj => [0.15, 0.4, 0.15, 1.0],
                     };
 
-                    if scene.hovered_surface == Some(i) {
+                    if hidden {
+                        let scale = 1.5;
+                        color[0] *= scale;
+                        color[1] *= scale;
+                        color[2] *= scale;
+                        color[3] = if hovered { 0.1 } else { 0.0 };
+                    }
+
+                    if hovered {
                         let boost = if surface.ty == SurfaceType::Floor {
                             0.08
                         } else {
@@ -210,9 +175,15 @@ impl Renderer {
                     }
 
                     for pos in &surface.vertices {
-                        surface_vertices.push(Vertex { pos: *pos, color });
+                        let vertex = Vertex { pos: *pos, color };
+                        if hidden {
+                            hidden_surface_vertices.push(vertex);
+                        } else {
+                            surface_vertices.push(vertex);
+                        }
                     }
                 }
+
                 let surface_vertex_buffer = (
                     surface_vertices.len(),
                     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -221,10 +192,19 @@ impl Renderer {
                         usage: wgpu::BufferUsage::VERTEX,
                     }),
                 );
+                let hidden_surface_vertex_buffer = (
+                    hidden_surface_vertices.len(),
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: None,
+                        contents: cast_slice(&hidden_surface_vertices),
+                        usage: wgpu::BufferUsage::VERTEX,
+                    }),
+                );
 
                 SceneBundle {
                     transform_bind_group,
                     surface_vertex_buffer,
+                    hidden_surface_vertex_buffer,
                 }
             })
             .collect();
@@ -273,12 +253,15 @@ impl Renderer {
                     viewport.height as u32,
                 );
 
-                render_pass.set_pipeline(&self.surface_pipeline);
                 render_pass.set_bind_group(0, &bundle.transform_bind_group, &[]);
 
+                render_pass.set_pipeline(&self.surface_pipeline);
                 render_pass.set_vertex_buffer(0, bundle.surface_vertex_buffer.1.slice(..));
-
                 render_pass.draw(0..bundle.surface_vertex_buffer.0 as u32, 0..1);
+
+                render_pass.set_pipeline(&self.hidden_surface_pipeline);
+                render_pass.set_vertex_buffer(0, bundle.hidden_surface_vertex_buffer.1.slice(..));
+                render_pass.draw(0..bundle.hidden_surface_vertex_buffer.0 as u32, 0..1);
             }
         }
 
@@ -300,6 +283,76 @@ fn create_depth_texture(device: &wgpu::Device, output_size: (u32, u32)) -> wgpu:
         dimension: wgpu::TextureDimension::D2,
         format: DEPTH_TEXTURE_FORMAT,
         usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
+    })
+}
+
+fn create_surface_pipeline(
+    device: &wgpu::Device,
+    transform_bind_group_layout: &wgpu::BindGroupLayout,
+    output_format: wgpu::TextureFormat,
+    depth_write_enabled: bool,
+) -> wgpu::RenderPipeline {
+    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: None,
+        layout: Some(
+            &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: None,
+                bind_group_layouts: &[&transform_bind_group_layout],
+                push_constant_ranges: &[],
+            }),
+        ),
+        vertex_stage: wgpu::ProgrammableStageDescriptor {
+            module: &device
+                .create_shader_module(wgpu::include_spirv!("../../bin/shaders/surface.vert.spv")),
+            entry_point: "main",
+        },
+        fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
+            module: &device
+                .create_shader_module(wgpu::include_spirv!("../../bin/shaders/surface.frag.spv")),
+            entry_point: "main",
+        }),
+        rasterization_state: None,
+        primitive_topology: wgpu::PrimitiveTopology::TriangleList,
+        color_states: &[wgpu::ColorStateDescriptor {
+            format: output_format,
+            alpha_blend: wgpu::BlendDescriptor::REPLACE,
+            color_blend: wgpu::BlendDescriptor {
+                src_factor: wgpu::BlendFactor::SrcAlpha,
+                dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                operation: wgpu::BlendOperation::Add,
+            },
+            write_mask: wgpu::ColorWrite::ALL,
+        }],
+        depth_stencil_state: Some(wgpu::DepthStencilStateDescriptor {
+            format: DEPTH_TEXTURE_FORMAT,
+            depth_write_enabled,
+            depth_compare: wgpu::CompareFunction::LessEqual,
+            stencil: wgpu::StencilStateDescriptor::default(),
+        }),
+        vertex_state: wgpu::VertexStateDescriptor {
+            index_format: wgpu::IndexFormat::Uint16,
+            vertex_buffers: &[wgpu::VertexBufferDescriptor {
+                stride: size_of::<Vertex>() as wgpu::BufferAddress,
+                step_mode: wgpu::InputStepMode::Vertex,
+                attributes: &[
+                    // a_Pos
+                    wgpu::VertexAttributeDescriptor {
+                        offset: offset_of!(Vertex, pos) as wgpu::BufferAddress,
+                        format: wgpu::VertexFormat::Float3,
+                        shader_location: 0,
+                    },
+                    // a_Color
+                    wgpu::VertexAttributeDescriptor {
+                        offset: offset_of!(Vertex, color) as wgpu::BufferAddress,
+                        format: wgpu::VertexFormat::Float4,
+                        shader_location: 1,
+                    },
+                ],
+            }],
+        },
+        sample_count: 1,
+        sample_mask: !0,
+        alpha_to_coverage_enabled: false,
     })
 }
 
