@@ -33,6 +33,7 @@ struct SceneBundle {
     surface_vertex_buffer: (usize, wgpu::Buffer),
     hidden_surface_vertex_buffer: (usize, wgpu::Buffer),
     wall_hitbox_vertex_buffer: (usize, wgpu::Buffer),
+    wall_hitbox_outline_vertex_buffer: (usize, wgpu::Buffer),
 }
 
 pub struct Renderer {
@@ -42,6 +43,7 @@ pub struct Renderer {
     hidden_surface_pipeline: wgpu::RenderPipeline,
     wall_hitbox_pipeline: wgpu::RenderPipeline,
     wall_hitbox_depth_pass_pipeline: wgpu::RenderPipeline,
+    wall_hitbox_outline_pipeline: wgpu::RenderPipeline,
 }
 
 impl Renderer {
@@ -81,10 +83,27 @@ impl Renderer {
             create_surface_pipeline(device, &transform_bind_group_layout, output_format, true);
         let hidden_surface_pipeline =
             create_surface_pipeline(device, &transform_bind_group_layout, output_format, false);
-        let wall_hitbox_pipeline =
-            create_wall_hitbox_pipeline(device, &transform_bind_group_layout, output_format, true);
-        let wall_hitbox_depth_pass_pipeline =
-            create_wall_hitbox_pipeline(device, &transform_bind_group_layout, output_format, false);
+        let wall_hitbox_pipeline = create_wall_hitbox_pipeline(
+            device,
+            &transform_bind_group_layout,
+            output_format,
+            true,
+            wgpu::PrimitiveTopology::TriangleList,
+        );
+        let wall_hitbox_depth_pass_pipeline = create_wall_hitbox_pipeline(
+            device,
+            &transform_bind_group_layout,
+            output_format,
+            false,
+            wgpu::PrimitiveTopology::TriangleList,
+        );
+        let wall_hitbox_outline_pipeline = create_wall_hitbox_pipeline(
+            device,
+            &transform_bind_group_layout,
+            output_format,
+            true,
+            wgpu::PrimitiveTopology::LineList,
+        );
 
         Self {
             depth_texture: None,
@@ -93,6 +112,7 @@ impl Renderer {
             hidden_surface_pipeline,
             wall_hitbox_pipeline,
             wall_hitbox_depth_pass_pipeline,
+            wall_hitbox_outline_pipeline,
         }
     }
 
@@ -175,12 +195,21 @@ impl Renderer {
                     }),
                 );
 
-                let wall_hitbox_vertices = get_wall_hitbox_vertices(scene);
+                let (wall_hitbox_vertices, wall_hitbox_outline_vertices) =
+                    get_wall_hitbox_vertices(scene);
                 let wall_hitbox_vertex_buffer = (
                     wall_hitbox_vertices.len(),
                     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                         label: None,
                         contents: cast_slice(&wall_hitbox_vertices),
+                        usage: wgpu::BufferUsage::VERTEX,
+                    }),
+                );
+                let wall_hitbox_outline_vertex_buffer = (
+                    wall_hitbox_outline_vertices.len(),
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: None,
+                        contents: cast_slice(&wall_hitbox_outline_vertices),
                         usage: wgpu::BufferUsage::VERTEX,
                     }),
                 );
@@ -190,6 +219,7 @@ impl Renderer {
                     surface_vertex_buffer,
                     hidden_surface_vertex_buffer,
                     wall_hitbox_vertex_buffer,
+                    wall_hitbox_outline_vertex_buffer,
                 }
             })
             .collect();
@@ -245,12 +275,17 @@ impl Renderer {
                 render_pass.draw(0..bundle.surface_vertex_buffer.0 as u32, 0..1);
 
                 if scene.wall_hitbox_radius > 0.0 {
-                    render_pass.set_vertex_buffer(0, bundle.wall_hitbox_vertex_buffer.1.slice(..));
+                    // Render lines first since tris write to z buffer
+                    render_pass.set_pipeline(&self.wall_hitbox_outline_pipeline);
+                    render_pass
+                        .set_vertex_buffer(0, bundle.wall_hitbox_outline_vertex_buffer.1.slice(..));
+                    render_pass.draw(0..bundle.wall_hitbox_outline_vertex_buffer.0 as u32, 0..1);
 
                     // When two wall hitboxes overlap, we should not increase the opacity within
                     // their region of overlap (preference).
                     // First pass writes only to depth buffer to ensure that only the closest
                     // hitbox triangles are drawn, then second pass draws them.
+                    render_pass.set_vertex_buffer(0, bundle.wall_hitbox_vertex_buffer.1.slice(..));
                     render_pass.set_pipeline(&self.wall_hitbox_depth_pass_pipeline);
                     render_pass.draw(0..bundle.wall_hitbox_vertex_buffer.0 as u32, 0..1);
                     render_pass.set_pipeline(&self.wall_hitbox_pipeline);
@@ -359,6 +394,7 @@ fn create_wall_hitbox_pipeline(
     transform_bind_group_layout: &wgpu::BindGroupLayout,
     output_format: wgpu::TextureFormat,
     color_write_enabled: bool,
+    primitive_topology: wgpu::PrimitiveTopology,
 ) -> wgpu::RenderPipeline {
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: None,
@@ -380,7 +416,7 @@ fn create_wall_hitbox_pipeline(
             entry_point: "main",
         }),
         rasterization_state: None,
-        primitive_topology: wgpu::PrimitiveTopology::TriangleList,
+        primitive_topology,
         color_states: &[wgpu::ColorStateDescriptor {
             format: output_format,
             alpha_blend: wgpu::BlendDescriptor::REPLACE,
@@ -517,8 +553,9 @@ fn get_surface_vertices(scene: &Scene) -> (Vec<Vertex>, Vec<Vertex>) {
     (surface_vertices, hidden_surface_vertices)
 }
 
-fn get_wall_hitbox_vertices(scene: &Scene) -> Vec<Vertex> {
+fn get_wall_hitbox_vertices(scene: &Scene) -> (Vec<Vertex>, Vec<Vertex>) {
     let mut wall_hitbox_vertices: Vec<Vertex> = Vec::new();
+    let mut wall_hitbox_outline_vertices: Vec<Vertex> = Vec::new();
 
     for (i, surface) in scene.surfaces.iter().enumerate() {
         if scene.hidden_surfaces.contains(&i) {
@@ -539,6 +576,7 @@ fn get_wall_hitbox_vertices(scene: &Scene) -> Vec<Vertex> {
                 color = [0.15, 0.4, 0.15, 0.4];
             }
         };
+        let outline_color = [0.0, 0.0, 0.0, 0.5];
 
         let proj_dist = scene.wall_hitbox_radius / surface.normal().dot(&proj_dir);
 
@@ -563,6 +601,17 @@ fn get_wall_hitbox_vertices(scene: &Scene) -> Vec<Vertex> {
             Vertex::new(int_vertices[0], color),
             Vertex::new(int_vertices[1], color),
             Vertex::new(int_vertices[2], color),
+        ]);
+
+        wall_hitbox_outline_vertices.extend_from_slice(&[
+            Vertex::new(ext_vertices[0], outline_color),
+            Vertex::new(ext_vertices[1], outline_color),
+            Vertex::new(ext_vertices[2], outline_color),
+        ]);
+        wall_hitbox_outline_vertices.extend_from_slice(&[
+            Vertex::new(int_vertices[0], outline_color),
+            Vertex::new(int_vertices[1], outline_color),
+            Vertex::new(int_vertices[2], outline_color),
         ]);
 
         // TODO: Helper for calculating bump sizes
@@ -596,8 +645,21 @@ fn get_wall_hitbox_vertices(scene: &Scene) -> Vec<Vertex> {
             for vertex in &vertices {
                 wall_hitbox_vertices.push(Vertex::new(vertex - bump * normal, color));
             }
+
+            wall_hitbox_outline_vertices.extend_from_slice(&[
+                Vertex::new(int_vertices[i0], outline_color),
+                Vertex::new(ext_vertices[i0], outline_color),
+            ]);
+            wall_hitbox_outline_vertices.extend_from_slice(&[
+                Vertex::new(int_vertices[i0], outline_color),
+                Vertex::new(int_vertices[i1], outline_color),
+            ]);
+            wall_hitbox_outline_vertices.extend_from_slice(&[
+                Vertex::new(ext_vertices[i0], outline_color),
+                Vertex::new(ext_vertices[i1], outline_color),
+            ]);
         }
     }
 
-    wall_hitbox_vertices
+    (wall_hitbox_vertices, wall_hitbox_outline_vertices)
 }
