@@ -5,6 +5,7 @@ use super::{
 use crate::{
     dll,
     error::Error,
+    graphics::scene,
     graphics::scene::Scene,
     memory::{Address, Memory, Value},
     sm64::read_objects_to_scene,
@@ -432,5 +433,22 @@ impl PyPipeline {
         let state = self.get().pipeline.timeline().frame_uncached(frame)?;
         read_objects_to_scene(scene, &state)?;
         Ok(())
+    }
+
+    pub fn read_mario_path(&self, frame_start: u32, frame_end: u32) -> PyResult<scene::ObjectPath> {
+        let timeline = self.get().pipeline.timeline();
+        let pos_path = timeline.memory().global_path("gMarioState->pos")?;
+
+        let mut nodes = Vec::new();
+        for frame in frame_start..frame_end {
+            nodes.push(scene::ObjectPathNode {
+                pos: timeline.frame(frame)?.path_read(&pos_path)?.as_f32_3()?,
+            });
+        }
+
+        Ok(scene::ObjectPath {
+            nodes,
+            root_index: 0,
+        })
     }
 }

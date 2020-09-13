@@ -4,3 +4,4 @@ surface.vert
 surface.frag
 color.vert
 color.frag
+screen_dot.vert

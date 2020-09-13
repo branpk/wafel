@@ -9,13 +9,15 @@ pub struct Scene {
     pub viewport: Viewport,
     pub camera: Camera,
     pub surfaces: Vec<Surface>,
-    pub objects: Vec<Object>,
     #[pyo3(get, set)]
     pub wall_hitbox_radius: f32,
     #[pyo3(get, set)]
     pub hovered_surface: Option<usize>,
     #[pyo3(get, set)]
     pub hidden_surfaces: HashSet<usize>,
+    pub objects: Vec<Object>,
+    #[pyo3(get, set)]
+    pub object_paths: Vec<ObjectPath>,
 }
 
 #[pymethods]
@@ -154,6 +156,26 @@ pub struct Object {
 }
 
 impl Object {
+    pub fn pos(&self) -> Point3f {
+        Point3f::from_slice(&self.pos)
+    }
+}
+
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct ObjectPath {
+    pub nodes: Vec<ObjectPathNode>,
+    #[pyo3(get, set)]
+    pub root_index: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct ObjectPathNode {
+    pub pos: [f32; 3],
+    // TODO: Quarter steps
+}
+
+impl ObjectPathNode {
     pub fn pos(&self) -> Point3f {
         Point3f::from_slice(&self.pos)
     }

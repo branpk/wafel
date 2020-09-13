@@ -4,7 +4,7 @@ use nalgebra::distance;
 use std::{f32::consts::PI, iter, mem::size_of};
 use wgpu::util::DeviceExt;
 
-use super::scene::{BirdsEyeCamera, Camera, RotateCamera, Scene, SurfaceType};
+use super::scene::{BirdsEyeCamera, Camera, ObjectPath, RotateCamera, Scene, SurfaceType};
 
 const NUM_OUTPUT_SAMPLES: u32 = 4;
 const DEPTH_TEXTURE_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth24Plus;
@@ -28,6 +28,18 @@ impl Vertex {
 unsafe impl Zeroable for Vertex {}
 unsafe impl Pod for Vertex {}
 
+#[derive(Debug, Clone, Copy, Default)]
+#[repr(C)]
+struct ScreenDotInstance {
+    center: [f32; 3],
+    radius: [f32; 2],
+    color: [f32; 4],
+}
+
+unsafe impl Zeroable for ScreenDotInstance {}
+unsafe impl Pod for ScreenDotInstance {}
+
+#[derive(Debug)]
 struct SceneBundle {
     transform_bind_group: wgpu::BindGroup,
     surface_vertex_buffer: (usize, wgpu::Buffer),
@@ -35,8 +47,12 @@ struct SceneBundle {
     wall_hitbox_vertex_buffer: (usize, wgpu::Buffer),
     wall_hitbox_outline_vertex_buffer: (usize, wgpu::Buffer),
     object_vertex_buffer: (usize, wgpu::Buffer),
+    object_path_line_vertex_buffer: (usize, wgpu::Buffer),
+    object_path_dot_instance_buffer: (usize, wgpu::Buffer),
 }
 
+/// A renderer for the game views.
+#[derive(Debug)]
 pub struct Renderer {
     multisample_texture: Option<((u32, u32), wgpu::Texture)>,
     depth_texture: Option<((u32, u32), wgpu::Texture)>,
@@ -47,14 +63,13 @@ pub struct Renderer {
     wall_hitbox_depth_pass_pipeline: wgpu::RenderPipeline,
     wall_hitbox_outline_pipeline: wgpu::RenderPipeline,
     object_pipeline: wgpu::RenderPipeline,
+    object_path_line_pipeline: wgpu::RenderPipeline,
+    screen_dot_pipeline: wgpu::RenderPipeline,
 }
 
 impl Renderer {
-    pub fn new(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        output_format: wgpu::TextureFormat,
-    ) -> Self {
+    /// Initialize the renderer.
+    pub fn new(device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Self {
         let transform_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: None,
@@ -115,6 +130,15 @@ impl Renderer {
             true,
             wgpu::PrimitiveTopology::LineList,
         );
+        let object_path_line_pipeline = create_color_pipeline(
+            device,
+            &transform_bind_group_layout,
+            output_format,
+            true,
+            wgpu::PrimitiveTopology::LineList,
+        );
+        let screen_dot_pipeline =
+            create_screen_dot_pipeline(device, &transform_bind_group_layout, output_format);
 
         Self {
             multisample_texture: None,
@@ -126,9 +150,12 @@ impl Renderer {
             wall_hitbox_depth_pass_pipeline,
             wall_hitbox_outline_pipeline,
             object_pipeline,
+            object_path_line_pipeline,
+            screen_dot_pipeline,
         }
     }
 
+    /// Render the given scenes.
     pub fn render(
         &mut self,
         device: &wgpu::Device,
@@ -209,51 +236,26 @@ impl Renderer {
                 });
 
                 let (surface_vertices, hidden_surface_vertices) = get_surface_vertices(scene);
-                let surface_vertex_buffer = (
-                    surface_vertices.len(),
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: None,
-                        contents: cast_slice(&surface_vertices),
-                        usage: wgpu::BufferUsage::VERTEX,
-                    }),
-                );
-                let hidden_surface_vertex_buffer = (
-                    hidden_surface_vertices.len(),
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: None,
-                        contents: cast_slice(&hidden_surface_vertices),
-                        usage: wgpu::BufferUsage::VERTEX,
-                    }),
-                );
+                let surface_vertex_buffer = upload_vertex_buffer(device, &surface_vertices);
+                let hidden_surface_vertex_buffer =
+                    upload_vertex_buffer(device, &hidden_surface_vertices);
 
                 let (wall_hitbox_vertices, wall_hitbox_outline_vertices) =
                     get_wall_hitbox_vertices(scene);
-                let wall_hitbox_vertex_buffer = (
-                    wall_hitbox_vertices.len(),
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: None,
-                        contents: cast_slice(&wall_hitbox_vertices),
-                        usage: wgpu::BufferUsage::VERTEX,
-                    }),
-                );
-                let wall_hitbox_outline_vertex_buffer = (
-                    wall_hitbox_outline_vertices.len(),
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: None,
-                        contents: cast_slice(&wall_hitbox_outline_vertices),
-                        usage: wgpu::BufferUsage::VERTEX,
-                    }),
-                );
+                let wall_hitbox_vertex_buffer = upload_vertex_buffer(device, &wall_hitbox_vertices);
+                let wall_hitbox_outline_vertex_buffer =
+                    upload_vertex_buffer(device, &wall_hitbox_outline_vertices);
 
                 let object_vertices = get_object_vertices(scene);
-                let object_vertex_buffer = (
-                    object_vertices.len(),
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: None,
-                        contents: cast_slice(&object_vertices),
-                        usage: wgpu::BufferUsage::VERTEX,
-                    }),
-                );
+                let object_vertex_buffer = upload_vertex_buffer(device, &object_vertices);
+
+                let object_path_line_vertices = get_object_path_line_vertices(scene);
+                let object_path_line_vertex_buffer =
+                    upload_vertex_buffer(device, &object_path_line_vertices);
+
+                let object_path_dot_instances = get_object_path_dot_instances(scene);
+                let object_path_dot_instance_buffer =
+                    upload_vertex_buffer(device, &object_path_dot_instances);
 
                 SceneBundle {
                     transform_bind_group,
@@ -262,9 +264,14 @@ impl Renderer {
                     wall_hitbox_vertex_buffer,
                     wall_hitbox_outline_vertex_buffer,
                     object_vertex_buffer,
+                    object_path_line_vertex_buffer,
+                    object_path_dot_instance_buffer,
                 }
             })
             .collect();
+
+        let screen_dot_offset_vertex_buffer =
+            upload_vertex_buffer(device, &get_screen_dot_offset_vertices());
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
 
@@ -320,6 +327,19 @@ impl Renderer {
                 render_pass.set_vertex_buffer(0, bundle.object_vertex_buffer.1.slice(..));
                 render_pass.draw(0..bundle.object_vertex_buffer.0 as u32, 0..1);
 
+                render_pass.set_pipeline(&self.object_path_line_pipeline);
+                render_pass.set_vertex_buffer(0, bundle.object_path_line_vertex_buffer.1.slice(..));
+                render_pass.draw(0..bundle.object_path_line_vertex_buffer.0 as u32, 0..1);
+
+                render_pass.set_pipeline(&self.screen_dot_pipeline);
+                render_pass
+                    .set_vertex_buffer(0, bundle.object_path_dot_instance_buffer.1.slice(..));
+                render_pass.set_vertex_buffer(1, screen_dot_offset_vertex_buffer.1.slice(..));
+                render_pass.draw(
+                    0..screen_dot_offset_vertex_buffer.0 as u32,
+                    0..bundle.object_path_dot_instance_buffer.0 as u32,
+                );
+
                 if scene.wall_hitbox_radius > 0.0 {
                     // Render lines first since tris write to z buffer
                     render_pass.set_pipeline(&self.wall_hitbox_outline_pipeline);
@@ -347,6 +367,17 @@ impl Renderer {
         let command_buffer = encoder.finish();
         queue.submit(iter::once(command_buffer));
     }
+}
+
+fn upload_vertex_buffer<T: Pod>(device: &wgpu::Device, vertices: &[T]) -> (usize, wgpu::Buffer) {
+    (
+        vertices.len(),
+        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: None,
+            contents: cast_slice(&vertices),
+            usage: wgpu::BufferUsage::VERTEX,
+        }),
+    )
 }
 
 fn create_multisample_texture(
@@ -530,6 +561,96 @@ fn create_color_pipeline(
     })
 }
 
+fn create_screen_dot_pipeline(
+    device: &wgpu::Device,
+    transform_bind_group_layout: &wgpu::BindGroupLayout,
+    output_format: wgpu::TextureFormat,
+) -> wgpu::RenderPipeline {
+    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: None,
+        layout: Some(
+            &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: None,
+                bind_group_layouts: &[&transform_bind_group_layout],
+                push_constant_ranges: &[],
+            }),
+        ),
+        vertex_stage: wgpu::ProgrammableStageDescriptor {
+            module: &device.create_shader_module(wgpu::include_spirv!(
+                "../../bin/shaders/screen_dot.vert.spv"
+            )),
+            entry_point: "main",
+        },
+        fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
+            module: &device
+                .create_shader_module(wgpu::include_spirv!("../../bin/shaders/color.frag.spv")),
+            entry_point: "main",
+        }),
+        rasterization_state: None,
+        primitive_topology: wgpu::PrimitiveTopology::TriangleList,
+        color_states: &[wgpu::ColorStateDescriptor {
+            format: output_format,
+            alpha_blend: wgpu::BlendDescriptor::REPLACE,
+            color_blend: wgpu::BlendDescriptor {
+                src_factor: wgpu::BlendFactor::SrcAlpha,
+                dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                operation: wgpu::BlendOperation::Add,
+            },
+            write_mask: wgpu::ColorWrite::ALL,
+        }],
+        depth_stencil_state: Some(wgpu::DepthStencilStateDescriptor {
+            format: DEPTH_TEXTURE_FORMAT,
+            depth_write_enabled: true,
+            depth_compare: wgpu::CompareFunction::LessEqual,
+            stencil: wgpu::StencilStateDescriptor::default(),
+        }),
+        vertex_state: wgpu::VertexStateDescriptor {
+            index_format: wgpu::IndexFormat::Uint16,
+            vertex_buffers: &[
+                wgpu::VertexBufferDescriptor {
+                    stride: size_of::<ScreenDotInstance>() as wgpu::BufferAddress,
+                    step_mode: wgpu::InputStepMode::Instance,
+                    attributes: &[
+                        // a_Center
+                        wgpu::VertexAttributeDescriptor {
+                            offset: offset_of!(ScreenDotInstance, center) as wgpu::BufferAddress,
+                            format: wgpu::VertexFormat::Float3,
+                            shader_location: 0,
+                        },
+                        // a_Radius
+                        wgpu::VertexAttributeDescriptor {
+                            offset: offset_of!(ScreenDotInstance, radius) as wgpu::BufferAddress,
+                            format: wgpu::VertexFormat::Float2,
+                            shader_location: 1,
+                        },
+                        // a)Color
+                        wgpu::VertexAttributeDescriptor {
+                            offset: offset_of!(ScreenDotInstance, color) as wgpu::BufferAddress,
+                            format: wgpu::VertexFormat::Float4,
+                            shader_location: 2,
+                        },
+                    ],
+                },
+                wgpu::VertexBufferDescriptor {
+                    stride: size_of::<[f32; 2]>() as wgpu::BufferAddress,
+                    step_mode: wgpu::InputStepMode::Vertex,
+                    attributes: &[
+                        // a_offset
+                        wgpu::VertexAttributeDescriptor {
+                            offset: 0,
+                            format: wgpu::VertexFormat::Float2,
+                            shader_location: 3,
+                        },
+                    ],
+                },
+            ],
+        },
+        sample_count: NUM_OUTPUT_SAMPLES,
+        sample_mask: !0,
+        alpha_to_coverage_enabled: false,
+    })
+}
+
 fn rotate_transforms(camera: &RotateCamera, output_size: (u32, u32)) -> (Matrix4f, Matrix4f) {
     let camera_pos = Point3f::new(camera.pos[0], camera.pos[1], camera.pos[2]);
     let target_pos = Point3f::new(camera.target[0], camera.target[1], camera.target[2]);
@@ -570,6 +691,20 @@ fn birds_eye_transforms(camera: &BirdsEyeCamera, output_size: (u32, u32)) -> (Ma
     let view_matrix = Matrix4f::new_translation(&-Vector3f::from_row_slice(&camera.pos));
 
     (proj_matrix, view_matrix)
+}
+
+fn get_screen_dot_offset_vertices() -> Vec<[f32; 2]> {
+    let mut vertices = Vec::new();
+
+    let num_edges = 12;
+    for i in 0..num_edges {
+        let a0 = i as f32 / num_edges as f32 * 2.0 * PI;
+        let a1 = (i + 1) as f32 / num_edges as f32 * 2.0 * PI;
+
+        vertices.extend(&[[0.0, 0.0], [a0.cos(), a0.sin()], [a1.cos(), a1.sin()]]);
+    }
+
+    vertices
 }
 
 fn get_surface_vertices(scene: &Scene) -> (Vec<Vertex>, Vec<Vertex>) {
@@ -760,4 +895,53 @@ fn get_object_vertices(scene: &Scene) -> Vec<Vertex> {
     }
 
     vertices
+}
+
+fn get_object_path_line_vertices(scene: &Scene) -> Vec<Vertex> {
+    let mut vertices = Vec::new();
+
+    for path in &scene.object_paths {
+        for (index, node) in path.nodes.iter().enumerate() {
+            let pos = node.pos();
+            let color = [0.5, 0.0, 0.0, get_path_alpha(path, index)];
+
+            let vertex = Vertex::new(pos, color);
+            vertices.push(vertex);
+            if index != 0 && index != path.nodes.len() - 1 {
+                vertices.push(vertex);
+            }
+        }
+    }
+
+    vertices
+}
+
+fn get_object_path_dot_instances(scene: &Scene) -> Vec<ScreenDotInstance> {
+    let mut instances = Vec::new();
+
+    for path in &scene.object_paths {
+        for (index, node) in path.nodes.iter().enumerate() {
+            let y_radius = 0.01;
+            let x_radius = y_radius * scene.viewport.height as f32 / scene.viewport.width as f32;
+            instances.push(ScreenDotInstance {
+                center: node.pos,
+                radius: [x_radius, y_radius],
+                color: [1.0, 0.0, 0.0, get_path_alpha(path, index)],
+            });
+        }
+    }
+
+    instances
+}
+
+fn get_path_alpha(path: &ObjectPath, index: usize) -> f32 {
+    let rel_index = index as isize - path.root_index as isize;
+    let t = if rel_index > 0 {
+        rel_index as f32 / (path.nodes.len() - path.root_index - 1) as f32
+    } else if rel_index < 0 {
+        -rel_index as f32 / path.root_index as f32
+    } else {
+        0.0
+    };
+    1.0 - t
 }

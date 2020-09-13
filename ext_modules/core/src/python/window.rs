@@ -66,7 +66,7 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
         let imgui_config = load_imgui_config()?;
         let imgui_renderer =
             ImguiRenderer::new(&device, &queue, swap_chain_desc.format, &imgui_config);
-        let mut renderer = Renderer::new(&device, &queue, swap_chain_desc.format);
+        let mut renderer = Renderer::new(&device, swap_chain_desc.format);
 
         window.set_visible(true);
 

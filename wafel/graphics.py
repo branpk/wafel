@@ -118,21 +118,6 @@ def render_game(
   hovered_surface: Optional[int] = None,
   hidden_surfaces: Set[int] = set(),
 ) -> None:
-  # log.timer.begin('scene')
-  # scene = build_scene(model, viewport, camera, hidden_surfaces)
-  # scene.wall_hitbox_radius = wall_hitbox_radius
-  # scene.hovered_surface = -1 if hovered_surface is None else hovered_surface
-  # log.timer.end()
-  # log.timer.begin('render')
-  # render_scene(scene)
-  # log.timer.end()
-
-  # print(
-  #   model.get(model.selected_frame, 'gMarioState->pos[0]'),
-  #   model.get(model.selected_frame, 'gMarioState->pos[1]'),
-  #   model.get(model.selected_frame, 'gMarioState->pos[2]'),
-  # )
-
   viewport2 = Viewport()
   viewport2.x = viewport.pos.x
   viewport2.y = viewport.pos.y
@@ -163,6 +148,15 @@ def render_game(
   scene.hidden_surfaces = hidden_surfaces
 
   model.pipeline.read_objects_to_scene(scene, model.selected_frame)
+
+  if model.play_speed <= 0 or not model.playback_mode:
+    path_frames = range(max(model.selected_frame - 5, 0), model.selected_frame + 61)
+  else:
+    path_frames = range(max(model.selected_frame - 60, 0), model.selected_frame + 6)
+  mario_path = model.pipeline.read_mario_path(path_frames.start, path_frames.stop)
+  mario_path.root_index = path_frames.index(model.selected_frame)
+
+  scene.object_paths = [mario_path]
 
   scenes.append(scene)
 

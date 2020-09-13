@@ -47,6 +47,7 @@ fn core(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<scene::Viewport>()?;
     m.add_class::<scene::RotateCamera>()?;
     m.add_class::<scene::BirdsEyeCamera>()?;
+    m.add_class::<scene::ObjectPath>()?;
     m.add_wrapped(wrap_pyfunction!(open_window_and_run))?;
     Ok(())
 }
