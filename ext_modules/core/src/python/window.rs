@@ -1,5 +1,5 @@
-use super::Scene;
 use crate::{
+    graphics::scene::Scene,
     graphics::{
         ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, ImguiRenderer, Renderer,
         IMGUI_FONT_TEXTURE_ID,
@@ -23,10 +23,10 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
         let event_loop = EventLoop::new();
         let window = WindowBuilder::new()
             .with_title(title)
-            .with_maximized(true)
             .with_visible(false)
             .build(&event_loop)
             .expect("failed to open window");
+        window.set_maximized(true);
 
         let surface = unsafe { instance.create_surface(&window) };
         let adapter = instance

@@ -34,6 +34,8 @@ pub enum SM64ErrorCause {
     VariableSerdeError(serde_json::Error),
     #[display(fmt = "surface pool pointer does not have a stride")]
     UnsizedSurfacePoolPointer,
+    #[display(fmt = "object pool array does not have a stride")]
+    UnsizedObjectPoolArray,
 }
 
 #[derive(Debug, Display, Error, From)]

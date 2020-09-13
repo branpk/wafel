@@ -3,7 +3,7 @@
 //! The exposed API is **not** safe because of the assumptions made about DLL loading.
 
 use crate::graphics::{
-    ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, IMGUI_FONT_TEXTURE_ID,
+    scene, ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, IMGUI_FONT_TEXTURE_ID,
 };
 use bytemuck::{cast_slice, Pod, Zeroable};
 pub use imgui_input::*;
@@ -16,8 +16,6 @@ use std::{
 };
 pub use variable::*;
 use wgpu::util::DeviceExt;
-// pub use window::*;
-pub use scene::*;
 pub use window::*;
 use winit::{
     dpi::PhysicalSize,
@@ -32,7 +30,6 @@ use winit::{
 mod error;
 mod imgui_input;
 mod pipeline;
-mod scene;
 mod value;
 mod variable;
 mod window;
@@ -46,10 +43,10 @@ fn core(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyObjectBehavior>()?;
     m.add_class::<PyAddress>()?;
     m.add_class::<PyRenderer>()?;
-    m.add_class::<Scene>()?;
-    m.add_class::<Viewport>()?;
-    m.add_class::<RotateCamera>()?;
-    m.add_class::<BirdsEyeCamera>()?;
+    m.add_class::<scene::Scene>()?;
+    m.add_class::<scene::Viewport>()?;
+    m.add_class::<scene::RotateCamera>()?;
+    m.add_class::<scene::BirdsEyeCamera>()?;
     m.add_wrapped(wrap_pyfunction!(open_window_and_run))?;
     Ok(())
 }

@@ -9,6 +9,7 @@ pub struct Scene {
     pub viewport: Viewport,
     pub camera: Camera,
     pub surfaces: Vec<Surface>,
+    pub objects: Vec<Object>,
     #[pyo3(get, set)]
     pub wall_hitbox_radius: f32,
     #[pyo3(get, set)]
@@ -143,4 +144,17 @@ pub enum SurfaceType {
     Ceiling,
     WallXProj,
     WallZProj,
+}
+
+#[derive(Debug, Clone)]
+pub struct Object {
+    pub pos: [f32; 3],
+    pub hitbox_height: f32,
+    pub hitbox_radius: f32,
+}
+
+impl Object {
+    pub fn pos(&self) -> Point3f {
+        Point3f::from_slice(&self.pos)
+    }
 }

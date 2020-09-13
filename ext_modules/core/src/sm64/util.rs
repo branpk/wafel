@@ -1,12 +1,14 @@
+use graphics::scene::{self, Scene};
+
 use super::{ObjectBehavior, ObjectSlot, SM64ErrorCause, SurfaceSlot};
 use crate::{
     data_path::GlobalDataPath,
     error::Error,
+    graphics,
     memory::{
         data_type::{FloatType, IntType},
         ConstantSource, IntValue, Memory, Value,
     },
-    python::{Scene, Surface, SurfaceType},
     timeline::{SlotState, State},
 };
 use std::collections::HashMap;
@@ -170,24 +172,24 @@ pub fn read_surfaces_to_scene(scene: &mut Scene, state: &impl SlotState) -> Resu
 
     scene.surfaces.clear();
     for index in 0..surfaces_allocated {
-        let surface_address = surface_pool_addr + index * surface_size;
+        let surface_addr = surface_pool_addr + index * surface_size;
 
-        let normal = read_f32_3(surface_address + o_normal)?;
-        let vertex1 = read_s16_3(surface_address + o_vertex1)?;
-        let vertex2 = read_s16_3(surface_address + o_vertex2)?;
-        let vertex3 = read_s16_3(surface_address + o_vertex3)?;
+        let normal = read_f32_3(surface_addr + o_normal)?;
+        let vertex1 = read_s16_3(surface_addr + o_vertex1)?;
+        let vertex2 = read_s16_3(surface_addr + o_vertex2)?;
+        let vertex3 = read_s16_3(surface_addr + o_vertex3)?;
 
         let ty = if normal[1] > 0.01 {
-            SurfaceType::Floor
+            scene::SurfaceType::Floor
         } else if normal[1] < -0.01 {
-            SurfaceType::Ceiling
+            scene::SurfaceType::Ceiling
         } else if normal[0] < -0.707 || normal[0] > 0.707 {
-            SurfaceType::WallXProj
+            scene::SurfaceType::WallXProj
         } else {
-            SurfaceType::WallZProj
+            scene::SurfaceType::WallZProj
         };
 
-        scene.surfaces.push(Surface {
+        scene.surfaces.push(scene::Surface {
             ty,
             vertices: [
                 [vertex1[0] as f32, vertex1[1] as f32, vertex1[2] as f32],
@@ -196,6 +198,61 @@ pub fn read_surfaces_to_scene(scene: &mut Scene, state: &impl SlotState) -> Resu
             ],
             normal,
         });
+    }
+
+    Ok(())
+}
+
+pub fn read_objects_to_scene(scene: &mut Scene, state: &impl SlotState) -> Result<(), Error> {
+    let memory = state.memory();
+    let object_pool_addr = state.address("gObjectPool")?.unwrap();
+
+    let object_size = memory
+        .global_path("gObjectPool")?
+        .concrete_type()
+        .stride()?
+        .ok_or_else(|| SM64ErrorCause::UnsizedObjectPoolArray)?;
+
+    let offset = |path| -> Result<usize, Error> { Ok(memory.local_path(path)?.field_offset()?) };
+    let o_active_flags = offset("struct Object.activeFlags")?;
+    let o_pos_x = offset("struct Object.oPosX")?;
+    let o_pos_y = offset("struct Object.oPosY")?;
+    let o_pos_z = offset("struct Object.oPosZ")?;
+    let o_hitbox_height = offset("struct Object.hitboxHeight")?;
+    let o_hitbox_radius = offset("struct Object.hitboxRadius")?;
+
+    let active_flag_active = memory
+        .data_layout()
+        .get_constant("ACTIVE_FLAG_ACTIVE")?
+        .value as i16;
+
+    let read_f32 = |address| -> Result<f32, Error> {
+        let classified_address = memory.classify_address(&address);
+        let result = memory.read_float(state.slot(), &classified_address, FloatType::F32)? as f32;
+        Ok(result)
+    };
+
+    let read_s16 = |address| -> Result<i16, Error> {
+        let classified_address = memory.classify_address(&address);
+        let result = memory.read_int(state.slot(), &classified_address, IntType::S16)? as i16;
+        Ok(result)
+    };
+
+    for slot in 0..240 {
+        let object_addr = object_pool_addr + slot * object_size;
+
+        let active_flags = read_s16(object_addr + o_active_flags)?;
+        if (active_flags & active_flag_active) != 0 {
+            scene.objects.push(scene::Object {
+                pos: [
+                    read_f32(object_addr + o_pos_x)?,
+                    read_f32(object_addr + o_pos_y)?,
+                    read_f32(object_addr + o_pos_z)?,
+                ],
+                hitbox_height: read_f32(object_addr + o_hitbox_height)?,
+                hitbox_radius: read_f32(object_addr + o_hitbox_radius)?,
+            })
+        }
     }
 
     Ok(())

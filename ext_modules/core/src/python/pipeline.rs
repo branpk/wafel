@@ -1,11 +1,13 @@
 use super::{
     value::{py_object_to_value, value_to_py_object},
-    PyAddress, PyEditRange, PyObjectBehavior, PyVariable, Scene,
+    PyAddress, PyEditRange, PyObjectBehavior, PyVariable,
 };
 use crate::{
     dll,
     error::Error,
+    graphics::scene::Scene,
     memory::{Address, Memory, Value},
+    sm64::read_objects_to_scene,
     sm64::{
         frame_log, load_dll_pipeline, object_behavior, object_path, read_surfaces_to_scene,
         ObjectSlot, Pipeline, SM64ErrorCause,
@@ -423,6 +425,12 @@ impl PyPipeline {
     pub fn read_surfaces_to_scene(&self, scene: &mut Scene, frame: u32) -> PyResult<()> {
         let state = self.get().pipeline.timeline().frame_uncached(frame)?;
         read_surfaces_to_scene(scene, &state)?;
+        Ok(())
+    }
+
+    pub fn read_objects_to_scene(&self, scene: &mut Scene, frame: u32) -> PyResult<()> {
+        let state = self.get().pipeline.timeline().frame_uncached(frame)?;
+        read_objects_to_scene(scene, &state)?;
         Ok(())
     }
 }
