@@ -1,7 +1,7 @@
 from typing import *
 
 import ext_modules.graphics as cg
-from ext_modules.core import Scene, Viewport, BirdsEyeCamera, RotateCamera
+from ext_modules.core import Scene, Viewport, BirdsEyeCamera, RotateCamera, QuarterStep
 
 from wafel.model import Model
 import wafel.config as config
@@ -156,6 +156,21 @@ def render_game(
     path_frames = range(max(model.selected_frame - 60, 0), model.selected_frame + 6)
   mario_path = model.pipeline.read_mario_path(path_frames.start, path_frames.stop)
   mario_path.root_index = path_frames.index(model.selected_frame)
+
+  log.timer.begin('qsteps')
+  qstep_frame = model.selected_frame + 1
+  num_steps = dcast(int, model.get(qstep_frame, 'gQStepsInfo.numSteps'))
+
+  quarter_steps = []
+  for i in range(num_steps):
+    quarter_step_value = dcast(dict, model.get(qstep_frame, f'gQStepsInfo.steps[{i}]'))
+    quarter_step = QuarterStep()
+    quarter_step.intended_pos = quarter_step_value['intendedPos']
+    quarter_step.result_pos = quarter_step_value['resultPos']
+    quarter_steps.append(quarter_step)
+
+  mario_path.set_quarter_steps(path_frames.index(qstep_frame) - 1, quarter_steps)
+  log.timer.end()
 
   scene.object_paths = [mario_path]
 

@@ -936,21 +936,29 @@ fn get_object_vertices(scene: &Scene) -> Vec<Vertex> {
 
 fn get_object_path_line_vertices(scene: &Scene) -> Vec<Vertex> {
     let mut vertices = Vec::new();
+    let offset = Vector3f::new(0.0, 0.01, 0.0);
 
     for path in &scene.object_paths {
         for (index, node) in path.nodes.iter().enumerate() {
             let pos = node.pos();
             let color = [0.5, 0.0, 0.0, get_path_alpha(path, index)];
 
-            let vertex = Vertex::new(pos, color);
-            vertices.push(vertex);
-            if index != 0 && index != path.nodes.len() - 1 {
-                vertices.push(vertex);
+            vertices.push(Vertex::new(pos + offset, color));
+
+            for step in &node.quarter_steps {
+                vertices.push(Vertex::new(
+                    Point3f::from_slice(&step.intended_pos) + offset,
+                    color,
+                ));
+                vertices.push(Vertex::new(
+                    Point3f::from_slice(&step.result_pos) + offset,
+                    color,
+                ));
             }
         }
     }
 
-    vertices
+    vertices.windows(2).flatten().cloned().collect()
 }
 
 fn get_object_path_dot_instances(scene: &Scene) -> Vec<ScreenDotInstance> {
@@ -958,13 +966,37 @@ fn get_object_path_dot_instances(scene: &Scene) -> Vec<ScreenDotInstance> {
 
     for path in &scene.object_paths {
         for (index, node) in path.nodes.iter().enumerate() {
+            let alpha = get_path_alpha(path, index);
+
             let y_radius = 0.01;
             let x_radius = y_radius * scene.viewport.height as f32 / scene.viewport.width as f32;
             instances.push(ScreenDotInstance {
                 center: node.pos,
                 radius: [x_radius, y_radius],
-                color: [1.0, 0.0, 0.0, get_path_alpha(path, index)],
+                color: [1.0, 0.0, 0.0, alpha],
             });
+
+            for step in &node.quarter_steps {
+                let y_radius = 0.008;
+                let x_radius =
+                    y_radius * scene.viewport.height as f32 / scene.viewport.width as f32;
+
+                if step.intended_pos != step.result_pos {
+                    instances.push(ScreenDotInstance {
+                        center: step.intended_pos,
+                        radius: [x_radius, y_radius],
+                        color: [0.8, 0.5, 0.8, alpha],
+                    });
+                }
+
+                if index == path.nodes.len() - 1 || step.result_pos != path.nodes[index + 1].pos {
+                    instances.push(ScreenDotInstance {
+                        center: step.result_pos,
+                        radius: [x_radius, y_radius],
+                        color: [1.0, 0.5, 0.0, alpha],
+                    });
+                }
+            }
         }
     }
 

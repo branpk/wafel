@@ -167,14 +167,38 @@ pub struct ObjectPath {
     pub root_index: usize,
 }
 
+#[pymethods]
+impl ObjectPath {
+    pub fn set_quarter_steps(&mut self, index: usize, quarter_steps: Vec<QuarterStep>) {
+        self.nodes[index].quarter_steps = quarter_steps;
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ObjectPathNode {
     pub pos: [f32; 3],
-    // TODO: Quarter steps
+    pub quarter_steps: Vec<QuarterStep>,
 }
 
 impl ObjectPathNode {
     pub fn pos(&self) -> Point3f {
         Point3f::from_slice(&self.pos)
+    }
+}
+
+#[pyclass]
+#[derive(Debug, Clone, Default)]
+pub struct QuarterStep {
+    #[pyo3(get, set)]
+    pub intended_pos: [f32; 3],
+    #[pyo3(get, set)]
+    pub result_pos: [f32; 3],
+}
+
+#[pymethods]
+impl QuarterStep {
+    #[new]
+    pub fn new() -> Self {
+        Self::default()
     }
 }

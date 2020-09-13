@@ -443,6 +443,7 @@ impl PyPipeline {
         for frame in frame_start..frame_end {
             nodes.push(scene::ObjectPathNode {
                 pos: timeline.frame(frame)?.path_read(&pos_path)?.as_f32_3()?,
+                quarter_steps: Vec::new(),
             });
         }
 
