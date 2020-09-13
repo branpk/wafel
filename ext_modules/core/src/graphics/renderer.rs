@@ -51,6 +51,7 @@ struct SceneBundle {
     object_path_dot_instance_buffer: (usize, wgpu::Buffer),
     camera_target_line_vertex_buffer: (usize, wgpu::Buffer),
     camera_target_dot_instance_buffer: (usize, wgpu::Buffer),
+    unit_square_vertex_buffer: (usize, wgpu::Buffer),
 }
 
 /// A renderer for the game views.
@@ -65,6 +66,7 @@ pub struct Renderer {
     hidden_surface_pipeline: wgpu::RenderPipeline,
     wall_hitbox_pipeline: wgpu::RenderPipeline,
     wall_hitbox_depth_pass_pipeline: wgpu::RenderPipeline,
+    unit_square_pipeline: wgpu::RenderPipeline,
 }
 
 impl Renderer {
@@ -102,6 +104,7 @@ impl Renderer {
             &transform_bind_group_layout,
             output_format,
             true,
+            true,
             wgpu::PrimitiveTopology::LineList,
         );
 
@@ -117,6 +120,7 @@ impl Renderer {
             &transform_bind_group_layout,
             output_format,
             true,
+            true,
             wgpu::PrimitiveTopology::TriangleList,
         );
         let wall_hitbox_depth_pass_pipeline = create_color_pipeline(
@@ -124,7 +128,17 @@ impl Renderer {
             &transform_bind_group_layout,
             output_format,
             false,
+            true,
             wgpu::PrimitiveTopology::TriangleList,
+        );
+
+        let unit_square_pipeline = create_color_pipeline(
+            device,
+            &transform_bind_group_layout,
+            output_format,
+            true,
+            false,
+            wgpu::PrimitiveTopology::LineList,
         );
 
         Self {
@@ -137,6 +151,7 @@ impl Renderer {
             hidden_surface_pipeline,
             wall_hitbox_pipeline,
             wall_hitbox_depth_pass_pipeline,
+            unit_square_pipeline,
         }
     }
 
@@ -249,6 +264,9 @@ impl Renderer {
                 let camera_target_dot_instance_buffer =
                     upload_vertex_buffer(device, &camera_target_dot_instances);
 
+                let unit_square_vertices = get_unit_square_vertices(scene);
+                let unit_square_vertex_buffer = upload_vertex_buffer(device, &unit_square_vertices);
+
                 SceneBundle {
                     transform_bind_group,
                     surface_vertex_buffer,
@@ -260,6 +278,7 @@ impl Renderer {
                     object_path_dot_instance_buffer,
                     camera_target_line_vertex_buffer,
                     camera_target_dot_instance_buffer,
+                    unit_square_vertex_buffer,
                 }
             })
             .collect();
@@ -369,6 +388,10 @@ impl Renderer {
                 render_pass.set_pipeline(&self.hidden_surface_pipeline);
                 render_pass.set_vertex_buffer(0, bundle.hidden_surface_vertex_buffer.1.slice(..));
                 render_pass.draw(0..bundle.hidden_surface_vertex_buffer.0 as u32, 0..1);
+
+                render_pass.set_pipeline(&self.unit_square_pipeline);
+                render_pass.set_vertex_buffer(0, bundle.unit_square_vertex_buffer.1.slice(..));
+                render_pass.draw(0..bundle.unit_square_vertex_buffer.0 as u32, 0..1);
             }
         }
 
@@ -499,6 +522,7 @@ fn create_color_pipeline(
     transform_bind_group_layout: &wgpu::BindGroupLayout,
     output_format: wgpu::TextureFormat,
     color_write_enabled: bool,
+    depth_test_enabled: bool,
     primitive_topology: wgpu::PrimitiveTopology,
 ) -> wgpu::RenderPipeline {
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -538,8 +562,12 @@ fn create_color_pipeline(
         }],
         depth_stencil_state: Some(wgpu::DepthStencilStateDescriptor {
             format: DEPTH_TEXTURE_FORMAT,
-            depth_write_enabled: true,
-            depth_compare: wgpu::CompareFunction::LessEqual,
+            depth_write_enabled: depth_test_enabled,
+            depth_compare: if depth_test_enabled {
+                wgpu::CompareFunction::LessEqual
+            } else {
+                wgpu::CompareFunction::Always
+            },
             stencil: wgpu::StencilStateDescriptor::default(),
         }),
         vertex_state: wgpu::VertexStateDescriptor {
@@ -980,4 +1008,55 @@ fn get_camera_target_vertices(scene: &Scene) -> (Vec<Vertex>, Vec<ScreenDotInsta
     }
 
     (line_vertices, dot_instances)
+}
+
+fn get_unit_square_vertices(scene: &Scene) -> Vec<Vertex> {
+    let mut vertices = Vec::new();
+
+    if let Camera::BirdsEye(camera) = &scene.camera {
+        let span_x = camera.span_y;
+        let span_z = span_x * scene.viewport.width as f32 / scene.viewport.height as f32;
+
+        let min_x = camera.pos[0] - span_x / 2.0;
+        let max_x = camera.pos[0] + span_x / 2.0;
+        let min_z = camera.pos[2] - span_z / 2.0;
+        let max_z = camera.pos[2] + span_z / 2.0;
+
+        let density_threshold = 0.1;
+        let density = ((max_x - min_x) / scene.viewport.height as f32)
+            .max((max_z - min_z) / scene.viewport.width as f32);
+
+        if density <= density_threshold {
+            let color = [0.8, 0.8, 1.0, 0.5];
+            let y = camera.pos[1];
+
+            for x in min_x as i32..=max_x as i32 {
+                vertices.extend(&[
+                    Vertex {
+                        pos: [x as f32, y, min_z],
+                        color,
+                    },
+                    Vertex {
+                        pos: [x as f32, y, max_z],
+                        color,
+                    },
+                ]);
+            }
+
+            for z in min_z as i32..=max_z as i32 {
+                vertices.extend(&[
+                    Vertex {
+                        pos: [min_x, y, z as f32],
+                        color,
+                    },
+                    Vertex {
+                        pos: [max_x, y, z as f32],
+                        color,
+                    },
+                ]);
+            }
+        }
+    }
+
+    vertices
 }
