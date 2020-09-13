@@ -129,18 +129,19 @@ def render_game(
     camera2 = RotateCamera()
     camera2.pos = [camera.pos.x, camera.pos.y, camera.pos.z]
     camera2.target = [camera.target.x, camera.target.y, camera.target.z]
-    camera2.pitch = camera.pitch
-    camera2.yaw = camera.yaw
     camera2.fov_y = camera.fov_y
+    show_camera_target = camera.render_target
   else:
     camera = camera.birds_eye_camera
     camera2 = BirdsEyeCamera()
     camera2.pos = [camera.pos.x, camera.pos.y, camera.pos.z]
     camera2.span_y = camera.span_y
+    show_camera_target = False
 
   scene = Scene()
   scene.viewport = viewport2
   scene.camera = camera2
+  scene.show_camera_target = show_camera_target
 
   model.pipeline.read_surfaces_to_scene(scene, model.selected_frame)
   scene.wall_hitbox_radius = wall_hitbox_radius

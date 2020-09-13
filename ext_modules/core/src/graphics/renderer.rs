@@ -1,4 +1,4 @@
-use crate::geo::{Matrix4f, Point3f, Vector3f, Vector4f};
+use crate::geo::{direction_to_pitch_yaw, Matrix4f, Point3f, Vector3f, Vector4f};
 use bytemuck::{cast_slice, offset_of, Pod, Zeroable};
 use nalgebra::distance;
 use std::{f32::consts::PI, iter, mem::size_of};
@@ -49,6 +49,8 @@ struct SceneBundle {
     object_vertex_buffer: (usize, wgpu::Buffer),
     object_path_line_vertex_buffer: (usize, wgpu::Buffer),
     object_path_dot_instance_buffer: (usize, wgpu::Buffer),
+    camera_target_line_vertex_buffer: (usize, wgpu::Buffer),
+    camera_target_dot_instance_buffer: (usize, wgpu::Buffer),
 }
 
 /// A renderer for the game views.
@@ -57,14 +59,12 @@ pub struct Renderer {
     multisample_texture: Option<((u32, u32), wgpu::Texture)>,
     depth_texture: Option<((u32, u32), wgpu::Texture)>,
     transform_bind_group_layout: wgpu::BindGroupLayout,
+    color_line_pipeline: wgpu::RenderPipeline,
+    screen_dot_pipeline: wgpu::RenderPipeline,
     surface_pipeline: wgpu::RenderPipeline,
     hidden_surface_pipeline: wgpu::RenderPipeline,
     wall_hitbox_pipeline: wgpu::RenderPipeline,
     wall_hitbox_depth_pass_pipeline: wgpu::RenderPipeline,
-    wall_hitbox_outline_pipeline: wgpu::RenderPipeline,
-    object_pipeline: wgpu::RenderPipeline,
-    object_path_line_pipeline: wgpu::RenderPipeline,
-    screen_dot_pipeline: wgpu::RenderPipeline,
 }
 
 impl Renderer {
@@ -97,6 +97,17 @@ impl Renderer {
                 ],
             });
 
+        let color_line_pipeline = create_color_pipeline(
+            device,
+            &transform_bind_group_layout,
+            output_format,
+            true,
+            wgpu::PrimitiveTopology::LineList,
+        );
+
+        let screen_dot_pipeline =
+            create_screen_dot_pipeline(device, &transform_bind_group_layout, output_format);
+
         let surface_pipeline =
             create_surface_pipeline(device, &transform_bind_group_layout, output_format, true);
         let hidden_surface_pipeline =
@@ -115,43 +126,17 @@ impl Renderer {
             false,
             wgpu::PrimitiveTopology::TriangleList,
         );
-        let wall_hitbox_outline_pipeline = create_color_pipeline(
-            device,
-            &transform_bind_group_layout,
-            output_format,
-            true,
-            wgpu::PrimitiveTopology::LineList,
-        );
-
-        let object_pipeline = create_color_pipeline(
-            device,
-            &transform_bind_group_layout,
-            output_format,
-            true,
-            wgpu::PrimitiveTopology::LineList,
-        );
-        let object_path_line_pipeline = create_color_pipeline(
-            device,
-            &transform_bind_group_layout,
-            output_format,
-            true,
-            wgpu::PrimitiveTopology::LineList,
-        );
-        let screen_dot_pipeline =
-            create_screen_dot_pipeline(device, &transform_bind_group_layout, output_format);
 
         Self {
             multisample_texture: None,
             depth_texture: None,
             transform_bind_group_layout,
+            color_line_pipeline,
+            screen_dot_pipeline,
             surface_pipeline,
             hidden_surface_pipeline,
             wall_hitbox_pipeline,
             wall_hitbox_depth_pass_pipeline,
-            wall_hitbox_outline_pipeline,
-            object_pipeline,
-            object_path_line_pipeline,
-            screen_dot_pipeline,
         }
     }
 
@@ -257,6 +242,13 @@ impl Renderer {
                 let object_path_dot_instance_buffer =
                     upload_vertex_buffer(device, &object_path_dot_instances);
 
+                let (camera_target_line_vertices, camera_target_dot_instances) =
+                    get_camera_target_vertices(scene);
+                let camera_target_line_vertex_buffer =
+                    upload_vertex_buffer(device, &camera_target_line_vertices);
+                let camera_target_dot_instance_buffer =
+                    upload_vertex_buffer(device, &camera_target_dot_instances);
+
                 SceneBundle {
                     transform_bind_group,
                     surface_vertex_buffer,
@@ -266,6 +258,8 @@ impl Renderer {
                     object_vertex_buffer,
                     object_path_line_vertex_buffer,
                     object_path_dot_instance_buffer,
+                    camera_target_line_vertex_buffer,
+                    camera_target_dot_instance_buffer,
                 }
             })
             .collect();
@@ -323,11 +317,11 @@ impl Renderer {
                 render_pass.set_vertex_buffer(0, bundle.surface_vertex_buffer.1.slice(..));
                 render_pass.draw(0..bundle.surface_vertex_buffer.0 as u32, 0..1);
 
-                render_pass.set_pipeline(&self.object_pipeline);
+                render_pass.set_pipeline(&self.color_line_pipeline);
                 render_pass.set_vertex_buffer(0, bundle.object_vertex_buffer.1.slice(..));
                 render_pass.draw(0..bundle.object_vertex_buffer.0 as u32, 0..1);
 
-                render_pass.set_pipeline(&self.object_path_line_pipeline);
+                render_pass.set_pipeline(&self.color_line_pipeline);
                 render_pass.set_vertex_buffer(0, bundle.object_path_line_vertex_buffer.1.slice(..));
                 render_pass.draw(0..bundle.object_path_line_vertex_buffer.0 as u32, 0..1);
 
@@ -340,9 +334,23 @@ impl Renderer {
                     0..bundle.object_path_dot_instance_buffer.0 as u32,
                 );
 
+                render_pass.set_pipeline(&self.color_line_pipeline);
+                render_pass
+                    .set_vertex_buffer(0, bundle.camera_target_line_vertex_buffer.1.slice(..));
+                render_pass.draw(0..bundle.camera_target_line_vertex_buffer.0 as u32, 0..1);
+
+                render_pass.set_pipeline(&self.screen_dot_pipeline);
+                render_pass
+                    .set_vertex_buffer(0, bundle.camera_target_dot_instance_buffer.1.slice(..));
+                render_pass.set_vertex_buffer(1, screen_dot_offset_vertex_buffer.1.slice(..));
+                render_pass.draw(
+                    0..screen_dot_offset_vertex_buffer.0 as u32,
+                    0..bundle.camera_target_dot_instance_buffer.0 as u32,
+                );
+
                 if scene.wall_hitbox_radius > 0.0 {
                     // Render lines first since tris write to z buffer
-                    render_pass.set_pipeline(&self.wall_hitbox_outline_pipeline);
+                    render_pass.set_pipeline(&self.color_line_pipeline);
                     render_pass
                         .set_vertex_buffer(0, bundle.wall_hitbox_outline_vertex_buffer.1.slice(..));
                     render_pass.draw(0..bundle.wall_hitbox_outline_vertex_buffer.0 as u32, 0..1);
@@ -669,9 +677,10 @@ fn rotate_transforms(camera: &RotateCamera, output_size: (u32, u32)) -> (Matrix4
         far,
     );
 
+    let (pitch, yaw) = direction_to_pitch_yaw(&(target_pos - camera_pos).normalize());
     let view_matrix = Matrix4f::new_rotation(PI * Vector3f::y())
-        * Matrix4f::new_rotation(camera.pitch * Vector3f::x())
-        * Matrix4f::new_rotation(-camera.yaw * Vector3f::y())
+        * Matrix4f::new_rotation(pitch * Vector3f::x())
+        * Matrix4f::new_rotation(-yaw * Vector3f::y())
         * Matrix4f::new_translation(&-camera_pos.coords);
 
     (proj_matrix, view_matrix)
@@ -944,4 +953,31 @@ fn get_path_alpha(path: &ObjectPath, index: usize) -> f32 {
         0.0
     };
     1.0 - t
+}
+
+fn get_camera_target_vertices(scene: &Scene) -> (Vec<Vertex>, Vec<ScreenDotInstance>) {
+    let mut line_vertices = Vec::new();
+    let mut dot_instances = Vec::new();
+
+    if scene.show_camera_target {
+        if let Camera::Rotate(camera) = &scene.camera {
+            let color = [0.2, 0.2, 0.2, 0.8];
+            let target = Point3f::from_slice(&camera.target);
+
+            let y_radius = 0.01;
+            let x_radius = y_radius * scene.viewport.height as f32 / scene.viewport.width as f32;
+            dot_instances.push(ScreenDotInstance {
+                center: camera.target,
+                radius: [x_radius, y_radius],
+                color,
+            });
+
+            line_vertices.extend(&[
+                Vertex::new(target, color),
+                Vertex::new(target + Vector3f::new(0.0, -10_000.0, 0.0), color),
+            ]);
+        }
+    }
+
+    (line_vertices, dot_instances)
 }

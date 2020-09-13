@@ -8,6 +8,8 @@ pub struct Scene {
     #[pyo3(get, set)]
     pub viewport: Viewport,
     pub camera: Camera,
+    #[pyo3(get, set)]
+    pub show_camera_target: bool,
     pub surfaces: Vec<Surface>,
     #[pyo3(get, set)]
     pub wall_hitbox_radius: f32,
@@ -86,10 +88,6 @@ pub struct RotateCamera {
     pub pos: [f32; 3],
     #[pyo3(get, set)]
     pub target: [f32; 3],
-    #[pyo3(get, set)]
-    pub pitch: f32, // TODO: Can compute pitch and yaw from target
-    #[pyo3(get, set)]
-    pub yaw: f32,
     #[pyo3(get, set)]
     pub fov_y: f32,
 }
