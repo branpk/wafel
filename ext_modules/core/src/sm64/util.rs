@@ -4,6 +4,8 @@ use super::{ObjectBehavior, ObjectSlot, SM64ErrorCause, SurfaceSlot};
 use crate::{
     data_path::GlobalDataPath,
     error::Error,
+    geo::Point3f,
+    geo::Vector3f,
     graphics,
     memory::{
         data_type::{FloatType, IntType},
@@ -121,12 +123,18 @@ fn frame_log_event_variant_name(event_type: &str) -> String {
         .collect()
 }
 
-pub fn read_surfaces_to_scene(scene: &mut Scene, state: &impl SlotState) -> Result<(), Error> {
+#[derive(Debug, Clone)]
+struct Surface {
+    normal: [f32; 3],
+    vertices: [[i16; 3]; 3],
+}
+
+fn read_surfaces(state: &impl SlotState) -> Result<Vec<Surface>, Error> {
     let memory = state.memory();
 
     let surface_pool_addr = state.read("sSurfacePool?")?;
     if surface_pool_addr.is_null() {
-        return Ok(());
+        return Ok(Vec::new());
     }
     let surface_pool_addr = surface_pool_addr.as_address()?;
 
@@ -170,7 +178,7 @@ pub fn read_surfaces_to_scene(scene: &mut Scene, state: &impl SlotState) -> Resu
         ])
     };
 
-    scene.surfaces.clear();
+    let mut surfaces = Vec::new();
     for index in 0..surfaces_allocated {
         let surface_addr = surface_pool_addr + index * surface_size;
 
@@ -179,26 +187,41 @@ pub fn read_surfaces_to_scene(scene: &mut Scene, state: &impl SlotState) -> Resu
         let vertex2 = read_s16_3(surface_addr + o_vertex2)?;
         let vertex3 = read_s16_3(surface_addr + o_vertex3)?;
 
-        let ty = if normal[1] > 0.01 {
-            scene::SurfaceType::Floor
-        } else if normal[1] < -0.01 {
-            scene::SurfaceType::Ceiling
-        } else if normal[0] < -0.707 || normal[0] > 0.707 {
-            scene::SurfaceType::WallXProj
-        } else {
-            scene::SurfaceType::WallZProj
-        };
-
-        scene.surfaces.push(scene::Surface {
-            ty,
-            vertices: [
-                [vertex1[0] as f32, vertex1[1] as f32, vertex1[2] as f32],
-                [vertex2[0] as f32, vertex2[1] as f32, vertex2[2] as f32],
-                [vertex3[0] as f32, vertex3[1] as f32, vertex3[2] as f32],
-            ],
+        surfaces.push(Surface {
             normal,
+            vertices: [vertex1, vertex2, vertex3],
         });
     }
+
+    Ok(surfaces)
+}
+
+pub fn read_surfaces_to_scene(scene: &mut Scene, state: &impl SlotState) -> Result<(), Error> {
+    scene.surfaces = read_surfaces(state)?
+        .iter()
+        .map(|surface| {
+            let ty = if surface.normal[1] > 0.01 {
+                scene::SurfaceType::Floor
+            } else if surface.normal[1] < -0.01 {
+                scene::SurfaceType::Ceiling
+            } else if surface.normal[0] < -0.707 || surface.normal[0] > 0.707 {
+                scene::SurfaceType::WallXProj
+            } else {
+                scene::SurfaceType::WallZProj
+            };
+
+            let as_f32_3 = |p: [i16; 3]| [p[0] as f32, p[1] as f32, p[2] as f32];
+            scene::Surface {
+                ty,
+                vertices: [
+                    as_f32_3(surface.vertices[0]),
+                    as_f32_3(surface.vertices[1]),
+                    as_f32_3(surface.vertices[2]),
+                ],
+                normal: surface.normal,
+            }
+        })
+        .collect();
 
     Ok(())
 }
@@ -256,4 +279,48 @@ pub fn read_objects_to_scene(scene: &mut Scene, state: &impl SlotState) -> Resul
     }
 
     Ok(())
+}
+
+pub fn trace_ray_to_surface(
+    state: &impl SlotState,
+    ray: (Point3f, Vector3f),
+) -> Result<Option<(usize, Point3f)>, Error> {
+    let mut nearest: Option<(f32, (usize, Point3f))> = None;
+
+    let vertex_to_vec = |p: [i16; 3]| Point3f::new(p[0] as f32, p[1] as f32, p[2] as f32);
+
+    let surfaces = read_surfaces(state)?;
+    for (i, surface) in surfaces.iter().enumerate() {
+        let normal = Vector3f::from_row_slice(&surface.normal);
+        let vertices = [
+            vertex_to_vec(surface.vertices[0]),
+            vertex_to_vec(surface.vertices[1]),
+            vertex_to_vec(surface.vertices[2]),
+        ];
+
+        let t = -normal.dot(&(ray.0 - vertices[0])) / normal.dot(&ray.1);
+        if t <= 0.0 {
+            continue;
+        }
+
+        let p = ray.0 + t * ray.1;
+
+        let mut interior = true;
+        for k in 0..3 {
+            let edge = vertices[(k + 1) % 3] - vertices[k];
+            if normal.dot(&edge.cross(&(p - vertices[k]))) < 0.0 {
+                interior = false;
+                break;
+            }
+        }
+        if !interior {
+            continue;
+        }
+
+        if nearest.is_none() || t < nearest.unwrap().0 {
+            nearest = Some((t, (i, p)));
+        }
+    }
+
+    Ok(nearest.map(|(_, result)| result))
 }

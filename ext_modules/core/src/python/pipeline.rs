@@ -5,10 +5,13 @@ use super::{
 use crate::{
     dll,
     error::Error,
+    geo::Point3f,
+    geo::Vector3f,
     graphics::scene,
     graphics::scene::Scene,
     memory::{Address, Memory, Value},
     sm64::read_objects_to_scene,
+    sm64::trace_ray_to_surface,
     sm64::{
         frame_log, load_dll_pipeline, object_behavior, object_path, read_surfaces_to_scene,
         ObjectSlot, Pipeline, SM64ErrorCause,
@@ -421,6 +424,23 @@ impl PyPipeline {
         };
 
         events.into_iter().map(convert_event).collect()
+    }
+
+    pub fn trace_ray_to_surface(
+        &self,
+        frame: u32,
+        ray: ([f32; 3], [f32; 3]),
+    ) -> PyResult<Option<usize>> {
+        let state = self.get().pipeline.timeline().frame_uncached(frame)?;
+        let index = trace_ray_to_surface(
+            &state,
+            (
+                Point3f::from_slice(&ray.0),
+                Vector3f::from_row_slice(&ray.1),
+            ),
+        )?
+        .map(|(index, _)| index);
+        Ok(index)
     }
 
     pub fn read_surfaces_to_scene(&self, scene: &mut Scene, frame: u32) -> PyResult<()> {
