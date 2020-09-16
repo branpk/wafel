@@ -5,7 +5,6 @@ import gc
 import os
 import weakref
 
-import ext_modules.util as c_util
 from ext_modules.core import Variable, Pipeline, ObjectBehavior
 
 import wafel.config as config
@@ -43,7 +42,6 @@ class Model:
     def base_pointer(path: str) -> int:
       address = assert_not_none(self.pipeline.path_address(0, path))
       return self.pipeline.address_to_base_pointer(0, address)
-    c_util.init(base_pointer)
 
     self._selected_frame = selected_frame
     self.selected_frame_callbacks: List[Callable[[int], None]] = []

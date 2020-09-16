@@ -1,6 +1,6 @@
 from typing import *
 
-import ext_modules.util as c_util
+from ext_modules.core import IntendedStick, stick_intended_to_raw_heuristic
 
 from wafel.util import *
 
@@ -15,9 +15,11 @@ def intended_to_raw(
 ) -> Tuple[int, int]:
   # TODO: This doesn't account for rotation from platform displacement (if face yaw is at start of frame)
 
-  stick_x, stick_y = c_util.stick_intended_to_raw(
-    trunc_signed(int_yaw, 16),
-    min(max(int_mag, 0.0), 32.0),
+  stick_x, stick_y = stick_intended_to_raw_heuristic(
+    IntendedStick(
+      trunc_signed(int_yaw, 16),
+      min(max(int_mag, 0.0), 32.0),
+    ),
     face_yaw,
     camera_yaw,
     squish_timer != 0,

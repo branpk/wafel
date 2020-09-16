@@ -3,8 +3,8 @@ from dataclasses import dataclass
 import math
 import ctypes as C
 
-import ext_modules.util as c_util
-from ext_modules.core import Variable, ObjectBehavior, Address
+from ext_modules.core import Variable, ObjectBehavior, Address, stick_raw_to_adjusted, \
+  stick_adjusted_to_intended
 
 import wafel.imgui as ig
 from wafel.model import Model
@@ -204,8 +204,8 @@ class VariableExplorer:
     raw_stick_x = self.model.get(stick_x_var)
     raw_stick_y = self.model.get(stick_y_var)
 
-    adjusted = c_util.stick_raw_to_adjusted(raw_stick_x, raw_stick_y)
-    intended_yaw, intended_mag = c_util.stick_adjusted_to_intended(
+    adjusted = stick_raw_to_adjusted(raw_stick_x, raw_stick_y)
+    intended = stick_adjusted_to_intended(
       adjusted,
       face_yaw,
       camera_yaw,
@@ -231,17 +231,17 @@ class VariableExplorer:
     target_dyaw: Optional[int] = None
     target_mag: Optional[float] = None
 
-    target_mag = render_value('int mag', intended_mag, FloatFormatter())
-    target_yaw = render_value('int yaw', intended_yaw, DecimalIntFormatter())
-    dyaw = intended_yaw - active_face_yaw
+    target_mag = render_value('int mag', intended.mag, FloatFormatter())
+    target_yaw = render_value('int yaw', intended.yaw, DecimalIntFormatter())
+    dyaw = intended.yaw - active_face_yaw
     target_dyaw = render_value('dyaw', dyaw, DecimalIntFormatter())
 
     ig.same_line()
     if ig.button('?'):
       ig.open_popup('active-yaw-expl')
     if ig.begin_popup('active-yaw-expl'):
-      ig.text(f'{intended_yaw} - {active_face_yaw} = {dyaw}')
-      ig.text(f'intended yaw = {intended_yaw}')
+      ig.text(f'{intended.yaw} - {active_face_yaw} = {dyaw}')
+      ig.text(f'intended yaw = {intended.yaw}')
       if active_face_yaw == face_yaw:
         ig.text(f'face yaw = {face_yaw}')
       if active_face_yaw != face_yaw:
@@ -258,9 +258,9 @@ class VariableExplorer:
       if target_dyaw is not None:
         target_yaw = active_face_yaw + target_dyaw
       if target_yaw is None:
-        target_yaw = intended_yaw
+        target_yaw = intended.yaw
       if target_mag is None:
-        target_mag = intended_mag
+        target_mag = intended.mag
 
       new_raw_stick_x, new_raw_stick_y = intended_to_raw(
         face_yaw, camera_yaw, squish_timer, target_yaw, target_mag, relative_to
@@ -269,9 +269,9 @@ class VariableExplorer:
       self.model.set(stick_x_var, new_raw_stick_x)
       self.model.set(stick_y_var, new_raw_stick_y)
 
-    n_a = intended_yaw - up_angle
-    n_x = intended_mag / 32 * math.sin(-n_a * math.pi / 0x8000)
-    n_y = intended_mag / 32 * math.cos(n_a * math.pi / 0x8000)
+    n_a = intended.yaw - up_angle
+    n_x = intended.mag / 32 * math.sin(-n_a * math.pi / 0x8000)
+    n_y = intended.mag / 32 * math.cos(n_a * math.pi / 0x8000)
 
     ig.set_cursor_pos((ig.get_cursor_pos().x + 155, 0))
     new_n = ui.render_joystick_control(id, n_x, n_y, 'circle')
