@@ -10,7 +10,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "util/sm64_types.hpp"
+#include "sm64_types.hpp"
 #include "renderer.hpp"
 #include "util.hpp"
 #include "gfx_rendering_api.h"
