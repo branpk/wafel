@@ -18,7 +18,11 @@ if 'clean' in sys.argv[1:]:
       shutil.rmtree(file)
 
 if sys.argv[1:] == [] or 'dist' in sys.argv[1:]:
-  subprocess.run([sys.executable, 'setup.py', 'develop'], check=True)
+  subprocess.run(
+    ['cargo', 'build', '--release', '--manifest-path', 'ext_modules/core/Cargo.toml'],
+    check=True,
+  )
+  shutil.copyfile('ext_modules/core/target/release/core.dll', 'ext_modules/core.pyd')
 
 if 'dist' in sys.argv[1:]:
   shutil.rmtree('build/dist', ignore_errors=True)
