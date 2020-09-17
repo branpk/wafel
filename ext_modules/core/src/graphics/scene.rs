@@ -1,4 +1,4 @@
-use crate::geo::{Point3f, Vector3f};
+use crate::geo::{direction_to_pitch_yaw, Point3f, Vector3f};
 use pyo3::prelude::*;
 use std::collections::HashSet;
 
@@ -97,6 +97,22 @@ impl RotateCamera {
     #[new]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    #[getter]
+    pub fn pitch(&self) -> f32 {
+        direction_to_pitch_yaw(
+            &(Vector3f::from_row_slice(&self.target) - Vector3f::from_row_slice(&self.pos)),
+        )
+        .0
+    }
+
+    #[getter]
+    pub fn yaw(&self) -> f32 {
+        direction_to_pitch_yaw(
+            &(Vector3f::from_row_slice(&self.target) - Vector3f::from_row_slice(&self.pos)),
+        )
+        .1
     }
 }
 

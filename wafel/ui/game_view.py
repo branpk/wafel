@@ -5,7 +5,7 @@ import time
 
 import glfw
 
-import ext_modules.graphics as cg
+import ext_modules.core as core
 from ext_modules.core import Variable, Address
 
 import wafel.imgui as ig
@@ -81,15 +81,15 @@ def direction_to_angle(dir: Vec3f) -> Tuple[float, float]:
   return pitch, yaw
 
 
-def get_viewport(framebuffer_size: Tuple[int, int]) -> cg.Viewport:
+def get_viewport(framebuffer_size: Tuple[int, int]) -> core.Viewport:
   window_pos = tuple(map(int, ig.get_window_position()))
   window_size = tuple(map(int, ig.get_window_size()))
 
-  viewport = cg.Viewport()
-  viewport.pos.x = window_pos[0]
-  viewport.pos.y = window_pos[1]
-  viewport.size.x = window_size[0]
-  viewport.size.y = window_size[1]
+  viewport = core.Viewport()
+  viewport.x = window_pos[0]
+  viewport.y = window_pos[1]
+  viewport.width = window_size[0]
+  viewport.height = window_size[1]
 
   return viewport
 
@@ -133,7 +133,7 @@ def get_normalized_mouse_pos() -> Optional[Tuple[float, float]]:
   return mouse_pos
 
 
-def get_mouse_ray(camera: cg.RotateCamera) -> Optional[Tuple[Vec3f, Vec3f]]:
+def get_mouse_ray(camera: core.RotateCamera) -> Optional[Tuple[Vec3f, Vec3f]]:
   window_size = tuple(map(int, ig.get_window_size()))
   mouse_pos = get_normalized_mouse_pos()
   if mouse_pos is None:
@@ -155,10 +155,10 @@ def get_mouse_ray(camera: cg.RotateCamera) -> Optional[Tuple[Vec3f, Vec3f]]:
   mag = math.sqrt(sum(c ** 2 for c in mouse_dir))
   mouse_dir = (mouse_dir[0] / mag, mouse_dir[1] / mag, mouse_dir[2] / mag)
 
-  return ((camera.pos.x, camera.pos.y, camera.pos.z), mouse_dir)
+  return (tuple(camera.pos), mouse_dir)
 
 
-def get_mouse_world_pos_birds_eye(camera: cg.BirdsEyeCamera) -> Optional[Tuple[float, float]]:
+def get_mouse_world_pos_birds_eye(camera: core.BirdsEyeCamera) -> Optional[Tuple[float, float]]:
   window_size = tuple(map(int, ig.get_window_size()))
   mouse_pos = get_normalized_mouse_pos()
   if mouse_pos is None:
@@ -167,8 +167,8 @@ def get_mouse_world_pos_birds_eye(camera: cg.BirdsEyeCamera) -> Optional[Tuple[f
   world_span_x = camera.span_y
   world_span_z = camera.span_y * window_size[0] / window_size[1]
   return (
-    camera.pos.x + mouse_pos[1] * world_span_x / 2,
-    camera.pos.z + mouse_pos[0] * world_span_z / 2,
+    camera.pos[0] + mouse_pos[1] * world_span_x / 2,
+    camera.pos[2] + mouse_pos[0] * world_span_z / 2,
   )
 
 
@@ -179,7 +179,7 @@ def trace_ray(model: Model, ray: Tuple[Vec3f, Vec3f]) -> Optional[int]:
 def use_rotational_camera(
   framebuffer_size: Tuple[int, int],
   model: Model,
-) -> cg.RotateCamera:
+) -> Tuple[core.RotateCamera, bool]:
   mouse_state = use_state('mouse-state', MouseTracker()).value
   target: Ref[Optional[Vec3f]] = use_state('target', None)
   target_vel: Ref[Optional[Vec3f]] = use_state('target-vel', None)
@@ -272,16 +272,14 @@ def use_rotational_camera(
     target_pos[2] - offset * face_direction[2],
   )
 
-  camera = cg.RotateCamera()
-  camera.pos = cg.vec3(*camera_pos)
-  camera.target = cg.vec3(*target_pos)
-  camera.pitch = pitch.value
-  camera.yaw = yaw.value
+  camera = core.RotateCamera()
+  camera.pos = camera_pos
+  camera.target = target_pos
   camera.fov_y = fov_y
-  if target.value is not None and not lock_to_in_game.value:
-    camera.render_target = True # TODO: Should be a scene config
 
-  return camera
+  show_camera_target = target.value is not None and not lock_to_in_game.value
+
+  return camera, show_camera_target
 
 
 def render_game_view_rotate(
@@ -295,7 +293,7 @@ def render_game_view_rotate(
   ig.push_id(id)
 
   log.timer.begin('overlay')
-  camera = use_rotational_camera(framebuffer_size, model)
+  camera, show_camera_target = use_rotational_camera(framebuffer_size, model)
   model.rotational_camera_yaw = int(camera.yaw * 0x8000 / math.pi)
   log.timer.end()
 
@@ -308,7 +306,8 @@ def render_game_view_rotate(
   render_game(
     model,
     get_viewport(framebuffer_size),
-    cg.Camera(camera),
+    camera,
+    show_camera_target,
     wall_hitbox_radius,
     hovered_surface=hovered_surface,
     hidden_surfaces=hidden_surfaces,
@@ -318,33 +317,32 @@ def render_game_view_rotate(
   return new_hovered_surface
 
 
-def render_game_view_in_game(
-  id: str,
-  framebuffer_size: Tuple[int, int],
-  model: Model,
-) -> None:
-  ig.push_id(id)
+# def render_game_view_in_game(
+#   id: str,
+#   framebuffer_size: Tuple[int, int],
+#   model: Model,
+# ) -> None:
+#   ig.push_id(id)
 
-  camera = use_rotational_camera(framebuffer_size, model)
-  model.rotational_camera_yaw = int(camera.yaw * 0x8000 / math.pi)
+#   camera = use_rotational_camera(framebuffer_size, model)
+#   model.rotational_camera_yaw = int(camera.yaw * 0x8000 / math.pi)
 
-  # FIXME: In-game view
-  # Invalidate frame to ensure no rendering state gets copied to other slots
-  prev_frame = max(model.selected_frame - 1, 0)
-  with model.timeline.request_base(prev_frame, invalidate=True) as state:
-    # TODO: Override fov (so that it stays at 45 when not in in-game mode)
-    model.game.path('gOverrideCamera.enabled').set(state.slot, True)
-    model.game.path('gOverrideCamera.pos[0]').set(state.slot, camera.pos.x)
-    model.game.path('gOverrideCamera.pos[1]').set(state.slot, camera.pos.y)
-    model.game.path('gOverrideCamera.pos[2]').set(state.slot, camera.pos.z)
-    model.game.path('gOverrideCamera.focus[0]').set(state.slot, camera.target.x)
-    model.game.path('gOverrideCamera.focus[1]').set(state.slot, camera.target.y)
-    model.game.path('gOverrideCamera.focus[2]').set(state.slot, camera.target.z)
+#   # Invalidate frame to ensure no rendering state gets copied to other slots
+#   prev_frame = max(model.selected_frame - 1, 0)
+#   with model.timeline.request_base(prev_frame, invalidate=True) as state:
+#     # TODO: Override fov (so that it stays at 45 when not in in-game mode)
+#     model.game.path('gOverrideCamera.enabled').set(state.slot, True)
+#     model.game.path('gOverrideCamera.pos[0]').set(state.slot, camera.pos.x)
+#     model.game.path('gOverrideCamera.pos[1]').set(state.slot, camera.pos.y)
+#     model.game.path('gOverrideCamera.pos[2]').set(state.slot, camera.pos.z)
+#     model.game.path('gOverrideCamera.focus[0]').set(state.slot, camera.target.x)
+#     model.game.path('gOverrideCamera.focus[1]').set(state.slot, camera.target.y)
+#     model.game.path('gOverrideCamera.focus[2]').set(state.slot, camera.target.z)
 
-    sm64_update_and_render = model.game.memory.symbol('sm64_update_and_render').absolute
-    cg.update_and_render(get_viewport(framebuffer_size), sm64_update_and_render)
+#     sm64_update_and_render = model.game.memory.symbol('sm64_update_and_render').absolute
+#     cg.update_and_render(get_viewport(framebuffer_size), sm64_update_and_render)
 
-  ig.pop_id()
+#   ig.pop_id()
 
 
 def render_pos_y_slider(
@@ -415,12 +413,12 @@ def render_game_view_birds_eye(
     camera_xz = target.value
 
   if drag_amount != (0.0, 0.0):
-    world_span_z = world_span_x * viewport.size.x / viewport.size.y
+    world_span_z = world_span_x * viewport.width / viewport.height
     if target.value is None:
       target.value = (mario_pos[0], mario_pos[2])
     target.value = (
-      camera_xz[0] + drag_amount[1] * world_span_x / viewport.size.y,
-      camera_xz[1] - drag_amount[0] * world_span_z / viewport.size.x,
+      camera_xz[0] + drag_amount[1] * world_span_x / viewport.height,
+      camera_xz[1] - drag_amount[0] * world_span_z / viewport.width,
     )
     camera_xz = target.value
 
@@ -431,7 +429,7 @@ def render_game_view_birds_eye(
 
   camera_y = mario_pos[1] + 500 if pos_y.value is None else pos_y.value
 
-  ig.set_cursor_pos((viewport.size.x - 100, 10))
+  ig.set_cursor_pos((viewport.width - 100, 10))
   ig.begin_child('##y-slider')
   new_y, reset = render_pos_y_slider('y-slider', camera_y, mario_pos[1])
   if reset:
@@ -441,17 +439,17 @@ def render_game_view_birds_eye(
     camera_y = pos_y.value
   ig.end_child()
 
-  camera = cg.BirdsEyeCamera()
-  camera.pos = cg.vec3(camera_xz[0], camera_y, camera_xz[1])
+  camera = core.BirdsEyeCamera()
+  camera.pos = [camera_xz[0], camera_y, camera_xz[1]]
   camera.span_y = world_span_x
 
   # Mouse xz
   mouse_world_pos = get_mouse_world_pos_birds_eye(camera)
   mouse_ray: Optional[Tuple[Vec3f, Vec3f]]
   if mouse_world_pos is not None:
-    ig.set_cursor_pos((10, viewport.size.y - 25))
+    ig.set_cursor_pos((10, viewport.height - 25))
     ig.text('(x, z) = (%.3f, %.3f)' % mouse_world_pos)
-    mouse_ray = ((mouse_world_pos[0], camera.pos.y, mouse_world_pos[1]), (0, -1, 0))
+    mouse_ray = ((mouse_world_pos[0], camera.pos[1], mouse_world_pos[1]), (0, -1, 0))
   else:
     mouse_ray = None
 
@@ -463,7 +461,8 @@ def render_game_view_birds_eye(
   render_game(
     model,
     viewport,
-    cg.Camera(camera),
+    camera,
+    False,
     wall_hitbox_radius,
     hovered_surface=hovered_surface,
     hidden_surfaces=hidden_surfaces,
@@ -473,4 +472,4 @@ def render_game_view_birds_eye(
   return new_hovered_surface
 
 
-__all__ = ['render_game_view_rotate', 'render_game_view_in_game', 'render_game_view_birds_eye']
+__all__ = ['render_game_view_rotate', 'render_game_view_birds_eye']

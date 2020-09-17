@@ -190,26 +190,20 @@ class View:
     )
     hidden_surfaces = hidden_surfaces_by_area.setdefault(current_area, set())
 
-    in_game_view = use_state('in-game-view', False)
-
     log.timer.begin('gview1')
     ig.begin_child(
       'Game View 1',
       height=int(total_height // 2) - slider_space // 2,
       border=True,
     )
-    if config.dev_mode and in_game_view.value:
-      ui.render_game_view_in_game('game-view-1', framebuffer_size, self.model)
-      hovered_surface_1 = None
-    else:
-      hovered_surface_1 = ui.render_game_view_rotate(
-        'game-view-1',
-        framebuffer_size,
-        self.model,
-        wall_hitbox_radius.value,
-        hovered_surface.value,
-        hidden_surfaces,
-      )
+    hovered_surface_1 = ui.render_game_view_rotate(
+      'game-view-1',
+      framebuffer_size,
+      self.model,
+      wall_hitbox_radius.value,
+      hovered_surface.value,
+      hidden_surfaces,
+    )
 
     ig.set_cursor_pos((10.0, ig.get_window_height() - 30))
     ig.text('wall radius')
@@ -222,11 +216,6 @@ class View:
     )
     wall_hitbox_radius.value = wall_hitbox_options[index]
     ig.pop_item_width()
-
-    if config.dev_mode:
-      ig.same_line()
-      if ig.button('Secret hype'):
-        in_game_view.value = not in_game_view.value
 
     ig.end_child()
     log.timer.end()
