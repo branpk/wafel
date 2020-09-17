@@ -1,4 +1,4 @@
-use crate::geo::{direction_to_pitch_yaw, Matrix4f, Point3f, Vector3f, Vector4f};
+use crate::geo::{direction_to_pitch_yaw, Matrix4f, Point3f, StoredPoint3f, Vector3f, Vector4f};
 use bytemuck::{cast_slice, offset_of, Pod, Zeroable};
 use nalgebra::distance;
 use std::{f32::consts::PI, iter, mem::size_of};
@@ -12,26 +12,26 @@ const DEPTH_TEXTURE_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth24Pl
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(C)]
 struct Vertex {
-    pos: [f32; 3],
+    pos: StoredPoint3f,
     color: [f32; 4],
-}
-
-impl Vertex {
-    fn new(pos: Point3f, color: [f32; 4]) -> Self {
-        Self {
-            pos: [pos.x, pos.y, pos.z],
-            color,
-        }
-    }
 }
 
 unsafe impl Zeroable for Vertex {}
 unsafe impl Pod for Vertex {}
 
+impl Vertex {
+    fn new(pos: impl Into<StoredPoint3f>, color: [f32; 4]) -> Self {
+        Self {
+            pos: pos.into(),
+            color,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(C)]
 struct ScreenDotInstance {
-    center: [f32; 3],
+    center: StoredPoint3f,
     radius: [f32; 2],
     color: [f32; 4],
 }
@@ -727,7 +727,7 @@ fn birds_eye_transforms(camera: &BirdsEyeCamera, output_size: (u32, u32)) -> (Ma
     ));
     let proj_matrix = scaling * rotation;
 
-    let view_matrix = Matrix4f::new_translation(&-Vector3f::from_row_slice(&camera.pos));
+    let view_matrix = Matrix4f::new_translation(&-camera.pos.coords);
 
     (proj_matrix, view_matrix)
 }
@@ -818,9 +818,13 @@ fn get_wall_hitbox_vertices(scene: &Scene) -> (Vec<Vertex>, Vec<Vertex>) {
         };
         let outline_color = [0.0, 0.0, 0.0, 0.5];
 
-        let proj_dist = scene.wall_hitbox_radius / surface.normal().dot(&proj_dir);
+        let proj_dist = scene.wall_hitbox_radius / surface.normal.dot(&proj_dir);
 
-        let wall_vertices = surface.vertices();
+        let wall_vertices = [
+            surface.vertices[0].0,
+            surface.vertices[1].0,
+            surface.vertices[2].0,
+        ];
         let ext_vertices = [
             wall_vertices[0] + proj_dist * proj_dir,
             wall_vertices[1] + proj_dist * proj_dir,
@@ -856,7 +860,7 @@ fn get_wall_hitbox_vertices(scene: &Scene) -> (Vec<Vertex>, Vec<Vertex>) {
 
         // TODO: Helper for calculating bump sizes
         let camera_dist = match &scene.camera {
-            Camera::Rotate(camera) => distance(&int_vertices[0], &Point3f::from_slice(&camera.pos)),
+            Camera::Rotate(camera) => distance(&int_vertices[0], &camera.pos),
             Camera::BirdsEye(camera) => 1000.0,
         };
 
@@ -910,7 +914,7 @@ fn get_object_vertices(scene: &Scene) -> Vec<Vertex> {
     for object in &scene.objects {
         let color = [1.0, 0.0, 0.0, 1.0];
 
-        let pos = object.pos();
+        let pos = object.pos.0;
         vertices.extend(&[
             Vertex::new(pos, color),
             Vertex::new(pos + Vector3f::new(0.0, object.hitbox_height, 0.0), color),
@@ -942,20 +946,13 @@ fn get_object_path_line_vertices(scene: &Scene) -> Vec<Vertex> {
 
     for path in &scene.object_paths {
         for (index, node) in path.nodes.iter().enumerate() {
-            let pos = node.pos();
             let color = [0.5, 0.0, 0.0, get_path_alpha(path, index)];
 
-            vertices.push(Vertex::new(pos + offset, color));
+            vertices.push(Vertex::new(node.pos.0 + offset, color));
 
             for step in &node.quarter_steps {
-                vertices.push(Vertex::new(
-                    Point3f::from_slice(&step.intended_pos) + offset,
-                    color,
-                ));
-                vertices.push(Vertex::new(
-                    Point3f::from_slice(&step.result_pos) + offset,
-                    color,
-                ));
+                vertices.push(Vertex::new(step.intended_pos.0 + offset, color));
+                vertices.push(Vertex::new(step.result_pos.0 + offset, color));
             }
         }
     }
@@ -1024,7 +1021,6 @@ fn get_camera_target_vertices(scene: &Scene) -> (Vec<Vertex>, Vec<ScreenDotInsta
     if scene.show_camera_target {
         if let Camera::Rotate(camera) = &scene.camera {
             let color = [0.2, 0.2, 0.2, 0.8];
-            let target = Point3f::from_slice(&camera.target);
 
             let y_radius = 0.01;
             let x_radius = y_radius * scene.viewport.height as f32 / scene.viewport.width as f32;
@@ -1035,8 +1031,8 @@ fn get_camera_target_vertices(scene: &Scene) -> (Vec<Vertex>, Vec<ScreenDotInsta
             });
 
             line_vertices.extend(&[
-                Vertex::new(target, color),
-                Vertex::new(target + Vector3f::new(0.0, -10_000.0, 0.0), color),
+                Vertex::new(camera.target, color),
+                Vertex::new(camera.target.0 + Vector3f::new(0.0, -10_000.0, 0.0), color),
             ]);
         }
     }
@@ -1066,27 +1062,15 @@ fn get_unit_square_vertices(scene: &Scene) -> Vec<Vertex> {
 
             for x in min_x as i32..=max_x as i32 {
                 vertices.extend(&[
-                    Vertex {
-                        pos: [x as f32, y, min_z],
-                        color,
-                    },
-                    Vertex {
-                        pos: [x as f32, y, max_z],
-                        color,
-                    },
+                    Vertex::new(Point3f::new(x as f32, y, min_z), color),
+                    Vertex::new(Point3f::new(x as f32, y, max_z), color),
                 ]);
             }
 
             for z in min_z as i32..=max_z as i32 {
                 vertices.extend(&[
-                    Vertex {
-                        pos: [min_x, y, z as f32],
-                        color,
-                    },
-                    Vertex {
-                        pos: [max_x, y, z as f32],
-                        color,
-                    },
+                    Vertex::new(Point3f::new(min_x, y, z as f32), color),
+                    Vertex::new(Point3f::new(max_x, y, z as f32), color),
                 ]);
             }
         }

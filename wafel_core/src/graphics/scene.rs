@@ -1,4 +1,4 @@
-use crate::geo::{direction_to_pitch_yaw, Point3f, Vector3f};
+use crate::geo::{direction_to_pitch_yaw, Point3f, StoredPoint3f, StoredVector3f, Vector3f};
 use pyo3::prelude::*;
 use std::collections::HashSet;
 
@@ -85,9 +85,9 @@ impl Default for Camera {
 #[derive(Debug, Clone, Default)]
 pub struct RotateCamera {
     #[pyo3(get, set)]
-    pub pos: [f32; 3],
+    pub pos: StoredPoint3f,
     #[pyo3(get, set)]
-    pub target: [f32; 3],
+    pub target: StoredPoint3f,
     #[pyo3(get, set)]
     pub fov_y: f32,
 }
@@ -101,18 +101,12 @@ impl RotateCamera {
 
     #[getter]
     pub fn pitch(&self) -> f32 {
-        direction_to_pitch_yaw(
-            &(Vector3f::from_row_slice(&self.target) - Vector3f::from_row_slice(&self.pos)),
-        )
-        .0
+        direction_to_pitch_yaw(&(self.target.0 - self.pos.0)).0
     }
 
     #[getter]
     pub fn yaw(&self) -> f32 {
-        direction_to_pitch_yaw(
-            &(Vector3f::from_row_slice(&self.target) - Vector3f::from_row_slice(&self.pos)),
-        )
-        .1
+        direction_to_pitch_yaw(&(self.target.0 - self.pos.0)).1
     }
 }
 
@@ -120,7 +114,7 @@ impl RotateCamera {
 #[derive(Debug, Clone, Default)]
 pub struct BirdsEyeCamera {
     #[pyo3(get, set)]
-    pub pos: [f32; 3],
+    pub pos: StoredPoint3f,
     #[pyo3(get, set)]
     pub span_y: f32,
 }
@@ -136,22 +130,8 @@ impl BirdsEyeCamera {
 #[derive(Debug, Clone)]
 pub struct Surface {
     pub ty: SurfaceType,
-    pub vertices: [[f32; 3]; 3],
-    pub normal: [f32; 3],
-}
-
-impl Surface {
-    pub fn normal(&self) -> Vector3f {
-        Vector3f::from_row_slice(&self.normal)
-    }
-
-    pub fn vertices(&self) -> [Point3f; 3] {
-        [
-            Point3f::from_slice(&self.vertices[0]),
-            Point3f::from_slice(&self.vertices[1]),
-            Point3f::from_slice(&self.vertices[2]),
-        ]
-    }
+    pub vertices: [StoredPoint3f; 3],
+    pub normal: StoredVector3f,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -164,19 +144,13 @@ pub enum SurfaceType {
 
 #[derive(Debug, Clone)]
 pub struct Object {
-    pub pos: [f32; 3],
+    pub pos: StoredPoint3f,
     pub hitbox_height: f32,
     pub hitbox_radius: f32,
 }
 
-impl Object {
-    pub fn pos(&self) -> Point3f {
-        Point3f::from_slice(&self.pos)
-    }
-}
-
 #[pyclass]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ObjectPath {
     pub nodes: Vec<ObjectPathNode>,
     #[pyo3(get, set)]
@@ -190,25 +164,19 @@ impl ObjectPath {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ObjectPathNode {
-    pub pos: [f32; 3],
+    pub pos: StoredPoint3f,
     pub quarter_steps: Vec<QuarterStep>,
-}
-
-impl ObjectPathNode {
-    pub fn pos(&self) -> Point3f {
-        Point3f::from_slice(&self.pos)
-    }
 }
 
 #[pyclass]
 #[derive(Debug, Clone, Default)]
 pub struct QuarterStep {
     #[pyo3(get, set)]
-    pub intended_pos: [f32; 3],
+    pub intended_pos: StoredPoint3f,
     #[pyo3(get, set)]
-    pub result_pos: [f32; 3],
+    pub result_pos: StoredPoint3f,
 }
 
 #[pymethods]

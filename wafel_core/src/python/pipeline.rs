@@ -461,8 +461,9 @@ impl PyPipeline {
 
         let mut nodes = Vec::new();
         for frame in frame_start..frame_end {
+            let pos_coords = timeline.frame(frame)?.path_read(&pos_path)?.as_f32_3()?;
             nodes.push(scene::ObjectPathNode {
-                pos: timeline.frame(frame)?.path_read(&pos_path)?.as_f32_3()?,
+                pos: Point3f::from_slice(&pos_coords).into(),
                 quarter_steps: Vec::new(),
             });
         }

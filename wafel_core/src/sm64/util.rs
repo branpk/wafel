@@ -210,15 +210,15 @@ pub fn read_surfaces_to_scene(scene: &mut Scene, state: &impl SlotState) -> Resu
                 scene::SurfaceType::WallZProj
             };
 
-            let as_f32_3 = |p: [i16; 3]| [p[0] as f32, p[1] as f32, p[2] as f32];
+            let as_point = |p: [i16; 3]| Point3f::new(p[0] as f32, p[1] as f32, p[2] as f32);
             scene::Surface {
                 ty,
                 vertices: [
-                    as_f32_3(surface.vertices[0]),
-                    as_f32_3(surface.vertices[1]),
-                    as_f32_3(surface.vertices[2]),
+                    as_point(surface.vertices[0]).into(),
+                    as_point(surface.vertices[1]).into(),
+                    as_point(surface.vertices[2]).into(),
                 ],
-                normal: surface.normal,
+                normal: Vector3f::from_row_slice(&surface.normal).into(),
             }
         })
         .collect();
@@ -267,11 +267,12 @@ pub fn read_objects_to_scene(scene: &mut Scene, state: &impl SlotState) -> Resul
         let active_flags = read_s16(object_addr + o_active_flags)?;
         if (active_flags & active_flag_active) != 0 {
             scene.objects.push(scene::Object {
-                pos: [
+                pos: Point3f::new(
                     read_f32(object_addr + o_pos_x)?,
                     read_f32(object_addr + o_pos_y)?,
                     read_f32(object_addr + o_pos_z)?,
-                ],
+                )
+                .into(),
                 hitbox_height: read_f32(object_addr + o_hitbox_height)?,
                 hitbox_radius: read_f32(object_addr + o_hitbox_radius)?,
             })
