@@ -7,8 +7,7 @@ from glob import glob
 import wafel.config as config
 
 if 'clean' in sys.argv[1:]:
-  build_files = ['dist', 'build', 'ext_modules/core/target']
-  build_files += glob('ext_modules/**/*.pyd', recursive=True)
+  build_files = ['dist', 'build', 'wafel_core/target', 'wafel_core.pyd']
   for file in build_files:
     if os.path.isfile(file):
       print('Removing ' + file)
@@ -19,10 +18,10 @@ if 'clean' in sys.argv[1:]:
 
 if sys.argv[1:] == [] or 'dist' in sys.argv[1:]:
   subprocess.run(
-    ['cargo', 'build', '--release', '--manifest-path', 'ext_modules/core/Cargo.toml'],
+    ['cargo', 'build', '--release', '--manifest-path', 'wafel_core/Cargo.toml'],
     check=True,
   )
-  shutil.copyfile('ext_modules/core/target/release/core.dll', 'ext_modules/core.pyd')
+  shutil.copyfile('wafel_core/target/release/wafel_core.dll', 'wafel_core.pyd')
 
 if 'dist' in sys.argv[1:]:
   shutil.rmtree('build/dist', ignore_errors=True)
@@ -44,7 +43,7 @@ if 'dist' in sys.argv[1:]:
   )
 
   shutil.copytree('assets', 'build/dist/assets')
-  shutil.copytree('lib/libsm64', 'build/dist/libsm64')
+  shutil.copytree('libsm64', 'build/dist/libsm64')
 
   print('Creating zip file')
   shutil.make_archive(
