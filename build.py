@@ -42,7 +42,6 @@ if 'dist' in sys.argv[1:]:
     check=True,
   )
 
-  shutil.copytree('assets', 'build/dist/assets')
   shutil.copytree('libsm64', 'build/dist/libsm64')
 
   print('Creating zip file')
