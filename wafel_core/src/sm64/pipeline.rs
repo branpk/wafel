@@ -170,11 +170,11 @@ pub unsafe fn load_dll_pipeline(
 
     load_object_fields(
         memory.data_layout_mut(),
-        include_bytes!("../../inline_resources/object_fields.json"),
+        include_bytes!("../../assets/object_fields.json"),
     )?;
     load_constants(
         memory.data_layout_mut(),
-        include_bytes!("../../inline_resources/constants.json"),
+        include_bytes!("../../assets/constants.json"),
     )?;
 
     let data_variables = DataVariables::all(&memory)?;

@@ -463,13 +463,15 @@ fn create_surface_pipeline(
             }),
         ),
         vertex_stage: wgpu::ProgrammableStageDescriptor {
-            module: &device
-                .create_shader_module(wgpu::include_spirv!("../../bin/shaders/surface.vert.spv")),
+            module: &device.create_shader_module(wgpu::include_spirv!(
+                "../../assets/shaders/surface.vert.spv"
+            )),
             entry_point: "main",
         },
         fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
-            module: &device
-                .create_shader_module(wgpu::include_spirv!("../../bin/shaders/surface.frag.spv")),
+            module: &device.create_shader_module(wgpu::include_spirv!(
+                "../../assets/shaders/surface.frag.spv"
+            )),
             entry_point: "main",
         }),
         rasterization_state: None,
@@ -536,12 +538,12 @@ fn create_color_pipeline(
         ),
         vertex_stage: wgpu::ProgrammableStageDescriptor {
             module: &device
-                .create_shader_module(wgpu::include_spirv!("../../bin/shaders/color.vert.spv")),
+                .create_shader_module(wgpu::include_spirv!("../../assets/shaders/color.vert.spv")),
             entry_point: "main",
         },
         fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
             module: &device
-                .create_shader_module(wgpu::include_spirv!("../../bin/shaders/color.frag.spv")),
+                .create_shader_module(wgpu::include_spirv!("../../assets/shaders/color.frag.spv")),
             entry_point: "main",
         }),
         rasterization_state: None,
@@ -613,13 +615,13 @@ fn create_screen_dot_pipeline(
         ),
         vertex_stage: wgpu::ProgrammableStageDescriptor {
             module: &device.create_shader_module(wgpu::include_spirv!(
-                "../../bin/shaders/screen_dot.vert.spv"
+                "../../assets/shaders/screen_dot.vert.spv"
             )),
             entry_point: "main",
         },
         fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
             module: &device
-                .create_shader_module(wgpu::include_spirv!("../../bin/shaders/color.frag.spv")),
+                .create_shader_module(wgpu::include_spirv!("../../assets/shaders/color.frag.spv")),
             entry_point: "main",
         }),
         rasterization_state: None,

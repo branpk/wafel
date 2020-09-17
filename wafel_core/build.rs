@@ -14,7 +14,7 @@ fn main() {
 }
 
 fn compile_shaders() -> Result<(), Box<dyn Error>> {
-    let bin_dir = Path::new("bin");
+    let assets_dir = Path::new("assets");
     let mut output_files = HashSet::new();
 
     for src_path in shader_files()? {
@@ -23,7 +23,7 @@ fn compile_shaders() -> Result<(), Box<dyn Error>> {
             src_path.to_str().expect("path is not unicode")
         );
 
-        let mut dst_path = bin_dir.join(&src_path);
+        let mut dst_path = assets_dir.join(&src_path);
         dst_path.set_extension(match src_path.extension() {
             Some(ext) => format!("{}.spv", ext.to_str().unwrap()),
             None => "spv".to_owned(),
@@ -45,9 +45,9 @@ fn compile_shaders() -> Result<(), Box<dyn Error>> {
         output_files.insert(dst_path);
     }
 
-    if bin_dir.is_dir() {
-        remove_unexpected_files(bin_dir, &output_files)?;
-        remove_empty_dirs(bin_dir)?;
+    if assets_dir.is_dir() {
+        remove_unexpected_files(assets_dir, &output_files)?;
+        remove_empty_dirs(assets_dir)?;
     }
 
     Ok(())
@@ -69,10 +69,10 @@ fn shader_files() -> Result<Vec<PathBuf>, Box<dyn Error>> {
 }
 
 fn remove_unexpected_files(
-    bin_dir: &Path,
+    assets_dir: &Path,
     output_files: &HashSet<PathBuf>,
 ) -> Result<(), Box<dyn Error>> {
-    let shaders_dir = bin_dir.join("shaders");
+    let shaders_dir = assets_dir.join("shaders");
     if !shaders_dir.is_dir() {
         return Ok(());
     }
@@ -90,8 +90,8 @@ fn remove_unexpected_files(
     Ok(())
 }
 
-fn remove_empty_dirs(bin_dir: &Path) -> Result<(), Box<dyn Error>> {
-    for dir in WalkDir::new(bin_dir) {
+fn remove_empty_dirs(assets_dir: &Path) -> Result<(), Box<dyn Error>> {
+    for dir in WalkDir::new(assets_dir) {
         let dir = dir?;
         let path = dir.path();
         if !path.is_dir() {
