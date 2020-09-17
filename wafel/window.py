@@ -4,7 +4,7 @@ import glfw
 from imgui.integrations.glfw import GlfwRenderer
 from OpenGL import GL as gl
 
-import ext_modules.core as core
+import wafel_core as core
 
 import wafel.imgui as ig
 import wafel.config as config

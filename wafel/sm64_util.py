@@ -1,6 +1,6 @@
 from typing import *
 
-from ext_modules.core import IntendedStick, stick_intended_to_raw_heuristic
+from wafel_core import IntendedStick, stick_intended_to_raw_heuristic
 
 from wafel.util import *
 

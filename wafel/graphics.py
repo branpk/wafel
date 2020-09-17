@@ -1,6 +1,6 @@
 from typing import *
 
-from ext_modules.core import Scene, Viewport, BirdsEyeCamera, RotateCamera, QuarterStep
+from wafel_core import Scene, Viewport, BirdsEyeCamera, RotateCamera, QuarterStep
 
 from wafel.model import Model
 import wafel.config as config

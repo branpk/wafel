@@ -1,6 +1,6 @@
 from typing import *
 
-from ext_modules.core import Variable
+from wafel_core import Variable
 
 import wafel.imgui as ig
 from wafel.variable_format import VariableFormatter

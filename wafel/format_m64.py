@@ -2,7 +2,7 @@ from typing import *
 import struct
 import os
 
-from ext_modules.core import Variable, Pipeline
+from wafel_core import Variable, Pipeline
 
 from wafel.input_buttons import INPUT_BUTTON_FLAGS
 from wafel.variable import VariableReader

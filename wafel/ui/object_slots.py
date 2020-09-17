@@ -1,6 +1,6 @@
 from typing import *
 
-from ext_modules.core import ObjectBehavior
+from wafel_core import ObjectBehavior
 
 import wafel.imgui as ig
 

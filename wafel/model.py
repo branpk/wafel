@@ -5,7 +5,7 @@ import gc
 import os
 import weakref
 
-from ext_modules.core import Variable, Pipeline, ObjectBehavior
+from wafel_core import Variable, Pipeline, ObjectBehavior
 
 import wafel.config as config
 from wafel.util import *

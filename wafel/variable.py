@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ext_modules.core import Variable
+from wafel_core import Variable
 
 from typing import *
 from abc import abstractmethod, ABC

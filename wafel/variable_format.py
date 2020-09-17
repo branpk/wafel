@@ -1,7 +1,7 @@
 from typing import *
 from abc import abstractmethod
 
-from ext_modules.core import Variable, Pipeline
+from wafel_core import Variable, Pipeline
 
 
 class VariableFormatter:

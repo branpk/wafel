@@ -43,7 +43,7 @@ mod window;
 // TODO: __str__, __repr__, __eq__, __hash__ for PyObjectBehavior, PyAddress
 
 #[pymodule]
-fn core(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
+fn wafel_core(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyPipeline>()?;
     m.add_class::<PyVariable>()?;
     m.add_class::<PyObjectBehavior>()?;

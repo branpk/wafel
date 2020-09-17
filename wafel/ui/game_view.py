@@ -5,8 +5,8 @@ import time
 
 import glfw
 
-import ext_modules.core as core
-from ext_modules.core import Variable, Address
+import wafel_core as core
+from wafel_core import Variable, Address
 
 import wafel.imgui as ig
 from wafel.model import Model

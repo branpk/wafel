@@ -4,7 +4,7 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 import time
 
-from ext_modules.core import Variable
+from wafel_core import Variable
 
 import wafel.imgui as ig
 from wafel.variable import VariablePipeline

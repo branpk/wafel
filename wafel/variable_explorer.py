@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import math
 import ctypes as C
 
-from ext_modules.core import Variable, ObjectBehavior, Address, stick_raw_to_adjusted, \
+from wafel_core import Variable, ObjectBehavior, Address, stick_raw_to_adjusted, \
   stick_adjusted_to_intended
 
 import wafel.imgui as ig

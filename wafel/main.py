@@ -14,7 +14,7 @@ import glfw
 from imgui.integrations.glfw import GlfwRenderer
 from OpenGL import GL as gl
 
-from ext_modules.core import Pipeline
+from wafel_core import Pipeline
 
 import wafel.imgui as ig
 from wafel.model import Model
