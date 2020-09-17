@@ -7,7 +7,7 @@ from glob import glob
 import wafel.config as config
 
 if 'clean' in sys.argv[1:]:
-  build_files = ['dist', 'ext_modules.egg-info', 'build', 'ext_modules/core/target']
+  build_files = ['dist', 'build', 'ext_modules/core/target']
   build_files += glob('ext_modules/**/*.pyd', recursive=True)
   for file in build_files:
     if os.path.isfile(file):
