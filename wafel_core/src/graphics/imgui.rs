@@ -298,7 +298,7 @@ impl ImguiRenderer {
             ],
         });
 
-        let mut buffers: Vec<(wgpu::Buffer, wgpu::Buffer)> = draw_data
+        let buffers: Vec<(wgpu::Buffer, wgpu::Buffer)> = draw_data
             .command_lists
             .iter()
             .map(|command_list| {

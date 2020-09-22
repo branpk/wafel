@@ -121,7 +121,6 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
                                 &queue,
                                 output_view,
                                 output_size,
-                                swap_chain_desc.format,
                                 &imgui_draw_data,
                             );
                         }
