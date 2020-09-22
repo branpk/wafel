@@ -1,6 +1,6 @@
 //! Implementation of timeline algorithm.
 
-use super::{slot_state_impl::SlotStateImpl, Controller, SlotState, SlotStateMut, State};
+use super::{slot_state_impl::SlotStateImpl, Controller, SlotState, SlotStateMut};
 use crate::{error::Error, memory::Memory};
 use itertools::{iproduct, Itertools};
 use rand::seq::SliceRandom;

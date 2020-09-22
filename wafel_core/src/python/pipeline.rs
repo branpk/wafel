@@ -4,7 +4,6 @@ use super::{
 };
 use crate::{
     dll,
-    error::Error,
     geo::Point3f,
     geo::Vector3f,
     graphics::scene,
@@ -14,7 +13,7 @@ use crate::{
     sm64::trace_ray_to_surface,
     sm64::{
         frame_log, load_dll_pipeline, object_behavior, object_path, read_surfaces_to_scene,
-        ObjectSlot, Pipeline, SM64ErrorCause,
+        ObjectSlot, Pipeline,
     },
     timeline::{SlotState, State},
 };
@@ -426,6 +425,7 @@ impl PyPipeline {
         events.into_iter().map(convert_event).collect()
     }
 
+    /// Trace a ray until it hits a surface, and return the surface's index in the surface pool.
     pub fn trace_ray_to_surface(
         &self,
         frame: u32,
@@ -443,18 +443,21 @@ impl PyPipeline {
         Ok(index)
     }
 
+    /// Load the SM64 surfaces from the game state and add them to the scene.
     pub fn read_surfaces_to_scene(&self, scene: &mut Scene, frame: u32) -> PyResult<()> {
         let state = self.get().pipeline.timeline().frame_uncached(frame)?;
         read_surfaces_to_scene(scene, &state)?;
         Ok(())
     }
 
+    /// Load the SM64 objects from the game state and add them to the scene.
     pub fn read_objects_to_scene(&self, scene: &mut Scene, frame: u32) -> PyResult<()> {
         let state = self.get().pipeline.timeline().frame_uncached(frame)?;
         read_objects_to_scene(scene, &state)?;
         Ok(())
     }
 
+    /// Add an object path for mario to the scene, using the given frame range.
     pub fn read_mario_path(&self, frame_start: u32, frame_end: u32) -> PyResult<scene::ObjectPath> {
         let timeline = self.get().pipeline.timeline();
         let pos_path = timeline.memory().global_path("gMarioState->pos")?;

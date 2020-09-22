@@ -4,6 +4,7 @@ use lazy_static::lazy_static;
 
 // TODO: Accurate trig functions
 
+/// A wrapping 16 bit integer representing an angle.
 pub type Angle = Wrapping<i16>;
 
 fn sins(x: Angle) -> f32 {

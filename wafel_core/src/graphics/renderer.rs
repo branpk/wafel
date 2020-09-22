@@ -861,7 +861,7 @@ fn get_wall_hitbox_vertices(scene: &Scene) -> (Vec<Vertex>, Vec<Vertex>) {
         // TODO: Helper for calculating bump sizes
         let camera_dist = match &scene.camera {
             Camera::Rotate(camera) => distance(&int_vertices[0], &camera.pos),
-            Camera::BirdsEye(camera) => 1000.0,
+            Camera::BirdsEye(_camera) => 1000.0,
         };
 
         for i0 in 0..3 {

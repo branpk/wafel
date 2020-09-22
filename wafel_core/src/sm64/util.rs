@@ -196,6 +196,7 @@ fn read_surfaces(state: &impl SlotState) -> Result<Vec<Surface>, Error> {
     Ok(surfaces)
 }
 
+/// Load the SM64 surfaces from the game state and add them to the scene.
 pub fn read_surfaces_to_scene(scene: &mut Scene, state: &impl SlotState) -> Result<(), Error> {
     scene.surfaces = read_surfaces(state)?
         .iter()
@@ -226,6 +227,7 @@ pub fn read_surfaces_to_scene(scene: &mut Scene, state: &impl SlotState) -> Resu
     Ok(())
 }
 
+/// Load the SM64 objects from the game state and add them to the scene.
 pub fn read_objects_to_scene(scene: &mut Scene, state: &impl SlotState) -> Result<(), Error> {
     let memory = state.memory();
     let object_pool_addr = state.address("gObjectPool")?.unwrap();
@@ -282,6 +284,7 @@ pub fn read_objects_to_scene(scene: &mut Scene, state: &impl SlotState) -> Resul
     Ok(())
 }
 
+/// Trace a ray until it hits a surface, and return the surface's index in the surface pool.
 pub fn trace_ray_to_surface(
     state: &impl SlotState,
     ray: (Point3f, Vector3f),

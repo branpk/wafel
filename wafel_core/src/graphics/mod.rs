@@ -1,3 +1,5 @@
+//! UI and game scene rendering.
+
 pub use imgui::*;
 pub use renderer::*;
 

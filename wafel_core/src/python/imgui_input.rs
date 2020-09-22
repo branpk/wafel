@@ -7,12 +7,15 @@ use winit::{
     },
 };
 
+/// Utility for updating imgui keys.
+#[derive(Debug)]
 pub struct ImguiInput {
     winit_to_glfw_key: HashMap<VirtualKeyCode, u32>,
     modifier_keys: Vec<(&'static str, u32, u32)>,
 }
 
 impl ImguiInput {
+    /// Initialize a new `ImguiInput`.
     pub fn new(py: Python<'_>) -> PyResult<Self> {
         let glfw = PyModule::import(py, "glfw")?;
 
@@ -40,6 +43,7 @@ impl ImguiInput {
         })
     }
 
+    /// Initialize the imgui key map.
     pub fn set_key_map(&mut self, py: Python<'_>) -> PyResult<()> {
         let ig = PyModule::import(py, "imgui")?;
         let io = ig.call_method0("get_io")?;
@@ -54,6 +58,7 @@ impl ImguiInput {
         Ok(())
     }
 
+    /// Update delta time for a frame.
     pub fn set_delta_time(&mut self, py: Python<'_>, delta_time: f64) -> PyResult<()> {
         let ig = PyModule::import(py, "imgui")?;
         let io = ig.call_method0("get_io")?;
@@ -62,6 +67,7 @@ impl ImguiInput {
         Ok(())
     }
 
+    /// Set the display size for a frame.
     pub fn set_display_size(&mut self, py: Python<'_>, display_size: (u32, u32)) -> PyResult<()> {
         let ig = PyModule::import(py, "imgui")?;
         let io = ig.call_method0("get_io")?;
@@ -70,6 +76,7 @@ impl ImguiInput {
         Ok(())
     }
 
+    /// Handle a winit window event.
     pub fn handle_event(&mut self, py: Python<'_>, event: &WindowEvent<'_>) -> PyResult<()> {
         let ig = PyModule::import(py, "imgui")?;
         let io = ig.call_method0("get_io")?;
