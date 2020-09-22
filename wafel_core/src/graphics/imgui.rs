@@ -1,45 +1,67 @@
+//! Renderer for imgui.
+
 use bytemuck::cast_slice;
 use std::iter;
 use wgpu::util::DeviceExt;
 
+/// Initial configuration for imgui draw lists.
 #[derive(Debug, Clone)]
 pub struct ImguiConfig {
+    /// The size of an index element (2 for ushort or 4 for uint).
     pub index_size: usize,
 
+    /// The size of a vertex element.
     pub vertex_size: usize,
+    /// The offset of position in the vertex struct.
     pub vertex_pos_offset: usize,
+    /// The offset of tex coord in the vertex struct.
     pub vertex_tex_coord_offset: usize,
+    /// The offset of color in the vertex struct.
     pub vertex_color_offset: usize,
 
+    /// The width in pixels of the font texture.
     pub font_texture_width: u32,
+    /// The height in pixels of the font texture.
     pub font_texture_height: u32,
+    /// The RGBA32 data for the font texture.
     pub font_texture_data: Vec<u8>,
 }
 
+/// The draw data for one frame.
 #[derive(Debug, Clone)]
 pub struct ImguiDrawData {
+    /// The command lists to draw.
     pub command_lists: Vec<ImguiCommandList>,
 }
 
+/// An imgui command list, which consists of commands that use the same index and vertex buffers.
 #[derive(Debug, Clone)]
 pub struct ImguiCommandList {
+    /// The bytes of the index buffer.
     pub index_buffer: Vec<u8>,
+    /// The bytes of the vertex buffer.
     pub vertex_buffer: Vec<u8>,
+    /// The commands in this list.
     pub commands: Vec<ImguiCommand>,
 }
 
+/// A single draw command.
 #[derive(Debug, Clone)]
 pub struct ImguiCommand {
+    /// The texture to use (must equal `IMGUI_FONT_TEXTURE_ID`).
     pub texture_id: u32,
+    /// The clip rectangle in screen coordinates.
     pub clip_rect: (f32, f32, f32, f32),
+    /// The number of indices.
     pub elem_count: u32,
 }
 
+/// The main font texture.
 pub const IMGUI_FONT_TEXTURE_ID: u32 = 1;
 
+/// A renderer for imgui frame data.
 #[derive(Debug)]
 pub struct ImguiRenderer {
-    // config: ImguiConfig,
     pipeline: wgpu::RenderPipeline,
     proj_bind_group_layout: wgpu::BindGroupLayout,
     texture_bind_group_layout: wgpu::BindGroupLayout,
@@ -47,6 +69,7 @@ pub struct ImguiRenderer {
 }
 
 impl ImguiRenderer {
+    /// Create a renderer with the given config.
     pub fn new(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
@@ -239,13 +262,13 @@ impl ImguiRenderer {
         }
     }
 
+    /// Render the given draw data.
     pub fn render(
         &self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         output_view: &wgpu::TextureView,
         output_size: (u32, u32),
-        output_format: wgpu::TextureFormat,
         draw_data: &ImguiDrawData,
     ) {
         let proj_matrix: [[f32; 4]; 4] = [
