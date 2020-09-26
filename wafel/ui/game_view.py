@@ -155,7 +155,7 @@ def get_mouse_ray(camera: core.RotateCamera) -> Optional[Tuple[Vec3f, Vec3f]]:
   mag = math.sqrt(sum(c ** 2 for c in mouse_dir))
   mouse_dir = (mouse_dir[0] / mag, mouse_dir[1] / mag, mouse_dir[2] / mag)
 
-  return (tuple(camera.pos), mouse_dir)
+  return (camera.pos, mouse_dir)
 
 
 def get_mouse_world_pos_birds_eye(camera: core.BirdsEyeCamera) -> Optional[Tuple[float, float]]:
@@ -440,7 +440,7 @@ def render_game_view_birds_eye(
   ig.end_child()
 
   camera = core.BirdsEyeCamera()
-  camera.pos = [camera_xz[0], camera_y, camera_xz[1]]
+  camera.pos = (camera_xz[0], camera_y, camera_xz[1])
   camera.span_y = world_span_x
 
   # Mouse xz

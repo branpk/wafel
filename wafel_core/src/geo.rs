@@ -3,7 +3,7 @@
 use std::ops::Deref;
 
 use bytemuck::{Pod, Zeroable};
-use pyo3::{FromPyObject, IntoPy, PyObject};
+use pyo3::{types::PyTuple, FromPyObject, IntoPy, PyObject};
 
 /// 4x4 f32 matrix
 pub type Matrix4f = nalgebra::Matrix4<f32>;
@@ -79,8 +79,7 @@ impl<'p> FromPyObject<'p> for StoredPoint3f {
 
 impl IntoPy<PyObject> for StoredPoint3f {
     fn into_py(self, py: pyo3::Python<'_>) -> PyObject {
-        let coords = [self.x, self.y, self.z];
-        coords.into_py(py)
+        PyTuple::new(py, &[self.x, self.y, self.z]).into_py(py)
     }
 }
 

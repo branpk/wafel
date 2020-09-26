@@ -201,8 +201,8 @@ class VariableExplorer:
     }[up_options[up_option.value]]
     self.model.input_up_yaw = up_angle
 
-    raw_stick_x = self.model.get(stick_x_var)
-    raw_stick_y = self.model.get(stick_y_var)
+    raw_stick_x = dcast(int, self.model.get(stick_x_var))
+    raw_stick_y = dcast(int, self.model.get(stick_y_var))
 
     adjusted = stick_raw_to_adjusted(raw_stick_x, raw_stick_y)
     intended = stick_adjusted_to_intended(

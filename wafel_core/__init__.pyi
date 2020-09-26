@@ -48,6 +48,13 @@ class Pipeline:
 
   def frame_log(self, frame: int) -> List[Dict[str, Any]]: ...
 
+  def trace_ray_to_surface(
+    self, frame: int, ray: Tuple[Iterable[float], Iterable[float]]
+  ) -> Optional[int]: ...
+  def read_surfaces_to_scene(self, scene: Scene, frame: int) -> None: ...
+  def read_objects_to_scene(self, scene: Scene, frame: int) -> None: ...
+  def read_mario_path(self, frame_start: int, frame_end: int) -> ObjectPath: ...
+
 
 class Variable:
   def __init__(self, name: str) -> None: ...
@@ -93,3 +100,89 @@ class EditRange:
   def end(self) -> int: ...
   @property
   def value(self) -> object: ...
+
+
+class Scene:
+  viewport: Viewport
+  camera: Union[RotateCamera, BirdsEyeCamera]
+  show_camera_target: bool
+  # surfaces: List[Surface]
+  wall_hitbox_radius: float
+  hovered_surface: Optional[int]
+  hidden_surfaces: Set[int]
+  # objects: List[Object]
+  object_paths: List[ObjectPath]
+
+class Viewport:
+  x: float
+  y: float
+  width: float
+  height: float
+
+class RotateCamera:
+  pos: Tuple[float, float, float]
+  target: Tuple[float, float, float]
+  fov_y: float
+
+  @property
+  def pitch(self) -> float: ...
+  @property
+  def yaw(self) -> float: ...
+
+class BirdsEyeCamera:
+  pos: Tuple[float, float, float]
+  span_y: float
+
+class ObjectPath:
+  # nodes: List[ObjectPathNode]
+  root_index: int
+
+  def set_quarter_steps(self, index: int, quarter_steps: List[QuarterStep]) -> None: ...
+
+class QuarterStep:
+  intended_pos: Tuple[float, float, float]
+  result_pos: Tuple[float, float, float]
+
+
+def open_window_and_run(
+  title: str,
+  update_fn: Callable[[], Tuple[object, List[Scene]]],
+) -> None:
+  ...
+
+
+class AdjustedStick:
+  x: float
+  y: float
+  mag: float
+
+  def __init__(self, x: float, y: float, mag: float) -> None: ...
+
+class IntendedStick:
+  yaw: int
+  mag: float
+
+  def __init__(self, yaw: int, mag: float) -> None: ...
+
+def stick_raw_to_adjusted(raw_stick_x: int, raw_stick_y: int) -> AdjustedStick: ...
+
+def stick_adjusted_to_intended(
+  adjusted: AdjustedStick,
+  face_yaw: int,
+  camera_yaw: int,
+  squished: bool,
+) -> IntendedStick: ...
+
+def stick_adjusted_to_raw_euclidean(
+  target_adjusted_x: float,
+  target_adjusted_y: float,
+) -> Tuple[int, int]: ...
+
+def stick_intended_to_raw_heuristic(
+  intended: IntendedStick,
+  face_yaw: int,
+  camera_yaw: int,
+  squished: bool,
+  relative_to: int,
+) -> Tuple[int, int]:
+  ...
