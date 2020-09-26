@@ -9,7 +9,6 @@ from wafel_core import Variable, Pipeline, ObjectBehavior
 
 import wafel.config as config
 from wafel.util import *
-# from wafel.script import Scripts, ScriptController
 
 
 class Model:
