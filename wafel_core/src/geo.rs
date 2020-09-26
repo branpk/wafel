@@ -1,11 +1,17 @@
+//! Geometric types and functions.
+
 use std::ops::Deref;
 
 use bytemuck::{Pod, Zeroable};
 use pyo3::{FromPyObject, IntoPy, PyObject};
 
+/// 4x4 f32 matrix
 pub type Matrix4f = nalgebra::Matrix4<f32>;
+/// f32 vector of length 3
 pub type Vector3f = nalgebra::Vector3<f32>;
+/// f32 vector of length 4
 pub type Vector4f = nalgebra::Vector4<f32>;
+/// f32 point of length 3
 pub type Point3f = nalgebra::Point3<f32>;
 
 macro_rules! stored_matrix_wrapper {
@@ -78,6 +84,7 @@ impl IntoPy<PyObject> for StoredPoint3f {
     }
 }
 
+/// Convert a direction to its pitch and yaw in radians.
 pub fn direction_to_pitch_yaw(dir: &Vector3f) -> (f32, f32) {
     let xz = (dir.x * dir.x + dir.z * dir.z).sqrt();
     let pitch = f32::atan2(dir.y, xz);
@@ -85,6 +92,7 @@ pub fn direction_to_pitch_yaw(dir: &Vector3f) -> (f32, f32) {
     (pitch, yaw)
 }
 
+/// Convert a pitch and yaw in radians to a direction.
 pub fn pitch_yaw_to_direction(pitch: f32, yaw: f32) -> Vector3f {
     Vector3f::new(
         pitch.cos() * yaw.sin(),
