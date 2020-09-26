@@ -342,60 +342,6 @@ impl Memory {
         }
     }
 
-    /// Translate the static address to a mutable pointer.
-    ///
-    /// Performs validation and bounds checking, so the result should be a valid pointer.
-    /// Dereferencing should be safe provided junk data is acceptable in T.
-    fn static_to_pointer_mut<T>(&self, address: StaticAddress) -> Result<*mut T, Error> {
-        let offset = address.0;
-        self.validate_offset::<T>(offset, self.base_size)?;
-        Ok(self.base_pointer.0.wrapping_add(offset) as *mut T)
-    }
-
-    /// Translate an address to a pointer.
-    ///
-    /// # Safety
-    /// This should not be used to write to memory (static or slot).
-    /// This includes any functions that are called through it.
-    ///
-    /// The Memory must stay live while this pointer is live.
-    pub unsafe fn address_to_base_pointer<T>(
-        &self,
-        base_slot: &Slot,
-        address: &Address,
-    ) -> Result<*const T, Error> {
-        self.validate_base_slot(base_slot)?;
-        match self.classify_address(address) {
-            ClassifiedAddress::Static(address) => Ok(self.static_to_pointer(address)?),
-            ClassifiedAddress::Relocatable(address) => {
-                Ok(self.relocatable_to_pointer(base_slot, address)?)
-            }
-            ClassifiedAddress::Invalid => Err(MemoryErrorCause::InvalidAddress.into()),
-        }
-    }
-
-    /// Translate an address to a mutable pointer.
-    ///
-    /// # Safety
-    /// This should not be used to write to static memory (not .bss or .data).
-    /// This includes any functions that are called through it.
-    ///
-    /// The Memory must stay live while this pointer is live.
-    pub unsafe fn address_to_base_pointer_mut<T>(
-        &self,
-        base_slot: &mut Slot,
-        address: &Address,
-    ) -> Result<*mut T, Error> {
-        self.validate_base_slot(base_slot)?;
-        match self.classify_address(address) {
-            ClassifiedAddress::Static(address) => Ok(self.static_to_pointer_mut(address)?),
-            ClassifiedAddress::Relocatable(address) => {
-                Ok(self.relocatable_to_pointer_mut(base_slot, address)?)
-            }
-            ClassifiedAddress::Invalid => Err(MemoryErrorCause::InvalidAddress.into()),
-        }
-    }
-
     /// Looks up the addresses for every symbol, skipping those where lookup fails.
     ///
     /// This is equivalent to calling `symbol_address` one-by-one and ignoring errors,

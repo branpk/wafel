@@ -38,10 +38,6 @@ class Model:
 
     self.action_names = self.pipeline.action_names()
 
-    def base_pointer(path: str) -> int:
-      address = assert_not_none(self.pipeline.path_address(0, path))
-      return self.pipeline.address_to_base_pointer(0, address)
-
     self._selected_frame = selected_frame
     self.selected_frame_callbacks: List[Callable[[int], None]] = []
 

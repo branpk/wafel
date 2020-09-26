@@ -339,8 +339,7 @@ class VariableExplorer:
     events = self.model.pipeline.frame_log(self.model.selected_frame + frame_offset.value)
 
     def string(addr: object) -> str:
-      pointer = self.model.pipeline.address_to_base_pointer(0, dcast(Address, addr))
-      return C.string_at(pointer).decode('utf-8')
+      return self.model.pipeline.read_string(0, dcast(Address, addr)).decode('utf-8')
 
     def f32(number: object) -> str:
       assert isinstance(number, float)
