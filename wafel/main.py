@@ -11,7 +11,6 @@ import traceback
 import gc
 
 import glfw
-from imgui.integrations.glfw import GlfwRenderer
 from OpenGL import GL as gl
 
 from wafel_core import Pipeline
