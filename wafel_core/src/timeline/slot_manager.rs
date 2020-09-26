@@ -361,8 +361,7 @@ impl<M: Memory, C: Controller<M>> SlotManager<M, C> {
 
             let matching_slot: Option<&SlotWrapper<M::Slot>> = slots
                 .iter()
-                .filter(|slot| !slot.is_base && slot.frame == Frame::At(target_frame))
-                .next();
+                .find(|slot| !slot.is_base && slot.frame == Frame::At(target_frame));
             if let Some(matching_slot) = matching_slot {
                 used_slots.insert(matching_slot.index);
                 continue;

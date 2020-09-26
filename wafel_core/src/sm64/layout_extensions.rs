@@ -33,9 +33,10 @@ pub fn load_object_fields(layout: &mut DataLayout, json_source: &[u8]) -> Result
         let extra_fields = read_object_fields(&json, raw_data_offset)?;
         fields.extend(extra_fields);
     } else {
-        Err(ObjectStructNotStruct {
+        return Err(ObjectStructNotStruct {
             object_struct: object_struct_ref.clone(),
-        })?;
+        }
+        .into());
     }
 
     Ok(())

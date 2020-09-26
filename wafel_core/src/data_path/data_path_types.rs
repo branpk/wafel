@@ -86,7 +86,7 @@ impl GlobalDataPath {
         memory: &M,
         slot: &M::Slot,
     ) -> Result<Option<Address>, Error> {
-        let mut address: Address = self.0.root.clone().into();
+        let mut address: Address = self.0.root;
         for edge in &self.0.edges {
             match edge {
                 DataPathEdge::Offset(offset) => address = address + *offset,

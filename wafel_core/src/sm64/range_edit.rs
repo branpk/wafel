@@ -3,6 +3,7 @@
 use super::Variable;
 use crate::{memory::Value, timeline::InvalidatedFrames};
 use std::{
+    cmp::Ordering,
     collections::{HashMap, HashSet},
     hash::Hash,
     ops::Range,
@@ -260,7 +261,7 @@ impl Ranges {
         self.ranges_by_frame.clear();
         for (range_id, range) in &self.ranges {
             for frame in range.frames.clone() {
-                self.ranges_by_frame.insert(frame, range_id.clone());
+                self.ranges_by_frame.insert(frame, *range_id);
             }
         }
     }
@@ -416,25 +417,31 @@ impl RangeEditPreview {
                 }
             }
             None => {
-                // Dragging upward from unedited cell
-                if drag_target < self.drag_source {
-                    self.clear_frames_shrink_upward(parent, drag_target..self.drag_source + 1);
-                    self.set_range(
-                        parent,
-                        self.reserved_range_id,
-                        drag_target..self.drag_source + 1,
-                        self.source_value.clone(),
-                    );
-                }
-                // Dragging downward from unedited cell
-                else if drag_target > self.drag_source {
-                    self.clear_frames_shrink_downward(parent, self.drag_source..drag_target + 1);
-                    self.set_range(
-                        parent,
-                        self.reserved_range_id,
-                        self.drag_source..drag_target + 1,
-                        self.source_value.clone(),
-                    );
+                match drag_target.cmp(&self.drag_source) {
+                    // Dragging upward from unedited cell
+                    Ordering::Less => {
+                        self.clear_frames_shrink_upward(parent, drag_target..self.drag_source + 1);
+                        self.set_range(
+                            parent,
+                            self.reserved_range_id,
+                            drag_target..self.drag_source + 1,
+                            self.source_value.clone(),
+                        );
+                    }
+                    // Dragging downward from unedited cell
+                    Ordering::Greater => {
+                        self.clear_frames_shrink_downward(
+                            parent,
+                            self.drag_source..drag_target + 1,
+                        );
+                        self.set_range(
+                            parent,
+                            self.reserved_range_id,
+                            self.drag_source..drag_target + 1,
+                            self.source_value.clone(),
+                        );
+                    }
+                    Ordering::Equal => {}
                 }
             }
         }

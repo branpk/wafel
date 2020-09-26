@@ -79,28 +79,28 @@ impl PyVariable {
     /// Return a copy of the variable but associated with the given frame.
     pub fn with_frame(&self, frame: u32) -> Self {
         Self {
-            variable: self.variable.with_frame(frame).into(),
+            variable: self.variable.with_frame(frame),
         }
     }
 
     /// Return a copy of the variable but without an associated frame.
     pub fn without_frame(&self) -> Self {
         Self {
-            variable: self.variable.without_frame().into(),
+            variable: self.variable.without_frame(),
         }
     }
 
     /// Return a copy of the variable but associated to the given object slot.
     pub fn with_object(&self, object: usize) -> Self {
         Self {
-            variable: self.variable.with_object(ObjectSlot(object)).into(),
+            variable: self.variable.with_object(ObjectSlot(object)),
         }
     }
 
     /// Return a copy of the variable but without an associated object slot.
     pub fn without_object(&self) -> Self {
         Self {
-            variable: self.variable.without_object().into(),
+            variable: self.variable.without_object(),
         }
     }
 
@@ -109,29 +109,28 @@ impl PyVariable {
         Self {
             variable: self
                 .variable
-                .with_object_behavior(behavior.behavior.clone())
-                .into(),
+                .with_object_behavior(behavior.behavior.clone()),
         }
     }
 
     /// Return a copy of the variable but without an associated object behavior.
     pub fn without_object_behavior(&self) -> Self {
         Self {
-            variable: self.variable.without_object_behavior().into(),
+            variable: self.variable.without_object_behavior(),
         }
     }
 
     /// Return a copy of the variable but associated to the given surface slot.
     pub fn with_surface(&self, surface: usize) -> Self {
         Self {
-            variable: self.variable.with_surface(SurfaceSlot(surface)).into(),
+            variable: self.variable.with_surface(SurfaceSlot(surface)),
         }
     }
 
     /// Return a copy of the variable but without an associated surface slot.
     pub fn without_surface(&self) -> Self {
         Self {
-            variable: self.variable.without_surface().into(),
+            variable: self.variable.without_surface(),
         }
     }
 }

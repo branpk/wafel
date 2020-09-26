@@ -56,7 +56,7 @@ fn display_struct(fields: &HashMap<String, Value>) -> String {
     format!("{{ {} }}", field_str)
 }
 
-fn display_array(elements: &Vec<Value>) -> String {
+fn display_array(elements: &[Value]) -> String {
     let elements_str = elements
         .iter()
         .map(ToString::to_string)
@@ -68,11 +68,7 @@ fn display_array(elements: &Vec<Value>) -> String {
 impl Value {
     /// Return true if the value is null.
     pub fn is_null(&self) -> bool {
-        if let Value::Null = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Value::Null)
     }
 
     /// Convert the value to an int.
@@ -131,7 +127,7 @@ impl Value {
     /// Return an error if the value is not an address.
     pub fn as_address(&self) -> Result<Address, Error> {
         if let Value::Address(address) = self {
-            Ok(address.clone())
+            Ok(*address)
         } else {
             Err(MemoryErrorCause::ValueTypeError {
                 value: self.to_string(),

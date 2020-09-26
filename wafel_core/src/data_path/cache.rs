@@ -3,7 +3,7 @@ use crate::{error::Error, memory::Memory};
 use std::{collections::HashMap, sync::Mutex};
 
 /// A cache for data path compilation.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct DataPathCache {
     paths: Mutex<HashMap<String, DataPath>>,
 }
@@ -11,9 +11,7 @@ pub struct DataPathCache {
 impl DataPathCache {
     /// Construct an empty cache.
     pub fn new() -> Self {
-        Self {
-            paths: Mutex::new(HashMap::new()),
-        }
+        Self::default()
     }
 
     /// Look up or compile a data path.

@@ -1,7 +1,7 @@
 use crate::geo::{direction_to_pitch_yaw, Matrix4f, Point3f, StoredPoint3f, Vector3f, Vector4f};
 use bytemuck::{cast_slice, offset_of, Pod, Zeroable};
 use nalgebra::distance;
-use std::{f32::consts::PI, iter, mem::size_of};
+use std::{cmp::Ordering, f32::consts::PI, iter, mem::size_of};
 use wgpu::util::DeviceExt;
 
 use super::scene::{BirdsEyeCamera, Camera, ObjectPath, RotateCamera, Scene, SurfaceType};
@@ -1004,12 +1004,10 @@ fn get_object_path_dot_instances(scene: &Scene) -> Vec<ScreenDotInstance> {
 
 fn get_path_alpha(path: &ObjectPath, index: usize) -> f32 {
     let rel_index = index as isize - path.root_index as isize;
-    let t = if rel_index > 0 {
-        rel_index as f32 / (path.nodes.len() - path.root_index - 1) as f32
-    } else if rel_index < 0 {
-        -rel_index as f32 / path.root_index as f32
-    } else {
-        0.0
+    let t = match rel_index.cmp(&0) {
+        Ordering::Greater => rel_index as f32 / (path.nodes.len() - path.root_index - 1) as f32,
+        Ordering::Less => -rel_index as f32 / path.root_index as f32,
+        Ordering::Equal => 0.0,
     };
     1.0 - t
 }

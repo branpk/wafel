@@ -186,74 +186,42 @@ pub struct Field {
 impl DataType {
     /// Return true if the data type is void.
     pub fn is_void(&self) -> bool {
-        if let Self::Void = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Self::Void)
     }
 
     /// Return true if the data type is an integer type.
     pub fn is_int(&self) -> bool {
-        if let Self::Int(_) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Self::Int(_))
     }
 
     /// Return true if the data type is a float type.
     pub fn is_float(&self) -> bool {
-        if let Self::Float(_) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Self::Float(_))
     }
 
     /// Return true if the data type is a pointer type.
     pub fn is_pointer(&self) -> bool {
-        if let Self::Pointer { .. } = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Self::Pointer { .. })
     }
 
     /// Return true if the data type is an array type.
     pub fn is_array(&self) -> bool {
-        if let Self::Array { .. } = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Self::Array { .. })
     }
 
     /// Return true if the data type is a struct type.
     pub fn is_struct(&self) -> bool {
-        if let Self::Struct { .. } = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Self::Struct { .. })
     }
 
     /// Return true if the data type is a union type.
     pub fn is_union(&self) -> bool {
-        if let Self::Union { .. } = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Self::Union { .. })
     }
 
     /// Return true if the data type is a type name.
     pub fn is_name(&self) -> bool {
-        if let Self::Name(_) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Self::Name(_))
     }
 
     /// Return the stride for an array or pointer type.

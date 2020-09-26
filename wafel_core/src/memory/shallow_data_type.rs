@@ -118,7 +118,7 @@ impl<Id: Debug> ShallowDataType<Id> {
 #[derive(Debug, Display, Clone)]
 #[display(
     fmt = "{}: {} (size = {:?})",
-    "debug_name.clone().unwrap_or(\"?\".to_owned())",
+    "debug_name.clone().unwrap_or_else(|| \"?\".to_owned())",
     shallow_type,
     size
 )]
@@ -168,7 +168,7 @@ impl<Id: Debug> PreDataType<Id> {
 pub fn get_size_from_pre_types<'a, Id: Clone + Eq + Hash>(
     pre_types: &'a HashMap<Id, PreDataType<Id>>,
 ) -> impl Fn(&Id) -> Option<usize> + 'a {
-    return move |id: &Id| -> Option<usize> {
+    move |id: &Id| -> Option<usize> {
         let mut id = id.clone();
         loop {
             let pre_type = pre_types.get(&id)?;
@@ -180,7 +180,7 @@ pub fn get_size_from_pre_types<'a, Id: Clone + Eq + Hash>(
                 PreDataTypeSize::Unknown => break None,
             }
         }
-    };
+    }
 }
 
 pub fn build_data_types<Id: Clone + Eq + Hash + Debug>(

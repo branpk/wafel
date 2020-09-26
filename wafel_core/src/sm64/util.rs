@@ -106,7 +106,7 @@ pub fn frame_log(state: &impl State) -> Result<Vec<HashMap<String, Value>>, Erro
 fn frame_log_event_variant_name(event_type: &str) -> String {
     let mut name = event_type.to_ascii_lowercase();
     name = name.strip_prefix("flt_").unwrap_or(&name).to_owned();
-    name.split("_")
+    name.split('_')
         .enumerate()
         .map(|(i, part)| {
             if i == 0 {
@@ -159,7 +159,7 @@ fn read_surfaces(state: &impl SlotState) -> Result<Vec<Surface>, Error> {
     };
     let read_f32_3 = |address| -> Result<[f32; 3], Error> {
         Ok([
-            read_f32(address + 0)?,
+            read_f32(address)?,
             read_f32(address + 4)?,
             read_f32(address + 8)?,
         ])
@@ -172,7 +172,7 @@ fn read_surfaces(state: &impl SlotState) -> Result<Vec<Surface>, Error> {
     };
     let read_s16_3 = |address| -> Result<[i16; 3], Error> {
         Ok([
-            read_s16(address + 0)?,
+            read_s16(address)?,
             read_s16(address + 2)?,
             read_s16(address + 4)?,
         ])

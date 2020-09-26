@@ -28,7 +28,7 @@ pub fn data_path<M: Memory>(memory: &M, source: &str) -> Result<DataPath, Error>
 
         match ast.root {
             RootAst::Global(root_name) => {
-                let root: Address = memory.symbol_address(&root_name)?.into();
+                let root: Address = memory.symbol_address(&root_name)?;
                 let root_type = layout.get_global(&root_name)?;
                 let root_type = layout.concrete_type(root_type)?;
 
@@ -113,7 +113,7 @@ fn follow_edge<T>(
         }
         EdgeAst::Nullable => {
             if !path.concrete_type.is_pointer() {
-                Err(DataPathErrorCause::NullableNotAPointer)?;
+                return Err(DataPathErrorCause::NullableNotAPointer.into());
             }
             path.edges.push(DataPathEdge::Nullable);
             Ok(path)
@@ -140,9 +140,10 @@ fn follow_field_access<T>(
             }
             None => Err(DataPathErrorCause::UndefinedField {
                 name: field_name.clone(),
-            })?,
+            }
+            .into()),
         },
-        _ => Err(DataPathErrorCause::NotAStruct { field_name })?,
+        _ => Err(DataPathErrorCause::NotAStruct { field_name }.into()),
     }
 }
 
@@ -159,10 +160,11 @@ fn follow_subscript<T>(
         } => {
             if let Some(length) = length {
                 if index >= *length {
-                    Err(DataPathErrorCause::IndexOutOfBounds {
+                    return Err(DataPathErrorCause::IndexOutOfBounds {
                         index,
                         length: *length,
-                    })?;
+                    }
+                    .into());
                 }
             }
             let mut edges = path.edges;
@@ -174,7 +176,7 @@ fn follow_subscript<T>(
                 concrete_type: layout.concrete_type(&base)?,
             })
         }
-        _ => Err(DataPathErrorCause::NotAnArray)?,
+        _ => Err(DataPathErrorCause::NotAnArray.into()),
     }
 }
 
@@ -252,7 +254,7 @@ fn parse_field<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, EdgeA
 fn parse_subscript<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, EdgeAst, E> {
     map(
         preceded(tag("["), terminated(parse_int, tag("]"))),
-        |index| EdgeAst::Subscript(index),
+        EdgeAst::Subscript,
     )(i)
 }
 

@@ -39,7 +39,7 @@ pub enum ConstantSource {
         "name
             .as_deref()
             .map(|name| format!(\"enum {}\", name))
-            .unwrap_or(\"anonymous enum\".to_owned())"
+            .unwrap_or_else(|| \"anonymous enum\".to_owned())"
     )]
     Enum {
         /// The name of the enum, or None for an anonymous enum.

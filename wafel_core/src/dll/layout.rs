@@ -269,7 +269,7 @@ where
             "signed char" => ShallowDataType::Int(IntType::S8),
             "short int" => ShallowDataType::Int(IntType::S16),
             "_Bool" => ShallowDataType::Int(IntType::S32),
-            _ => return Err(LayoutErrorCause::UnknownBaseTypeName { name })?,
+            _ => return Err(LayoutErrorCause::UnknownBaseTypeName { name }.into()),
         };
         self.pre_types.insert(
             TypeId::Offset(entry.offset().0),
@@ -372,7 +372,7 @@ where
             Some(s) => size = PreDataTypeSize::Known(s),
         }
 
-        let mut field_info: Vec<(Option<String>, ShallowField<TypeId<R::Offset>>)> = Vec::new();
+        let mut field_info: Vec<(Option<String>, ShallowField<_>)> = Vec::new();
 
         // Read field entries
         let mut children = node.children();
@@ -400,8 +400,8 @@ where
         // Give anonymous fields unique names
         let mut fields: HashMap<String, ShallowField<TypeId<R::Offset>>> = HashMap::new();
         for (explicit_name, field) in field_info {
-            let field_name = explicit_name
-                .unwrap_or_else(|| unique_name(&mut used_field_names, ANON_FIELD_NAME));
+            let field_name =
+                explicit_name.unwrap_or_else(|| unique_name(&used_field_names, ANON_FIELD_NAME));
             used_field_names.insert(field_name.clone());
             fields.insert(field_name, field);
         }
@@ -716,7 +716,6 @@ fn unique_name(used_names: &HashSet<String>, base_name: &str) -> String {
     let fallbacks = (1..).map(|k| format!("{}_{}", base_name, k));
     iter::once(base_name.to_owned())
         .chain(fallbacks)
-        .filter(|name| !used_names.contains(name))
-        .nth(0)
+        .find(|name| !used_names.contains(name))
         .unwrap()
 }

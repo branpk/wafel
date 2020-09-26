@@ -11,10 +11,7 @@ pub fn value_to_py_object(py: Python<'_>, value: &Value) -> PyResult<PyObject> {
         Value::Int(n) => Ok(n.to_object(py)),
         Value::Float(r) => Ok(r.to_object(py)),
         Value::String(s) => Ok(s.to_object(py)),
-        Value::Address(address) => Ok(PyAddress {
-            address: (*address).into(),
-        }
-        .into_py(py)),
+        Value::Address(address) => Ok(PyAddress { address: *address }.into_py(py)),
         Value::Struct { fields } => Ok(fields
             .iter()
             .map(|(name, value)| value_to_py_object(py, value).map(|object| (name, object)))
@@ -39,7 +36,7 @@ pub fn py_object_to_value(py: Python<'_>, value: &PyObject) -> PyResult<Value> {
     } else if let Ok(float_value) = value.cast_as::<PyFloat>(py) {
         Ok(Value::Float(float_value.extract()?))
     } else if let Ok(address) = value.cast_as::<PyAny>(py)?.extract::<PyAddress>() {
-        Ok(Value::Address(address.address.into()))
+        Ok(Value::Address(address.address))
     } else {
         Err(Error::from(SM64ErrorCause::ValueFromPython {
             value: value.cast_as::<PyAny>(py)?.str()?.to_string()?.into(),

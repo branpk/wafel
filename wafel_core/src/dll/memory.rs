@@ -1,5 +1,7 @@
 //! Implementation of `Memory` for a loaded DLL.
 
+#![allow(clippy::mutex_atomic)]
+
 use super::{
     layout::{load_layout_from_dll, DllSegment},
     DllError, DllErrorCause,
@@ -177,10 +179,7 @@ impl Memory {
 
             // When a backtrace is created, SymInitializeW is called. This causes an error
             // when AddressInfoObtainer calls the same function.
-            let backtrace_enabled = match env::var("RUST_BACKTRACE").as_deref() {
-                Ok("0") | Ok("") | Ok("false") | Err(_) => false,
-                _ => true,
-            };
+            let backtrace_enabled = !matches!(env::var("RUST_BACKTRACE").as_deref(), Ok("0") | Ok("") | Ok("false") | Err(_));
             if backtrace_enabled {
                 // Only do this if backtraces are enabled, since it's hacky and could break things.
                 SymCleanup(GetCurrentProcess());
@@ -288,10 +287,8 @@ impl Memory {
     }
 
     fn validate_offset<T>(&self, offset: usize, range_size: usize) -> Result<(), Error> {
-        if offset + mem::size_of::<T>() > range_size {
-            Err(MemoryErrorCause::InvalidAddress)?
-        } else if offset % mem::align_of::<T>() != 0 {
-            Err(MemoryErrorCause::InvalidAddress)?
+        if offset + mem::size_of::<T>() > range_size || offset % mem::align_of::<T>() != 0 {
+            Err(MemoryErrorCause::InvalidAddress.into())
         } else {
             Ok(())
         }
@@ -449,7 +446,7 @@ impl MemoryTrait for Memory {
         unsafe {
             Ok(match float_type {
                 FloatType::F32 => (*self.relocatable_to_pointer::<f32>(slot, *address)?).into(),
-                FloatType::F64 => (*self.relocatable_to_pointer::<f64>(slot, *address)?).into(),
+                FloatType::F64 => (*self.relocatable_to_pointer::<f64>(slot, *address)?),
             })
         }
     }
@@ -492,7 +489,7 @@ impl MemoryTrait for Memory {
         unsafe {
             Ok(match float_type {
                 FloatType::F32 => (*self.static_to_pointer::<f32>(*address)?).into(),
-                FloatType::F64 => (*self.static_to_pointer::<f64>(*address)?).into(),
+                FloatType::F64 => (*self.static_to_pointer::<f64>(*address)?),
             })
         }
     }
@@ -512,7 +509,7 @@ impl MemoryTrait for Memory {
         value: IntValue,
     ) -> Result<(), Error> {
         unsafe {
-            Ok(match int_type {
+            match int_type {
                 IntType::U8 => {
                     *self.relocatable_to_pointer_mut::<u8>(slot, *address)? = value as u8
                 }
@@ -537,7 +534,8 @@ impl MemoryTrait for Memory {
                 IntType::S64 => {
                     *self.relocatable_to_pointer_mut::<i64>(slot, *address)? = value as i64
                 }
-            })
+            }
+            Ok(())
         }
     }
 
@@ -549,14 +547,15 @@ impl MemoryTrait for Memory {
         value: FloatValue,
     ) -> Result<(), Error> {
         unsafe {
-            Ok(match float_type {
+            match float_type {
                 FloatType::F32 => {
                     *self.relocatable_to_pointer_mut::<f32>(slot, *address)? = value as f32
                 }
                 FloatType::F64 => {
                     *self.relocatable_to_pointer_mut::<f64>(slot, *address)? = value as f64
                 }
-            })
+            }
+            Ok(())
         }
     }
 
@@ -567,10 +566,8 @@ impl MemoryTrait for Memory {
         value: &Address,
     ) -> Result<(), Error> {
         unsafe {
-            Ok(
-                *self.relocatable_to_pointer_mut::<*const u8>(slot, *address)? =
-                    value.0 as *const u8,
-            )
+            *self.relocatable_to_pointer_mut::<*const u8>(slot, *address)? = value.0 as *const u8;
+            Ok(())
         }
     }
 
@@ -580,15 +577,10 @@ impl MemoryTrait for Memory {
             return ClassifiedAddress::Invalid;
         }
 
-        let segment = self
-            .data_segments
-            .iter()
-            .enumerate()
-            .filter(|(_, segment)| {
-                offset >= segment.virtual_address
-                    && offset < segment.virtual_address + segment.virtual_size
-            })
-            .next();
+        let segment = self.data_segments.iter().enumerate().find(|(_, segment)| {
+            offset >= segment.virtual_address
+                && offset < segment.virtual_address + segment.virtual_size
+        });
 
         match segment {
             Some((i, segment)) => ClassifiedAddress::Relocatable(RelocatableAddress {

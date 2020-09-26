@@ -187,13 +187,13 @@ pub trait Memory: Sized {
             }
             DataType::Pointer { .. } => {
                 let address = self.classify_address(address);
-                Value::Address(self.read_address(slot, &address)?.into())
+                Value::Address(self.read_address(slot, &address)?)
             }
             DataType::Struct { fields } => {
                 let field_values: HashMap<String, Value> = fields
                     .iter()
                     .map(|(name, field)| {
-                        self.read_value(slot, &(address.clone() + field.offset), &field.data_type)
+                        self.read_value(slot, &(*address + field.offset), &field.data_type)
                             .map(|value| (name.clone(), value))
                     })
                     .collect::<Result<_, Error>>()?;
@@ -207,13 +207,16 @@ pub trait Memory: Sized {
                 stride,
             } => {
                 let values: Vec<Value> = (0..*length)
-                    .map(|index| self.read_value(slot, &(address.clone() + index * *stride), base))
+                    .map(|index| self.read_value(slot, &(*address + index * *stride), base))
                     .collect::<Result<_, Error>>()?;
                 Value::Array(values)
             }
-            _ => Err(MemoryErrorCause::UnreadableValue {
-                data_type: data_type.clone(),
-            })?,
+            _ => {
+                return Err(MemoryErrorCause::UnreadableValue {
+                    data_type: data_type.clone(),
+                }
+                .into());
+            }
         })
     }
 
@@ -242,7 +245,7 @@ pub trait Memory: Sized {
             }
         };
 
-        Ok(match data_type.as_ref() {
+        match data_type.as_ref() {
             DataType::Int(int_type) => {
                 let address = to_relocatable(address)?;
                 self.write_slot_int(slot, &address, *int_type, value.as_int()?)?;
@@ -253,12 +256,17 @@ pub trait Memory: Sized {
             }
             DataType::Pointer { .. } => {
                 let address = to_relocatable(address)?;
-                self.write_slot_address(slot, &address, &value.as_address()?.into())?;
+                self.write_slot_address(slot, &address, &value.as_address()?)?;
             }
-            _ => Err(MemoryErrorCause::UnwritableValue {
-                data_type: data_type.clone(),
-            })?,
-        })
+            _ => {
+                return Err(MemoryErrorCause::UnwritableValue {
+                    data_type: data_type.clone(),
+                }
+                .into());
+            }
+        }
+
+        Ok(())
     }
 
     /// Get the data type and global variable information for memory access.

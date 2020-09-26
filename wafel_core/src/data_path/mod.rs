@@ -22,10 +22,10 @@
 //!   expression returns `Value::Null`. If `?` is not used, an error is thrown instead.
 
 pub use cache::*;
-pub use data_path::*;
+pub use data_path_types::*;
 pub use error::*;
 
 mod cache;
 mod compile;
-mod data_path;
+mod data_path_types;
 mod error;

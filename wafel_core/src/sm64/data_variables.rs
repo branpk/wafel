@@ -261,7 +261,7 @@ impl Builder {
                         } else if root_type == surface_struct {
                             Path::Surface(path)
                         } else {
-                            Err(SM64ErrorCause::InvalidVariableRoot { path })?
+                            return Err(SM64ErrorCause::InvalidVariableRoot { path }.into());
                         }
                     }
                 };
