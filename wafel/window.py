@@ -1,7 +1,6 @@
 from typing import *
 
 import glfw
-from imgui.integrations.glfw import GlfwRenderer
 from OpenGL import GL as gl
 
 import wafel_core as core
@@ -12,22 +11,14 @@ from wafel.util import *
 import wafel.graphics as graphics
 
 
-rendering = False
 first_render = True
 
 
-def _render_window(render: Callable[[str], None]) -> object:
-  global rendering, first_render
-  if rendering:
-    return
-  rendering = True
+def _render_window(render: Callable[[str], None]) -> Tuple[object, List[core.Scene]]:
+  global first_render
 
-  try:
-    clipboard_length = len(glfw.get_clipboard_string(window))
-  except:
-    # Fails if the user has non-text copied
-    clipboard_length = 0
-  ig.set_clipboard_length(clipboard_length)
+  # TODO: clipboard length
+  ig.set_clipboard_length(0)
 
   style = ig.get_style()
   style.window_rounding = 0
@@ -56,28 +47,11 @@ def _render_window(render: Callable[[str], None]) -> object:
   draw_data = ig.get_draw_data()
   # ig_renderer.render(draw_data)
 
-  rendering = False
   return draw_data, graphics.take_scenes()
 
 
 def open_window_and_run(render: Callable[[str], None], maximize = False) -> None:
   glfw.init()
-
-  # glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
-  # glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
-  # glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_COMPAT_PROFILE) # TODO: Core
-  # glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, True)
-  # glfw.window_hint(glfw.SAMPLES, 4)
-
-  # glfw.window_hint(glfw.VISIBLE, False)
-  # window = glfw.create_window(800, 600, 'Wafel ' + config.version_str('.'), None, None)
-  # glfw.set_window_size_limits(window, 1, 1, glfw.DONT_CARE, glfw.DONT_CARE)
-  # if maximize:
-  #   glfw.maximize_window(window)
-  # glfw.show_window(window)
-
-  # glfw.make_context_current(window)
-  # glfw.swap_interval(0)
 
   ig_context = ig.create_context()
   ig.get_io().ini_filename = None
