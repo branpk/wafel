@@ -6,11 +6,13 @@ use crate::{
     },
     python::ImguiInput,
 };
+use image::ImageFormat;
 use pyo3::prelude::*;
 use std::{slice, time::Instant};
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
+    window::Icon,
     window::WindowBuilder,
 };
 
@@ -23,6 +25,7 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
         let event_loop = EventLoop::new();
         let window = WindowBuilder::new()
             .with_title(title)
+            .with_window_icon(Some(load_window_icon()))
             .with_visible(false)
             .build(&event_loop)
             .expect("failed to open window");
@@ -137,6 +140,16 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
             }
         })
     })
+}
+
+fn load_window_icon() -> Icon {
+    let image =
+        image::load_from_memory_with_format(include_bytes!("../../../wafel.ico"), ImageFormat::Ico)
+            .unwrap()
+            .to_rgba();
+    let width = image.width();
+    let height = image.height();
+    Icon::from_rgba(image.into_raw(), width, height).unwrap()
 }
 
 fn load_imgui_config() -> PyResult<ImguiConfig> {

@@ -32,6 +32,7 @@ if 'dist' in sys.argv[1:]:
     [
       'pyinstaller',
       '--onefile',
+      '--icon', '../wafel.ico',
       '--noconsole',
       '--specpath', 'build',
       '--distpath', 'build/dist',
