@@ -18,7 +18,6 @@ use winit::{
 
 /// Open a window, call `update_fn` on each frame, and render the UI and scene(s).
 pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()> {
-    // TODO: Error handling (and/or make sure panics show up in log)
     futures::executor::block_on(async {
         let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
 
