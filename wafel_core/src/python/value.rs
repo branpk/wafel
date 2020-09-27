@@ -39,7 +39,7 @@ pub fn py_object_to_value(py: Python<'_>, value: &PyObject) -> PyResult<Value> {
         Ok(Value::Address(address.address))
     } else {
         Err(Error::from(SM64ErrorCause::ValueFromPython {
-            value: value.cast_as::<PyAny>(py)?.str()?.to_string()?.into(),
+            value: value.cast_as::<PyAny>(py)?.str()?.to_string(),
         })
         .into())
     }

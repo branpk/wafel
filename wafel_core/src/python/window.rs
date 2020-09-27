@@ -130,8 +130,10 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
             };
 
             if let Err(error) = result {
-                error.print(py);
-                todo!()
+                // Most errors are caught within `update_fn` and are displayed in the UI. If
+                // an error occurs outside of that scope, then just print the error to the log
+                // and crash.
+                panic!("(Fatal) {}", error);
             }
         })
     })
