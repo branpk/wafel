@@ -8,7 +8,8 @@ pyinstaller = "*"
 mypy = "*"
 
 [packages]
-imgui = { editable = true, extras = ["cython", "glfw"], git = "https://github.com/branpk/pyimgui.git" }
+imgui = {editable = true,extras = ["cython", "glfw"],git = "https://github.com/branpk/pyimgui.git"}
+cryptography = "*"
 
 [requires]
 python_version = "3.8"

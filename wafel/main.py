@@ -29,6 +29,7 @@ from wafel.local_state import use_state, use_state_with
 from wafel.util import *
 import wafel.config as config
 from wafel.bindings import *
+from wafel.game_versions import *
 
 
 RANGE_COLORS = [
@@ -631,6 +632,14 @@ class View:
     if ig.begin_popup_modal('Key bindings##settings-key-bindings', True, ig.WINDOW_NO_RESIZE)[0]:
       render_key_binding_settings('content')
       ig.end_popup_modal()
+    if ig.begin_popup_modal('Game versions##game-versions', True, ig.WINDOW_NO_RESIZE | ig.WINDOW_ALWAYS_AUTO_RESIZE)[0]:
+      def select_rom_filename() -> Optional[str]:
+        self.tkinter_lift()
+        return tkinter.filedialog.askopenfilename() or None
+      render_game_version_menu('content', select_rom_filename)
+      ig.end_popup_modal()
+
+    ig.open_popup('Game versions##game-versions')
 
     ig.columns(2)
     self.render_left_column(window_size)
