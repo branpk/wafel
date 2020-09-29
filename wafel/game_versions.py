@@ -140,6 +140,8 @@ def render_game_version_menu(
       del error_msgs[version]
 
   for version in versions:
+    ig.push_id('version-' + version)
+
     ig.separator()
     locked = version not in unlocked_dlls
     ig.text('SM64 ' + version + ' - ' + ('locked' if locked else 'unlocked'))
@@ -176,6 +178,8 @@ def render_game_version_menu(
     error_msg = error_msgs.get(version)
     if error_msg is not None:
       ig.text(error_msg)
+
+    ig.pop_id()
 
   ig.separator()
   ig.dummy(1, 5)

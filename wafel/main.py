@@ -521,6 +521,9 @@ class MainView:
     ig.pop_id()
 
 
+DEFAULT_TAS = TasMetadata('us', 'Untitled TAS', 'Unknown author(s)', 'Made using Wafel')
+
+
 class View:
   def __init__(self, model: Model) -> None:
     self.model = model
@@ -538,7 +541,7 @@ class View:
   def reload(self) -> None:
     edits: Dict[Variable, object]
     if self.file is None:
-      metadata = TasMetadata('us', 'Untitled TAS', 'Unknown author(s)', 'Made using Wafel')
+      metadata = DEFAULT_TAS
       edits = {}
     elif self.file.type == 'm64':
       metadata, edits = load_m64(self.file.filename)
@@ -639,9 +642,14 @@ class View:
 
     if self.tas_to_load is not None:
       game_version, edits = self.tas_to_load
-      if game_version.upper() in unlocked_game_versions():
+      unlocked_versions = unlocked_game_versions()
+      if game_version.upper() in unlocked_versions:
         self.tas_to_load = None
         self.model.load(game_version, edits)
+        self.main_view = MainView(self.model)
+      elif self.metadata is DEFAULT_TAS and len(unlocked_versions) > 0:
+        self.tas_to_load = None
+        self.model.load(unlocked_versions[0].lower(), edits)
         self.main_view = MainView(self.model)
       else:
         ig.open_popup('Game versions##game-versions')
@@ -655,7 +663,11 @@ class View:
     if ig.begin_popup_modal('Key bindings##settings-key-bindings', True, ig.WINDOW_NO_RESIZE)[0]:
       render_key_binding_settings('content')
       ig.end_popup_modal()
-    if ig.begin_popup_modal('Game versions##game-versions', True, ig.WINDOW_NO_RESIZE | ig.WINDOW_ALWAYS_AUTO_RESIZE)[0]:
+    if ig.begin_popup_modal(
+      'Game versions##game-versions',
+      True if self.tas_to_load is None else None,
+      ig.WINDOW_NO_RESIZE | ig.WINDOW_ALWAYS_AUTO_RESIZE,
+    )[0]:
       def select_rom_filename() -> Optional[str]:
         self.tkinter_lift()
         return tkinter.filedialog.askopenfilename() or None
