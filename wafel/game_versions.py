@@ -101,6 +101,24 @@ def get_game_version(filename: str) -> str:
   match = assert_not_none(re.match(r'^sm64_([^.]+)', base))
   return match.group(1).upper()
 
+def find_locked_dlls() -> Dict[str, str]:
+  return {
+    get_game_version(filename): filename
+      for filename in glob(os.path.join(config.lib_directory, 'libsm64', 'sm64_*.dll.locked'))
+  }
+
+def find_unlocked_dlls() -> Dict[str, str]:
+  return {
+    get_game_version(filename): filename
+      for filename in glob(os.path.join(config.lib_directory, 'libsm64', 'sm64_*.dll'))
+  }
+
+def unlocked_game_versions() -> List[str]:
+  return sorted(find_unlocked_dlls())
+
+def locked_game_versions() -> List[str]:
+  return sorted(set(find_locked_dlls()).difference(unlocked_game_versions()))
+
 
 def render_game_version_menu(
   id: str,
@@ -110,17 +128,9 @@ def render_game_version_menu(
 
   ig.text('Wafel requires a vanilla SM64 ROM to run')
 
-  locked_dlls = {
-    get_game_version(filename): filename
-      for filename in glob(os.path.join(config.lib_directory, 'libsm64', 'sm64_*.dll.locked'))
-  }
-  unlocked_dlls = {
-    get_game_version(filename): filename
-      for filename in glob(os.path.join(config.lib_directory, 'libsm64', 'sm64_*.dll'))
-  }
-
-  versions = list(set(locked_dlls.keys()).union(unlocked_dlls.keys()))
-  versions.sort()
+  locked_dlls = find_locked_dlls()
+  unlocked_dlls = find_unlocked_dlls()
+  versions = sorted(set(locked_dlls.keys()).union(unlocked_dlls.keys()))
 
   ig.dummy(1, 5)
 
@@ -172,4 +182,8 @@ def render_game_version_menu(
   ig.pop_id()
 
 
-__all__ = ['render_game_version_menu']
+__all__ = [
+  'render_game_version_menu',
+  'unlocked_game_versions',
+  'locked_game_versions',
+]
