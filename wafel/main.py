@@ -42,6 +42,8 @@ RANGE_COLORS = [
   (0.3, 0.3, 0.7, 0.3),
 ]
 
+epoch = 0
+
 
 class DragHandler:
   def __init__(self, pipeline: Pipeline) -> None:
@@ -80,13 +82,9 @@ DEFAULT_FRAME_SHEET_VARS = [
   'mario-vel-f',
 ]
 
-# if config.dev_mode:
-#   DEFAULT_FRAME_SHEET_VARS.insert(0, 'wafel-script')
-
 
 class SequenceFile:
   FILE_TYPES = [
-    # ('Wafel TAS', '*.wafi'),
     ('Mupen64 TAS', '*.m64'),
     ('All files', '*'),
   ]
@@ -94,9 +92,7 @@ class SequenceFile:
   @staticmethod
   def from_filename(filename: str) -> 'SequenceFile':
     _, ext = os.path.splitext(filename)
-    if ext == '.wafi':
-      return SequenceFile(filename, 'wafi')
-    elif ext == '.m64':
+    if ext == '.m64':
       return SequenceFile(filename, 'm64')
     else:
       raise NotImplementedError(ext) # TODO: User message
@@ -106,45 +102,16 @@ class SequenceFile:
     self.type = type_
 
 
-class View:
+class MainView:
 
   def __init__(self, model: Model) -> None:
+    global epoch
+    epoch += 1
+
     self.model = model
-    self.epoch = 0
-    self.tkinter_root = tkinter.Tk()
-    self.tkinter_root.withdraw()
 
-    self.dbg_frame_advance = False
-
-    self.file: Optional[SequenceFile] = None
-    self.reload()
-
-
-  def reload(self) -> None:
-    edits: Dict[Variable, object]
-    if self.file is None:
-      metadata = TasMetadata('us', 'Untitled TAS', 'Unknown author(s)', 'Made using Wafel')
-      edits = {}
-    elif self.file.type == 'm64':
-      metadata, edits = load_m64(self.file.filename)
-    else:
-      raise NotImplementedError(self.file.type)
-    self.metadata = metadata
-    self.model.load(metadata.game_version, edits)
-
-    self.reload_ui()
-
-
-  def change_version(self, version: str) -> None:
-    self.metadata.game_version = version
-    self.model.change_version(version)
-    self.reload_ui()
-
-
-  def reload_ui(self) -> None:
     self.show_debug_pane = config.dev_mode
     self.formatters = DataFormatters(self.model.pipeline)
-    self.formatters[Variable('mario-action')] = EnumFormatter(self.model.action_names)
 
     self.frame_sheets: List[FrameSheet] = [
       FrameSheet(
@@ -160,16 +127,6 @@ class View:
       self.frame_sheets[0].append_variable(Variable(var_name))
 
     self.variable_explorer = VariableExplorer(self.model, self.formatters)
-
-    self.epoch += 1
-
-
-  def save(self) -> None:
-    assert self.file is not None
-    if self.file.type == 'm64':
-      save_m64(self.file.filename, self.metadata, self.model.pipeline, self.model.max_frame - 1)
-    else:
-      raise NotImplementedError(self.file.type)
 
 
   def render_left_column(self, framebuffer_size: Tuple[int, int]) -> None:
@@ -411,7 +368,7 @@ class View:
     frame_sheet = self.frame_sheets[0]
     ig.set_next_window_content_size(frame_sheet.get_content_width(), 0)
     ig.begin_child(
-      'Frame Sheet##' + str(self.epoch) + '-0',
+      'Frame Sheet##' + str(epoch) + '-0',
       height=int(total_height * 0.7),
       flags=ig.WINDOW_HORIZONTAL_SCROLLING_BAR,
     )
@@ -430,75 +387,6 @@ class View:
     self.variable_explorer.render('variable-explorer')
     ig.end_child()
     log.timer.end()
-
-
-  def tkinter_lift(self) -> None:
-    self.tkinter_root.attributes('-topmost', True)
-    self.tkinter_root.lift()
-
-
-  def ask_save_filename(self) -> bool:
-    self.tkinter_lift()
-    filename = tkinter.filedialog.asksaveasfilename(
-      defaultext='.m64',
-      filetypes=SequenceFile.FILE_TYPES,
-    ) or None
-    if filename is None:
-      return False
-    self.file = SequenceFile.from_filename(filename)
-    return True
-
-
-  def render_menu_bar(self) -> None:
-    open_popup = None
-
-    if ig.begin_menu_bar():
-      if ig.begin_menu('File'):
-        if ig.menu_item('New')[0]:
-          self.file = None
-          self.reload()
-
-        if ig.menu_item('Open')[0]:
-          self.tkinter_lift()
-          filename = tkinter.filedialog.askopenfilename() or None
-          if filename is not None:
-            self.file = SequenceFile.from_filename(filename)
-            self.reload()
-
-        if ig.menu_item('Save')[0]:
-          if self.file is None:
-            if self.ask_save_filename():
-              self.save()
-          else:
-            self.save()
-
-        if ig.menu_item('Save as')[0]:
-          if self.ask_save_filename():
-            self.save()
-
-        if ig.begin_menu('Game version'):
-          versions = [
-            ('US', 'us'),
-            ('J', 'jp'),
-          ]
-          for label, version in versions:
-            if ig.menu_item(label, selected = self.metadata.game_version == version)[0]:
-              self.change_version(version)
-          ig.end_menu()
-
-        ig.end_menu()
-
-      if ig.begin_menu('Settings'):
-        if ig.menu_item('Controller')[0]:
-          open_popup = 'Controller##settings-controller'
-        if ig.menu_item('Key bindings')[0]:
-          open_popup = 'Key bindings##settings-key-bindings'
-        ig.end_menu()
-
-      ig.end_menu_bar()
-
-    if open_popup is not None:
-      ig.open_popup(open_popup)
 
 
   def compute_stick_from_controller(self, cx: float, cy: float) -> Tuple[int, int]:
@@ -593,14 +481,14 @@ class View:
 
     ig.pop_id()
 
+
   def render(self) -> None:
-    ig.push_id(str(self.epoch))
+    ig.push_id(str(epoch))
 
     if ig.is_key_pressed(ord('`')):
       self.show_debug_pane = not self.show_debug_pane
 
     self.handle_controller()
-
 
     prev_frame_time = use_state_with('prev-frame-time', time.time)
     accum_time = use_state('accum-time', 0.0)
@@ -621,10 +509,145 @@ class View:
         self.handle_controller()
         updates += 1
 
-
     ig_window_size = ig.get_window_size()
     window_size = (int(ig_window_size.x), int(ig_window_size.y))
+
+    ig.columns(2)
+    self.render_left_column(window_size)
+    ig.next_column()
+    self.render_right_column()
+    ig.columns(1)
+
+    ig.pop_id()
+
+
+class View:
+  def __init__(self, model: Model) -> None:
+    self.model = model
+    self.tas_to_load: Optional[Tuple[str, Dict[Variable, object]]] = None
+    self.main_view: Optional[MainView] = None
+
+    self.tkinter_root = tkinter.Tk()
+    self.tkinter_root.withdraw()
+
+    self.dbg_frame_advance = False
+
+    self.file: Optional[SequenceFile] = None
+    self.reload()
+
+  def reload(self) -> None:
+    edits: Dict[Variable, object]
+    if self.file is None:
+      metadata = TasMetadata('us', 'Untitled TAS', 'Unknown author(s)', 'Made using Wafel')
+      edits = {}
+    elif self.file.type == 'm64':
+      metadata, edits = load_m64(self.file.filename)
+    else:
+      raise NotImplementedError(self.file.type)
+    self.metadata = metadata
+    self.tas_to_load = (metadata.game_version, edits)
+
+  def change_version(self, version: str) -> None:
+    if self.tas_to_load is None:
+      self.metadata.game_version = version
+      self.model.change_version(version)
+      self.main_view = MainView(self.model)
+
+  def save(self) -> None:
+    assert self.file is not None
+    if self.file.type == 'm64':
+      save_m64(self.file.filename, self.metadata, self.model.pipeline, self.model.max_frame - 1)
+    else:
+      raise NotImplementedError(self.file.type)
+
+  def tkinter_lift(self) -> None:
+    self.tkinter_root.attributes('-topmost', True)
+    self.tkinter_root.lift()
+
+  def ask_save_filename(self) -> bool:
+    self.tkinter_lift()
+    filename = tkinter.filedialog.asksaveasfilename(
+      defaultext='.m64',
+      filetypes=SequenceFile.FILE_TYPES,
+    ) or None
+    if filename is None:
+      return False
+    self.file = SequenceFile.from_filename(filename)
+    return True
+
+  def render_menu_bar(self) -> None:
+    open_popup = None
+
+    if ig.begin_menu_bar():
+      if ig.begin_menu('File'):
+        if ig.menu_item('New')[0]:
+          self.file = None
+          self.reload()
+
+        if ig.menu_item('Open')[0]:
+          self.tkinter_lift()
+          filename = tkinter.filedialog.askopenfilename() or None
+          if filename is not None:
+            self.file = SequenceFile.from_filename(filename)
+            self.reload()
+
+        if ig.menu_item('Save')[0]:
+          if self.file is None:
+            if self.ask_save_filename():
+              self.save()
+          else:
+            self.save()
+
+        if ig.menu_item('Save as')[0]:
+          if self.ask_save_filename():
+            self.save()
+
+        if ig.begin_menu('Game version'):
+          versions = [
+            (version.upper(), version.lower())
+              for version in unlocked_game_versions()
+          ]
+
+          loaded_game_version: Optional[str] = None
+          if hasattr(self.model, 'game_version'):
+            loaded_game_version = self.model.game_version
+
+          for label, version in versions:
+            if ig.menu_item(label, selected = loaded_game_version == version)[0]:
+              self.change_version(version)
+          if len(locked_game_versions()) > 0:
+            if ig.menu_item('Other')[0]:
+              open_popup = 'Game versions##game-versions'
+          ig.end_menu()
+
+        ig.end_menu()
+
+      if ig.begin_menu('Settings'):
+        if ig.menu_item('Controller')[0]:
+          open_popup = 'Controller##settings-controller'
+        if ig.menu_item('Key bindings')[0]:
+          open_popup = 'Key bindings##settings-key-bindings'
+        ig.end_menu()
+
+      ig.end_menu_bar()
+
+    if open_popup is not None:
+      ig.open_popup(open_popup)
+
+  def render(self) -> None:
     self.render_menu_bar()
+
+    if self.tas_to_load is not None:
+      game_version, edits = self.tas_to_load
+      if game_version.upper() in unlocked_game_versions():
+        self.tas_to_load = None
+        self.model.load(game_version, edits)
+        self.main_view = MainView(self.model)
+      else:
+        ig.open_popup('Game versions##game-versions')
+
+    if self.main_view is not None:
+      self.main_view.render()
 
     if ig.begin_popup_modal('Controller##settings-controller', True, ig.WINDOW_NO_RESIZE)[0]:
       render_controller_settings('content')
@@ -638,16 +661,6 @@ class View:
         return tkinter.filedialog.askopenfilename() or None
       render_game_version_menu('content', select_rom_filename)
       ig.end_popup_modal()
-
-    ig.open_popup('Game versions##game-versions')
-
-    ig.columns(2)
-    self.render_left_column(window_size)
-    ig.next_column()
-    self.render_right_column()
-    ig.columns(1)
-
-    ig.pop_id()
 
 
 def run() -> None:
