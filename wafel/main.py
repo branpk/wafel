@@ -109,9 +109,10 @@ class MainView:
     epoch += 1
 
     self.model = model
-
     self.show_debug_pane = config.dev_mode
+
     self.formatters = DataFormatters(self.model.pipeline)
+    self.formatters[Variable('mario-action')] = EnumFormatter(self.model.action_names)
 
     self.frame_sheets: List[FrameSheet] = [
       FrameSheet(
