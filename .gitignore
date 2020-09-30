@@ -5,5 +5,6 @@ __pycache__
 
 /build
 /libsm64
+/roms
 /log.txt
 /settings.json
