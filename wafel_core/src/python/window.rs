@@ -74,9 +74,12 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
 
         let mut last_frame_time = Instant::now();
 
+        drop(gil);
+
         event_loop.run(move |event, _, control_flow| {
             let gil = Python::acquire_gil();
             let py = gil.python();
+            let _gil_pool = unsafe { py.new_pool() }; // prevent memory leak
 
             let result: PyResult<()> = try {
                 match event {
