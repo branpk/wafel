@@ -1,0 +1,5 @@
+cryptography
+imgui
+glfw
+PyOpenGL
+pyinstaller
