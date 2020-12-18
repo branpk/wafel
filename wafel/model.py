@@ -20,8 +20,7 @@ class Model:
     self.input_up_yaw: Optional[int] = None
 
   def load(self, game_version: str, edits: Dict[Variable, object]) -> None:
-    selected_frame = 1580 if config.dev_mode else 0
-    self._load_game_version(game_version, selected_frame)
+    self._load_game_version(game_version, 0)
     self._set_edits(edits)
 
   def change_version(self, game_version: str) -> None:

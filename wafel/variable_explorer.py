@@ -34,8 +34,6 @@ FIXED_TABS = [
   TabId('Subframe'),
   TabId('Objects'),
 ]
-if config.dev_mode:
-  FIXED_TABS.insert(1, TabId('Scripting'))
 
 
 class VariableExplorer:

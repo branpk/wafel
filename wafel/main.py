@@ -686,9 +686,6 @@ def run() -> None:
 
     if view is None:
       view = View(model)
-      if config.dev_mode:
-        view.file = SequenceFile('test_files/22stars.m64', 'm64')
-        view.reload()
     ig.push_id(id)
 
     log.timer.begin('render')
