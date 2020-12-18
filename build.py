@@ -5,7 +5,7 @@ import os
 from glob import glob
 
 import wafel.config as config
-from wafel.game_versions import lock_game_version, unlocked_game_versions
+from wafel.game_versions import lock_game_version, unlocked_game_versions, find_locked_dlls
 
 config.init()
 
@@ -21,7 +21,7 @@ if 'clean' in sys.argv[1:]:
 
 if sys.argv[1:] == [] or 'dist' in sys.argv[1:]:
   subprocess.run(
-    ['cargo', '+nightly', 'build', '--release', '--manifest-path', 'wafel_core/Cargo.toml'],
+    ['cargo', 'build', '--release', '--manifest-path', 'wafel_core/Cargo.toml'],
     check=True,
   )
   shutil.copyfile('wafel_core/target/release/wafel_core.dll', 'wafel_core.pyd')
@@ -46,16 +46,26 @@ if 'dist' in sys.argv[1:]:
     check=True,
   )
 
-  print('Locking DLLs')
-  os.makedirs(os.path.join('build', 'dist', 'libsm64'))
-  for game_version in unlocked_game_versions():
-    name = 'sm64_' + game_version.lower()
-    lock_game_version(
-      game_version,
-      os.path.join('roms', name + '.z64'),
-      os.path.join('libsm64', name + '.dll'),
-      os.path.join('build', 'dist', 'libsm64', name + '.dll.locked'),
-    )
+  if 'lock' in sys.argv[1:]:
+    print('Locking DLLs')
+    os.makedirs(os.path.join('build', 'dist', 'libsm64'))
+    for game_version in unlocked_game_versions():
+      name = 'sm64_' + game_version.lower()
+      lock_game_version(
+        game_version,
+        os.path.join('roms', name + '.z64'),
+        os.path.join('libsm64', name + '.dll'),
+        os.path.join('build', 'dist', 'libsm64', name + '.dll.locked'),
+      )
+  else:
+    print('Copying locked DLLs')
+    os.makedirs(os.path.join('build', 'dist', 'libsm64'))
+    for game_version, locked_dll in find_locked_dlls().items():
+      name = 'sm64_' + game_version.lower()
+      shutil.copyfile(
+        locked_dll,
+        os.path.join('build', 'dist', 'libsm64', name + '.dll.locked')
+      )
 
   print('Creating zip file')
   shutil.make_archive(
