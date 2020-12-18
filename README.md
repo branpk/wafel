@@ -11,6 +11,10 @@ primary tool for vanilla SM64 TASing, but the feature set is not quite there yet
 Currently Windows is the only supported platform (but support for other platforms in the future
 is likely).
 
+Thanks to [Thestickman391](https://github.com/thestickman391) for contributing the Wafel logo.
+
+Wafel is a backronym for **W**e **A**re **F**inally **E**mulator-**L**ess.
+
 ## Bugs and feature requests
 
 Please log bugs and feature requests on Github [here](https://github.com/branpk/wafel/issues/new).
