@@ -1,9 +1,9 @@
-# WAFEL
+# Wafel
 
-WAFEL (**W**e **A**re **F**inally **Emulator**-**L**ess) is a TASing tool for Super Mario 64. It provides the ability to move backward and forward
+Wafel is a TASing tool for Super Mario 64. It provides the ability to move backward and forward
 through a TAS without using save states, and displays relevant in-game data variables.
 
-WAFEL is not an emulator, but it does require a vanilla SM64 ROM to operate.
+Wafel is not an emulator, but it does require a vanilla SM64 ROM to operate.
 
 This project is still a work in progress. The goal is to eventually replace Mupen64 as the
 primary tool for vanilla SM64 TASing, but the feature set is not quite there yet.
@@ -11,7 +11,9 @@ primary tool for vanilla SM64 TASing, but the feature set is not quite there yet
 Currently Windows is the only supported platform (but support for other platforms in the future
 is likely).
 
-Thanks to [Thestickman391](https://github.com/thestickman391) for contributing the WAFEL logo.
+Thanks to [Thestickman391](https://github.com/thestickman391) for contributing the Wafel logo.
+
+Wafel is a backronym for **W**e **A**re **F**inally **E**mulator-**L**ess.
 
 ## Bugs and feature requests
 
