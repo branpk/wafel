@@ -4,7 +4,8 @@ __pycache__
 .vscode
 
 /build
-/libsm64
+/libsm64/*
+!/libsm64/*.locked
 /roms
 /log.txt
 /settings.json
