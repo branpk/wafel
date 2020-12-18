@@ -15,6 +15,10 @@ Thanks to [Thestickman391](https://github.com/thestickman391) for contributing t
 
 Wafel is a backronym for **W**e **A**re **F**inally **E**mulator-**L**ess.
 
+## Downloading
+
+You can download the latest version from the [Releases page](https://github.com/branpk/wafel/releases).
+
 ## Bugs and feature requests
 
 Please log bugs and feature requests on Github [here](https://github.com/branpk/wafel/issues/new).
