@@ -8,14 +8,14 @@ Wafel is not an emulator, but it does require a vanilla SM64 ROM to operate.
 This project is still a work in progress. The goal is to eventually replace Mupen64 as the
 primary tool for vanilla SM64 TASing, but the feature set is not quite there yet.
 
-Currently Windows is the only supported platform (but support for other platforms in the future
-is likely).
-
 Thanks to [Thestickman391](https://github.com/thestickman391) for contributing the Wafel logo.
 
 Wafel is a backronym for **W**e **A**re **F**inally **E**mulator-**L**ess.
 
 ## Downloading
+
+Currently Windows is the only supported platform (but support for other platforms in the future
+is likely).
 
 You can download the latest version from the [Releases page](https://github.com/branpk/wafel/releases).
 
