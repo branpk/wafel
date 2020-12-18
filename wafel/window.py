@@ -54,7 +54,6 @@ def open_window_and_run(render: Callable[[str], None], maximize = False) -> None
   glfw.init()
 
   ig_context = ig.create_context()
-  ig.get_io().ini_filename = None
 
   core.open_window_and_run(
     'Wafel ' + config.version_str('.'),

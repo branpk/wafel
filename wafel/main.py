@@ -486,8 +486,8 @@ class MainView:
   def render(self) -> None:
     ig.push_id(str(epoch))
 
-    if ig.is_key_pressed(ord('`')):
-      self.show_debug_pane = not self.show_debug_pane
+    # if ig.is_key_pressed(ord('`')):
+    #   self.show_debug_pane = not self.show_debug_pane
 
     self.handle_controller()
 

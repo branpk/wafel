@@ -8,3 +8,4 @@ __pycache__
 /roms
 /log.txt
 /settings.json
+/imgui.ini

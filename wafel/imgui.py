@@ -41,7 +41,7 @@ def _begin_child(*args, **kwargs):
   _stack.append(('begin_child', (args, kwargs)))
   _push_logical_id(args)
   fixed_args = list(args)
-  fixed_args[0] = str(ig.get_id(fixed_args[0]))
+  fixed_args[0] = str(get_id_stack() + (fixed_args[0],))
   return ig.begin_child(*fixed_args, **kwargs)
 
 def _conditional_begin_call(name: str) -> Any:
@@ -140,6 +140,9 @@ def try_render(render: Callable[[], None]) -> None:
         assert False, begin_call
       __getattr__(end_call)()
     raise
+
+def is_key_down(key: int) -> bool:
+  return ig.get_io().keys_down[key]
 
 def global_keyboard_capture() -> bool:
   # TOOD: Mouse thing is weird behavior but probably fine?
