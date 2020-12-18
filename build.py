@@ -21,7 +21,7 @@ if 'clean' in sys.argv[1:]:
 
 if sys.argv[1:] == [] or 'dist' in sys.argv[1:]:
   subprocess.run(
-    ['cargo', 'build', '--release', '--manifest-path', 'wafel_core/Cargo.toml'],
+    ['cargo', '+nightly', 'build', '--release', '--manifest-path', 'wafel_core/Cargo.toml'],
     check=True,
   )
   shutil.copyfile('wafel_core/target/release/wafel_core.dll', 'wafel_core.pyd')
