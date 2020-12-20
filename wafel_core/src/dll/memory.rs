@@ -179,11 +179,7 @@ impl Memory {
 
             // When a backtrace is created, SymInitializeW is called. This causes an error
             // when AddressInfoObtainer calls the same function.
-            let backtrace_enabled = !matches!(env::var("RUST_BACKTRACE").as_deref(), Ok("0") | Ok("") | Ok("false") | Err(_));
-            if backtrace_enabled {
-                // Only do this if backtraces are enabled, since it's hacky and could break things.
-                SymCleanup(GetCurrentProcess());
-            }
+            SymCleanup(GetCurrentProcess());
 
             // dlopen API requires looking up a symbol to get the base address
             let init_function: *const () = read_symbol(&library, init_function)?;

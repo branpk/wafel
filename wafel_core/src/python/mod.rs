@@ -22,6 +22,7 @@ mod window;
 
 #[pymodule]
 fn wafel_core(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
+    error::init();
     m.add_class::<PyPipeline>()?;
     m.add_class::<PyVariable>()?;
     m.add_class::<PyObjectBehavior>()?;

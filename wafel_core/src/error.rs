@@ -101,7 +101,7 @@ impl<E> From<E> for WithContext<E> {
         Self {
             cause,
             context: Vec::new(),
-            backtrace: Backtrace::capture(),
+            backtrace: Backtrace::force_capture(),
         }
     }
 }
