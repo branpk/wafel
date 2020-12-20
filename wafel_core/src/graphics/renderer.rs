@@ -80,8 +80,9 @@ impl Renderer {
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
                         visibility: wgpu::ShaderStage::VERTEX,
-                        ty: wgpu::BindingType::UniformBuffer {
-                            dynamic: false,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
                             min_binding_size: None,
                         },
                         count: None,
@@ -90,8 +91,9 @@ impl Renderer {
                     wgpu::BindGroupLayoutEntry {
                         binding: 1,
                         visibility: wgpu::ShaderStage::VERTEX,
-                        ty: wgpu::BindingType::UniformBuffer {
-                            dynamic: false,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
                             min_binding_size: None,
                         },
                         count: None,
@@ -290,6 +292,7 @@ impl Renderer {
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: None,
                 color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
                     attachment: &multisample_texture_view,
                     resolve_target: Some(&output_view),
@@ -427,7 +430,7 @@ fn create_multisample_texture(
         sample_count: NUM_OUTPUT_SAMPLES,
         dimension: wgpu::TextureDimension::D2,
         format: output_format,
-        usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
+        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
     })
 }
 
@@ -443,7 +446,7 @@ fn create_depth_texture(device: &wgpu::Device, output_size: (u32, u32)) -> wgpu:
         sample_count: NUM_OUTPUT_SAMPLES,
         dimension: wgpu::TextureDimension::D2,
         format: DEPTH_TEXTURE_FORMAT,
-        usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
+        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
     })
 }
 
@@ -463,13 +466,13 @@ fn create_surface_pipeline(
             }),
         ),
         vertex_stage: wgpu::ProgrammableStageDescriptor {
-            module: &device.create_shader_module(wgpu::include_spirv!(
+            module: &device.create_shader_module(&wgpu::include_spirv!(
                 "../../assets/shaders/surface.vert.spv"
             )),
             entry_point: "main",
         },
         fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
-            module: &device.create_shader_module(wgpu::include_spirv!(
+            module: &device.create_shader_module(&wgpu::include_spirv!(
                 "../../assets/shaders/surface.frag.spv"
             )),
             entry_point: "main",
@@ -493,7 +496,7 @@ fn create_surface_pipeline(
             stencil: wgpu::StencilStateDescriptor::default(),
         }),
         vertex_state: wgpu::VertexStateDescriptor {
-            index_format: wgpu::IndexFormat::Uint16,
+            index_format: None,
             vertex_buffers: &[wgpu::VertexBufferDescriptor {
                 stride: size_of::<Vertex>() as wgpu::BufferAddress,
                 step_mode: wgpu::InputStepMode::Vertex,
@@ -538,12 +541,12 @@ fn create_color_pipeline(
         ),
         vertex_stage: wgpu::ProgrammableStageDescriptor {
             module: &device
-                .create_shader_module(wgpu::include_spirv!("../../assets/shaders/color.vert.spv")),
+                .create_shader_module(&wgpu::include_spirv!("../../assets/shaders/color.vert.spv")),
             entry_point: "main",
         },
         fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
             module: &device
-                .create_shader_module(wgpu::include_spirv!("../../assets/shaders/color.frag.spv")),
+                .create_shader_module(&wgpu::include_spirv!("../../assets/shaders/color.frag.spv")),
             entry_point: "main",
         }),
         rasterization_state: None,
@@ -573,7 +576,7 @@ fn create_color_pipeline(
             stencil: wgpu::StencilStateDescriptor::default(),
         }),
         vertex_state: wgpu::VertexStateDescriptor {
-            index_format: wgpu::IndexFormat::Uint16,
+            index_format: None,
             vertex_buffers: &[wgpu::VertexBufferDescriptor {
                 stride: size_of::<Vertex>() as wgpu::BufferAddress,
                 step_mode: wgpu::InputStepMode::Vertex,
@@ -614,14 +617,14 @@ fn create_screen_dot_pipeline(
             }),
         ),
         vertex_stage: wgpu::ProgrammableStageDescriptor {
-            module: &device.create_shader_module(wgpu::include_spirv!(
+            module: &device.create_shader_module(&wgpu::include_spirv!(
                 "../../assets/shaders/screen_dot.vert.spv"
             )),
             entry_point: "main",
         },
         fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
             module: &device
-                .create_shader_module(wgpu::include_spirv!("../../assets/shaders/color.frag.spv")),
+                .create_shader_module(&wgpu::include_spirv!("../../assets/shaders/color.frag.spv")),
             entry_point: "main",
         }),
         rasterization_state: None,
@@ -643,7 +646,7 @@ fn create_screen_dot_pipeline(
             stencil: wgpu::StencilStateDescriptor::default(),
         }),
         vertex_state: wgpu::VertexStateDescriptor {
-            index_format: wgpu::IndexFormat::Uint16,
+            index_format: None,
             vertex_buffers: &[
                 wgpu::VertexBufferDescriptor {
                     stride: size_of::<ScreenDotInstance>() as wgpu::BufferAddress,

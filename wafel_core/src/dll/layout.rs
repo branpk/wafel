@@ -133,13 +133,20 @@ where
 }
 
 /// A placeholder id for a type reference within a compilation unit.
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum TypeId<O> {
     /// The offset to the type's dwarf entry.
-    #[display(fmt = "{}", _0)]
     Offset(O),
-    #[display(fmt = "void")]
     Void,
+}
+
+impl<O: Display> Display for TypeId<O> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TypeId::Offset(offset) => write!(f, "{}", offset),
+            TypeId::Void => write!(f, "void"),
+        }
+    }
 }
 
 /// State that is tracked when reading a single compilation unit.

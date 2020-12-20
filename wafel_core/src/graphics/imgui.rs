@@ -66,6 +66,7 @@ pub struct ImguiRenderer {
     proj_bind_group_layout: wgpu::BindGroupLayout,
     texture_bind_group_layout: wgpu::BindGroupLayout,
     font_texture_bind_group: wgpu::BindGroup,
+    index_format: wgpu::IndexFormat,
 }
 
 impl ImguiRenderer {
@@ -84,8 +85,9 @@ impl ImguiRenderer {
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
                         visibility: wgpu::ShaderStage::VERTEX,
-                        ty: wgpu::BindingType::UniformBuffer {
-                            dynamic: false,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
                             min_binding_size: None,
                         },
                         count: None,
@@ -101,22 +103,31 @@ impl ImguiRenderer {
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
                         visibility: wgpu::ShaderStage::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler { comparison: false },
+                        ty: wgpu::BindingType::Sampler {
+                            filtering: true,
+                            comparison: false,
+                        },
                         count: None,
                     },
                     // u_Texture
                     wgpu::BindGroupLayoutEntry {
                         binding: 1,
                         visibility: wgpu::ShaderStage::FRAGMENT,
-                        ty: wgpu::BindingType::SampledTexture {
-                            dimension: wgpu::TextureViewDimension::D2,
-                            component_type: wgpu::TextureComponentType::Float,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            view_dimension: wgpu::TextureViewDimension::D2,
                             multisampled: false,
                         },
                         count: None,
                     },
                 ],
             });
+
+        let index_format = match config.index_size {
+            2 => wgpu::IndexFormat::Uint16,
+            4 => wgpu::IndexFormat::Uint32,
+            n => unimplemented!("{}", n),
+        };
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
@@ -128,13 +139,13 @@ impl ImguiRenderer {
                 }),
             ),
             vertex_stage: wgpu::ProgrammableStageDescriptor {
-                module: &device.create_shader_module(wgpu::include_spirv!(
+                module: &device.create_shader_module(&wgpu::include_spirv!(
                     "../../assets/shaders/imgui.vert.spv"
                 )),
                 entry_point: "main",
             },
             fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
-                module: &device.create_shader_module(wgpu::include_spirv!(
+                module: &device.create_shader_module(&wgpu::include_spirv!(
                     "../../assets/shaders/imgui.frag.spv"
                 )),
                 entry_point: "main",
@@ -153,11 +164,7 @@ impl ImguiRenderer {
             }],
             depth_stencil_state: None,
             vertex_state: wgpu::VertexStateDescriptor {
-                index_format: match config.index_size {
-                    2 => wgpu::IndexFormat::Uint16,
-                    4 => wgpu::IndexFormat::Uint32,
-                    n => unimplemented!("{}", n),
-                },
+                index_format: Some(index_format),
                 vertex_buffers: &[wgpu::VertexBufferDescriptor {
                     stride: config.vertex_size as wgpu::BufferAddress,
                     step_mode: wgpu::InputStepMode::Vertex,
@@ -259,6 +266,7 @@ impl ImguiRenderer {
             proj_bind_group_layout,
             texture_bind_group_layout,
             font_texture_bind_group,
+            index_format,
         }
     }
 
@@ -319,6 +327,7 @@ impl ImguiRenderer {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: None,
                 color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
                     attachment: output_view,
                     resolve_target: None,
@@ -337,7 +346,7 @@ impl ImguiRenderer {
             for (command_list, (index_buffer, vertex_buffer)) in
                 draw_data.command_lists.iter().zip(buffers.iter())
             {
-                render_pass.set_index_buffer(index_buffer.slice(..));
+                render_pass.set_index_buffer(index_buffer.slice(..), self.index_format);
                 render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
 
                 let mut initial_index = 0;
