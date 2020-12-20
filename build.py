@@ -29,7 +29,9 @@ if sys.argv[1:] == [] or 'dist' in sys.argv[1:]:
 if 'dist' in sys.argv[1:]:
   shutil.rmtree('build/dist', ignore_errors=True)
 
-  from glfw.library import glfw
+  import ctypes
+  import ctypes.util
+  from glfw.library import glfw, msvcr
 
   subprocess.run(
     [
@@ -39,7 +41,9 @@ if 'dist' in sys.argv[1:]:
       '--noconsole',
       '--specpath', 'build',
       '--distpath', 'build/dist',
-      '--add-binary', glfw._name + os.pathsep + '.',
+      '--add-binary', os.pathsep.join([ctypes.util.find_library('msvcp140.dll'), '.']),
+      '--add-binary', os.pathsep.join([glfw._name, '.']),
+      '--add-binary', os.pathsep.join([msvcr._name, '.']),
       '--name', 'wafel',
       'run.py',
     ],
