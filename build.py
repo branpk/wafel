@@ -70,6 +70,9 @@ if 'dist' in sys.argv[1:]:
       os.path.join('build', 'dist', 'libsm64', name + '.dll.locked')
     )
 
+  print('Copying .pdb')
+  shutil.copyfile('wafel_core/target/release/wafel_core.pdb', 'build/dist/wafel_core.pdb')
+
   print('Creating zip file')
   shutil.make_archive(
     'build/wafel_' + config.version_str('_'),
