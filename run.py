@@ -10,6 +10,7 @@ log.info('Wafel', config.version_str('.'))
 config.init()
 
 with open(config.log_file, 'a') as log_file:
+  log_file.write('-' * 80 + '\n')
   def append_to_log(message: log.LogMessage) -> None:
     log_file.write(str(message) + '\n')
     log_file.flush()
