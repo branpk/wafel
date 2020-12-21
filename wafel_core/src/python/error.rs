@@ -5,6 +5,8 @@ use std::{
     panic::{self, PanicInfo},
 };
 
+use super::log;
+
 create_exception!(wafel, WafelError, PyException);
 
 impl From<Error> for PyErr {
@@ -35,11 +37,7 @@ fn panic_hook(info: &PanicInfo<'_>) {
 
     let panic_details = format!("Panicked at {}: {}\n{}", location, msg, backtrace);
 
-    let result = Python::with_gil(|py| -> PyResult<()> {
-        let log = PyModule::import(py, "wafel.log")?;
-        log.call_method1("error", (format!("Panic details:\n{}", panic_details),))?;
-        Ok(())
-    });
+    let result = log::error_acquire(format!("Panic details:\n{}", panic_details));
     if result.is_err() {
         eprintln!("Failed to log panic details:\n{}", panic_details);
     }

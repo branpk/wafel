@@ -16,6 +16,8 @@ use winit::{
     window::WindowBuilder,
 };
 
+use super::log;
+
 /// Open a window, call `update_fn` on each frame, and render the UI and scene(s).
 pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()> {
     futures::executor::block_on(async {
@@ -38,6 +40,12 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
             })
             .await
             .expect("no compatible device");
+        let adapter_info = adapter.get_info();
+        log::info_acquire(format!(
+            "GPU: {}, {:?}, {:?}",
+            adapter_info.name, adapter_info.device_type, adapter_info.backend
+        ));
+
         let (device, queue) = adapter
             .request_device(
                 &wgpu::DeviceDescriptor {

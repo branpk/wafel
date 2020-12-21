@@ -13,6 +13,7 @@ pub use window::*;
 
 mod error;
 mod imgui_input;
+pub mod log;
 mod pipeline;
 mod value;
 mod variable;
