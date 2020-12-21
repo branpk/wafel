@@ -3,6 +3,7 @@
 #![warn(missing_docs)]
 #![warn(missing_debug_implementations)]
 #![warn(rust_2018_idioms)]
+#![allow(clippy::float_cmp)]
 #![feature(try_blocks)]
 #![feature(backtrace)]
 #![feature(option_expect_none)]

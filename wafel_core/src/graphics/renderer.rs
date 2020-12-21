@@ -317,7 +317,18 @@ impl Renderer {
             });
 
             for (scene, bundle) in scenes.iter().zip(&scene_bundles) {
-                let viewport = &scene.viewport;
+                let mut viewport = scene.viewport.clone();
+
+                // Viewport size can become out of sync with output_size on the frame that the
+                // window is resized
+                viewport.x = viewport.x.min(output_size.0 as f32);
+                viewport.y = viewport.y.min(output_size.1 as f32);
+                viewport.width = viewport.width.min(output_size.0 as f32 - viewport.x);
+                viewport.height = viewport.height.min(output_size.1 as f32 - viewport.y);
+                if viewport.width == 0.0 || viewport.height == 0.0 {
+                    continue;
+                }
+
                 render_pass.set_viewport(
                     viewport.x,
                     viewport.y,

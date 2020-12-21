@@ -57,6 +57,9 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
             )
             .await
             .unwrap();
+        device.on_uncaptured_error(|error| {
+            panic!("wgpu error: {}", error);
+        });
 
         let mut swap_chain_desc = wgpu::SwapChainDescriptor {
             usage: wgpu::TextureUsage::RENDER_ATTACHMENT,

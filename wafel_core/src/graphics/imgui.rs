@@ -354,7 +354,15 @@ impl ImguiRenderer {
                 for command in &command_list.commands {
                     assert_eq!(command.texture_id, IMGUI_FONT_TEXTURE_ID);
 
-                    let (clip_x0, clip_y0, clip_x1, clip_y1) = command.clip_rect;
+                    let (mut clip_x0, mut clip_y0, mut clip_x1, mut clip_y1) = command.clip_rect;
+                    clip_x0 = clip_x0.min(output_size.0 as f32);
+                    clip_y0 = clip_y0.min(output_size.1 as f32);
+                    clip_x1 = clip_x1.min(output_size.0 as f32);
+                    clip_y1 = clip_y1.min(output_size.1 as f32);
+                    if clip_x0 == clip_x1 || clip_y0 == clip_y1 {
+                        continue;
+                    }
+
                     render_pass.set_scissor_rect(
                         clip_x0 as u32,
                         clip_y0 as u32,
