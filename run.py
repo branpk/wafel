@@ -1,11 +1,12 @@
 import sys
-import os
 import traceback
+import platform
 
 import wafel.log as log
 import wafel.config as config
 
 log.info('Wafel', config.version_str('.'))
+log.info(f'Platform: {platform.platform()} {platform.machine()}')
 
 config.init()
 
