@@ -624,6 +624,9 @@ fn create_screen_dot_pipeline(
     transform_bind_group_layout: &wgpu::BindGroupLayout,
     output_format: wgpu::TextureFormat,
 ) -> wgpu::RenderPipeline {
+    let shader = device.create_shader_module(&wgpu::include_wgsl!(
+        "../../assets/shaders_new/screen_dot.wgsl"
+    ));
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: None,
         layout: Some(
@@ -634,9 +637,7 @@ fn create_screen_dot_pipeline(
             }),
         ),
         vertex: wgpu::VertexState {
-            module: &device.create_shader_module(&wgpu::include_spirv!(
-                "../../assets/shaders/screen_dot.vert.spv"
-            )),
+            module: &shader,
             entry_point: "main",
             buffers: &[
                 wgpu::VertexBufferLayout {
@@ -693,8 +694,7 @@ fn create_screen_dot_pipeline(
             ..Default::default()
         },
         fragment: Some(wgpu::FragmentState {
-            module: &device
-                .create_shader_module(&wgpu::include_spirv!("../../assets/shaders/color.frag.spv")),
+            module: &shader,
             entry_point: "main",
             targets: &[wgpu::ColorTargetState {
                 format: output_format,
