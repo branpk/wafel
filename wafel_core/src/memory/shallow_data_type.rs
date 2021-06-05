@@ -165,9 +165,9 @@ impl<Id: Debug> PreDataType<Id> {
     }
 }
 
-pub fn get_size_from_pre_types<'a, Id: Clone + Eq + Hash>(
-    pre_types: &'a HashMap<Id, PreDataType<Id>>,
-) -> impl Fn(&Id) -> Option<usize> + 'a {
+pub fn get_size_from_pre_types<Id: Clone + Eq + Hash>(
+    pre_types: &HashMap<Id, PreDataType<Id>>,
+) -> impl Fn(&Id) -> Option<usize> + '_ {
     move |id: &Id| -> Option<usize> {
         let mut id = id.clone();
         loop {

@@ -271,11 +271,11 @@ impl<M: Memory, C: Controller<M>> SlotManager<M, C> {
         Ok((self.memory, base_slot, self.controller))
     }
 
-    fn borrow_slot_state<'a>(
-        &'a self,
+    fn borrow_slot_state(
+        &'_ self,
         frame: u32,
         require_base: bool,
-    ) -> Result<impl SlotState<Memory = M> + 'a, Error> {
+    ) -> Result<impl SlotState<Memory = M> + '_, Error> {
         let mut slots = self
             .slots
             .try_borrow_mut()
@@ -302,11 +302,11 @@ impl<M: Memory, C: Controller<M>> SlotManager<M, C> {
         })
     }
 
-    fn slot_state_mut<'a>(
-        &'a mut self,
+    fn slot_state_mut(
+        &mut self,
         frame: u32,
         require_base: bool,
-    ) -> Result<impl SlotStateMut<Memory = M> + 'a, Error> {
+    ) -> Result<impl SlotStateMut<Memory = M> + '_, Error> {
         let slots = self.slots.get_mut();
 
         let slot_index = request_frame(&self.memory, &self.controller, slots, frame, require_base)?;
@@ -325,18 +325,18 @@ impl<M: Memory, C: Controller<M>> SlotManager<M, C> {
         })
     }
 
-    pub fn frame<'a>(&'a self, frame: u32) -> Result<impl SlotState<Memory = M> + 'a, Error> {
+    pub fn frame(&self, frame: u32) -> Result<impl SlotState<Memory = M> + '_, Error> {
         self.borrow_slot_state(frame, false)
     }
 
-    pub fn base_slot<'a>(&'a self, frame: u32) -> Result<impl SlotState<Memory = M> + 'a, Error> {
+    pub fn base_slot(&self, frame: u32) -> Result<impl SlotState<Memory = M> + '_, Error> {
         self.borrow_slot_state(frame, true)
     }
 
-    pub fn base_slot_mut<'a>(
-        &'a mut self,
+    pub fn base_slot_mut(
+        &mut self,
         frame: u32,
-    ) -> Result<impl SlotStateMut<Memory = M> + 'a, Error> {
+    ) -> Result<impl SlotStateMut<Memory = M> + '_, Error> {
         self.slot_state_mut(frame, true)
     }
 

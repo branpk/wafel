@@ -82,7 +82,7 @@ pub fn frame_log(state: &impl State) -> Result<Vec<HashMap<String, Value>>, Erro
     (0..log_length)
         .map(|i| -> Result<_, Error> {
             let event_type_value = state.read(&format!("gFrameLog[{}].type", i))?.as_int()?;
-            let event_type = event_types.get(&event_type_value).ok_or_else(|| {
+            let event_type = event_types.get(&event_type_value).ok_or({
                 SM64ErrorCause::InvalidFrameLogEventType {
                     value: event_type_value,
                 }
@@ -144,9 +144,9 @@ fn read_surfaces(state: &impl SlotState) -> Result<Vec<Surface>, Error> {
         .global_path("sSurfacePool")?
         .concrete_type()
         .stride()?
-        .ok_or_else(|| SM64ErrorCause::UnsizedSurfacePoolPointer)?;
+        .ok_or(SM64ErrorCause::UnsizedSurfacePoolPointer)?;
 
-    let offset = |path| -> Result<usize, Error> { Ok(memory.local_path(path)?.field_offset()?) };
+    let offset = |path| -> Result<usize, Error> { memory.local_path(path)?.field_offset() };
     let o_normal = offset("struct Surface.normal")?;
     let o_vertex1 = offset("struct Surface.vertex1")?;
     let o_vertex2 = offset("struct Surface.vertex2")?;
@@ -236,9 +236,9 @@ pub fn read_objects_to_scene(scene: &mut Scene, state: &impl SlotState) -> Resul
         .global_path("gObjectPool")?
         .concrete_type()
         .stride()?
-        .ok_or_else(|| SM64ErrorCause::UnsizedObjectPoolArray)?;
+        .ok_or(SM64ErrorCause::UnsizedObjectPoolArray)?;
 
-    let offset = |path| -> Result<usize, Error> { Ok(memory.local_path(path)?.field_offset()?) };
+    let offset = |path| -> Result<usize, Error> { memory.local_path(path)?.field_offset() };
     let o_active_flags = offset("struct Object.activeFlags")?;
     let o_pos_x = offset("struct Object.oPosX")?;
     let o_pos_y = offset("struct Object.oPosY")?;

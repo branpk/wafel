@@ -2,7 +2,7 @@ use crate::geo::{direction_to_pitch_yaw, Matrix4f, Point3f, StoredPoint3f, Vecto
 use bytemuck::{cast_slice, offset_of, Pod, Zeroable};
 use nalgebra::distance;
 use std::{cmp::Ordering, f32::consts::PI, iter, mem::size_of};
-use wgpu::{util::DeviceExt, FragmentState, MultisampleState};
+use wgpu::{util::DeviceExt, MultisampleState};
 
 use super::scene::{BirdsEyeCamera, Camera, ObjectPath, RotateCamera, Scene, SurfaceType};
 

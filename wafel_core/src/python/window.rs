@@ -159,7 +159,7 @@ fn load_window_icon() -> Icon {
     let image =
         image::load_from_memory_with_format(include_bytes!("../../../wafel.ico"), ImageFormat::Ico)
             .unwrap()
-            .to_rgba();
+            .to_rgba8();
     let width = image.width();
     let height = image.height();
     Icon::from_rgba(image.into_raw(), width, height).unwrap()

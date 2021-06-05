@@ -174,7 +174,7 @@ impl RangeEdits {
     }
 }
 
-fn range_id_generator<'a>(next_range_id: &'a mut usize) -> impl FnMut() -> EditRangeId + 'a {
+fn range_id_generator(next_range_id: &mut usize) -> impl FnMut() -> EditRangeId + '_ {
     move || {
         let range_id = EditRangeId(*next_range_id);
         *next_range_id += 1;

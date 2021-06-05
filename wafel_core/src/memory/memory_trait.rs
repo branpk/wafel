@@ -288,12 +288,12 @@ pub trait Memory: Sized {
 
     /// Look up or compile a global data path using the cache.
     fn global_path(&self, source: &str) -> Result<GlobalDataPath, Error> {
-        Ok(self.data_path(source)?.into_global()?)
+        self.data_path(source)?.into_global()
     }
 
     /// Look up or compile a local data path using the cache.
     fn local_path(&self, source: &str) -> Result<LocalDataPath, Error> {
-        Ok(self.data_path(source)?.into_local()?)
+        self.data_path(source)?.into_local()
     }
 
     /// Allocate a new backup slot.

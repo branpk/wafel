@@ -55,7 +55,7 @@ impl GlobalDataPath {
     ///
     /// See module documentation for syntax.
     pub fn compile(memory: &impl Memory, source: &str) -> Result<Self, Error> {
-        Ok(compile::data_path(memory, source)?.into_global()?)
+        compile::data_path(memory, source)?.into_global()
     }
 
     /// Get the source for the path.
@@ -143,7 +143,7 @@ impl LocalDataPath {
     ///
     /// See module documentation for syntax.
     pub fn compile(memory: &impl Memory, source: &str) -> Result<Self, Error> {
-        Ok(compile::data_path(memory, source)?.into_local()?)
+        compile::data_path(memory, source)?.into_local()
     }
 
     /// Get the path's root data type.

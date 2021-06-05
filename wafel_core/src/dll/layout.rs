@@ -501,7 +501,7 @@ where
         let mut children = node.children();
         let subrange_node = children
             .next()?
-            .ok_or_else(|| LayoutErrorCause::MissingSubrangeNode { entry_label })?;
+            .ok_or(LayoutErrorCause::MissingSubrangeNode { entry_label })?;
         let subrange_entry = subrange_node.entry();
         self.expect_tag(subrange_entry, gimli::DW_TAG_subrange_type)?;
         let length = self

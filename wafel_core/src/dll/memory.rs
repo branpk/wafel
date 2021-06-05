@@ -21,7 +21,6 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use std::{
     collections::HashMap,
-    env,
     fmt::Display,
     mem,
     path::Path,
@@ -313,7 +312,7 @@ impl Memory {
         unsafe {
             let segment = slot
                 .segment(address.segment)
-                .ok_or_else(|| MemoryErrorCause::InvalidAddress)?;
+                .ok_or(MemoryErrorCause::InvalidAddress)?;
             self.validate_offset::<T>(address.offset, segment.len())?;
             Ok(&segment[address.offset] as *const u8 as *const T)
         }
@@ -332,7 +331,7 @@ impl Memory {
         unsafe {
             let segment = slot
                 .segment_mut(address.segment)
-                .ok_or_else(|| MemoryErrorCause::InvalidAddress)?;
+                .ok_or(MemoryErrorCause::InvalidAddress)?;
             self.validate_offset::<T>(address.offset, segment.len())?;
             Ok(&mut segment[address.offset] as *mut u8 as *mut T)
         }

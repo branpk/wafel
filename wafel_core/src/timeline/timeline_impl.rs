@@ -69,10 +69,7 @@ impl<M: Memory, C: Controller<M>> Timeline<M, C> {
     ///
     /// Generally, only one state should be kept alive at a time. Accessing one of the states
     /// may result in a panic.
-    pub fn frame_uncached<'a>(
-        &'a self,
-        frame: u32,
-    ) -> Result<impl SlotState<Memory = M> + 'a, Error> {
+    pub fn frame_uncached(&self, frame: u32) -> Result<impl SlotState<Memory = M> + '_, Error> {
         self.slot_manager.frame(frame)
     }
 
@@ -82,7 +79,7 @@ impl<M: Memory, C: Controller<M>> Timeline<M, C> {
     ///
     /// Generally, only one state should be kept alive at a time. Accessing one of the states
     /// may result in a panic.
-    pub fn frame<'a>(&'a self, frame: u32) -> Result<impl State<Memory = M> + 'a, Error> {
+    pub fn frame(&self, frame: u32) -> Result<impl State<Memory = M> + '_, Error> {
         Ok(TimelineState {
             timeline: self,
             frame,
@@ -115,7 +112,7 @@ impl<M: Memory, C: Controller<M>> Timeline<M, C> {
     /// # Panics
     ///
     /// Panics if another slot is requested while this one is still held.
-    pub fn base_slot<'a>(&'a self, frame: u32) -> Result<impl SlotState<Memory = M> + 'a, Error> {
+    pub fn base_slot(&self, frame: u32) -> Result<impl SlotState<Memory = M> + '_, Error> {
         self.slot_manager.base_slot(frame)
     }
 
@@ -123,10 +120,10 @@ impl<M: Memory, C: Controller<M>> Timeline<M, C> {
     ///
     /// This can be used for running internal functions in the base slot that may have a side
     /// effect.
-    pub fn base_slot_mut<'a>(
-        &'a mut self,
+    pub fn base_slot_mut(
+        &mut self,
         frame: u32,
-    ) -> Result<impl SlotStateMut<Memory = M> + 'a, Error> {
+    ) -> Result<impl SlotStateMut<Memory = M> + '_, Error> {
         self.slot_manager.base_slot_mut(frame)
     }
 
@@ -224,10 +221,7 @@ impl<'a, M: Memory, C: Controller<M>> State for TimelineState<'a, M, C> {
 
     fn path_address(&self, path: &GlobalDataPath) -> Result<Option<Address>, Error> {
         // Uncached for now (could also skip frame request in common case)
-        Ok(self
-            .timeline
-            .frame_uncached(self.frame)?
-            .path_address(path)?)
+        self.timeline.frame_uncached(self.frame)?.path_address(path)
     }
 
     fn path_read(&self, path: &GlobalDataPath) -> Result<Value, Error> {
