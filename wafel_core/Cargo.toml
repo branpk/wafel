@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 [dependencies]
 derive_more = "0.99.14"
 nom = "6.1.2"
-object = "0.25.2"
+object = "0.18.0"
 gimli = "0.24.0"
 topological-sort = "0.1.0"
 textwrap = "0.14.0"

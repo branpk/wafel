@@ -170,7 +170,6 @@ impl ImguiRenderer {
             },
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
-                strip_index_format: Some(index_format),
                 ..Default::default()
             },
             depth_stencil: None,
