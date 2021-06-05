@@ -8,36 +8,36 @@ name = "wafel_core"
 crate-type = ["cdylib"]
 
 [dependencies]
-derive_more = "0.99.5"
-nom = "5.1.1"
-object = "0.18.0"
-gimli = "0.20.0"
+derive_more = "0.99.14"
+nom = "6.1.2"
+object = "0.25.2"
+gimli = "0.24.0"
 topological-sort = "0.1.0"
-textwrap = "0.11.0"
-itertools = "0.9.0"
+textwrap = "0.14.0"
+itertools = "0.10.0"
 dlopen = "0.1.8"
-rand = "0.7.3"
-pyo3 = { version = "0.12.4", features = ["extension-module"] }
-derivative = "2.1.1"
-serde_json = "1.0.55"
+rand = "0.8.3"
+pyo3 = { version = "0.13.2", features = ["extension-module"] }
+derivative = "2.2.0"
+serde_json = "1.0.64"
 lazy_static = "1.4.0"
-indexmap = "1.4.0"
-serde = { version = "1.0.115", features = ["derive", "rc"] }
-lru = "0.6.0"
-deepsize = "0.1.2"
+indexmap = "1.6.2"
+serde = { version = "1.0.126", features = ["derive", "rc"] }
+lru = "0.6.5"
+deepsize = "0.2.0"
 winapi = { version = "0.3.9", features = ["dbghelp", "processthreadsapi"] }
 wgpu = { git = "https://github.com/gfx-rs/wgpu-rs.git" }
-futures = "0.3.5"
-winit = "0.24.0"
-bytemuck = "1.3.1"
-nalgebra = "0.22.0"
-image = "0.23.10"
-tracing = "0.1.22"
-tracing-log = "0.1.1"
-tracing-subscriber = "0.2.15"
+futures = "0.3.15"
+winit = "0.25.0"
+bytemuck = "1.5.1"
+nalgebra = "0.27.1"
+image = "0.23.14"
+tracing = "0.1.26"
+tracing-log = "0.1.2"
+tracing-subscriber = "0.2.18"
 
 [build-dependencies]
-walkdir = "2.3.1"
+walkdir = "2.3.2"
 
 [profile.release]
 debug = true

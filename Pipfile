@@ -6,6 +6,7 @@ verify_ssl = true
 [dev-packages]
 pyinstaller = "*"
 mypy = "*"
+pylint = "*"
 
 [packages]
 imgui = { version = "*", extras = ["cython", "glfw"] }
