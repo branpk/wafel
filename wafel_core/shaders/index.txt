@@ -1,5 +1,3 @@
-imgui.vert
-imgui.frag
 surface.vert
 surface.frag
 color.vert

@@ -129,6 +129,9 @@ impl ImguiRenderer {
             n => unimplemented!("{}", n),
         };
 
+        let shader = device
+            .create_shader_module(&wgpu::include_wgsl!("../../assets/shaders_new/imgui.wgsl"));
+
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
             layout: Some(
@@ -139,9 +142,7 @@ impl ImguiRenderer {
                 }),
             ),
             vertex: wgpu::VertexState {
-                module: &device.create_shader_module(&wgpu::include_spirv!(
-                    "../../assets/shaders/imgui.vert.spv"
-                )),
+                module: &shader,
                 entry_point: "main",
                 buffers: &[wgpu::VertexBufferLayout {
                     array_stride: config.vertex_size as wgpu::BufferAddress,
@@ -175,9 +176,7 @@ impl ImguiRenderer {
             depth_stencil: None,
             multisample: Default::default(),
             fragment: Some(wgpu::FragmentState {
-                module: &device.create_shader_module(&wgpu::include_spirv!(
-                    "../../assets/shaders/imgui.frag.spv"
-                )),
+                module: &shader,
                 entry_point: "main",
                 targets: &[wgpu::ColorTargetState {
                     format: output_format,
