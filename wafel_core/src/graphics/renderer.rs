@@ -544,6 +544,8 @@ fn create_color_pipeline(
     depth_test_enabled: bool,
     primitive_topology: wgpu::PrimitiveTopology,
 ) -> wgpu::RenderPipeline {
+    let shader =
+        device.create_shader_module(&wgpu::include_wgsl!("../../assets/shaders_new/color.wgsl"));
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: None,
         layout: Some(
@@ -554,8 +556,7 @@ fn create_color_pipeline(
             }),
         ),
         vertex: wgpu::VertexState {
-            module: &device
-                .create_shader_module(&wgpu::include_spirv!("../../assets/shaders/color.vert.spv")),
+            module: &shader,
             entry_point: "main",
             buffers: &[wgpu::VertexBufferLayout {
                 array_stride: size_of::<Vertex>() as wgpu::BufferAddress,
@@ -596,8 +597,7 @@ fn create_color_pipeline(
             ..Default::default()
         },
         fragment: Some(wgpu::FragmentState {
-            module: &device
-                .create_shader_module(&wgpu::include_spirv!("../../assets/shaders/color.frag.spv")),
+            module: &shader,
             entry_point: "main",
             targets: &[wgpu::ColorTargetState {
                 format: output_format,

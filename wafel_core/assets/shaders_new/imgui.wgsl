@@ -1,8 +1,9 @@
 [[block]]
-struct Proj {
-    proj: mat4x4<f32>;
+struct Transform {
+    matrix: mat4x4<f32>;
 };
-[[group(0), binding(0)]] var r_proj: Proj;
+
+[[group(0), binding(0)]] var r_proj: Transform;
 
 [[group(1), binding(0)]] var r_sampler: sampler;
 [[group(1), binding(1)]] var r_texture: texture_2d<f32>;
@@ -20,7 +21,7 @@ fn main(
     [[location(2)]] color: vec4<f32>,
 ) -> VertexOutput {
     return VertexOutput(
-        r_proj.proj * vec4<f32>(pos, 0.0, 1.0),
+        r_proj.matrix * vec4<f32>(pos, 0.0, 1.0),
         tex_coord,
         color,
     );
