@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "wafel_core",
+]
+
+[profile.release]
+debug = true
+incremental = true

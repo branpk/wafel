@@ -10,7 +10,7 @@ from wafel.game_versions import lock_game_version, unlocked_game_versions, find_
 config.init()
 
 if 'clean' in sys.argv[1:]:
-  build_files = ['dist', 'build', 'wafel_core/target', 'wafel_core.pyd']
+  build_files = ['dist', 'build', 'target', 'wafel_core.pyd']
   for file in build_files:
     if os.path.isfile(file):
       print('Removing ' + file)
@@ -21,10 +21,10 @@ if 'clean' in sys.argv[1:]:
 
 if sys.argv[1:] == [] or 'dist' in sys.argv[1:]:
   subprocess.run(
-    ['cargo', '+nightly', 'build', '--release', '--manifest-path', 'wafel_core/Cargo.toml'],
+    ['cargo', '+nightly', 'build', '--release'],
     check=True,
   )
-  shutil.copyfile('wafel_core/target/release/wafel_core.dll', 'wafel_core.pyd')
+  shutil.copyfile('target/release/wafel_core.dll', 'wafel_core.pyd')
 
 if 'dist' in sys.argv[1:]:
   shutil.rmtree('build/dist', ignore_errors=True)
@@ -71,7 +71,7 @@ if 'dist' in sys.argv[1:]:
     )
 
   print('Copying .pdb')
-  shutil.copyfile('wafel_core/target/release/wafel_core.pdb', 'build/dist/wafel_core.pdb')
+  shutil.copyfile('target/release/wafel_core.pdb', 'build/dist/wafel_core.pdb')
 
   print('Creating zip file')
   shutil.make_archive(
