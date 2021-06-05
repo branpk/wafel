@@ -1,7 +1,7 @@
 //! Renderer for imgui.
 
 use bytemuck::cast_slice;
-use std::iter;
+use std::{convert::TryInto, iter};
 use wgpu::util::DeviceExt;
 
 /// Initial configuration for imgui draw lists.
@@ -138,61 +138,61 @@ impl ImguiRenderer {
                     push_constant_ranges: &[],
                 }),
             ),
-            vertex_stage: wgpu::ProgrammableStageDescriptor {
+            vertex: wgpu::VertexState {
                 module: &device.create_shader_module(&wgpu::include_spirv!(
                     "../../assets/shaders/imgui.vert.spv"
                 )),
                 entry_point: "main",
-            },
-            fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
-                module: &device.create_shader_module(&wgpu::include_spirv!(
-                    "../../assets/shaders/imgui.frag.spv"
-                )),
-                entry_point: "main",
-            }),
-            rasterization_state: None,
-            primitive_topology: wgpu::PrimitiveTopology::TriangleList,
-            color_states: &[wgpu::ColorStateDescriptor {
-                format: output_format,
-                alpha_blend: wgpu::BlendDescriptor::REPLACE,
-                color_blend: wgpu::BlendDescriptor {
-                    src_factor: wgpu::BlendFactor::SrcAlpha,
-                    dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-                    operation: wgpu::BlendOperation::Add,
-                },
-                write_mask: wgpu::ColorWrite::ALL,
-            }],
-            depth_stencil_state: None,
-            vertex_state: wgpu::VertexStateDescriptor {
-                index_format: Some(index_format),
-                vertex_buffers: &[wgpu::VertexBufferDescriptor {
-                    stride: config.vertex_size as wgpu::BufferAddress,
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: config.vertex_size as wgpu::BufferAddress,
                     step_mode: wgpu::InputStepMode::Vertex,
                     attributes: &[
                         // a_Pos
-                        wgpu::VertexAttributeDescriptor {
+                        wgpu::VertexAttribute {
                             offset: config.vertex_pos_offset as wgpu::BufferAddress,
-                            format: wgpu::VertexFormat::Float2,
+                            format: wgpu::VertexFormat::Float32x2,
                             shader_location: 0,
                         },
                         // a_TexCoord
-                        wgpu::VertexAttributeDescriptor {
+                        wgpu::VertexAttribute {
                             offset: config.vertex_tex_coord_offset as wgpu::BufferAddress,
-                            format: wgpu::VertexFormat::Float2,
+                            format: wgpu::VertexFormat::Float32x2,
                             shader_location: 1,
                         },
                         // a_Color
-                        wgpu::VertexAttributeDescriptor {
+                        wgpu::VertexAttribute {
                             offset: config.vertex_color_offset as wgpu::BufferAddress,
-                            format: wgpu::VertexFormat::Uchar4Norm,
+                            format: wgpu::VertexFormat::Unorm8x4,
                             shader_location: 2,
                         },
                     ],
                 }],
             },
-            sample_count: 1,
-            sample_mask: !0,
-            alpha_to_coverage_enabled: false,
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: Some(index_format),
+                ..Default::default()
+            },
+            depth_stencil: None,
+            multisample: Default::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &device.create_shader_module(&wgpu::include_spirv!(
+                    "../../assets/shaders/imgui.frag.spv"
+                )),
+                entry_point: "main",
+                targets: &[wgpu::ColorTargetState {
+                    format: output_format,
+                    blend: Some(wgpu::BlendState {
+                        color: wgpu::BlendComponent {
+                            src_factor: wgpu::BlendFactor::SrcAlpha,
+                            dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                            operation: wgpu::BlendOperation::Add,
+                        },
+                        alpha: wgpu::BlendComponent::REPLACE,
+                    }),
+                    write_mask: wgpu::ColorWrite::ALL,
+                }],
+            }),
         });
 
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
@@ -215,7 +215,7 @@ impl ImguiRenderer {
             size: wgpu::Extent3d {
                 width: config.font_texture_width,
                 height: config.font_texture_height,
-                depth: 1,
+                depth_or_array_layers: 1,
             },
             mip_level_count: 1,
             sample_count: 1,
@@ -224,21 +224,21 @@ impl ImguiRenderer {
             usage: wgpu::TextureUsage::COPY_DST | wgpu::TextureUsage::SAMPLED,
         });
         queue.write_texture(
-            wgpu::TextureCopyView {
+            wgpu::ImageCopyTexture {
                 texture: &texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
             },
             &config.font_texture_data,
-            wgpu::TextureDataLayout {
+            wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: 4 * config.font_texture_width,
-                rows_per_image: config.font_texture_height,
+                bytes_per_row: Some((4 * config.font_texture_width).try_into().unwrap()),
+                rows_per_image: Some(config.font_texture_height.try_into().unwrap()),
             },
             wgpu::Extent3d {
                 width: config.font_texture_width,
                 height: config.font_texture_height,
-                depth: 1,
+                depth_or_array_layers: 1,
             },
         );
 
@@ -297,11 +297,11 @@ impl ImguiRenderer {
                 // u_Proj
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::Buffer {
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                         buffer: &proj_matrix_buffer,
                         offset: 0,
                         size: None,
-                    },
+                    }),
                 },
             ],
         });
@@ -328,8 +328,8 @@ impl ImguiRenderer {
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
-                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: output_view,
+                color_attachments: &[wgpu::RenderPassColorAttachment {
+                    view: output_view,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Load,

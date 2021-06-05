@@ -51,7 +51,7 @@ pub fn open_window_and_run(title: &str, update_fn: PyObject) -> PyResult<()> {
 }
 
 /// The joystick's state after removing the dead zone and capping the magnitude.
-#[pyclass(name = AdjustedStick)]
+#[pyclass(name = "AdjustedStick")]
 #[derive(Debug, Clone, Copy)]
 pub struct PyAdjustedStick {
     /// Adjusted stick x.
@@ -75,7 +75,7 @@ impl PyAdjustedStick {
 }
 
 /// The joystick's state as stored in the mario struct.
-#[pyclass(name = IntendedStick)]
+#[pyclass(name = "IntendedStick")]
 #[derive(Debug, Clone, Copy)]
 pub struct PyIntendedStick {
     /// Intended yaw in world space.

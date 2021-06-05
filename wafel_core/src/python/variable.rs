@@ -12,7 +12,7 @@ use std::{
 };
 
 /// An abstract game variable.
-#[pyclass(name = Variable, unsendable)]
+#[pyclass(name = "Variable", unsendable)]
 #[derive(Debug, Display, Clone, PartialEq, Eq, Hash)]
 pub struct PyVariable {
     pub(crate) variable: Variable,
@@ -161,21 +161,21 @@ impl PyObjectProtocol for PyVariable {
 }
 
 /// An opaque representation of an object behavior.
-#[pyclass(name = ObjectBehavior)]
+#[pyclass(name = "ObjectBehavior")]
 #[derive(Debug)]
 pub struct PyObjectBehavior {
     pub(crate) behavior: ObjectBehavior,
 }
 
 /// An opaque representation of a memory address.
-#[pyclass(name = Address, unsendable)]
+#[pyclass(name = "Address", unsendable)]
 #[derive(Debug, Clone)]
 pub struct PyAddress {
     pub(crate) address: Address,
 }
 
 /// Information about a variable edit range.
-#[pyclass(name = EditRange)]
+#[pyclass(name = "EditRange")]
 #[derive(Debug)]
 pub struct PyEditRange {
     pub(crate) range: EditRange,

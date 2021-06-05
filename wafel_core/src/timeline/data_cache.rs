@@ -100,4 +100,4 @@ impl DataCache {
     }
 }
 
-known_deep_size!(0, Value);
+known_deep_size!(0; Value);

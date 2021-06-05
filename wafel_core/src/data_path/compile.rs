@@ -12,7 +12,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_while1},
     character::{complete::space1, is_alphanumeric, is_digit},
-    combinator::{all_consuming, map, map_res},
+    combinator::{all_consuming, map},
     error::{convert_error, ParseError, VerboseError},
     multi::many0,
     sequence::{preceded, separated_pair, terminated, tuple},
@@ -267,7 +267,7 @@ fn parse_name<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a st
 }
 
 fn parse_int<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, usize, E> {
-    map_res(take_while1(|c| is_digit(c as u8)), |s: &str| {
-        s.parse::<usize>()
+    map(take_while1(|c| is_digit(c as u8)), |s: &str| {
+        s.parse::<usize>().unwrap()
     })(i)
 }

@@ -65,7 +65,7 @@ impl Display for DllLayout {
 pub fn load_layout_from_dll(dll_path: impl AsRef<Path>) -> Result<DllLayout, LayoutError> {
     // Read object file
     let buffer = fs::read(&dll_path)?;
-    let object = object::File::parse(&buffer)?;
+    let object = object::File::parse(&buffer[..])?;
 
     let mut segments = Vec::new();
     for segment in object.segments() {
@@ -86,8 +86,7 @@ pub fn load_layout_from_dll(dll_path: impl AsRef<Path>) -> Result<DllLayout, Lay
             .transpose()?
             .unwrap_or(Cow::Borrowed(&[])))
     };
-    let load_section_supplement = |_| Ok(Cow::Borrowed(&[] as &[u8]));
-    let dwarf_cow = Dwarf::load(&load_section, &load_section_supplement)?;
+    let dwarf_cow = Dwarf::load(&load_section)?;
     let dwarf = dwarf_cow.borrow(|section| EndianSlice::new(&section, RunTimeEndian::default()));
 
     // Read layout from dwarf

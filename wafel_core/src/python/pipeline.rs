@@ -31,7 +31,7 @@ lazy_static! {
 ///
 /// Note that writing a value to a variable and then reading the variable does not
 /// necessarily result in the original value.
-#[pyclass(name = Pipeline, unsendable)]
+#[pyclass(name = "Pipeline", unsendable)]
 #[derive(Debug)]
 pub struct PyPipeline {
     valid: Option<ValidPipeline>,

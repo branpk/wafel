@@ -6,9 +6,6 @@
 #![allow(clippy::float_cmp)]
 #![feature(try_blocks)]
 #![feature(backtrace)]
-#![feature(option_expect_none)]
-#![feature(range_is_empty)]
-#![feature(inner_deref)]
 
 pub mod data_path;
 pub mod dll;
