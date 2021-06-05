@@ -467,6 +467,9 @@ fn create_surface_pipeline(
     output_format: wgpu::TextureFormat,
     depth_write_enabled: bool,
 ) -> wgpu::RenderPipeline {
+    let shader = device.create_shader_module(&wgpu::include_wgsl!(
+        "../../assets/shaders_new/surface.wgsl"
+    ));
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: None,
         layout: Some(
@@ -477,9 +480,7 @@ fn create_surface_pipeline(
             }),
         ),
         vertex: wgpu::VertexState {
-            module: &device.create_shader_module(&wgpu::include_spirv!(
-                "../../assets/shaders/surface.vert.spv"
-            )),
+            module: &shader,
             entry_point: "main",
             buffers: &[wgpu::VertexBufferLayout {
                 array_stride: size_of::<Vertex>() as wgpu::BufferAddress,
@@ -516,9 +517,7 @@ fn create_surface_pipeline(
             ..Default::default()
         },
         fragment: Some(wgpu::FragmentState {
-            module: &device.create_shader_module(&wgpu::include_spirv!(
-                "../../assets/shaders/surface.frag.spv"
-            )),
+            module: &shader,
             entry_point: "main",
             targets: &[wgpu::ColorTargetState {
                 format: output_format,
