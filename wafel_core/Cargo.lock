@@ -2396,7 +2396,6 @@ dependencies = [
  "tracing",
  "tracing-log",
  "tracing-subscriber",
- "walkdir",
  "wgpu",
  "winapi",
  "winit",

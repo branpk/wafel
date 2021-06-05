@@ -467,9 +467,8 @@ fn create_surface_pipeline(
     output_format: wgpu::TextureFormat,
     depth_write_enabled: bool,
 ) -> wgpu::RenderPipeline {
-    let shader = device.create_shader_module(&wgpu::include_wgsl!(
-        "../../assets/shaders_new/surface.wgsl"
-    ));
+    let shader =
+        device.create_shader_module(&wgpu::include_wgsl!("../../assets/shaders/surface.wgsl"));
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: None,
         layout: Some(
@@ -544,7 +543,7 @@ fn create_color_pipeline(
     primitive_topology: wgpu::PrimitiveTopology,
 ) -> wgpu::RenderPipeline {
     let shader =
-        device.create_shader_module(&wgpu::include_wgsl!("../../assets/shaders_new/color.wgsl"));
+        device.create_shader_module(&wgpu::include_wgsl!("../../assets/shaders/color.wgsl"));
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: None,
         layout: Some(
@@ -623,9 +622,8 @@ fn create_screen_dot_pipeline(
     transform_bind_group_layout: &wgpu::BindGroupLayout,
     output_format: wgpu::TextureFormat,
 ) -> wgpu::RenderPipeline {
-    let shader = device.create_shader_module(&wgpu::include_wgsl!(
-        "../../assets/shaders_new/screen_dot.wgsl"
-    ));
+    let shader =
+        device.create_shader_module(&wgpu::include_wgsl!("../../assets/shaders/screen_dot.wgsl"));
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: None,
         layout: Some(
