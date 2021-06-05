@@ -30,7 +30,6 @@ To build from source, you'll need the following installed (be sure to use 64 bit
 * [Latest Rust nightly](https://www.rust-lang.org/tools/install)
 * [Python 3.8 or above](https://www.python.org/downloads/)
 * [pipenv](https://pipenv.pypa.io/en/latest/install/#installing-pipenv)
-* [glslc](https://github.com/google/shaderc#downloads) (you'll need to add this to your path manually)
 * [Visual C++ 2015 run-time](https://www.microsoft.com/en-us/download/details.aspx?id=52685)
 
 Setup:
