@@ -28,7 +28,7 @@ serde = { version = "1.0.126", features = ["derive", "rc"] }
 lru = "0.6.5"
 deepsize = "0.2.0"
 winapi = { version = "0.3.9", features = ["dbghelp", "processthreadsapi"] }
-wgpu = { git = "https://github.com/gfx-rs/wgpu-rs.git" }
+wgpu = { git = "https://github.com/gfx-rs/wgpu" }
 futures = "0.3.15"
 winit = "0.25.0"
 bytemuck = "1.5.1"
