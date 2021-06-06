@@ -25,7 +25,7 @@ pub fn data_path<M: Memory>(memory: &M, source: &str) -> Result<DataPath, Error>
         match ast.root {
             RootAst::Global(root_name) => {
                 let root: Address = memory.symbol_address(&root_name)?;
-                let root_type = layout.get_global(&root_name)?;
+                let root_type = layout.global(&root_name)?;
                 let root_type = layout.concrete_type(root_type)?;
 
                 let mut path = DataPathImpl {
@@ -43,7 +43,7 @@ pub fn data_path<M: Memory>(memory: &M, source: &str) -> Result<DataPath, Error>
             }
 
             RootAst::Local(root_name) => {
-                let root = layout.get_type(&root_name)?;
+                let root = layout.data_type(&root_name)?;
                 let root = layout.concrete_type(root)?;
 
                 let mut path = DataPathImpl {

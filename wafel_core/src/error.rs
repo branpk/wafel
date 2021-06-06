@@ -8,6 +8,8 @@ use std::{
 };
 
 use derive_more::{Display, Error, From};
+use wafel_data_type::ValueError;
+use wafel_layout::LayoutLookupError;
 
 use crate::{
     data_path::DataPathErrorCause,
@@ -21,6 +23,10 @@ pub type Error = WithContext<ErrorCause>;
 #[derive(Debug, Display, Error, From)]
 pub enum ErrorCause {
     #[from]
+    ValueError(ValueError),
+    #[from]
+    LayoutLookupError(LayoutLookupError),
+    #[from]
     MemoryError(MemoryErrorCause),
     #[from]
     DataPathError(DataPathErrorCause),
@@ -28,6 +34,18 @@ pub enum ErrorCause {
     DllError(DllErrorCause),
     #[from]
     SM64Error(SM64ErrorCause),
+}
+
+impl From<ValueError> for Error {
+    fn from(value: ValueError) -> Self {
+        ErrorCause::ValueError(value).into()
+    }
+}
+
+impl From<LayoutLookupError> for Error {
+    fn from(value: LayoutLookupError) -> Self {
+        ErrorCause::LayoutLookupError(value).into()
+    }
 }
 
 impl From<MemoryErrorCause> for Error {

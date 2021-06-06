@@ -4,6 +4,8 @@ use std::{collections::HashMap, fmt};
 
 use wafel_data_type::{DataType, DataTypeRef, IntValue, TypeName};
 
+use crate::LayoutLookupError::{self, *};
+
 /// A description of accessible variables and types.
 #[derive(Debug, Clone, Default)]
 pub struct DataLayout {
@@ -47,35 +49,46 @@ impl DataLayout {
     }
 
     /// Look up the definition of a type name.
-    pub fn data_type(&self, name: &TypeName) -> Option<&DataTypeRef> {
-        self.type_defns.get(name)
+    pub fn data_type(&self, name: &TypeName) -> Result<&DataTypeRef, LayoutLookupError> {
+        self.type_defns
+            .get(name)
+            .ok_or_else(|| UndefinedTypeName(name.clone()))
     }
 
     /// Look up the definition of a type name.
     ///
     /// This returns a mutable reference to the DataTypeRef. This is only useful if
     /// the data type hasn't been used in multiple places.
-    pub fn data_type_mut(&mut self, name: &TypeName) -> Option<&mut DataTypeRef> {
-        self.type_defns.get_mut(name)
+    pub fn data_type_mut(
+        &mut self,
+        name: &TypeName,
+    ) -> Result<&mut DataTypeRef, LayoutLookupError> {
+        self.type_defns
+            .get_mut(name)
+            .ok_or_else(|| UndefinedTypeName(name.clone()))
     }
 
     /// Recursively look up a type name.
-    pub fn concrete_type(&self, data_type: &DataTypeRef) -> Option<DataTypeRef> {
+    pub fn concrete_type(&self, data_type: &DataTypeRef) -> Result<DataTypeRef, LayoutLookupError> {
         let mut data_type = data_type.clone();
         while let DataType::Name(name) = data_type.as_ref() {
             data_type = self.data_type(name)?.clone();
         }
-        Some(data_type)
+        Ok(data_type)
     }
 
     /// Look up the type of a global variable.
-    pub fn global(&self, name: &str) -> Option<&DataTypeRef> {
-        self.globals.get(name)
+    pub fn global(&self, name: &str) -> Result<&DataTypeRef, LayoutLookupError> {
+        self.globals
+            .get(name)
+            .ok_or_else(|| UndefinedGlobal(name.to_string()))
     }
 
     /// Look up the value of a constant.
-    pub fn constant(&self, name: &str) -> Option<&Constant> {
-        self.constants.get(name)
+    pub fn constant(&self, name: &str) -> Result<&Constant, LayoutLookupError> {
+        self.constants
+            .get(name)
+            .ok_or_else(|| UndefinedConstant(name.to_string()))
     }
 }
 

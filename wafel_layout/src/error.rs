@@ -1,6 +1,6 @@
 use std::{error::Error, fmt, io};
 
-use wafel_data_type::shallow::BuildDataTypesError;
+use wafel_data_type::{shallow::BuildDataTypesError, TypeName};
 
 #[derive(Debug)]
 pub struct DllLayoutError {
@@ -124,3 +124,28 @@ impl From<BuildDataTypesError<String>> for DllLayoutErrorKind {
         Self::BuildDataTypesError(v)
     }
 }
+
+#[derive(Debug, Clone)]
+pub enum LayoutLookupError {
+    UndefinedTypeName(TypeName),
+    UndefinedGlobal(String),
+    UndefinedConstant(String),
+}
+
+impl fmt::Display for LayoutLookupError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LayoutLookupError::UndefinedTypeName(type_name) => {
+                write!(f, "undefined type name: {}", type_name)
+            }
+            LayoutLookupError::UndefinedGlobal(name) => {
+                write!(f, "undefined global name: {}", name)
+            }
+            LayoutLookupError::UndefinedConstant(name) => {
+                write!(f, "undefined constant name: {}", name)
+            }
+        }
+    }
+}
+
+impl Error for LayoutLookupError {}

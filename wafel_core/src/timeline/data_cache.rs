@@ -97,7 +97,7 @@ impl DataCache {
         for (frame, cache) in &self.cache {
             entries.insert(
                 *frame,
-                cache.iter().map(|(k, v)| (*k, (*v).into())).collect(),
+                cache.iter().map(|(k, v)| (*k, v.clone().into())).collect(),
             );
         }
         entries.deep_size_of()

@@ -4,6 +4,7 @@ use super::{
 };
 use crate::{
     dll,
+    error::Error,
     geo::Point3f,
     geo::Vector3f,
     graphics::scene,
@@ -455,7 +456,11 @@ impl PyPipeline {
 
         let mut nodes = Vec::new();
         for frame in frame_start..frame_end {
-            let pos_coords = timeline.frame(frame)?.path_read(&pos_path)?.as_f32_3()?;
+            let pos_coords = timeline
+                .frame(frame)?
+                .path_read(&pos_path)?
+                .as_f32_3()
+                .map_err(Error::from)?;
             nodes.push(scene::ObjectPathNode {
                 pos: Point3f::from_slice(&pos_coords).into(),
                 quarter_steps: Vec::new(),

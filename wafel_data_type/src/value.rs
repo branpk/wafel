@@ -1,6 +1,6 @@
 //! Dynamically typed value used for reading and writing to memory.
 
-use std::{collections::HashMap, convert::TryFrom, fmt, ops::Add};
+use std::{borrow::Cow, collections::HashMap, convert::TryFrom, error::Error, fmt, ops::Add};
 
 use serde::{Deserialize, Serialize};
 
@@ -65,74 +65,97 @@ impl Value {
     }
 
     /// Convert the value to an int.
-    pub fn as_int(&self) -> Option<IntValue> {
+    pub fn as_int(&self) -> Result<IntValue, ValueError> {
         if let Value::Int(n) = *self {
-            Some(n)
+            Ok(n)
         } else {
-            None
+            Err(ValueError::WrongType {
+                expected: "int".into(),
+                actual: self.clone(),
+            })
         }
     }
 
     /// Convert the value to a usize.
-    pub fn as_usize(&self) -> Option<usize> {
-        self.as_int().and_then(|n| usize::try_from(n).ok())
+    pub fn as_usize(&self) -> Result<usize, ValueError> {
+        self.as_int().and_then(|n| {
+            usize::try_from(n).map_err(|_| ValueError::WrongType {
+                expected: "usize".into(),
+                actual: self.clone(),
+            })
+        })
     }
 
     /// Convert the value to a float.
-    pub fn as_float(&self) -> Option<FloatValue> {
+    pub fn as_float(&self) -> Result<FloatValue, ValueError> {
         if let Value::Float(r) = *self {
-            Some(r)
+            Ok(r)
         } else {
-            None
+            Err(ValueError::WrongType {
+                expected: "float".into(),
+                actual: self.clone(),
+            })
         }
     }
 
     /// Convert the value to a float and then truncate to an f32.
-    pub fn as_f32(&self) -> Option<f32> {
+    pub fn as_f32(&self) -> Result<f32, ValueError> {
         self.as_float().map(|r| r as f32)
     }
 
     /// Convert the value to an address.
-    pub fn as_address(&self) -> Option<Address> {
+    pub fn as_address(&self) -> Result<Address, ValueError> {
         if let Value::Address(address) = self {
-            Some(*address)
+            Ok(*address)
         } else {
-            None
+            Err(ValueError::WrongType {
+                expected: "address".into(),
+                actual: self.clone(),
+            })
         }
     }
 
     /// Convert the value to a struct and return its fields.
-    pub fn as_struct(&self) -> Option<&HashMap<String, Value>> {
+    pub fn as_struct(&self) -> Result<&HashMap<String, Value>, ValueError> {
         if let Value::Struct { fields } = self {
-            Some(fields)
+            Ok(fields)
         } else {
-            None
+            Err(ValueError::WrongType {
+                expected: "struct".into(),
+                actual: self.clone(),
+            })
         }
     }
 
     /// Convert the value to an array and return its elements.
-    pub fn as_array(&self) -> Option<&[Value]> {
+    pub fn as_array(&self) -> Result<&[Value], ValueError> {
         if let Value::Array(elements) = self {
-            Some(elements)
+            Ok(elements)
         } else {
-            None
+            Err(ValueError::WrongType {
+                expected: "array".into(),
+                actual: self.clone(),
+            })
         }
     }
 
     /// Convert the value to an array and return its elements.
-    pub fn as_array_with_len(&self, length: usize) -> Option<&[Value]> {
+    pub fn as_array_with_len(&self, length: usize) -> Result<&[Value], ValueError> {
         let elements = self.as_array()?;
         if elements.len() == length {
-            Some(elements)
+            Ok(elements)
         } else {
-            None
+            Err(ValueError::WrongType {
+                expected: format!("array of length {}", length).into(),
+                actual: self.clone(),
+            })
         }
     }
 
     /// Convert the value to an array of three i16s.
-    pub fn as_i16_3(&self) -> Option<[i16; 3]> {
+    pub fn as_i16_3(&self) -> Result<[i16; 3], ValueError> {
         let elements = self.as_array_with_len(3)?;
-        Some([
+        Ok([
             elements[0].as_int()? as i16,
             elements[1].as_int()? as i16,
             elements[2].as_int()? as i16,
@@ -140,9 +163,9 @@ impl Value {
     }
 
     /// Convert the value to an array of three f32s.
-    pub fn as_f32_3(&self) -> Option<[f32; 3]> {
+    pub fn as_f32_3(&self) -> Result<[f32; 3], ValueError> {
         let elements = self.as_array_with_len(3)?;
-        Some([
+        Ok([
             elements[0].as_float()? as f32,
             elements[1].as_float()? as f32,
             elements[2].as_float()? as f32,
@@ -189,3 +212,23 @@ impl fmt::Display for Value {
         }
     }
 }
+
+#[derive(Debug, Clone)]
+pub enum ValueError {
+    WrongType {
+        expected: Cow<'static, str>,
+        actual: Value,
+    },
+}
+
+impl fmt::Display for ValueError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ValueError::WrongType { expected, actual } => {
+                write!(f, "expected value of type: {}, found: {}", expected, actual)
+            }
+        }
+    }
+}
+
+impl Error for ValueError {}

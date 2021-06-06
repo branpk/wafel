@@ -249,10 +249,7 @@ pub fn read_objects_to_scene(scene: &mut Scene, state: &impl SlotState) -> Resul
     let o_hitbox_height = offset("struct Object.hitboxHeight")?;
     let o_hitbox_radius = offset("struct Object.hitboxRadius")?;
 
-    let active_flag_active = memory
-        .data_layout()
-        .get_constant("ACTIVE_FLAG_ACTIVE")?
-        .value as i16;
+    let active_flag_active = memory.data_layout().constant("ACTIVE_FLAG_ACTIVE")?.value as i16;
 
     let read_f32 = |address| -> Result<f32, Error> {
         let classified_address = memory.classify_address(&address);
