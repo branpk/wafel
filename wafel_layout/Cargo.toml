@@ -7,3 +7,4 @@ edition = "2018"
 wafel_data_type = { path = "../wafel_data_type" }
 object = "0.18.0"
 gimli = "0.24.0"
+serde = { version = "1.0.126", features = ["derive", "rc"] }

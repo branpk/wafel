@@ -1,0 +1,9 @@
+[package]
+name = "libsm64_layout"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+wafel_layout = { path = "../wafel_layout" }
+clap = "2.33.3"
+serde_json = "1.0.64"

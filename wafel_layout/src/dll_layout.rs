@@ -12,6 +12,7 @@ use gimli::{
     EntriesTreeNode, Reader, RunTimeEndian, SectionId, Unit,
 };
 use object::{Object, ObjectSection, ObjectSegment};
+use serde::{Deserialize, Serialize};
 use wafel_data_type::{
     shallow::{
         build_data_types, get_size_from_pre_types, BuildDataTypesError, PreDataType,
@@ -23,7 +24,7 @@ use wafel_data_type::{
 use crate::{Constant, ConstantSource, DataLayout, DllLayoutError, DllLayoutErrorKind};
 
 /// Debugging and structural information extracted from a DLL.
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DllLayout {
     /// The segments defined in the DLL.
     pub segments: Vec<DllSegment>,
@@ -32,7 +33,7 @@ pub struct DllLayout {
 }
 
 /// A segment defined in the DLL.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DllSegment {
     /// The name of the segment.
     pub name: String,

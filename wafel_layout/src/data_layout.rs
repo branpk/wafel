@@ -2,12 +2,13 @@
 
 use std::{collections::HashMap, fmt};
 
+use serde::{Deserialize, Serialize};
 use wafel_data_type::{DataType, DataTypeRef, IntValue, TypeName};
 
 use crate::LayoutLookupError::{self, *};
 
 /// A description of accessible variables and types.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DataLayout {
     /// The definitions of structs, unions, and typedefs.
     pub type_defns: HashMap<TypeName, DataTypeRef>,
@@ -18,7 +19,7 @@ pub struct DataLayout {
 }
 
 /// A constant's value and source.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Constant {
     /// The integer value for the constant.
     pub value: IntValue,
@@ -27,7 +28,8 @@ pub struct Constant {
 }
 
 /// The source for a constant value.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(tag = "kind")]
 pub enum ConstantSource {
     /// The constant is defined as an enum variant.
     Enum {

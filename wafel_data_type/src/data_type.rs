@@ -2,8 +2,11 @@
 
 use std::{collections::HashMap, error::Error, fmt, sync::Arc};
 
+use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
+
 /// A representation of a C data type.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "data")]
 pub enum DataType {
     /// Void, typically used as a pointer target or function return type.
     Void,
@@ -54,7 +57,7 @@ pub enum DataType {
 pub type DataTypeRef = Arc<DataType>;
 
 /// Integer types of different sizes and signedness.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum IntType {
     /// 8 bit unsigned int
     U8,
@@ -75,7 +78,7 @@ pub enum IntType {
 }
 
 /// Float types of different sizes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum FloatType {
     /// 32 bit float
     F32,
@@ -133,7 +136,7 @@ pub struct TypeName {
 }
 
 /// A field in a struct or union.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Field {
     /// The byte offset within the struct or union.
     pub offset: usize,
@@ -286,5 +289,41 @@ impl fmt::Display for Namespace {
 impl fmt::Display for TypeName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", self.namespace, self.name)
+    }
+}
+
+impl Serialize for TypeName {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&format!("{} {}", self.namespace, self.name))
+    }
+}
+
+impl<'de> Deserialize<'de> for TypeName {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = <&str>::deserialize(deserializer)?;
+        let (namespace_str, name) = s
+            .split_once(" ")
+            .ok_or_else(|| D::Error::custom("type name must have form '<namespace> <name>'"))?;
+        let namespace = match namespace_str {
+            "struct" => Namespace::Struct,
+            "union" => Namespace::Union,
+            "typedef" => Namespace::Typedef,
+            _ => {
+                return Err(D::Error::custom(&format!(
+                    "invalid namespace: {}",
+                    namespace_str
+                )))
+            }
+        };
+        Ok(Self {
+            namespace,
+            name: name.to_string(),
+        })
     }
 }
