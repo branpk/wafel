@@ -1,7 +1,7 @@
 use std::{fs, process};
 
 use clap::{App, Arg};
-use wafel_layout::load_layout_from_dll;
+use wafel_layout::{load_layout_from_dll, load_sm64_extras};
 
 fn main() {
     let matches = App::new("libsm64_layout")
@@ -24,8 +24,13 @@ fn main() {
     let input_filename = matches.value_of("input").unwrap();
     let output_filename = matches.value_of("output").unwrap();
 
-    let layout = load_layout_from_dll(input_filename).unwrap_or_else(|error| {
+    let mut layout = load_layout_from_dll(input_filename).unwrap_or_else(|error| {
         eprintln!("Error while parsing {}: {}", input_filename, error);
+        process::exit(1);
+    });
+
+    load_sm64_extras(&mut layout.data_layout).unwrap_or_else(|error| {
+        eprintln!("Error while loading SM64 extensions: {}", error);
         process::exit(1);
     });
 

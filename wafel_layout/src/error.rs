@@ -149,3 +149,30 @@ impl fmt::Display for LayoutLookupError {
 }
 
 impl Error for LayoutLookupError {}
+
+#[derive(Debug, Clone)]
+pub enum SM64ExtrasError {
+    LayoutLookupError(LayoutLookupError),
+    ObjectStructInUse,
+    ObjectStructNotStruct,
+    MissingRawData,
+}
+
+impl fmt::Display for SM64ExtrasError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SM64ExtrasError::LayoutLookupError(error) => write!(f, "{}", error),
+            SM64ExtrasError::ObjectStructInUse => write!(f, "Object type already in use"),
+            SM64ExtrasError::ObjectStructNotStruct => write!(f, "Object type is not a struct"),
+            SM64ExtrasError::MissingRawData => write!(f, "missing rawData field in struct Object"),
+        }
+    }
+}
+
+impl Error for SM64ExtrasError {}
+
+impl From<LayoutLookupError> for SM64ExtrasError {
+    fn from(v: LayoutLookupError) -> Self {
+        Self::LayoutLookupError(v)
+    }
+}

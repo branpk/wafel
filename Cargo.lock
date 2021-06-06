@@ -2482,6 +2482,7 @@ dependencies = [
  "gimli",
  "object",
  "serde",
+ "serde_json",
  "wafel_data_type",
 ]
 

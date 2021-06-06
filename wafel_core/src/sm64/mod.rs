@@ -10,7 +10,6 @@ pub use variable::*;
 mod data_variables;
 mod error;
 mod input;
-mod layout_extensions;
 mod pipeline;
 mod range_edit;
 mod util;

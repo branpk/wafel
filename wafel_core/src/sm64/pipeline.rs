@@ -1,8 +1,4 @@
-use super::{
-    data_variables::DataVariables,
-    layout_extensions::{load_constants, load_object_fields},
-    EditRange, RangeEdits, Variable,
-};
+use super::{data_variables::DataVariables, EditRange, RangeEdits, Variable};
 use crate::{
     dll,
     error::Error,
@@ -10,6 +6,7 @@ use crate::{
     timeline::{Controller, InvalidatedFrames, SlotStateMut, Timeline},
 };
 use wafel_data_type::Value;
+use wafel_layout::load_sm64_extras;
 
 /// SM64 controller implementation.
 #[derive(Debug)]
@@ -168,15 +165,7 @@ pub unsafe fn load_dll_pipeline(
     num_backup_slots: usize,
 ) -> Result<Pipeline<dll::Memory>, Error> {
     let (mut memory, base_slot) = dll::Memory::load(dll_path, "sm64_init", "sm64_update")?;
-
-    load_object_fields(
-        memory.data_layout_mut(),
-        include_bytes!("../../assets/object_fields.json"),
-    )?;
-    load_constants(
-        memory.data_layout_mut(),
-        include_bytes!("../../assets/constants.json"),
-    )?;
+    load_sm64_extras(memory.data_layout_mut())?;
 
     let data_variables = DataVariables::all(&memory)?;
     let controller = SM64Controller::new(data_variables);
