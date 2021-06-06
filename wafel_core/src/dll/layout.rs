@@ -15,7 +15,7 @@ use std::{
     fs, iter,
     path::Path,
 };
-use wafel_types::{
+use wafel_data_type::{
     shallow::{
         build_data_types, get_size_from_pre_types, BuildDataTypesError, PreDataType,
         PreDataTypeSize, ShallowDataType, ShallowField,

@@ -29,7 +29,7 @@ use std::{
         Mutex,
     },
 };
-use wafel_types::{FloatType, IntType};
+use wafel_data_type::{FloatType, IntType};
 use winapi::um::{dbghelp::SymCleanup, processthreadsapi::GetCurrentProcess};
 
 lazy_static! {

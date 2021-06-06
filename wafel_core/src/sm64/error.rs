@@ -5,7 +5,7 @@
 use crate::{data_path::LocalDataPath, error::Error, memory::IntValue};
 use derive_more::{Display, Error, From};
 use std::io;
-use wafel_types::DataTypeRef;
+use wafel_data_type::DataTypeRef;
 
 #[derive(Debug, Display, Error, From)]
 pub enum SM64ErrorCause {

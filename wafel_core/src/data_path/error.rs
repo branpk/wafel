@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 
 use derive_more::{Display, Error};
-use wafel_types::DataTypeRef;
+use wafel_data_type::DataTypeRef;
 
 #[derive(Debug, Display, Error)]
 pub enum DataPathErrorCause {

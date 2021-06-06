@@ -15,7 +15,7 @@ use nom::{
     sequence::{preceded, separated_pair, terminated, tuple},
     Err, IResult,
 };
-use wafel_types::{DataType, DataTypeRef, Field, Namespace, TypeName};
+use wafel_data_type::{DataType, DataTypeRef, Field, Namespace, TypeName};
 
 pub fn data_path<M: Memory>(memory: &M, source: &str) -> Result<DataPath, Error> {
     let result: Result<_, Error> = try {

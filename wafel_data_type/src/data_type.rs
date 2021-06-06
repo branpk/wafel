@@ -2,8 +2,6 @@
 
 use std::{collections::HashMap, error::Error, fmt, sync::Arc};
 
-pub mod shallow;
-
 /// A representation of a C data type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DataType {

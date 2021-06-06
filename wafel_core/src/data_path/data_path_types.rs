@@ -4,7 +4,7 @@ use crate::{
     memory::{Address, ClassifiedAddress, Memory, Value},
 };
 use derive_more::Display;
-use wafel_types::DataTypeRef;
+use wafel_data_type::DataTypeRef;
 
 /// Internal representation of a global or local data path.
 #[derive(Debug, Display, Clone)]

@@ -2396,22 +2396,25 @@ dependencies = [
  "tracing",
  "tracing-log",
  "tracing-subscriber",
- "wafel_types",
+ "wafel_data_type",
  "wgpu",
  "winapi",
  "winit",
 ]
 
 [[package]]
-name = "wafel_layout"
+name = "wafel_data_type"
 version = "0.1.0"
 dependencies = [
- "wafel_types",
+ "serde",
 ]
 
 [[package]]
-name = "wafel_types"
+name = "wafel_layout"
 version = "0.1.0"
+dependencies = [
+ "wafel_data_type",
+]
 
 [[package]]
 name = "walkdir"

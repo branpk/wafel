@@ -5,7 +5,7 @@ use crate::{
 };
 use serde_json::{Map, Value as JsonValue};
 use std::{collections::HashMap, convert::TryFrom};
-use wafel_types::{DataType, DataTypeRef, Field, FloatType, IntType, Namespace, TypeName};
+use wafel_data_type::{DataType, DataTypeRef, Field, FloatType, IntType, Namespace, TypeName};
 
 /// Load virtual object fields from the given json string.
 pub fn load_object_fields(layout: &mut DataLayout, json_source: &[u8]) -> Result<(), Error> {

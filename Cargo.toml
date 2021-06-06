@@ -1,8 +1,8 @@
 [workspace]
 members = [
     "wafel_core",
+    "wafel_data_type",
     "wafel_layout",
-    "wafel_types",
 ]
 
 [profile.release]

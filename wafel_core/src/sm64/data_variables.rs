@@ -6,7 +6,7 @@ use crate::{
     timeline::{SlotStateMut, State},
 };
 use indexmap::IndexMap;
-use wafel_types::DataTypeRef;
+use wafel_data_type::DataTypeRef;
 
 #[rustfmt::skip]
 fn build_variables(builder: &mut Builder) {

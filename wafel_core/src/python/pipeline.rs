@@ -20,7 +20,7 @@ use crate::{
 use lazy_static::lazy_static;
 use pyo3::{prelude::*, types::PyBytes};
 use std::{collections::HashMap, sync::Mutex};
-use wafel_types::IntType;
+use wafel_data_type::IntType;
 
 const NUM_BACKUP_SLOTS: usize = 30;
 

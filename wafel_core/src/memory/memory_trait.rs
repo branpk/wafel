@@ -8,7 +8,7 @@ use crate::{
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug, ops::Add};
-use wafel_types::{DataType, DataTypeRef, FloatType, IntType};
+use wafel_data_type::{DataType, DataTypeRef, FloatType, IntType};
 
 /// A trait that defines the interface for interacting with a target program's memory.
 ///

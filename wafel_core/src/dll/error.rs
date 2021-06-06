@@ -3,7 +3,7 @@
 use crate::error::WithContext;
 use derive_more::{Display, Error, From};
 use std::io;
-use wafel_types::shallow::BuildDataTypesError;
+use wafel_data_type::shallow::BuildDataTypesError;
 
 pub type DllError = WithContext<DllErrorCause>;
 

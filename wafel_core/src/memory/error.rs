@@ -3,7 +3,7 @@
 #![allow(missing_docs)]
 
 use derive_more::{Display, Error};
-use wafel_types::{DataTypeRef, TypeName};
+use wafel_data_type::{DataTypeRef, TypeName};
 
 #[derive(Debug, Display, Error)]
 pub enum MemoryErrorCause {

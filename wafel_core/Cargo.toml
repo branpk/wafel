@@ -8,7 +8,7 @@ name = "wafel_core"
 crate-type = ["cdylib"]
 
 [dependencies]
-wafel_types = { path = "../wafel_types" }
+wafel_data_type = { path = "../wafel_data_type" }
 derive_more = "0.99.14"
 nom = "6.1.2"
 object = "0.18.0"

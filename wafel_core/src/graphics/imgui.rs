@@ -129,8 +129,8 @@ impl ImguiRenderer {
             n => unimplemented!("{}", n),
         };
 
-        let shader = device
-            .create_shader_module(&wgpu::include_wgsl!("../../assets/shaders/imgui.wgsl"));
+        let shader =
+            device.create_shader_module(&wgpu::include_wgsl!("../../assets/shaders/imgui.wgsl"));
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,

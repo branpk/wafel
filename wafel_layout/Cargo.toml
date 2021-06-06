@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-wafel_types = { path = "../wafel_types" }
+wafel_data_type = { path = "../wafel_data_type" }

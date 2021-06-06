@@ -11,7 +11,7 @@ use crate::{
     timeline::{SlotState, State},
 };
 use std::collections::HashMap;
-use wafel_types::{FloatType, IntType};
+use wafel_data_type::{FloatType, IntType};
 
 /// Get the data path for an object, or None if the object is inactive.
 pub fn object_path(

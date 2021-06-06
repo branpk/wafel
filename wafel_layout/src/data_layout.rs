@@ -2,7 +2,7 @@
 
 use std::{collections::HashMap, fmt};
 
-use wafel_types::{DataType, DataTypeRef, TypeName};
+use wafel_data_type::{DataType, DataTypeRef, IntValue, TypeName};
 
 /// A description of accessible variables and types.
 #[derive(Debug, Clone, Default)]
