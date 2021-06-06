@@ -2413,6 +2413,8 @@ dependencies = [
 name = "wafel_layout"
 version = "0.1.0"
 dependencies = [
+ "gimli",
+ "object",
  "wafel_data_type",
 ]
 

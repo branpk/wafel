@@ -8,11 +8,11 @@ use wafel_data_type::{DataType, DataTypeRef, IntValue, TypeName};
 #[derive(Debug, Clone, Default)]
 pub struct DataLayout {
     /// The definitions of structs, unions, and typedefs.
-    type_defns: HashMap<TypeName, DataTypeRef>,
+    pub type_defns: HashMap<TypeName, DataTypeRef>,
     /// The types of global variables and functions.
-    globals: HashMap<String, DataTypeRef>,
+    pub globals: HashMap<String, DataTypeRef>,
     /// The values of integer constants.
-    constants: HashMap<String, Constant>,
+    pub constants: HashMap<String, Constant>,
 }
 
 /// A constant's value and source.
