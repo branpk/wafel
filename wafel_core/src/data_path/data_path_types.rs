@@ -1,9 +1,10 @@
 use super::{compile, DataPathErrorCause};
 use crate::{
     error::Error,
-    memory::{data_type::DataTypeRef, Address, ClassifiedAddress, Memory, Value},
+    memory::{Address, ClassifiedAddress, Memory, Value},
 };
 use derive_more::Display;
+use wafel_types::DataTypeRef;
 
 /// Internal representation of a global or local data path.
 #[derive(Debug, Display, Clone)]

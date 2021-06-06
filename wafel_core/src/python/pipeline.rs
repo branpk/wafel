@@ -8,7 +8,7 @@ use crate::{
     geo::Vector3f,
     graphics::scene,
     graphics::scene::Scene,
-    memory::{data_type::IntType, Address, Memory, Value},
+    memory::{Address, Memory, Value},
     sm64::read_objects_to_scene,
     sm64::trace_ray_to_surface,
     sm64::{
@@ -20,6 +20,7 @@ use crate::{
 use lazy_static::lazy_static;
 use pyo3::{prelude::*, types::PyBytes};
 use std::{collections::HashMap, sync::Mutex};
+use wafel_types::IntType;
 
 const NUM_BACKUP_SLOTS: usize = 30;
 

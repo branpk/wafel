@@ -1,9 +1,6 @@
 //! Interface for interacting with program memory.
 
-use super::{
-    data_type::{DataType, DataTypeRef, FloatType, IntType},
-    DataLayout, FloatValue, IntValue, MemoryErrorCause, Value,
-};
+use super::{DataLayout, FloatValue, IntValue, MemoryErrorCause, Value};
 use crate::{
     data_path::{DataPath, DataPathCache, GlobalDataPath, LocalDataPath},
     error::Error,
@@ -11,6 +8,7 @@ use crate::{
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug, ops::Add};
+use wafel_types::{DataType, DataTypeRef, FloatType, IntType};
 
 /// A trait that defines the interface for interacting with a target program's memory.
 ///

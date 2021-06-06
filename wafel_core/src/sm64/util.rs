@@ -7,13 +7,11 @@ use crate::{
     geo::Point3f,
     geo::Vector3f,
     graphics,
-    memory::{
-        data_type::{FloatType, IntType},
-        ConstantSource, IntValue, Memory, Value,
-    },
+    memory::{ConstantSource, IntValue, Memory, Value},
     timeline::{SlotState, State},
 };
 use std::collections::HashMap;
+use wafel_types::{FloatType, IntType};
 
 /// Get the data path for an object, or None if the object is inactive.
 pub fn object_path(
@@ -143,7 +141,9 @@ fn read_surfaces(state: &impl SlotState) -> Result<Vec<Surface>, Error> {
     let surface_size = memory
         .global_path("sSurfacePool")?
         .concrete_type()
-        .stride()?
+        .stride()
+        .ok()
+        .flatten()
         .ok_or(SM64ErrorCause::UnsizedSurfacePoolPointer)?;
 
     let offset = |path| -> Result<usize, Error> { memory.local_path(path)?.field_offset() };
@@ -235,7 +235,9 @@ pub fn read_objects_to_scene(scene: &mut Scene, state: &impl SlotState) -> Resul
     let object_size = memory
         .global_path("gObjectPool")?
         .concrete_type()
-        .stride()?
+        .stride()
+        .ok()
+        .flatten()
         .ok_or(SM64ErrorCause::UnsizedObjectPoolArray)?;
 
     let offset = |path| -> Result<usize, Error> { memory.local_path(path)?.field_offset() };

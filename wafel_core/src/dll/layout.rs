@@ -1,14 +1,7 @@
 //! Debugging and structural information extracted from a DLL.
 
 use super::{LayoutError, LayoutErrorCause};
-use crate::memory::{
-    data_type::{FloatType, IntType, Namespace, TypeName},
-    shallow_data_type::{
-        build_data_types, get_size_from_pre_types, PreDataType, PreDataTypeSize, ShallowDataType,
-        ShallowField,
-    },
-    Constant, ConstantSource, DataLayout, IntValue,
-};
+use crate::memory::{Constant, ConstantSource, DataLayout, IntValue};
 use derive_more::Display;
 use gimli::{
     AttributeValue, DebuggingInformationEntry, DwAt, Dwarf, EndianSlice, EntriesTree,
@@ -21,6 +14,13 @@ use std::{
     fmt::{self, Display},
     fs, iter,
     path::Path,
+};
+use wafel_types::{
+    shallow::{
+        build_data_types, get_size_from_pre_types, BuildDataTypesError, PreDataType,
+        PreDataTypeSize, ShallowDataType, ShallowField,
+    },
+    FloatType, IntType, Namespace, TypeName,
 };
 
 /// Debugging and structural information extracted from a DLL.
@@ -119,7 +119,10 @@ where
         let result: Result<(), LayoutError> = try {
             let mut unit_reader = UnitReader::new(dwarf, &unit);
             unit_reader.extract_definitions()?;
-            unit_reader.update_layout(&mut layout)?;
+            // TODO: Use a more meaningful string than the TypeId
+            unit_reader
+                .update_layout(&mut layout)
+                .map_err(|e| e.map(|id| format!("{}", id)))?;
         };
 
         result.map_err(|error| match unit_name {
@@ -190,7 +193,6 @@ where
         self.pre_types.insert(
             TypeId::Void,
             PreDataType {
-                debug_name: Some("void".to_owned()),
                 shallow_type: ShallowDataType::Void,
                 size: PreDataTypeSize::Known(0),
             },
@@ -227,7 +229,10 @@ where
     /// Update `layout` with the extracted type and variable definitions.
     ///
     /// Assumes that `extract_definitions` has been called.
-    fn update_layout(&self, layout: &mut DataLayout) -> Result<(), LayoutError> {
+    fn update_layout(
+        &self,
+        layout: &mut DataLayout,
+    ) -> Result<(), BuildDataTypesError<TypeId<R::Offset>>> {
         // Resolve placeholder type ids and sizes/strides to build full data types
         let data_types = build_data_types(&self.pre_types)?;
 
@@ -236,14 +241,13 @@ where
 
         // Resolve placeholder type ids in named type definitions
         for (type_name, shallow_type) in &self.type_defns {
-            let data_type =
-                shallow_type.resolve_direct(get_type, &get_size, type_name.to_string().as_ref())?;
+            let data_type = shallow_type.resolve_direct(get_type, &get_size)?;
             layout.type_defns.insert(type_name.clone(), data_type);
         }
 
         // Resolve placeholder type ids in variables
         for (name, shallow_type) in &self.global_defns {
-            let data_type = shallow_type.resolve_direct(get_type, &get_size, name)?;
+            let data_type = shallow_type.resolve_direct(get_type, &get_size)?;
             layout.globals.insert(name.clone(), data_type);
         }
 
@@ -280,7 +284,6 @@ where
         self.pre_types.insert(
             TypeId::Offset(entry.offset().0),
             PreDataType {
-                debug_name: Some(name),
                 shallow_type,
                 size: PreDataTypeSize::Known(self.req_attr_usize(entry, gimli::DW_AT_byte_size)?),
             },
@@ -298,7 +301,6 @@ where
         self.pre_types.insert(
             TypeId::Offset(entry.offset().0),
             PreDataType {
-                debug_name: self.attr_string(entry, gimli::DW_AT_name)?,
                 shallow_type: ShallowDataType::Alias(target_type),
                 size: PreDataTypeSize::Defer(target_type),
             },
@@ -317,7 +319,6 @@ where
         let target_type_id = self.req_attr_type_id(entry, gimli::DW_AT_type)?;
 
         let data_type = PreDataType {
-            debug_name: Some(type_name.name.clone()),
             shallow_type: ShallowDataType::Name(type_name.clone()),
             size: PreDataTypeSize::Defer(target_type_id),
         };
@@ -336,7 +337,6 @@ where
         self.pre_types.insert(
             TypeId::Offset(entry.offset().0),
             PreDataType {
-                debug_name: self.attr_string(entry, gimli::DW_AT_name)?,
                 shallow_type: ShallowDataType::Pointer {
                     base: self.req_attr_type_id(entry, gimli::DW_AT_type)?,
                 },
@@ -368,7 +368,6 @@ where
                 self.pre_types.insert(
                     type_id,
                     PreDataType {
-                        debug_name: Some(name.clone()),
                         shallow_type: ShallowDataType::Name(TypeName { namespace, name }),
                         size: PreDataTypeSize::Unknown,
                     },
@@ -421,15 +420,11 @@ where
         match name {
             Some(name) => {
                 // type id -> type name -> struct
-                let type_name = TypeName {
-                    namespace,
-                    name: name.clone(),
-                };
+                let type_name = TypeName { namespace, name };
                 self.type_defns.insert(type_name.clone(), shallow_type);
                 self.pre_types.insert(
                     type_id,
                     PreDataType {
-                        debug_name: Some(name),
                         shallow_type: ShallowDataType::Name(type_name),
                         size,
                     },
@@ -437,14 +432,8 @@ where
             }
             None => {
                 // type id -> struct
-                self.pre_types.insert(
-                    type_id,
-                    PreDataType {
-                        debug_name: None,
-                        shallow_type,
-                        size,
-                    },
-                );
+                self.pre_types
+                    .insert(type_id, PreDataType { shallow_type, size });
             }
         };
         Ok(())
@@ -460,7 +449,6 @@ where
         self.pre_types.insert(
             TypeId::Offset(entry.offset().0),
             PreDataType {
-                debug_name: name.clone(),
                 shallow_type: ShallowDataType::Alias(
                     self.req_attr_type_id(entry, gimli::DW_AT_type)?,
                 ),
@@ -488,7 +476,6 @@ where
     fn read_array_type(&mut self, node: EntriesTreeNode<'_, '_, '_, R>) -> Result<(), LayoutError> {
         let entry = node.entry();
 
-        let name = self.attr_string(entry, gimli::DW_AT_name)?;
         let size = match self.attr_usize(entry, gimli::DW_AT_byte_size)? {
             Some(size) => PreDataTypeSize::Known(size),
             None => PreDataTypeSize::Unknown,
@@ -511,7 +498,6 @@ where
         self.pre_types.insert(
             type_id,
             PreDataType {
-                debug_name: name,
                 shallow_type: ShallowDataType::Array {
                     base: base_type,
                     length,
@@ -532,7 +518,6 @@ where
         self.pre_types.insert(
             TypeId::Offset(entry.offset().0),
             PreDataType {
-                debug_name: self.attr_string(entry, gimli::DW_AT_name)?,
                 shallow_type: ShallowDataType::Void,
                 size: PreDataTypeSize::Unknown,
             },

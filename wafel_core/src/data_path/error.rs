@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 
-use crate::memory::data_type::DataTypeRef;
 use derive_more::{Display, Error};
+use wafel_types::DataTypeRef;
 
 #[derive(Debug, Display, Error)]
 pub enum DataPathErrorCause {

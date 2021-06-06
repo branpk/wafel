@@ -10,7 +10,6 @@ use crate::{
     data_path::DataPathCache,
     error::Error,
     memory::{
-        data_type::{FloatType, IntType},
         Address, ClassifiedAddress, DataLayout, FloatValue, IntValue, Memory as MemoryTrait,
         MemoryErrorCause,
     },
@@ -30,6 +29,7 @@ use std::{
         Mutex,
     },
 };
+use wafel_types::{FloatType, IntType};
 use winapi::um::{dbghelp::SymCleanup, processthreadsapi::GetCurrentProcess};
 
 lazy_static! {

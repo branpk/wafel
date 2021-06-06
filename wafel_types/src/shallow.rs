@@ -197,6 +197,20 @@ impl<Id: fmt::Display> fmt::Display for BuildDataTypesError<Id> {
 
 impl<Id: fmt::Debug + fmt::Display> Error for BuildDataTypesError<Id> {}
 
+impl<Id> BuildDataTypesError<Id> {
+    pub fn map<T>(self, f: impl FnOnce(Id) -> T) -> BuildDataTypesError<T> {
+        match self {
+            BuildDataTypesError::UndefinedTypeId(id) => BuildDataTypesError::UndefinedTypeId(f(id)),
+            BuildDataTypesError::CyclicDependency(id) => {
+                BuildDataTypesError::CyclicDependency(f(id))
+            }
+            BuildDataTypesError::UnsizedArrayElement(id) => {
+                BuildDataTypesError::UnsizedArrayElement(f(id))
+            }
+        }
+    }
+}
+
 fn topological_sort<T: Eq + Hash + Copy>(dependencies: &HashMap<T, Vec<T>>) -> Result<Vec<T>, T> {
     let all_nodes: HashSet<T> = dependencies
         .keys()

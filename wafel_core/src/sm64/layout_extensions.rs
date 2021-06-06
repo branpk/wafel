@@ -1,13 +1,11 @@
 use super::LayoutExtensionErrorCause::*;
 use crate::{
     error::Error,
-    memory::{
-        data_type::{DataType, DataTypeRef, Field, FloatType, IntType, Namespace, TypeName},
-        Constant, ConstantSource, DataLayout, IntValue,
-    },
+    memory::{Constant, ConstantSource, DataLayout, IntValue},
 };
 use serde_json::{Map, Value as JsonValue};
 use std::{collections::HashMap, convert::TryFrom};
+use wafel_types::{DataType, DataTypeRef, Field, FloatType, IntType, Namespace, TypeName};
 
 /// Load virtual object fields from the given json string.
 pub fn load_object_fields(layout: &mut DataLayout, json_source: &[u8]) -> Result<(), Error> {

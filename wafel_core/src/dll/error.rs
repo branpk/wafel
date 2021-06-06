@@ -1,8 +1,9 @@
 #![allow(missing_docs)]
 
-use crate::{error::WithContext, memory::BuildDataTypesErrorCause};
+use crate::error::WithContext;
 use derive_more::{Display, Error, From};
 use std::io;
+use wafel_types::shallow::BuildDataTypesError;
 
 pub type DllError = WithContext<DllErrorCause>;
 
@@ -36,7 +37,7 @@ pub enum LayoutErrorCause {
     #[from]
     DwarfReadError(gimli::Error),
     #[from]
-    BuildDataTypesError(BuildDataTypesErrorCause),
+    BuildDataTypesError(BuildDataTypesError<String>),
     #[display(fmt = "missing attribute {} in entry {}", attribute, entry_label)]
     MissingAttribute {
         entry_label: String,
@@ -84,8 +85,8 @@ impl From<gimli::Error> for LayoutError {
     }
 }
 
-impl From<BuildDataTypesErrorCause> for LayoutError {
-    fn from(error: BuildDataTypesErrorCause) -> Self {
+impl From<BuildDataTypesError<String>> for LayoutError {
+    fn from(error: BuildDataTypesError<String>) -> Self {
         LayoutErrorCause::from(error).into()
     }
 }

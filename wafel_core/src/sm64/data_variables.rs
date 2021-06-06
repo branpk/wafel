@@ -2,10 +2,11 @@ use super::{util, SM64ErrorCause, Variable};
 use crate::{
     data_path::{DataPath, GlobalDataPath, LocalDataPath},
     error::Error,
-    memory::{data_type::DataTypeRef, IntValue, Memory, Value},
+    memory::{IntValue, Memory, Value},
     timeline::{SlotStateMut, State},
 };
 use indexmap::IndexMap;
+use wafel_types::DataTypeRef;
 
 #[rustfmt::skip]
 fn build_variables(builder: &mut Builder) {

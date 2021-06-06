@@ -1,13 +1,10 @@
 //! Recording and looking up type and global variable definitions.
 
-use super::{
-    data_type::{DataType, DataTypeRef, TypeName},
-    IntValue,
-    MemoryErrorCause::*,
-};
+use super::{IntValue, MemoryErrorCause::*};
 use crate::error::Error;
 use derive_more::Display;
 use std::{collections::HashMap, fmt};
+use wafel_types::{DataType, DataTypeRef, TypeName};
 
 /// A description of accessible variables and types.
 #[derive(Debug, Clone, Default)]
