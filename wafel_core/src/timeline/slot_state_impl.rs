@@ -1,10 +1,7 @@
 use super::{SlotState, SlotStateMut, State};
-use crate::{
-    data_path::GlobalDataPath,
-    error::Error,
-    memory::{Address, Memory, Value},
-};
+use crate::{data_path::GlobalDataPath, error::Error, memory::Memory};
 use std::ops::DerefMut;
+use wafel_data_type::{Address, Value};
 
 #[derive(Debug)]
 pub struct SlotStateImpl<'a, M: Memory, S: DerefMut<Target = M::Slot>> {

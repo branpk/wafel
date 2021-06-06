@@ -2,17 +2,11 @@
 
 #![allow(clippy::mutex_atomic)]
 
-use super::{
-    layout::{load_layout_from_dll, DllSegment},
-    DllError, DllErrorCause,
-};
+use super::{DllError, DllErrorCause};
 use crate::{
     data_path::DataPathCache,
     error::Error,
-    memory::{
-        Address, ClassifiedAddress, DataLayout, FloatValue, IntValue, Memory as MemoryTrait,
-        MemoryErrorCause,
-    },
+    memory::{ClassifiedAddress, Memory as MemoryTrait, MemoryErrorCause},
 };
 use derive_more::Display;
 use dlopen::raw::{AddressInfoObtainer, Library};
@@ -29,7 +23,8 @@ use std::{
         Mutex,
     },
 };
-use wafel_data_type::{FloatType, IntType};
+use wafel_data_type::{Address, FloatType, FloatValue, IntType, IntValue};
+use wafel_layout::{load_layout_from_dll, DataLayout, DllSegment};
 use winapi::um::{dbghelp::SymCleanup, processthreadsapi::GetCurrentProcess};
 
 lazy_static! {
@@ -172,7 +167,7 @@ impl Memory {
         update_function: &str,
     ) -> Result<(Self, Slot), Error> {
         let result: Result<(Self, Slot), DllError> = try {
-            let layout = load_layout_from_dll(dll_path.as_ref())?;
+            let layout = load_layout_from_dll(dll_path.as_ref()).map_err(DllErrorCause::from)?;
 
             let library = Library::open(dll_path.as_ref())?;
 

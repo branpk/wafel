@@ -1,9 +1,10 @@
 use super::PyAddress;
-use crate::{error::Error, memory::Value, sm64::SM64ErrorCause};
+use crate::{error::Error, sm64::SM64ErrorCause};
 use pyo3::{
     prelude::*,
     types::{IntoPyDict, PyFloat, PyList, PyLong},
 };
+use wafel_data_type::Value;
 
 pub fn value_to_py_object(py: Python<'_>, value: &Value) -> PyResult<PyObject> {
     match value {

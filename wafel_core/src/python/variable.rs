@@ -1,7 +1,6 @@
 use super::value::value_to_py_object;
 use crate::{
     error::Error,
-    memory::Address,
     sm64::{EditRange, ObjectBehavior, ObjectSlot, SM64ErrorCause, SurfaceSlot, Variable},
 };
 use derive_more::Display;
@@ -10,6 +9,7 @@ use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
+use wafel_data_type::Address;
 
 /// An abstract game variable.
 #[pyclass(name = "Variable", unsendable)]

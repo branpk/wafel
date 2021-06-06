@@ -1,10 +1,7 @@
 use super::{
     DataPath, DataPathEdge, DataPathErrorCause, DataPathImpl, GlobalDataPath, LocalDataPath,
 };
-use crate::{
-    error::Error,
-    memory::{Address, DataLayout, Memory},
-};
+use crate::{error::Error, memory::Memory};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while1},
@@ -15,7 +12,8 @@ use nom::{
     sequence::{preceded, separated_pair, terminated, tuple},
     Err, IResult,
 };
-use wafel_data_type::{DataType, DataTypeRef, Field, Namespace, TypeName};
+use wafel_data_type::{Address, DataType, DataTypeRef, Field, Namespace, TypeName};
+use wafel_layout::DataLayout;
 
 pub fn data_path<M: Memory>(memory: &M, source: &str) -> Result<DataPath, Error> {
     let result: Result<_, Error> = try {

@@ -1,8 +1,5 @@
-use crate::{
-    data_path::GlobalDataPath,
-    error::Error,
-    memory::{Address, Memory, Value},
-};
+use crate::{data_path::GlobalDataPath, error::Error, memory::Memory};
+use wafel_data_type::{Address, Value};
 
 /// An abstract state of the simulation on a given frame.
 pub trait State {

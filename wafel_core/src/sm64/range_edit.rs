@@ -1,13 +1,14 @@
 //! Implementation of range editing (drag and drop in the frame sheet).
 
 use super::Variable;
-use crate::{memory::Value, timeline::InvalidatedFrames};
+use crate::timeline::InvalidatedFrames;
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
     hash::Hash,
     ops::Range,
 };
+use wafel_data_type::Value;
 
 /// A unique identifier for an edit range.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

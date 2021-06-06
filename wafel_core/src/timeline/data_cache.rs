@@ -1,8 +1,9 @@
 use super::State;
-use crate::{data_path::GlobalDataPath, memory::Value};
+use crate::data_path::GlobalDataPath;
 use deepsize::{known_deep_size, DeepSizeOf};
 use lru::LruCache;
 use std::collections::HashMap;
+use wafel_data_type::Value;
 
 /// A cache for data path accesses, with the goal of minimizing calls to `SlotManager#frame`.
 ///
@@ -92,12 +93,24 @@ impl DataCache {
     }
 
     pub fn byte_size(&self) -> usize {
-        let mut entries: HashMap<u32, HashMap<usize, Value>> = HashMap::new();
+        let mut entries: HashMap<u32, HashMap<usize, ValueWrapper>> = HashMap::new();
         for (frame, cache) in &self.cache {
-            entries.insert(*frame, cache.clone());
+            entries.insert(
+                *frame,
+                cache.iter().map(|(k, v)| (*k, (*v).into())).collect(),
+            );
         }
         entries.deep_size_of()
     }
 }
 
-known_deep_size!(0; Value);
+#[derive(Debug, Clone)]
+struct ValueWrapper(Value);
+
+impl From<Value> for ValueWrapper {
+    fn from(v: Value) -> Self {
+        Self(v)
+    }
+}
+
+known_deep_size!(0; ValueWrapper);

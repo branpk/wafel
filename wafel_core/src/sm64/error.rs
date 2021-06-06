@@ -2,10 +2,10 @@
 
 #![allow(missing_docs)]
 
-use crate::{data_path::LocalDataPath, error::Error, memory::IntValue};
+use crate::{data_path::LocalDataPath, error::Error};
 use derive_more::{Display, Error, From};
 use std::io;
-use wafel_data_type::DataTypeRef;
+use wafel_data_type::{DataTypeRef, IntValue};
 
 #[derive(Debug, Display, Error, From)]
 pub enum SM64ErrorCause {

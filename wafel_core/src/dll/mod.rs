@@ -9,5 +9,4 @@ pub use error::*;
 pub use memory::*;
 
 mod error;
-mod layout;
 mod memory;

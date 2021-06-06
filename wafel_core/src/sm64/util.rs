@@ -7,11 +7,12 @@ use crate::{
     geo::Point3f,
     geo::Vector3f,
     graphics,
-    memory::{ConstantSource, IntValue, Memory, Value},
+    memory::Memory,
     timeline::{SlotState, State},
 };
 use std::collections::HashMap;
-use wafel_data_type::{FloatType, IntType};
+use wafel_data_type::{FloatType, IntType, IntValue, Value};
+use wafel_layout::ConstantSource;
 
 /// Get the data path for an object, or None if the object is inactive.
 pub fn object_path(

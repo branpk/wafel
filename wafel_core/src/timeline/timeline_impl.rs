@@ -1,10 +1,7 @@
 use super::{data_cache::DataCache, slot_manager::SlotManager, SlotState, SlotStateMut, State};
-use crate::{
-    data_path::GlobalDataPath,
-    error::Error,
-    memory::{Address, Memory, Value},
-};
+use crate::{data_path::GlobalDataPath, error::Error, memory::Memory};
 use std::{cell::RefCell, time::Duration};
+use wafel_data_type::{Address, Value};
 
 /// Applies edits at the end of each frame to control the simulation.
 pub trait Controller<M: Memory> {

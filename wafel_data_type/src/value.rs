@@ -1,6 +1,6 @@
 //! Dynamically typed value used for reading and writing to memory.
 
-use std::{collections::HashMap, convert::TryFrom};
+use std::{collections::HashMap, convert::TryFrom, fmt, ops::Add};
 
 use serde::{Deserialize, Serialize};
 
@@ -10,6 +10,14 @@ use serde::{Deserialize, Serialize};
 /// on a `Memory` implementation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Address(pub usize);
+
+impl Add<usize> for Address {
+    type Output = Self;
+
+    fn add(self, rhs: usize) -> Self::Output {
+        Self(self.0.wrapping_add(rhs))
+    }
+}
 
 /// A dynamically typed value.
 #[derive(Debug, Clone)]
@@ -139,5 +147,45 @@ impl Value {
             elements[1].as_float()? as f32,
             elements[2].as_float()? as f32,
         ])
+    }
+}
+
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:#X}", self.0)
+    }
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::Null => write!(f, "null"),
+            Value::Int(n) => write!(f, "{}", n),
+            Value::Float(r) => write!(f, "{}", r),
+            Value::String(s) => write!(f, "{:?}", s),
+            Value::Address(a) => write!(f, "{}", a),
+            Value::Struct { fields } => {
+                write!(
+                    f,
+                    "{{ {} }}",
+                    fields
+                        .iter()
+                        .map(|(name, value)| format!("{} = {}", name, value))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+            Value::Array(elements) => {
+                write!(
+                    f,
+                    "[{}]",
+                    elements
+                        .iter()
+                        .map(|element| format!("{}", element))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+            }
+        }
     }
 }

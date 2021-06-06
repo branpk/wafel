@@ -1,14 +1,15 @@
 //! Interface for interacting with program memory.
 
-use super::{DataLayout, FloatValue, IntValue, MemoryErrorCause, Value};
+use super::MemoryErrorCause;
 use crate::{
     data_path::{DataPath, DataPathCache, GlobalDataPath, LocalDataPath},
     error::Error,
 };
-use derive_more::Display;
-use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt::Debug, ops::Add};
-use wafel_data_type::{DataType, DataTypeRef, FloatType, IntType};
+use std::{collections::HashMap, fmt::Debug};
+use wafel_data_type::{
+    Address, DataType, DataTypeRef, FloatType, FloatValue, IntType, IntValue, Value,
+};
+use wafel_layout::DataLayout;
 
 /// A trait that defines the interface for interacting with a target program's memory.
 ///
@@ -302,22 +303,6 @@ pub trait Memory: Sized {
 
     /// Advance a base slot one frame.
     fn advance_base_slot(&self, base_slot: &mut Self::Slot) -> Result<(), Error>;
-}
-
-/// A raw pointer value that can be stored in memory.
-///
-/// Having a single numeric type is convenient so that `Value` doesn't have to be generic
-/// on a `Memory` implementation.
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[display(fmt = "{:#X}", _0)]
-pub struct Address(pub usize);
-
-impl Add<usize> for Address {
-    type Output = Self;
-
-    fn add(self, rhs: usize) -> Self::Output {
-        Self(self.0.wrapping_add(rhs))
-    }
 }
 
 /// An address that has been classified as either static or relocatable.

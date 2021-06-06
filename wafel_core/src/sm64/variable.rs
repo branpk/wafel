@@ -1,11 +1,12 @@
 use super::SM64ErrorCause;
-use crate::{error::Error, memory::Address};
+use crate::error::Error;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Display},
     rc::Rc,
 };
+use wafel_data_type::Address;
 
 /// A wrapper for an object slot index.
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

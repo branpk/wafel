@@ -2397,6 +2397,7 @@ dependencies = [
  "tracing-log",
  "tracing-subscriber",
  "wafel_data_type",
+ "wafel_layout",
  "wgpu",
  "winapi",
  "winit",

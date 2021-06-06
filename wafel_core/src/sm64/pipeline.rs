@@ -6,9 +6,10 @@ use super::{
 use crate::{
     dll,
     error::Error,
-    memory::{Memory, Value},
+    memory::Memory,
     timeline::{Controller, InvalidatedFrames, SlotStateMut, Timeline},
 };
+use wafel_data_type::Value;
 
 /// SM64 controller implementation.
 #[derive(Debug)]

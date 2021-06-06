@@ -40,6 +40,8 @@ impl fmt::Display for DllLayoutError {
     }
 }
 
+impl Error for DllLayoutError {}
+
 impl fmt::Display for DllLayoutErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
