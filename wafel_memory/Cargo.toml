@@ -1,0 +1,9 @@
+[package]
+name = "wafel_memory"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+wafel_data_type = { path = "../wafel_data_type" }
+wafel_layout = { path = "../wafel_layout" }
+nom = "6.1.2"

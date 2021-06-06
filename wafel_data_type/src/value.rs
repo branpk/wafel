@@ -19,6 +19,12 @@ impl Add<usize> for Address {
     }
 }
 
+impl Address {
+    pub fn is_null(self) -> bool {
+        self.0 == 0
+    }
+}
+
 /// A dynamically typed value.
 #[derive(Debug, Clone)]
 pub enum Value {
