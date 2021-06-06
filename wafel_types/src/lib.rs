@@ -189,13 +189,13 @@ impl DataType {
         match self {
             DataType::Pointer { stride, .. } => Ok(*stride),
             DataType::Array { stride, .. } => Ok(Some(*stride)),
-            _ => Err(NotAnArrayOrPointer {}),
+            _ => Err(NotAnArrayOrPointer),
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct NotAnArrayOrPointer {}
+pub struct NotAnArrayOrPointer;
 
 impl fmt::Display for NotAnArrayOrPointer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

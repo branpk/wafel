@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "wafel_core",
+    "wafel_layout",
     "wafel_types",
 ]
 
