@@ -149,7 +149,7 @@ pub trait SlottedMemory {
     fn advance_base_slot(&self, base_slot: &mut Self::Slot);
 }
 
-pub trait MemoryPrimitiveRead {
+pub trait MemoryReadPrimitive {
     /// Read a primitive value from memory.
     ///
     /// # Safety
@@ -158,7 +158,7 @@ pub trait MemoryPrimitiveRead {
     unsafe fn read_primitive<T: Copy>(&self, address: Address) -> Result<T, MemoryError>;
 }
 
-pub trait MemoryPrimitiveWrite {
+pub trait MemoryWritePrimitive {
     /// Write a primitive value to memory.
     ///
     /// # Safety
@@ -171,7 +171,7 @@ pub trait MemoryPrimitiveWrite {
     ) -> Result<(), MemoryError>;
 }
 
-impl<M: MemoryPrimitiveRead> MemoryRead for M {
+impl<M: MemoryReadPrimitive> MemoryRead for M {
     fn read_int(&self, address: Address, int_type: IntType) -> Result<IntValue, MemoryError> {
         unsafe {
             Ok(match int_type {
@@ -208,7 +208,7 @@ impl<M: MemoryPrimitiveRead> MemoryRead for M {
     }
 }
 
-impl<M: MemoryPrimitiveWrite> MemoryWrite for M {
+impl<M: MemoryWritePrimitive> MemoryWrite for M {
     fn write_int(
         &mut self,
         address: Address,

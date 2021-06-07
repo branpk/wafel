@@ -17,7 +17,7 @@ use winapi::um::{dbghelp::SymCleanup, processthreadsapi::GetCurrentProcess};
 use crate::{
     dll::slot_impl::BaseSlot,
     MemoryError::{self, *},
-    MemoryPrimitiveRead, MemoryPrimitiveWrite, SlottedMemory,
+    MemoryReadPrimitive, MemoryWritePrimitive, SlottedMemory, SymbolLookup,
 };
 
 use super::{
@@ -296,6 +296,14 @@ impl DllMemory {
     }
 }
 
+impl SymbolLookup for DllMemory {
+    fn symbol_address(&self, symbol: &str) -> Option<Address> {
+        read_symbol(&self.library, symbol)
+            .ok()
+            .map(|pointer: *const u8| Address(pointer as usize))
+    }
+}
+
 impl SlottedMemory for DllMemory {
     type Slot = Slot;
 
@@ -365,7 +373,7 @@ impl<'a> DllStaticMemoryView<'a> {
     }
 }
 
-impl MemoryPrimitiveRead for DllStaticMemoryView<'_> {
+impl MemoryReadPrimitive for DllStaticMemoryView<'_> {
     unsafe fn read_primitive<T: Copy>(&self, address: Address) -> Result<T, MemoryError> {
         self.memory
             .address_to_static_pointer::<T>(address)
@@ -379,7 +387,7 @@ pub struct DllSlotMemoryView<'a> {
     slot: &'a Slot,
 }
 
-impl MemoryPrimitiveRead for DllSlotMemoryView<'_> {
+impl MemoryReadPrimitive for DllSlotMemoryView<'_> {
     unsafe fn read_primitive<T: Copy>(&self, address: Address) -> Result<T, MemoryError> {
         self.memory
             .address_to_pointer::<T>(self.slot, address)
@@ -393,7 +401,7 @@ pub struct DllSlotMemoryViewMut<'a> {
     slot: &'a mut Slot,
 }
 
-impl MemoryPrimitiveRead for DllSlotMemoryViewMut<'_> {
+impl MemoryReadPrimitive for DllSlotMemoryViewMut<'_> {
     unsafe fn read_primitive<T: Copy>(&self, address: Address) -> Result<T, MemoryError> {
         self.memory
             .address_to_pointer::<T>(self.slot, address)
@@ -401,7 +409,7 @@ impl MemoryPrimitiveRead for DllSlotMemoryViewMut<'_> {
     }
 }
 
-impl MemoryPrimitiveWrite for DllSlotMemoryViewMut<'_> {
+impl MemoryWritePrimitive for DllSlotMemoryViewMut<'_> {
     unsafe fn write_primitive<T: Copy>(
         &mut self,
         address: Address,

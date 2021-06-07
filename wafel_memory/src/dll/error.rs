@@ -11,7 +11,11 @@ pub enum DllLoadError {
 
 impl fmt::Display for DllLoadError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!()
+        match self {
+            DllLoadError::DlOpenError(error) => write!(f, "failed to open DLL: {}", error),
+            DllLoadError::DllLayoutError(error) => write!(f, "{}", error),
+            DllLoadError::UndefinedSymbol(error) => write!(f, "{}", error),
+        }
     }
 }
 
@@ -43,7 +47,7 @@ pub struct UndefinedSymbolError {
 
 impl fmt::Display for UndefinedSymbolError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!()
+        write!(f, "failed to look up symbol {}: {}", self.name, self.error)
     }
 }
 
