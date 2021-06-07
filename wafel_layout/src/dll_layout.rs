@@ -71,16 +71,7 @@ pub fn load_layout_from_dll(dll_path: impl AsRef<Path>) -> Result<DllLayout, Dll
     let buffer = fs::read(&dll_path)?;
     let object = object::File::parse(&buffer[..])?;
 
-    let mut segments = Vec::new();
-    for segment in object.segments() {
-        if let Some(name) = segment.name()? {
-            segments.push(DllSegment {
-                name: name.to_owned(),
-                virtual_address: segment.address() as usize,
-                virtual_size: segment.size() as usize,
-            });
-        }
-    }
+    let segments = load_dll_segments_impl(&object)?;
 
     // Load dwarf info
     let load_section = |id: SectionId| -> Result<Cow<'_, [u8]>, object::Error> {
@@ -100,6 +91,28 @@ pub fn load_layout_from_dll(dll_path: impl AsRef<Path>) -> Result<DllLayout, Dll
         segments,
         data_layout,
     })
+}
+
+/// Load segment definitions from the DLL.
+pub fn load_dll_segments(dll_path: impl AsRef<Path>) -> Result<Vec<DllSegment>, DllLayoutError> {
+    let buffer = fs::read(&dll_path)?;
+    let object = object::File::parse(&buffer[..])?;
+    let segments = load_dll_segments_impl(&object)?;
+    Ok(segments)
+}
+
+fn load_dll_segments_impl(object: &object::File) -> Result<Vec<DllSegment>, DllLayoutError> {
+    let mut segments = Vec::new();
+    for segment in object.segments() {
+        if let Some(name) = segment.name()? {
+            segments.push(DllSegment {
+                name: name.to_owned(),
+                virtual_address: segment.address() as usize,
+                virtual_size: segment.size() as usize,
+            });
+        }
+    }
+    Ok(segments)
 }
 
 /// Build a DataLayout from the provided DWARF info.

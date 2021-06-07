@@ -2490,9 +2490,12 @@ dependencies = [
 name = "wafel_memory"
 version = "0.1.0"
 dependencies = [
+ "dlopen",
  "nom",
+ "once_cell",
  "wafel_data_type",
  "wafel_layout",
+ "winapi",
 ]
 
 [[package]]
