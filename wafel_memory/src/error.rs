@@ -1,6 +1,6 @@
 use std::{error::Error, fmt};
 
-use wafel_data_type::{DataTypeRef, ValueError};
+use wafel_data_type::ValueError;
 use wafel_layout::{DllLayoutError, LayoutLookupError};
 
 #[derive(Debug, Clone)]

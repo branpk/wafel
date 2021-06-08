@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use wafel_data_type::{
     Address, DataType, DataTypeRef, FloatType, FloatValue, IntType, IntValue, Value,

@@ -132,7 +132,7 @@ impl GlobalDataPath {
     ) -> Result<(), MemoryError> {
         match self.address(memory)? {
             Some(address) => memory
-                .write_value(address, &self.0.concrete_type, value)
+                .write_value(address, &self.0.concrete_type, value, &self.0.layout)
                 .map_err(|error| MemoryError::Context {
                     context: format!("while evaluating '{}'", self),
                     error: Box::new(error),
