@@ -319,7 +319,10 @@ impl<M: MemoryWritePrimitive> MemoryWrite for M {
     }
 }
 
-pub trait SlottedMemory {
+/// A trait that allows accessing game memory and saving/loading states.
+///
+/// The memory // TODO
+pub trait GameMemory {
     type Slot;
 
     type StaticView<'a>: MemoryRead;

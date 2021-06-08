@@ -11,20 +11,20 @@ use std::{
 use dlopen::raw::{AddressInfoObtainer, Library};
 use once_cell::sync::OnceCell;
 use wafel_data_type::Address;
-use wafel_layout::{load_dll_segments, DllSegment};
-use winapi::um::{dbghelp::SymCleanup, processthreadsapi::GetCurrentProcess};
+use wafel_layout::{load_dll_segments, DllLayout, DllLayoutError, DllSegment};
 
 use crate::{
     dll_slot_impl::{BasePointer, BaseSlot, BufferSlot, SlotImpl},
     error::DllLoadError,
+    GameMemory,
     MemoryError::{self, *},
-    MemoryReadPrimitive, MemoryWritePrimitive, SlottedMemory, SymbolLookup,
+    MemoryReadPrimitive, MemoryWritePrimitive, SymbolLookup,
 };
 
 #[derive(Debug)]
-pub struct Slot(SlotImpl);
+pub struct DllSlot(SlotImpl);
 
-impl Slot {
+impl DllSlot {
     pub fn is_base_slot(&self) -> bool {
         matches!(self.0, SlotImpl::Base(_))
     }
@@ -56,7 +56,7 @@ fn next_memory_id() -> usize {
 
 /// Memory management for a loaded DLL and backup slots.
 #[derive(Debug)]
-pub struct DllMemory {
+pub struct DllGameMemory {
     id: usize,
     /// The loaded DLL
     library: Library,
@@ -68,8 +68,8 @@ pub struct DllMemory {
     update_function: unsafe extern "C" fn(),
 }
 
-impl DllMemory {
-    /// Load a DLL and extract its memory layout.
+impl DllGameMemory {
+    /// Load a DLL and return a [DllGameMemory] and its base slot.
     ///
     /// # Safety
     /// Loading the same DLL multiple times is unsafe.
@@ -77,64 +77,31 @@ impl DllMemory {
     /// Furthermore if the DLL is accessed from anywhere else, this will likely result in UB.
     pub unsafe fn load(
         dll_path: &str,
-        init_function: &str,
-        update_function: &str,
-    ) -> Result<(Self, Slot), DllLoadError> {
-        let library = Library::open(dll_path)?;
+        init_function_name: &str,
+        update_function_name: &str,
+    ) -> Result<(Self, DllSlot), DllLoadError> {
+        let all_segments = load_dll_segments(dll_path)?;
+        let data_segments = dll_data_segments(&all_segments);
 
-        // When a backtrace is created, SymInitializeW is called. This causes an error
-        // when AddressInfoObtainer calls the same function.
-        SymCleanup(GetCurrentProcess());
-
-        // dlopen API requires looking up a symbol to get the base address
-        let init_function: *const () = read_symbol(&library, init_function)
-            .ok_or_else(|| DllLoadError::UndefinedSymbol(init_function.to_string()))?;
-        let addr_info = AddressInfoObtainer::new().obtain(init_function)?;
-        let base_pointer = addr_info.dll_base_addr;
-
-        // This cast is UB, but there's not really a way to avoid it when doing this kind of
-        // thing with a DLL
-        let base_pointer = BasePointer(base_pointer as *mut u8);
-
-        let segments = load_dll_segments(dll_path)?;
-
-        let base_size = segments
+        let base_size = all_segments
             .iter()
             .map(|segment| segment.virtual_address + segment.virtual_size)
             .max()
             .unwrap_or(0);
 
-        // .data and .bss segments are the only ones that need to be copied in backup slots
-        let segments_by_name: HashMap<String, DllSegment> = segments
-            .into_iter()
-            .map(|segment| (segment.name.clone(), segment))
-            .collect();
-        let get_segment = |name: &str| {
-            segments_by_name
-                .get(name)
-                .cloned()
-                .unwrap_or_else(|| panic!("{} is missing a {} segment", dll_path, name))
-        };
-        let mut data_segments = vec![get_segment(".data"), get_segment(".bss")];
+        let library = Library::open(dll_path)?;
 
-        // Need to ensure that data segments are disjoint for aliasing restrictions
-        data_segments.sort_by_key(|segment| segment.virtual_address);
-        for i in 0..data_segments.len() - 1 {
-            let segment1 = &data_segments[i];
-            let segment2 = &data_segments[i + 1];
-            assert!(
-                segment1.virtual_address + segment1.virtual_size <= segment2.virtual_address,
-                "overlapping dll segments"
-            );
-        }
+        let init_function: unsafe extern "C" fn() = library
+            .symbol(init_function_name)
+            .map_err(|_| DllLoadError::UndefinedSymbol(init_function_name.to_string()))?;
+        let update_function: unsafe extern "C" fn() = library
+            .symbol(update_function_name)
+            .map_err(|_| DllLoadError::UndefinedSymbol(update_function_name.to_string()))?;
+
+        let base_pointer = dll_base_pointer(init_function as *const ())?;
 
         // Call init function
-        let init_function: unsafe extern "C" fn() = mem::transmute(init_function);
         init_function();
-
-        let update_function: *const () = read_symbol(&library, update_function)
-            .ok_or_else(|| DllLoadError::UndefinedSymbol(update_function.to_string()))?;
-        let update_function: unsafe extern "C" fn() = mem::transmute(update_function);
 
         let memory = Self {
             id: next_memory_id(),
@@ -146,7 +113,7 @@ impl DllMemory {
             update_function,
         };
 
-        let base_slot = Slot(SlotImpl::Base(BaseSlot::new(
+        let base_slot = DllSlot(SlotImpl::Base(BaseSlot::new(
             memory.id,
             base_pointer,
             base_size,
@@ -156,7 +123,7 @@ impl DllMemory {
         Ok((memory, base_slot))
     }
 
-    fn validate_slot(&self, slot: &Slot) {
+    fn validate_slot(&self, slot: &DllSlot) {
         assert_eq!(
             slot.0.memory_id(),
             self.id,
@@ -164,7 +131,7 @@ impl DllMemory {
         )
     }
 
-    fn validate_base_slot(&self, slot: &Slot) {
+    fn validate_base_slot(&self, slot: &DllSlot) {
         self.validate_slot(slot);
         assert!(
             slot.is_base_slot(),
@@ -215,7 +182,7 @@ impl DllMemory {
     /// Dereferencing should be safe provided junk data is acceptable in T.
     fn relocatable_to_pointer<T>(
         &self,
-        slot: &Slot,
+        slot: &DllSlot,
         segment: usize,
         offset: usize,
     ) -> Result<*const T, MemoryError> {
@@ -233,7 +200,7 @@ impl DllMemory {
     /// Dereferencing should be safe provided junk data is acceptable in T.
     fn relocatable_to_pointer_mut<T>(
         &self,
-        slot: &mut Slot,
+        slot: &mut DllSlot,
         segment: usize,
         offset: usize,
     ) -> Result<*mut T, MemoryError> {
@@ -263,7 +230,7 @@ impl DllMemory {
     /// Dereferencing should be safe provided junk data is acceptable in T.
     fn address_to_pointer<T>(
         &self,
-        slot: &Slot,
+        slot: &DllSlot,
         address: Address,
     ) -> Result<*const T, MemoryError> {
         match self.classify_address(address) {
@@ -281,7 +248,7 @@ impl DllMemory {
     /// Dereferencing should be safe provided junk data is acceptable in T.
     fn address_to_pointer_mut<T>(
         &self,
-        slot: &mut Slot,
+        slot: &mut DllSlot,
         address: Address,
     ) -> Result<*mut T, MemoryError> {
         match self.classify_address(address) {
@@ -294,14 +261,14 @@ impl DllMemory {
     }
 }
 
-impl SymbolLookup for DllMemory {
+impl SymbolLookup for DllGameMemory {
     fn symbol_address(&self, symbol: &str) -> Option<Address> {
         read_symbol(&self.library, symbol).map(|pointer: *const u8| Address(pointer as usize))
     }
 }
 
-impl SlottedMemory for DllMemory {
-    type Slot = Slot;
+impl GameMemory for DllGameMemory {
+    type Slot = DllSlot;
 
     type StaticView<'a> = DllStaticMemoryView<'a>;
     type SlotView<'a> = DllSlotMemoryView<'a>;
@@ -321,7 +288,7 @@ impl SlottedMemory for DllMemory {
 
     fn create_backup_slot(&self) -> Self::Slot {
         let id = self.next_buffer_id.fetch_add(1, Ordering::SeqCst);
-        Slot(SlotImpl::Buffer(BufferSlot::new(
+        DllSlot(SlotImpl::Buffer(BufferSlot::new(
             self.id,
             id,
             self.data_segments
@@ -351,17 +318,60 @@ impl SlottedMemory for DllMemory {
     }
 }
 
+fn dll_data_segments(all_segments: &[DllSegment]) -> Vec<DllSegment> {
+    // .data and .bss segments are the only ones that need to be copied in backup slots
+    let mut data_segments: Vec<DllSegment> = all_segments
+        .iter()
+        .filter(|&segment| [".data", ".bss"].contains(&segment.name.as_str()))
+        .cloned()
+        .collect();
+
+    // Need to ensure that data segments are disjoint for aliasing restrictions
+    data_segments.sort_by_key(|segment| segment.virtual_address);
+    for i in 0..data_segments.len() - 1 {
+        let segment1 = &data_segments[i];
+        let segment2 = &data_segments[i + 1];
+        assert!(
+            segment1.virtual_address + segment1.virtual_size <= segment2.virtual_address,
+            "overlapping dll segments"
+        );
+    }
+
+    data_segments
+}
+
+unsafe fn dll_base_pointer(
+    arbitrary_symbol_pointer: *const (),
+) -> Result<BasePointer, dlopen::Error> {
+    #[cfg(windows)]
+    {
+        use winapi::um::{dbghelp::SymCleanup, processthreadsapi::GetCurrentProcess};
+
+        // When a backtrace is created, SymInitializeW is called. This causes an error
+        // when AddressInfoObtainer calls the same function.
+        // https://github.com/szymonwieloch/rust-dlopen/issues/37
+        SymCleanup(GetCurrentProcess());
+    }
+
+    // dlopen API requires looking up a symbol to get the base address
+    let addr_info = AddressInfoObtainer::new().obtain(arbitrary_symbol_pointer)?;
+
+    // This cast is UB, but there's not really a way to avoid it when doing this kind of
+    // thing with a DLL
+    Ok(BasePointer(addr_info.dll_base_addr as *mut u8))
+}
+
 fn read_symbol<T>(library: &Library, name: &str) -> Option<*const T> {
     unsafe { library.symbol(name) }.ok()
 }
 
 #[derive(Debug)]
 pub struct DllStaticMemoryView<'a> {
-    memory: &'a DllMemory,
+    memory: &'a DllGameMemory,
 }
 
 impl<'a> DllStaticMemoryView<'a> {
-    pub fn new(memory: &'a DllMemory) -> Self {
+    pub fn new(memory: &'a DllGameMemory) -> Self {
         Self { memory }
     }
 }
@@ -376,8 +386,8 @@ impl MemoryReadPrimitive for DllStaticMemoryView<'_> {
 
 #[derive(Debug)]
 pub struct DllSlotMemoryView<'a> {
-    memory: &'a DllMemory,
-    slot: &'a Slot,
+    memory: &'a DllGameMemory,
+    slot: &'a DllSlot,
 }
 
 impl MemoryReadPrimitive for DllSlotMemoryView<'_> {
@@ -390,8 +400,8 @@ impl MemoryReadPrimitive for DllSlotMemoryView<'_> {
 
 #[derive(Debug)]
 pub struct DllSlotMemoryViewMut<'a> {
-    memory: &'a DllMemory,
-    slot: &'a mut Slot,
+    memory: &'a DllGameMemory,
+    slot: &'a mut DllSlot,
 }
 
 impl MemoryReadPrimitive for DllSlotMemoryViewMut<'_> {
