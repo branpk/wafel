@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 use std::{error::Error, fmt, io};
 
 use wafel_data_type::{shallow::BuildDataTypesError, TypeName};

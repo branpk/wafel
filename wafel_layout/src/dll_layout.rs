@@ -101,7 +101,7 @@ pub fn load_dll_segments(dll_path: impl AsRef<Path>) -> Result<Vec<DllSegment>, 
     Ok(segments)
 }
 
-fn load_dll_segments_impl(object: &object::File) -> Result<Vec<DllSegment>, DllLayoutError> {
+fn load_dll_segments_impl(object: &object::File<'_>) -> Result<Vec<DllSegment>, DllLayoutError> {
     let mut segments = Vec::new();
     for segment in object.segments() {
         if let Some(name) = segment.name()? {
