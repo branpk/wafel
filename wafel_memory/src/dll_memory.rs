@@ -15,14 +15,14 @@ use wafel_layout::{load_dll_segments, DllSegment};
 use winapi::um::{dbghelp::SymCleanup, processthreadsapi::GetCurrentProcess};
 
 use crate::{
-    dll::slot_impl::BaseSlot,
+    dll_slot_impl::BaseSlot,
     MemoryError::{self, *},
     MemoryReadPrimitive, MemoryWritePrimitive, SlottedMemory, SymbolLookup,
 };
 
 use super::{
-    error::{DllLoadError, UndefinedSymbolError},
-    slot_impl::{BasePointer, BufferSlot, SlotImpl},
+    dll_slot_impl::{BasePointer, BufferSlot, SlotImpl},
+    error::DllLoadError,
 };
 
 #[derive(Debug)]
@@ -91,7 +91,8 @@ impl DllMemory {
         SymCleanup(GetCurrentProcess());
 
         // dlopen API requires looking up a symbol to get the base address
-        let init_function: *const () = read_symbol(&library, init_function)?;
+        let init_function: *const () = read_symbol(&library, init_function)
+            .ok_or_else(|| DllLoadError::UndefinedSymbol(init_function.to_string()))?;
         let addr_info = AddressInfoObtainer::new().obtain(init_function)?;
         let base_pointer = addr_info.dll_base_addr;
 
@@ -135,7 +136,8 @@ impl DllMemory {
         let init_function: unsafe extern "C" fn() = mem::transmute(init_function);
         init_function();
 
-        let update_function: *const () = read_symbol(&library, update_function)?;
+        let update_function: *const () = read_symbol(&library, update_function)
+            .ok_or_else(|| DllLoadError::UndefinedSymbol(update_function.to_string()))?;
         let update_function: unsafe extern "C" fn() = mem::transmute(update_function);
 
         let memory = Self {
@@ -298,9 +300,7 @@ impl DllMemory {
 
 impl SymbolLookup for DllMemory {
     fn symbol_address(&self, symbol: &str) -> Option<Address> {
-        read_symbol(&self.library, symbol)
-            .ok()
-            .map(|pointer: *const u8| Address(pointer as usize))
+        read_symbol(&self.library, symbol).map(|pointer: *const u8| Address(pointer as usize))
     }
 }
 
@@ -355,11 +355,8 @@ impl SlottedMemory for DllMemory {
     }
 }
 
-fn read_symbol<T>(library: &Library, name: &str) -> Result<*const T, UndefinedSymbolError> {
-    unsafe { library.symbol(name) }.map_err(|error| UndefinedSymbolError {
-        name: name.to_string(),
-        error,
-    })
+fn read_symbol<T>(library: &Library, name: &str) -> Option<*const T> {
+    unsafe { library.symbol(name) }.ok()
 }
 
 #[derive(Debug)]
