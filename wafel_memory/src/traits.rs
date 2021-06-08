@@ -6,19 +6,46 @@ use wafel_data_type::{
 
 use crate::MemoryError::{self, *};
 
+/// Trait for looking up a symbol's address.
+///
+/// A symbol is the name of a global variable or function.
 pub trait SymbolLookup {
+    /// Look up a symbol's address.
+    ///
+    /// Returns None if the symbol is undefined.
     fn symbol_address(&self, symbol: &str) -> Option<Address>;
 }
 
+/// Trait for a view of memory that allows reading values by address.
+///
+/// Endianness should be handled by the implementer.
 pub trait MemoryRead {
+    /// Read an int from the given address.
+    ///
+    /// The int's size and signedness is given by `int_type`.
     fn read_int(&self, address: Address, int_type: IntType) -> Result<IntValue, MemoryError>;
+
+    /// Read a float from the given address.
+    ///
+    /// The float's size and signedness is given by `float_type`.
     fn read_float(
         &self,
         address: Address,
         float_type: FloatType,
     ) -> Result<FloatValue, MemoryError>;
+
+    /// Read an address value from the given address.
+    ///
+    /// The resulting address may be invalid or zero.
     fn read_address(&self, address: Address) -> Result<Address, MemoryError>;
 
+    /// Read a value of the given type.
+    ///
+    /// Any type names present in `data_type` are resolved using `resolve_type`.
+    ///
+    /// This method can handle all data types except for:
+    /// - Unsized arrays
+    /// - Unions
     fn read_value(
         &self,
         address: Address,
@@ -80,21 +107,40 @@ fn read_value_impl<M: MemoryRead + ?Sized>(
     Ok(value)
 }
 
+/// Trait for a view of memory that allows writing values by address.
+///
+/// Endianness should be handled by the implementer.
 pub trait MemoryWrite {
+    /// Write an int at the given address.
+    ///
+    /// The int's size and signedness is given by `int_type`.
     fn write_int(
         &mut self,
         address: Address,
         int_type: IntType,
         value: IntValue,
     ) -> Result<(), MemoryError>;
+
+    /// Write a float at the given address.
+    ///
+    /// The float's size and signedness is given by `float_type`.
     fn write_float(
         &mut self,
         address: Address,
         float_type: FloatType,
         value: FloatValue,
     ) -> Result<(), MemoryError>;
+
+    /// Write an address value at the given address.
+    ///
+    /// The address value may be invalid or zero.
     fn write_address(&mut self, address: Address, value: Address) -> Result<(), MemoryError>;
 
+    /// Write a value of the given type.
+    ///
+    /// Any type names present in `data_type` are resolved using `resolve_type`.
+    ///
+    /// This method can handle all data types except for unions.
     fn write_value(
         &mut self,
         address: Address,
@@ -172,22 +218,7 @@ fn write_value_impl<M: MemoryWrite + ?Sized>(
     Ok(())
 }
 
-pub trait SlottedMemory {
-    type Slot;
-
-    type StaticView<'a>: MemoryRead;
-    type SlotView<'a>: MemoryRead;
-    type SlotViewMut<'a>: MemoryRead + MemoryWrite;
-
-    fn static_view(&self) -> Self::StaticView<'_>;
-    fn with_slot<'a>(&'a self, slot: &'a Self::Slot) -> Self::SlotView<'a>;
-    fn with_slot_mut<'a>(&'a self, slot: &'a mut Self::Slot) -> Self::SlotViewMut<'a>;
-
-    fn create_backup_slot(&self) -> Self::Slot;
-    fn copy_slot(&self, dst: &mut Self::Slot, src: &Self::Slot);
-    fn advance_base_slot(&self, base_slot: &mut Self::Slot);
-}
-
+/// A helper trait for implementing [MemoryRead].
 pub trait MemoryReadPrimitive {
     /// Read a primitive value from memory.
     ///
@@ -197,6 +228,7 @@ pub trait MemoryReadPrimitive {
     unsafe fn read_primitive<T: Copy>(&self, address: Address) -> Result<T, MemoryError>;
 }
 
+/// A helper trait for implementing [MemoryWrite].
 pub trait MemoryWritePrimitive {
     /// Write a primitive value to memory.
     ///
@@ -285,4 +317,20 @@ impl<M: MemoryWritePrimitive> MemoryWrite for M {
     fn write_address(&mut self, address: Address, value: Address) -> Result<(), MemoryError> {
         unsafe { self.write_primitive(address, value.0 as *const u8) }
     }
+}
+
+pub trait SlottedMemory {
+    type Slot;
+
+    type StaticView<'a>: MemoryRead;
+    type SlotView<'a>: MemoryRead;
+    type SlotViewMut<'a>: MemoryRead + MemoryWrite;
+
+    fn static_view(&self) -> Self::StaticView<'_>;
+    fn with_slot<'a>(&'a self, slot: &'a Self::Slot) -> Self::SlotView<'a>;
+    fn with_slot_mut<'a>(&'a self, slot: &'a mut Self::Slot) -> Self::SlotViewMut<'a>;
+
+    fn create_backup_slot(&self) -> Self::Slot;
+    fn copy_slot(&self, dst: &mut Self::Slot, src: &Self::Slot);
+    fn advance_base_slot(&self, base_slot: &mut Self::Slot);
 }
