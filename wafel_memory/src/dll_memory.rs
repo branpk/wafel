@@ -74,6 +74,11 @@ pub struct DllGameMemory {
 impl DllGameMemory {
     /// Load a DLL and return a [DllGameMemory] and its base slot.
     ///
+    /// `init_function_name` will be called once to initialize the game, and
+    /// `update_function_name` will be called when
+    /// [advance_base_slot](GameMemory::advance_base_slot) is called.
+    /// Both should take no arguments.
+    ///
     /// # Safety
     /// Loading the same DLL multiple times is unsafe.
     ///
