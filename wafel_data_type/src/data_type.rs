@@ -1,8 +1,10 @@
 //! Types and functions for representing C data types.
 
-use std::{collections::HashMap, error::Error, fmt, sync::Arc};
+use std::{collections::HashMap, fmt, sync::Arc};
 
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
+
+use crate::error::NotAnArrayOrPointerError;
 
 /// A representation of a C data type.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -186,25 +188,14 @@ impl DataType {
     }
 
     /// Return the stride for an array or pointer type.
-    pub fn stride(&self) -> Result<Option<usize>, NotAnArrayOrPointer> {
+    pub fn stride(&self) -> Result<Option<usize>, NotAnArrayOrPointerError> {
         match self {
             DataType::Pointer { stride, .. } => Ok(*stride),
             DataType::Array { stride, .. } => Ok(Some(*stride)),
-            _ => Err(NotAnArrayOrPointer),
+            _ => Err(NotAnArrayOrPointerError),
         }
     }
 }
-
-#[derive(Debug, Clone)]
-pub struct NotAnArrayOrPointer;
-
-impl fmt::Display for NotAnArrayOrPointer {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "DataType::stride called a non-array/pointer type")
-    }
-}
-
-impl Error for NotAnArrayOrPointer {}
 
 impl fmt::Display for DataType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

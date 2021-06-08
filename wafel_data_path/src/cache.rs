@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Mutex};
 use wafel_layout::DataLayoutRef;
 use wafel_memory::SymbolLookup;
 
-use super::{DataPath, DataPathError};
+use crate::{DataPath, DataPathError};
 
 /// A cache for data path compilation.
 #[derive(Debug, Default)]

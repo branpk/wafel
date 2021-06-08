@@ -12,7 +12,7 @@ use wafel_data_type::{Address, DataType, DataTypeRef, Field, Namespace, TypeName
 use wafel_layout::DataLayoutRef;
 use wafel_memory::SymbolLookup;
 
-use super::{
+use crate::{
     DataPath,
     DataPathCompileError::{self, *},
     DataPathEdge, DataPathError, DataPathImpl, GlobalDataPath, LocalDataPath,

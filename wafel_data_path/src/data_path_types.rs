@@ -4,31 +4,31 @@ use wafel_data_type::{Address, DataTypeRef, Value};
 use wafel_layout::DataLayoutRef;
 use wafel_memory::{MemoryError, MemoryRead, MemoryWrite, SymbolLookup};
 
-use super::{
+use crate::{
     compile,
     DataPathError::{self, *},
 };
 
 /// Internal representation of a global or local data path.
 #[derive(Debug, Clone)]
-pub(super) struct DataPathImpl<R> {
+pub(crate) struct DataPathImpl<R> {
     /// The original source for the data path.
-    pub(super) source: String,
+    pub(crate) source: String,
     /// The root for the path (either a global variable address or a struct type).
-    pub(super) root: R,
+    pub(crate) root: R,
     /// The operations to perform when evaluating the path.
-    pub(super) edges: Vec<DataPathEdge>,
+    pub(crate) edges: Vec<DataPathEdge>,
     /// The type of the value that the path points to.
     ///
     /// This should be "concrete", i.e. not a TypeName.
-    pub(super) concrete_type: DataTypeRef,
+    pub(crate) concrete_type: DataTypeRef,
     /// A reference to the global DataLayout.
-    pub(super) layout: DataLayoutRef,
+    pub(crate) layout: DataLayoutRef,
 }
 
 /// An operation that is applied when evaluating a data path.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum DataPathEdge {
+pub(crate) enum DataPathEdge {
     Offset(usize),
     Deref,
     Nullable,
@@ -38,13 +38,13 @@ pub(super) enum DataPathEdge {
 ///
 /// See module documentation for more information.
 #[derive(Debug, Clone)]
-pub struct GlobalDataPath(pub(super) DataPathImpl<Address>);
+pub struct GlobalDataPath(pub(crate) DataPathImpl<Address>);
 
 /// A data path starting from a type, such as a specific struct.
 ///
 /// See module documentation for more information.
 #[derive(Debug, Clone)]
-pub struct LocalDataPath(pub(super) DataPathImpl<DataTypeRef>);
+pub struct LocalDataPath(pub(crate) DataPathImpl<DataTypeRef>);
 
 /// Either a global or a local data path.
 #[derive(Debug, Clone)]

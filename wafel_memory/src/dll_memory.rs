@@ -15,14 +15,10 @@ use wafel_layout::{load_dll_segments, DllSegment};
 use winapi::um::{dbghelp::SymCleanup, processthreadsapi::GetCurrentProcess};
 
 use crate::{
-    dll_slot_impl::BaseSlot,
+    dll_slot_impl::{BasePointer, BaseSlot, BufferSlot, SlotImpl},
+    error::DllLoadError,
     MemoryError::{self, *},
     MemoryReadPrimitive, MemoryWritePrimitive, SlottedMemory, SymbolLookup,
-};
-
-use super::{
-    dll_slot_impl::{BasePointer, BufferSlot, SlotImpl},
-    error::DllLoadError,
 };
 
 #[derive(Debug)]

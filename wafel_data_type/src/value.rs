@@ -1,8 +1,10 @@
 //! Dynamically typed value used for reading and writing to memory.
 
-use std::{borrow::Cow, collections::HashMap, convert::TryFrom, error::Error, fmt, ops::Add};
+use std::{collections::HashMap, convert::TryFrom, fmt, ops::Add};
 
 use serde::{Deserialize, Serialize};
+
+use crate::error::ValueTypeError;
 
 /// A raw pointer value that can be stored in memory.
 ///
@@ -20,6 +22,7 @@ impl Add<usize> for Address {
 }
 
 impl Address {
+    /// Returns true if the address is null (equal to zero).
     pub fn is_null(self) -> bool {
         self.0 == 0
     }
@@ -71,11 +74,11 @@ impl Value {
     }
 
     /// Returns an error if the value is not null.
-    pub fn as_null(&self) -> Result<(), ValueError> {
+    pub fn as_null(&self) -> Result<(), ValueTypeError> {
         if self.is_null() {
             Ok(())
         } else {
-            Err(ValueError::WrongType {
+            Err(ValueTypeError {
                 expected: "void".into(),
                 actual: self.clone(),
             })
@@ -83,11 +86,11 @@ impl Value {
     }
 
     /// Convert the value to an int.
-    pub fn as_int(&self) -> Result<IntValue, ValueError> {
+    pub fn as_int(&self) -> Result<IntValue, ValueTypeError> {
         if let Value::Int(n) = *self {
             Ok(n)
         } else {
-            Err(ValueError::WrongType {
+            Err(ValueTypeError {
                 expected: "int".into(),
                 actual: self.clone(),
             })
@@ -95,9 +98,9 @@ impl Value {
     }
 
     /// Convert the value to a usize.
-    pub fn as_usize(&self) -> Result<usize, ValueError> {
+    pub fn as_usize(&self) -> Result<usize, ValueTypeError> {
         self.as_int().and_then(|n| {
-            usize::try_from(n).map_err(|_| ValueError::WrongType {
+            usize::try_from(n).map_err(|_| ValueTypeError {
                 expected: "usize".into(),
                 actual: self.clone(),
             })
@@ -105,11 +108,11 @@ impl Value {
     }
 
     /// Convert the value to a float.
-    pub fn as_float(&self) -> Result<FloatValue, ValueError> {
+    pub fn as_float(&self) -> Result<FloatValue, ValueTypeError> {
         if let Value::Float(r) = *self {
             Ok(r)
         } else {
-            Err(ValueError::WrongType {
+            Err(ValueTypeError {
                 expected: "float".into(),
                 actual: self.clone(),
             })
@@ -117,16 +120,16 @@ impl Value {
     }
 
     /// Convert the value to a float and then truncate to an f32.
-    pub fn as_f32(&self) -> Result<f32, ValueError> {
+    pub fn as_f32(&self) -> Result<f32, ValueTypeError> {
         self.as_float().map(|r| r as f32)
     }
 
     /// Convert the value to an address.
-    pub fn as_address(&self) -> Result<Address, ValueError> {
+    pub fn as_address(&self) -> Result<Address, ValueTypeError> {
         if let Value::Address(address) = self {
             Ok(*address)
         } else {
-            Err(ValueError::WrongType {
+            Err(ValueTypeError {
                 expected: "address".into(),
                 actual: self.clone(),
             })
@@ -134,11 +137,11 @@ impl Value {
     }
 
     /// Convert the value to a struct and return its fields.
-    pub fn as_struct(&self) -> Result<&HashMap<String, Value>, ValueError> {
+    pub fn as_struct(&self) -> Result<&HashMap<String, Value>, ValueTypeError> {
         if let Value::Struct { fields } = self {
             Ok(fields)
         } else {
-            Err(ValueError::WrongType {
+            Err(ValueTypeError {
                 expected: "struct".into(),
                 actual: self.clone(),
             })
@@ -146,11 +149,11 @@ impl Value {
     }
 
     /// Convert the value to an array and return its elements.
-    pub fn as_array(&self) -> Result<&[Value], ValueError> {
+    pub fn as_array(&self) -> Result<&[Value], ValueTypeError> {
         if let Value::Array(elements) = self {
             Ok(elements)
         } else {
-            Err(ValueError::WrongType {
+            Err(ValueTypeError {
                 expected: "array".into(),
                 actual: self.clone(),
             })
@@ -158,12 +161,12 @@ impl Value {
     }
 
     /// Convert the value to an array and return its elements.
-    pub fn as_array_with_len(&self, length: usize) -> Result<&[Value], ValueError> {
+    pub fn as_array_with_len(&self, length: usize) -> Result<&[Value], ValueTypeError> {
         let elements = self.as_array()?;
         if elements.len() == length {
             Ok(elements)
         } else {
-            Err(ValueError::WrongType {
+            Err(ValueTypeError {
                 expected: format!("array of length {}", length).into(),
                 actual: self.clone(),
             })
@@ -171,7 +174,7 @@ impl Value {
     }
 
     /// Convert the value to an array of three i16s.
-    pub fn as_i16_3(&self) -> Result<[i16; 3], ValueError> {
+    pub fn as_i16_3(&self) -> Result<[i16; 3], ValueTypeError> {
         let elements = self.as_array_with_len(3)?;
         Ok([
             elements[0].as_int()? as i16,
@@ -181,7 +184,7 @@ impl Value {
     }
 
     /// Convert the value to an array of three f32s.
-    pub fn as_f32_3(&self) -> Result<[f32; 3], ValueError> {
+    pub fn as_f32_3(&self) -> Result<[f32; 3], ValueTypeError> {
         let elements = self.as_array_with_len(3)?;
         Ok([
             elements[0].as_float()? as f32,
@@ -230,23 +233,3 @@ impl fmt::Display for Value {
         }
     }
 }
-
-#[derive(Debug, Clone)]
-pub enum ValueError {
-    WrongType {
-        expected: Cow<'static, str>,
-        actual: Value,
-    },
-}
-
-impl fmt::Display for ValueError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ValueError::WrongType { expected, actual } => {
-                write!(f, "expected value of type: {}, found: {}", expected, actual)
-            }
-        }
-    }
-}
-
-impl Error for ValueError {}

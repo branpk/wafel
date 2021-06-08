@@ -1,4 +1,6 @@
-//! Non-recursive data types that can be resolved into data types.
+//! Non-recursive version of data types that can be resolved into regular data types.
+
+#![allow(missing_docs)]
 
 use std::{
     collections::{HashMap, HashSet, VecDeque},

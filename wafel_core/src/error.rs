@@ -8,7 +8,7 @@ use std::{
 };
 
 use derive_more::{Display, Error, From};
-use wafel_data_type::ValueError;
+use wafel_data_type::ValueTypeError;
 use wafel_layout::{LayoutLookupError, SM64ExtrasError};
 
 use crate::{
@@ -23,7 +23,7 @@ pub type Error = WithContext<ErrorCause>;
 #[derive(Debug, Display, Error, From)]
 pub enum ErrorCause {
     #[from]
-    ValueError(ValueError),
+    ValueTypeError(ValueTypeError),
     #[from]
     LayoutLookupError(LayoutLookupError),
     #[from]
@@ -38,9 +38,9 @@ pub enum ErrorCause {
     SM64Error(SM64ErrorCause),
 }
 
-impl From<ValueError> for Error {
-    fn from(value: ValueError) -> Self {
-        ErrorCause::ValueError(value).into()
+impl From<ValueTypeError> for Error {
+    fn from(value: ValueTypeError) -> Self {
+        ErrorCause::ValueTypeError(value).into()
     }
 }
 

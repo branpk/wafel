@@ -1,6 +1,6 @@
 use std::{error::Error, fmt};
 
-use wafel_data_type::{TypeName, ValueError};
+use wafel_data_type::{TypeName, ValueTypeError};
 use wafel_layout::DllLayoutError;
 
 #[derive(Debug, Clone)]
@@ -9,7 +9,7 @@ pub enum MemoryError {
         context: String,
         error: Box<MemoryError>,
     },
-    ValueError(ValueError),
+    ValueTypeError(ValueTypeError),
     UndefinedTypeName(TypeName),
     ReadUnsizedArray,
     ReadUnion,
@@ -25,7 +25,7 @@ impl fmt::Display for MemoryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             MemoryError::Context { context, error } => write!(f, "{}: {}", context, error),
-            MemoryError::ValueError(error) => write!(f, "{}", error),
+            MemoryError::ValueTypeError(error) => write!(f, "{}", error),
             MemoryError::UndefinedTypeName(type_name) => {
                 write!(f, "undefined type name: {}", type_name)
             }
@@ -55,9 +55,9 @@ impl fmt::Display for MemoryError {
 
 impl Error for MemoryError {}
 
-impl From<ValueError> for MemoryError {
-    fn from(v: ValueError) -> Self {
-        Self::ValueError(v)
+impl From<ValueTypeError> for MemoryError {
+    fn from(v: ValueTypeError) -> Self {
+        Self::ValueTypeError(v)
     }
 }
 
