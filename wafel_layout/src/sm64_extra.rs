@@ -10,15 +10,17 @@ use crate::{
     SM64ExtrasError::{self, *},
 };
 
-/// Load hardcoded SM64 data into the data layout.
-///
-/// This includes:
-/// - rawData fields in the Object struct
-/// - Integer constants defined by macros
-pub fn load_sm64_extras(layout: &mut DataLayout) -> Result<(), SM64ExtrasError> {
-    load_object_fields(layout, include_bytes!("../sm64_extras/object_fields.json"))?;
-    load_constants(layout, include_bytes!("../sm64_extras/constants.json"));
-    Ok(())
+impl DataLayout {
+    /// Load hardcoded SM64 data into the data layout.
+    ///
+    /// This includes:
+    /// - rawData fields in the Object struct
+    /// - Integer constants defined by macros
+    pub fn add_sm64_extras(&mut self) -> Result<(), SM64ExtrasError> {
+        load_object_fields(self, include_bytes!("../sm64_extras/object_fields.json"))?;
+        load_constants(self, include_bytes!("../sm64_extras/constants.json"));
+        Ok(())
+    }
 }
 
 /// Load virtual object fields from the given json string.

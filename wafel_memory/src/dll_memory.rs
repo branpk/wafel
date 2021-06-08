@@ -10,7 +10,7 @@ use std::{
 use dlopen::raw::{AddressInfoObtainer, Library};
 use once_cell::sync::OnceCell;
 use wafel_data_type::Address;
-use wafel_layout::{load_dll_segments, DllSegment};
+use wafel_layout::{read_dll_segments, DllSegment};
 
 use crate::{
     dll_slot_impl::{BasePointer, BaseSlot, BufferSlot, SlotImpl},
@@ -88,7 +88,7 @@ impl DllGameMemory {
         init_function_name: &str,
         update_function_name: &str,
     ) -> Result<(Self, DllSlot), DllLoadError> {
-        let all_segments = load_dll_segments(dll_path)?;
+        let all_segments = read_dll_segments(dll_path)?;
         let data_segments = dll_data_segments(&all_segments);
 
         let base_size = all_segments

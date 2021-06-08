@@ -6,10 +6,10 @@
 //! - Constant values
 //!
 //! This layout is used for accessing global data in Wafel. It can be constructed manually
-//! or read automatically from the DWARF debugging info of a DLL.
+//! or read automatically from the DWARF debugging info of a DLL using [DllLayout::read].
 //!
 //! Some SM64 specific data cannot be parsed from DWARF but is useful to have in the layout.
-//! To include these, use [load_sm64_extras].
+//! To include these, use [DataLayout::add_sm64_extras].
 //!
 //! A json representation of this layout can be produced using the libsm64_layout executable.
 

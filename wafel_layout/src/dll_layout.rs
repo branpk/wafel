@@ -65,43 +65,46 @@ impl fmt::Display for DllSegment {
     }
 }
 
-/// Construct a DllLayout from the DWARF debugging information in a DLL.
-pub fn load_layout_from_dll(dll_path: impl AsRef<Path>) -> Result<DllLayout, DllLayoutError> {
-    // Read object file
-    let buffer = fs::read(&dll_path)?;
-    let object = object::File::parse(&buffer[..])?;
+impl DllLayout {
+    /// Construct a DllLayout from the DWARF debugging information in a DLL.
+    pub fn read(dll_path: impl AsRef<Path>) -> Result<Self, DllLayoutError> {
+        // Read object file
+        let buffer = fs::read(&dll_path)?;
+        let object = object::File::parse(&buffer[..])?;
 
-    let segments = load_dll_segments_impl(&object)?;
+        let segments = read_dll_segments_impl(&object)?;
 
-    // Load dwarf info
-    let load_section = |id: SectionId| -> Result<Cow<'_, [u8]>, object::Error> {
-        Ok(object
-            .section_by_name(id.name())
-            .map(|ref section| section.uncompressed_data())
-            .transpose()?
-            .unwrap_or(Cow::Borrowed(&[])))
-    };
-    let dwarf_cow = Dwarf::load(&load_section)?;
-    let dwarf = dwarf_cow.borrow(|section| EndianSlice::new(&section, RunTimeEndian::default()));
+        // Load dwarf info
+        let load_section = |id: SectionId| -> Result<Cow<'_, [u8]>, object::Error> {
+            Ok(object
+                .section_by_name(id.name())
+                .map(|ref section| section.uncompressed_data())
+                .transpose()?
+                .unwrap_or(Cow::Borrowed(&[])))
+        };
+        let dwarf_cow = Dwarf::load(&load_section)?;
+        let dwarf =
+            dwarf_cow.borrow(|section| EndianSlice::new(&section, RunTimeEndian::default()));
 
-    // Read layout from dwarf
-    let data_layout = load_data_layout_from_dwarf(&dwarf)?;
+        // Read layout from dwarf
+        let data_layout = load_data_layout_from_dwarf(&dwarf)?;
 
-    Ok(DllLayout {
-        segments,
-        data_layout,
-    })
+        Ok(DllLayout {
+            segments,
+            data_layout,
+        })
+    }
 }
 
 /// Load segment definitions from the DLL.
-pub fn load_dll_segments(dll_path: impl AsRef<Path>) -> Result<Vec<DllSegment>, DllLayoutError> {
+pub fn read_dll_segments(dll_path: impl AsRef<Path>) -> Result<Vec<DllSegment>, DllLayoutError> {
     let buffer = fs::read(&dll_path)?;
     let object = object::File::parse(&buffer[..])?;
-    let segments = load_dll_segments_impl(&object)?;
+    let segments = read_dll_segments_impl(&object)?;
     Ok(segments)
 }
 
-fn load_dll_segments_impl(object: &object::File<'_>) -> Result<Vec<DllSegment>, DllLayoutError> {
+fn read_dll_segments_impl(object: &object::File<'_>) -> Result<Vec<DllSegment>, DllLayoutError> {
     let mut segments = Vec::new();
     for segment in object.segments() {
         if let Some(name) = segment.name()? {

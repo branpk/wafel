@@ -6,7 +6,6 @@ use crate::{
     timeline::{Controller, InvalidatedFrames, SlotStateMut, Timeline},
 };
 use wafel_data_type::Value;
-use wafel_layout::load_sm64_extras;
 
 /// SM64 controller implementation.
 #[derive(Debug)]
@@ -165,7 +164,7 @@ pub unsafe fn load_dll_pipeline(
     num_backup_slots: usize,
 ) -> Result<Pipeline<dll::Memory>, Error> {
     let (mut memory, base_slot) = dll::Memory::load(dll_path, "sm64_init", "sm64_update")?;
-    load_sm64_extras(memory.data_layout_mut())?;
+    memory.data_layout_mut().add_sm64_extras()?;
 
     let data_variables = DataVariables::all(&memory)?;
     let controller = SM64Controller::new(data_variables);

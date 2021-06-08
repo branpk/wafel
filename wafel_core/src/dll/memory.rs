@@ -24,7 +24,7 @@ use std::{
     },
 };
 use wafel_data_type::{Address, FloatType, FloatValue, IntType, IntValue};
-use wafel_layout::{load_layout_from_dll, DataLayout, DllSegment};
+use wafel_layout::{DataLayout, DllLayout, DllSegment};
 use winapi::um::{dbghelp::SymCleanup, processthreadsapi::GetCurrentProcess};
 
 lazy_static! {
@@ -167,7 +167,7 @@ impl Memory {
         update_function: &str,
     ) -> Result<(Self, Slot), Error> {
         let result: Result<(Self, Slot), DllError> = try {
-            let layout = load_layout_from_dll(dll_path.as_ref()).map_err(DllErrorCause::from)?;
+            let layout = DllLayout::read(dll_path.as_ref()).map_err(DllErrorCause::from)?;
 
             let library = Library::open(dll_path.as_ref())?;
 
