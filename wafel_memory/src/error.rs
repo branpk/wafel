@@ -1,7 +1,7 @@
 use std::{error::Error, fmt};
 
-use wafel_data_type::ValueError;
-use wafel_layout::{DllLayoutError, LayoutLookupError};
+use wafel_data_type::{TypeName, ValueError};
+use wafel_layout::DllLayoutError;
 
 #[derive(Debug, Clone)]
 pub enum MemoryError {
@@ -10,7 +10,7 @@ pub enum MemoryError {
         error: Box<MemoryError>,
     },
     ValueError(ValueError),
-    LayoutLookupError(LayoutLookupError),
+    UndefinedTypeName(TypeName),
     ReadUnsizedArray,
     ReadUnion,
     WriteExtraField(String),
@@ -26,7 +26,9 @@ impl fmt::Display for MemoryError {
         match self {
             MemoryError::Context { context, error } => write!(f, "{}: {}", context, error),
             MemoryError::ValueError(error) => write!(f, "{}", error),
-            MemoryError::LayoutLookupError(error) => write!(f, "{}", error),
+            MemoryError::UndefinedTypeName(type_name) => {
+                write!(f, "undefined type name: {}", type_name)
+            }
             MemoryError::ReadUnsizedArray => {
                 write!(f, "cannot read array with unknown length")
             }
@@ -56,12 +58,6 @@ impl Error for MemoryError {}
 impl From<ValueError> for MemoryError {
     fn from(v: ValueError) -> Self {
         Self::ValueError(v)
-    }
-}
-
-impl From<LayoutLookupError> for MemoryError {
-    fn from(v: LayoutLookupError) -> Self {
-        Self::LayoutLookupError(v)
     }
 }
 

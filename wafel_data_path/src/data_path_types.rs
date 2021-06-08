@@ -115,7 +115,9 @@ impl GlobalDataPath {
     pub fn read(&self, memory: &impl MemoryRead) -> Result<Value, MemoryError> {
         match self.address(memory)? {
             Some(address) => memory
-                .read_value(address, &self.0.concrete_type, &self.0.layout)
+                .read_value(address, &self.0.concrete_type, |type_name| {
+                    self.0.layout.data_type(type_name).ok().cloned()
+                })
                 .map_err(|error| MemoryError::Context {
                     context: format!("while evaluating '{}'", self),
                     error: Box::new(error),
@@ -132,7 +134,9 @@ impl GlobalDataPath {
     ) -> Result<(), MemoryError> {
         match self.address(memory)? {
             Some(address) => memory
-                .write_value(address, &self.0.concrete_type, value, &self.0.layout)
+                .write_value(address, &self.0.concrete_type, value, |type_name| {
+                    self.0.layout.data_type(type_name).ok().cloned()
+                })
                 .map_err(|error| MemoryError::Context {
                     context: format!("while evaluating '{}'", self),
                     error: Box::new(error),

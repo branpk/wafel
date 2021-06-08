@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 
 use wafel_data_type::{
-    Address, DataType, DataTypeRef, FloatType, FloatValue, IntType, IntValue, Value,
+    Address, DataType, DataTypeRef, FloatType, FloatValue, IntType, IntValue, TypeName, Value,
 };
-use wafel_layout::DataLayout;
 
-use crate::MemoryError;
+use crate::MemoryError::{self, *};
 
 pub trait SymbolLookup {
     fn symbol_address(&self, symbol: &str) -> Option<Address>;
@@ -24,45 +23,61 @@ pub trait MemoryRead {
         &self,
         address: Address,
         data_type: &DataTypeRef,
-        layout: &DataLayout,
+        mut resolve_type: impl FnMut(&TypeName) -> Option<DataTypeRef>,
     ) -> Result<Value, MemoryError> {
-        let value = match data_type.as_ref() {
-            DataType::Void => Value::Null,
-            DataType::Int(int_type) => Value::Int(self.read_int(address, *int_type)?),
-            DataType::Float(float_type) => Value::Float(self.read_float(address, *float_type)?),
-            DataType::Pointer { .. } => Value::Address(self.read_address(address)?),
-            DataType::Array {
-                base,
-                length,
-                stride,
-            } => match *length {
-                Some(length) => {
-                    let values: Vec<Value> = (0..length)
-                        .map(|index| self.read_value(address + index * *stride, base, layout))
-                        .collect::<Result<_, MemoryError>>()?;
-                    Value::Array(values)
-                }
-                None => return Err(MemoryError::ReadUnsizedArray),
-            },
-            DataType::Struct { fields } => {
-                let mut field_values: HashMap<String, Value> = HashMap::new();
-                for (name, field) in fields {
-                    let field_value =
-                        self.read_value(address + field.offset, &field.data_type, layout)?;
-                    field_values.insert(name.clone(), field_value);
-                }
-                Value::Struct {
-                    fields: Box::new(field_values),
-                }
-            }
-            DataType::Union { .. } => return Err(MemoryError::ReadUnion),
-            DataType::Name(type_name) => {
-                let resolved_type = layout.data_type(type_name)?;
-                self.read_value(address, resolved_type, layout)?
-            }
-        };
-        Ok(value)
+        read_value_impl(self, address, data_type, &mut resolve_type)
     }
+}
+
+fn read_value_impl<M: MemoryRead + ?Sized>(
+    memory: &M,
+    address: Address,
+    data_type: &DataTypeRef,
+    resolve_type: &mut impl FnMut(&TypeName) -> Option<DataTypeRef>,
+) -> Result<Value, MemoryError> {
+    let value = match data_type.as_ref() {
+        DataType::Void => Value::Null,
+        DataType::Int(int_type) => Value::Int(memory.read_int(address, *int_type)?),
+        DataType::Float(float_type) => Value::Float(memory.read_float(address, *float_type)?),
+        DataType::Pointer { .. } => Value::Address(memory.read_address(address)?),
+        DataType::Array {
+            base,
+            length,
+            stride,
+        } => match *length {
+            Some(length) => {
+                let values: Vec<Value> = (0..length)
+                    .map(|index| {
+                        read_value_impl(memory, address + index * *stride, base, resolve_type)
+                    })
+                    .collect::<Result<_, MemoryError>>()?;
+                Value::Array(values)
+            }
+            None => return Err(ReadUnsizedArray),
+        },
+        DataType::Struct { fields } => {
+            let mut field_values: HashMap<String, Value> = HashMap::new();
+            for (name, field) in fields {
+                let field_value = read_value_impl(
+                    memory,
+                    address + field.offset,
+                    &field.data_type,
+                    resolve_type,
+                )?;
+                field_values.insert(name.clone(), field_value);
+            }
+            Value::Struct {
+                fields: Box::new(field_values),
+            }
+        }
+        DataType::Union { .. } => return Err(ReadUnion),
+        DataType::Name(type_name) => {
+            let resolved_type =
+                resolve_type(type_name).ok_or_else(|| UndefinedTypeName(type_name.clone()))?;
+            read_value_impl(memory, address, &resolved_type, resolve_type)?
+        }
+    };
+    Ok(value)
 }
 
 pub trait MemoryWrite {
@@ -85,58 +100,76 @@ pub trait MemoryWrite {
         address: Address,
         data_type: &DataTypeRef,
         value: Value,
-        layout: &DataLayout,
+        mut resolve_type: impl FnMut(&TypeName) -> Option<DataTypeRef>,
     ) -> Result<(), MemoryError> {
-        match data_type.as_ref() {
-            DataType::Void => value.as_null()?,
-            DataType::Int(int_type) => self.write_int(address, *int_type, value.as_int()?)?,
-            DataType::Float(float_type) => {
-                self.write_float(address, *float_type, value.as_float()?)?
-            }
-            DataType::Pointer { .. } => self.write_address(address, value.as_address()?)?,
-            DataType::Array {
-                base,
-                length,
-                stride,
-            } => {
-                let elements = match *length {
-                    Some(length) => value.as_array_with_len(length)?,
-                    None => value.as_array()?,
-                };
-                for (i, element) in elements.iter().enumerate() {
-                    self.write_value(address + i * *stride, base, element.clone(), layout)?;
-                }
-            }
-            DataType::Struct { fields } => {
-                let field_values = value.as_struct()?;
-                for name in field_values.keys() {
-                    if !fields.contains_key(name) {
-                        return Err(MemoryError::WriteExtraField(name.clone()));
-                    }
-                }
-                for name in fields.keys() {
-                    if !field_values.contains_key(name) {
-                        return Err(MemoryError::WriteExtraField(name.clone()));
-                    }
-                }
-                for (field_name, field) in fields {
-                    let field_value = field_values[field_name].clone();
-                    self.write_value(
-                        address + field.offset,
-                        &field.data_type,
-                        field_value,
-                        layout,
-                    )?;
-                }
-            }
-            DataType::Union { fields: _ } => return Err(MemoryError::WriteUnion),
-            DataType::Name(type_name) => {
-                let resolved_type = layout.data_type(type_name)?;
-                self.write_value(address, resolved_type, value, layout)?
+        write_value_impl(self, address, data_type, value, &mut resolve_type)
+    }
+}
+
+fn write_value_impl<M: MemoryWrite + ?Sized>(
+    memory: &mut M,
+    address: Address,
+    data_type: &std::sync::Arc<DataType>,
+    value: Value,
+    resolve_type: &mut impl FnMut(&TypeName) -> Option<std::sync::Arc<DataType>>,
+) -> Result<(), MemoryError> {
+    match data_type.as_ref() {
+        DataType::Void => value.as_null()?,
+        DataType::Int(int_type) => memory.write_int(address, *int_type, value.as_int()?)?,
+        DataType::Float(float_type) => {
+            memory.write_float(address, *float_type, value.as_float()?)?
+        }
+        DataType::Pointer { .. } => memory.write_address(address, value.as_address()?)?,
+        DataType::Array {
+            base,
+            length,
+            stride,
+        } => {
+            let elements = match *length {
+                Some(length) => value.as_array_with_len(length)?,
+                None => value.as_array()?,
+            };
+            for (i, element) in elements.iter().enumerate() {
+                write_value_impl(
+                    memory,
+                    address + i * *stride,
+                    base,
+                    element.clone(),
+                    resolve_type,
+                )?;
             }
         }
-        Ok(())
+        DataType::Struct { fields } => {
+            let field_values = value.as_struct()?;
+            for name in field_values.keys() {
+                if !fields.contains_key(name) {
+                    return Err(WriteExtraField(name.clone()));
+                }
+            }
+            for name in fields.keys() {
+                if !field_values.contains_key(name) {
+                    return Err(WriteExtraField(name.clone()));
+                }
+            }
+            for (field_name, field) in fields {
+                let field_value = field_values[field_name].clone();
+                write_value_impl(
+                    memory,
+                    address + field.offset,
+                    &field.data_type,
+                    field_value,
+                    resolve_type,
+                )?;
+            }
+        }
+        DataType::Union { fields: _ } => return Err(WriteUnion),
+        DataType::Name(type_name) => {
+            let resolved_type =
+                resolve_type(type_name).ok_or_else(|| UndefinedTypeName(type_name.clone()))?;
+            write_value_impl(memory, address, &resolved_type, value, resolve_type)?
+        }
     }
+    Ok(())
 }
 
 pub trait SlottedMemory {
