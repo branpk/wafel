@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     mem,
     sync::{
         atomic::{AtomicUsize, Ordering},
@@ -11,7 +10,7 @@ use std::{
 use dlopen::raw::{AddressInfoObtainer, Library};
 use once_cell::sync::OnceCell;
 use wafel_data_type::Address;
-use wafel_layout::{load_dll_segments, DllLayout, DllLayoutError, DllSegment};
+use wafel_layout::{load_dll_segments, DllSegment};
 
 use crate::{
     dll_slot_impl::{BasePointer, BaseSlot, BufferSlot, SlotImpl},
@@ -21,10 +20,14 @@ use crate::{
     MemoryReadPrimitive, MemoryWritePrimitive, SymbolLookup,
 };
 
+/// A slot for [DllGameMemory].
+///
+/// See the documentation for [GameMemory].
 #[derive(Debug)]
 pub struct DllSlot(SlotImpl);
 
 impl DllSlot {
+    /// Return true if the slot is the base slot for its [DllGameMemory].
     pub fn is_base_slot(&self) -> bool {
         matches!(self.0, SlotImpl::Base(_))
     }
@@ -365,15 +368,12 @@ fn read_symbol<T>(library: &Library, name: &str) -> Option<*const T> {
     unsafe { library.symbol(name) }.ok()
 }
 
+/// A read-only view of shared static memory.
+///
+/// See [GameMemory::static_view].
 #[derive(Debug)]
 pub struct DllStaticMemoryView<'a> {
     memory: &'a DllGameMemory,
-}
-
-impl<'a> DllStaticMemoryView<'a> {
-    pub fn new(memory: &'a DllGameMemory) -> Self {
-        Self { memory }
-    }
 }
 
 impl MemoryReadPrimitive for DllStaticMemoryView<'_> {
@@ -384,6 +384,10 @@ impl MemoryReadPrimitive for DllStaticMemoryView<'_> {
     }
 }
 
+/// A read-only view of both static and non-static memory, backed by a
+/// particular slot.
+///
+/// See [GameMemory::with_slot].
 #[derive(Debug)]
 pub struct DllSlotMemoryView<'a> {
     memory: &'a DllGameMemory,
@@ -398,6 +402,10 @@ impl MemoryReadPrimitive for DllSlotMemoryView<'_> {
     }
 }
 
+/// A read-write view of both static and non-static memory, backed by a
+/// particular slot.
+///
+/// See [GameMemory::with_slot_mut].
 #[derive(Debug)]
 pub struct DllSlotMemoryViewMut<'a> {
     memory: &'a DllGameMemory,

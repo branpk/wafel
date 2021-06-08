@@ -321,19 +321,71 @@ impl<M: MemoryWritePrimitive> MemoryWrite for M {
 
 /// A trait that allows accessing game memory and saving/loading states.
 ///
-/// The memory // TODO
+/// The memory is divided into static and non-static memory.
+/// Static memory is considered immutable, e.g. the .code and .rodata sections, while
+/// non-static memory is mutable and includes the .data and .bss sections.
+///
+/// A "slot" is a buffer that can hold a copy of non-static memory.
+/// Each [GameMemory] comes with a base slot, which represents the game's actual loaded memory.
+/// Other backup slots can be created, and data can be copied to/from the base slot.
 pub trait GameMemory {
+    /// A buffer that can hold a copy of non-static memory.
     type Slot;
 
+    /// A read-only view of shared static memory.
+    ///
+    /// Attempting to read a non-static address using this will fail.
     type StaticView<'a>: MemoryRead;
+
+    /// A read-only view of both static and non-static memory, backed by a
+    /// particular slot.
+    ///
+    /// Static addresses are looked up in shared static memory, while non-static
+    /// addresses are looked up in the slot's buffer.
     type SlotView<'a>: MemoryRead;
+
+    /// A read-write view of both static and non-static memory, backed by a
+    /// particular slot.
+    ///
+    /// Static addresses are looked up in shared static memory, while non-static
+    /// addresses are looked up in the slot's buffer.
     type SlotViewMut<'a>: MemoryRead + MemoryWrite;
 
+    /// Return a read-only view of shared static memory.
+    ///
+    /// Attempting to read a non-static address using this will fail.
     fn static_view(&self) -> Self::StaticView<'_>;
+
+    /// Return a read-only view of both static and non-static memory, backed by the given
+    /// slot.
+    ///
+    /// Static addresses are looked up in shared static memory, while non-static
+    /// addresses are looked up in the slot's buffer.
     fn with_slot<'a>(&'a self, slot: &'a Self::Slot) -> Self::SlotView<'a>;
+
+    /// Return a read-write view of both static and non-static memory, backed by the given
+    /// slot.
+    ///
+    /// Static addresses are looked up in shared static memory, while non-static
+    /// addresses are looked up in the slot's buffer.
     fn with_slot_mut<'a>(&'a self, slot: &'a mut Self::Slot) -> Self::SlotViewMut<'a>;
 
+    /// Allocate a new backup slot.
+    ///
+    /// Note that a slot can be large, so care should be taken to avoid allocating
+    /// too many. An SM64 slot is ~2 MB.
     fn create_backup_slot(&self) -> Self::Slot;
+
+    /// Copy data from one slot to another.
     fn copy_slot(&self, dst: &mut Self::Slot, src: &Self::Slot);
+
+    /// Advance the base slot by one frame.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the slot is not the base slot, i.e. was created using
+    /// [create_backup_slot](GameMemory::create_backup_slot).
+    /// To advance a backup slot, you should first copy it to the base slot,
+    /// then advance the base slot, then copy it back.
     fn advance_base_slot(&self, base_slot: &mut Self::Slot);
 }
