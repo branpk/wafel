@@ -2511,6 +2511,7 @@ dependencies = [
 name = "wafel_timeline"
 version = "0.1.0"
 dependencies = [
+ "rand",
  "wafel_memory",
 ]
 

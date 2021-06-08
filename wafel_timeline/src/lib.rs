@@ -5,5 +5,9 @@
     unreachable_pub
 )]
 
+pub use controller::*;
+pub use timeline::*;
+
+mod controller;
 mod slots;
 mod timeline;

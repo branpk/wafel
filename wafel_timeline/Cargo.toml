@@ -5,3 +5,4 @@ edition = "2018"
 
 [dependencies]
 wafel_memory = { path = "../wafel_memory" }
+rand = "0.8.3"

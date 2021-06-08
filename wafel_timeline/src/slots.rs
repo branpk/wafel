@@ -1,6 +1,6 @@
 use std::{fmt, iter};
 
-use wafel_memory::{GameMemory, MemoryError};
+use wafel_memory::GameMemory;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum SlotIndex {
@@ -44,6 +44,42 @@ pub(crate) struct Slots<M: GameMemory> {
 }
 
 impl<M: GameMemory> Slots<M> {
+    pub(crate) fn new(memory: &mut M, base_slot: M::Slot, num_backup_slots: usize) -> Self {
+        let base_slot = SlotWrapper {
+            index: SlotIndex::Base,
+            slot: base_slot,
+            is_base: true,
+            frame: Frame::PowerOn,
+        };
+
+        let mut power_on_slot = SlotWrapper {
+            index: SlotIndex::PowerOn,
+            slot: memory.create_backup_slot(),
+            is_base: false,
+            frame: Frame::PowerOn,
+        };
+        memory.copy_slot(&mut power_on_slot.slot, &base_slot.slot);
+
+        let backup_slots: Vec<_> = iter::repeat_with(|| memory.create_backup_slot())
+            .take(num_backup_slots)
+            .enumerate()
+            .map(|(index, slot)| SlotWrapper {
+                index: SlotIndex::Backup(index),
+                slot,
+                is_base: false,
+                frame: Frame::Unknown,
+            })
+            .collect();
+
+        Self {
+            power_on: power_on_slot,
+            base: base_slot,
+            backups: backup_slots,
+            num_advances: 0,
+            num_copies: 0,
+        }
+    }
+
     pub(crate) fn get(&self, index: SlotIndex) -> &SlotWrapper<M::Slot> {
         match index {
             SlotIndex::PowerOn => &self.power_on,
