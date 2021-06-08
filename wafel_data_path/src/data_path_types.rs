@@ -2,8 +2,7 @@ use std::fmt;
 
 use wafel_data_type::{Address, DataTypeRef, Value};
 use wafel_layout::DataLayoutRef;
-
-use crate::{MemoryError, MemoryRead, MemoryWrite, SymbolLookup};
+use wafel_memory::{MemoryError, MemoryRead, MemoryWrite, SymbolLookup};
 
 use super::{
     compile,

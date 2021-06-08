@@ -2469,6 +2469,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "wafel_data_path"
+version = "0.1.0"
+dependencies = [
+ "nom",
+ "wafel_data_type",
+ "wafel_layout",
+ "wafel_memory",
+]
+
+[[package]]
 name = "wafel_data_type"
 version = "0.1.0"
 dependencies = [
@@ -2491,7 +2501,6 @@ name = "wafel_memory"
 version = "0.1.0"
 dependencies = [
  "dlopen",
- "nom",
  "once_cell",
  "wafel_data_type",
  "wafel_layout",

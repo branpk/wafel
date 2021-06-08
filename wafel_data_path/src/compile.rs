@@ -10,8 +10,7 @@ use nom::{
 };
 use wafel_data_type::{Address, DataType, DataTypeRef, Field, Namespace, TypeName};
 use wafel_layout::DataLayoutRef;
-
-use crate::SymbolLookup;
+use wafel_memory::SymbolLookup;
 
 use super::{
     DataPath,

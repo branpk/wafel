@@ -1,8 +1,7 @@
 use std::{collections::HashMap, sync::Mutex};
 
 use wafel_layout::DataLayoutRef;
-
-use crate::SymbolLookup;
+use wafel_memory::SymbolLookup;
 
 use super::{DataPath, DataPathError};
 

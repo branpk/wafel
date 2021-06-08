@@ -8,7 +8,6 @@ use wafel_data_type::{
 };
 use wafel_layout::{DataLayout, LayoutLookupError};
 
-pub mod data_path;
 pub mod dll;
 
 pub trait SymbolLookup {
