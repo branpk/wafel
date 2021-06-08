@@ -1,7 +1,7 @@
 //! Data path compilation and evaluation.
 //!
-//! A data path is a sequence of operations to reach a location in memory. Conceptually, these
-//! operations include pointer dereferencing, array indexing, and struct/union field accesses.
+//! A data path describes a location in memory using a C-like syntax. It allows
+//! pointer dereferencing, array indexing, and struct/union field accesses.
 //!
 //! There are two types of data paths:
 //! - Global: a data path starting from a global variable address
@@ -20,6 +20,13 @@
 //! - `*` is not used for pointer dereferencing. Instead you can use `[0]`, `->`, or `.`
 //! - `?` denotes that a pointer may be null. If so, the entire expression returns `Value::Null`.
 //!   If `?` is not used, an error is thrown instead.
+
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    rust_2018_idioms,
+    unreachable_pub
+)]
 
 pub use cache::*;
 pub use data_path_types::*;
