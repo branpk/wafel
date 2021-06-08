@@ -28,11 +28,9 @@
     unreachable_pub
 )]
 
-pub use cache::*;
 pub use data_path_types::*;
 pub use error::*;
 
-mod cache;
 mod compile;
 mod data_path_types;
 mod error;
