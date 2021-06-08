@@ -1,3 +1,13 @@
+//! A standalone executable for parsing a libsm64 DLL and printing its
+//! [DataLayout](wafel_layout) as json.
+
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    rust_2018_idioms,
+    unreachable_pub
+)]
+
 use std::{fs, process};
 
 use clap::{App, Arg};
@@ -5,6 +15,7 @@ use wafel_layout::DllLayout;
 
 fn main() {
     let matches = App::new("libsm64_layout")
+        .about("Parses a libsm64 DLL and prints its data layout as json")
         .arg(
             Arg::with_name("input")
                 .short("i")
