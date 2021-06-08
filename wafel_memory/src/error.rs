@@ -1,6 +1,6 @@
 use std::{error::Error, fmt};
 
-use wafel_data_type::DataTypeRef;
+use wafel_data_type::{DataTypeRef, ValueError};
 use wafel_layout::{DllLayoutError, LayoutLookupError};
 
 #[derive(Debug, Clone)]
@@ -9,9 +9,13 @@ pub enum MemoryError {
         context: String,
         error: Box<MemoryError>,
     },
+    ValueError(ValueError),
     LayoutLookupError(LayoutLookupError),
-    UnreadableValue(DataTypeRef),
-    UnwritableValue(DataTypeRef),
+    ReadUnsizedArray,
+    ReadUnion,
+    WriteExtraField(String),
+    WriteMissingField(String),
+    WriteUnion,
     InvalidAddress,
     WriteToStaticAddress,
     NonStaticAddressInStaticView,
@@ -21,12 +25,22 @@ impl fmt::Display for MemoryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             MemoryError::Context { context, error } => write!(f, "{}: {}", context, error),
+            MemoryError::ValueError(error) => write!(f, "{}", error),
             MemoryError::LayoutLookupError(error) => write!(f, "{}", error),
-            MemoryError::UnreadableValue(data_type) => {
-                write!(f, "cannot read value of type {}", data_type)
+            MemoryError::ReadUnsizedArray => {
+                write!(f, "cannot read array with unknown length")
             }
-            MemoryError::UnwritableValue(data_type) => {
-                write!(f, "cannot write value of type {}", data_type)
+            MemoryError::ReadUnion => {
+                write!(f, "cannot read union with unspecified variant")
+            }
+            MemoryError::WriteExtraField(name) => {
+                write!(f, "extra field when writing to struct: {}", name)
+            }
+            MemoryError::WriteMissingField(name) => {
+                write!(f, "missing field when writing to struct: {}", name)
+            }
+            MemoryError::WriteUnion => {
+                write!(f, "cannot write to union with unspecified variant")
             }
             MemoryError::InvalidAddress => write!(f, "null or invalid address"),
             MemoryError::WriteToStaticAddress => write!(f, "write to static address"),
@@ -38,6 +52,12 @@ impl fmt::Display for MemoryError {
 }
 
 impl Error for MemoryError {}
+
+impl From<ValueError> for MemoryError {
+    fn from(v: ValueError) -> Self {
+        Self::ValueError(v)
+    }
+}
 
 impl From<LayoutLookupError> for MemoryError {
     fn from(v: LayoutLookupError) -> Self {

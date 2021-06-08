@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use wafel_data_type::{
     Address, DataType, DataTypeRef, FloatType, FloatValue, IntType, IntValue, Value,
@@ -26,20 +26,24 @@ pub trait MemoryRead {
         data_type: &DataTypeRef,
         layout: &DataLayout,
     ) -> Result<Value, MemoryError> {
-        Ok(match data_type.as_ref() {
+        let value = match data_type.as_ref() {
+            DataType::Void => Value::Null,
             DataType::Int(int_type) => Value::Int(self.read_int(address, *int_type)?),
             DataType::Float(float_type) => Value::Float(self.read_float(address, *float_type)?),
             DataType::Pointer { .. } => Value::Address(self.read_address(address)?),
             DataType::Array {
                 base,
-                length: Some(length),
+                length,
                 stride,
-            } => {
-                let values: Vec<Value> = (0..*length)
-                    .map(|index| self.read_value(address + index * *stride, base, layout))
-                    .collect::<Result<_, MemoryError>>()?;
-                Value::Array(values)
-            }
+            } => match *length {
+                Some(length) => {
+                    let values: Vec<Value> = (0..length)
+                        .map(|index| self.read_value(address + index * *stride, base, layout))
+                        .collect::<Result<_, MemoryError>>()?;
+                    Value::Array(values)
+                }
+                None => return Err(MemoryError::ReadUnsizedArray),
+            },
             DataType::Struct { fields } => {
                 let mut field_values: HashMap<String, Value> = HashMap::new();
                 for (name, field) in fields {
@@ -51,14 +55,13 @@ pub trait MemoryRead {
                     fields: Box::new(field_values),
                 }
             }
+            DataType::Union { .. } => return Err(MemoryError::ReadUnion),
             DataType::Name(type_name) => {
                 let resolved_type = layout.data_type(type_name)?;
                 self.read_value(address, resolved_type, layout)?
             }
-            _ => {
-                return Err(MemoryError::UnreadableValue(data_type.clone()));
-            }
-        })
+        };
+        Ok(value)
     }
 }
 
@@ -82,8 +85,57 @@ pub trait MemoryWrite {
         address: Address,
         data_type: &DataTypeRef,
         value: Value,
+        layout: &DataLayout,
     ) -> Result<(), MemoryError> {
-        todo!()
+        match data_type.as_ref() {
+            DataType::Void => value.as_null()?,
+            DataType::Int(int_type) => self.write_int(address, *int_type, value.as_int()?)?,
+            DataType::Float(float_type) => {
+                self.write_float(address, *float_type, value.as_float()?)?
+            }
+            DataType::Pointer { .. } => self.write_address(address, value.as_address()?)?,
+            DataType::Array {
+                base,
+                length,
+                stride,
+            } => {
+                let elements = match *length {
+                    Some(length) => value.as_array_with_len(length)?,
+                    None => value.as_array()?,
+                };
+                for (i, element) in elements.iter().enumerate() {
+                    self.write_value(address + i * *stride, base, element.clone(), layout)?;
+                }
+            }
+            DataType::Struct { fields } => {
+                let field_values = value.as_struct()?;
+                for name in field_values.keys() {
+                    if !fields.contains_key(name) {
+                        return Err(MemoryError::WriteExtraField(name.clone()));
+                    }
+                }
+                for name in fields.keys() {
+                    if !field_values.contains_key(name) {
+                        return Err(MemoryError::WriteExtraField(name.clone()));
+                    }
+                }
+                for (field_name, field) in fields {
+                    let field_value = field_values[field_name].clone();
+                    self.write_value(
+                        address + field.offset,
+                        &field.data_type,
+                        field_value,
+                        layout,
+                    )?;
+                }
+            }
+            DataType::Union { fields: _ } => return Err(MemoryError::WriteUnion),
+            DataType::Name(type_name) => {
+                let resolved_type = layout.data_type(type_name)?;
+                self.write_value(address, resolved_type, value, layout)?
+            }
+        }
+        Ok(())
     }
 }
 

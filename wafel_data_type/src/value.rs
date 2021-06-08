@@ -70,6 +70,18 @@ impl Value {
         matches!(self, Value::Null)
     }
 
+    /// Returns an error if the value is not null.
+    pub fn as_null(&self) -> Result<(), ValueError> {
+        if self.is_null() {
+            Ok(())
+        } else {
+            Err(ValueError::WrongType {
+                expected: "void".into(),
+                actual: self.clone(),
+            })
+        }
+    }
+
     /// Convert the value to an int.
     pub fn as_int(&self) -> Result<IntValue, ValueError> {
         if let Value::Int(n) = *self {
