@@ -6,6 +6,7 @@ members = [
     "wafel_data_type",
     "wafel_layout",
     "wafel_memory",
+    "wafel_timeline",
 ]
 
 [profile.release]
