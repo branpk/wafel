@@ -11,6 +11,7 @@ use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
 
 use crate::{data_cache::DataCache, Error};
 
+#[derive(Debug)]
 pub struct Timeline {
     memory: Arc<DllGameMemory>,
     layout: Arc<DataLayout>,
