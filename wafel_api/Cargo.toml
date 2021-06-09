@@ -9,3 +9,5 @@ wafel_data_type = { path = "../wafel_data_type" }
 wafel_layout = { path = "../wafel_layout" }
 wafel_memory = { path = "../wafel_memory" }
 wafel_timeline = { path = "../wafel_timeline" }
+deepsize = "0.2.0"
+lru = "0.6.5"

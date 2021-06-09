@@ -5,12 +5,15 @@
 //     unreachable_pub
 // )]
 
+mod data_cache;
+
 use std::{
     collections::HashMap,
     error, fmt,
     sync::{Arc, Mutex},
 };
 
+use data_cache::DataCache;
 use wafel_data_path::{DataPathError, GlobalDataPath};
 pub use wafel_data_type::Value;
 use wafel_layout::{DataLayout, DllLayout, DllLayoutError, SM64ExtrasError};
@@ -24,6 +27,7 @@ pub struct Timeline {
     layout: Arc<DataLayout>,
     timeline: Mutex<GameTimeline<Arc<DllGameMemory>, Controller>>,
     data_path_cache: Mutex<HashMap<String, Arc<GlobalDataPath>>>,
+    data_cache: Mutex<DataCache>,
 }
 
 impl Timeline {
@@ -52,7 +56,8 @@ impl Timeline {
             memory,
             layout,
             timeline,
-            data_path_cache: Default::default(),
+            data_path_cache: Mutex::new(HashMap::new()),
+            data_cache: Mutex::new(DataCache::new()),
         })
     }
 
@@ -67,26 +72,38 @@ impl Timeline {
     pub fn try_read(&self, frame: u32, path: &str) -> Result<Value, Error> {
         let path = self.data_path(path)?;
         let mut timeline = self.timeline.lock().unwrap();
-        let slot = timeline.frame(frame, false).0;
-        let value = path.read(&self.memory.with_slot(slot))?;
-        if let Some((_, error)) = timeline.earliest_error() {
-            return Err(error.clone());
+        let mut data_cache = self.data_cache.lock().unwrap();
+
+        let value = match data_cache.get(frame, &path) {
+            Some(value) => value,
+            None => self.read_and_cache(&mut data_cache, &mut timeline, frame, &path)?,
+        };
+
+        match timeline.earliest_error(frame) {
+            Some((_, error)) => Err(error.clone()),
+            None => Ok(value),
         }
+    }
+
+    fn read_and_cache(
+        &self,
+        data_cache: &mut DataCache,
+        timeline: &mut GameTimeline<Arc<DllGameMemory>, Controller>,
+        frame: u32,
+        path: &Arc<GlobalDataPath>,
+    ) -> Result<Value, Error> {
+        let slot = timeline.frame(frame, false).0;
+        let slot_memory = self.memory.with_slot(slot);
+
+        data_cache.preload_frame(frame, &slot_memory);
+
+        let value = path.read(&slot_memory)?;
+        data_cache.insert(frame, path, value.clone());
+
         Ok(value)
     }
 
-    // Expose EditRange API:
-    // - write_range(&mut self, frames: Range<u32>, path: &str, value: Value) -> EditRange
-    // - write(&mut self, frames: Range<u32>, path: &str, value: Value) -> EditRange
-    // -
-    // - move_range(&mut self, id: EditRangeId, frames: Range<u32>)
-    // - set_range_value(&mut self, id: EditRangeId, value: Value)
-    // - delete_range(&mut self, id: EditRangeId)
-    // etc
-    // Then drag/drop functionality is implemented on top of this API
-    //
-    // OR: don't for now. Just use basic 1-frame write and implement the RangeEdits API on top
-    // of that
+    // TODO: In docs for write, mention overlapping writes with different paths
 
     #[track_caller]
     pub fn write(&mut self, frame: u32, path: &str, value: Value) {
@@ -98,9 +115,49 @@ impl Timeline {
 
     pub fn try_write(&mut self, frame: u32, path: &str, value: Value) -> Result<(), Error> {
         let path = self.data_path(path)?;
-        let timeline = self.timeline.get_mut().unwrap();
-        timeline.with_controller_mut(|controller| controller.write(frame, &path, value));
+        self.with_controller_mut(|controller| controller.write(frame, &path, value));
         Ok(())
+    }
+
+    /// Clear all previous calls to [write](Self::write) with the given `frame` and `path`.
+    ///
+    /// The `path` string must match the one passed to `write` exactly. If it is different,
+    /// then this method will do nothing.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the data path fails to compile.
+    #[track_caller]
+    pub fn reset(&mut self, frame: u32, path: &str) {
+        match self.try_reset(frame, path) {
+            Ok(()) => {}
+            Err(error) => panic!("Error:\n  failed to reset '{}':\n{}\n", path, error),
+        }
+    }
+
+    /// Clear all previous calls to [write](Self::write) with the given `frame` and `path`.
+    ///
+    /// The `path` string must match the one passed to `write` exactly. If it is different,
+    /// then this method will do nothing.
+    ///
+    /// Returns an error if the data path fails to compile.
+    pub fn try_reset(&mut self, frame: u32, path: &str) -> Result<(), Error> {
+        let path = self.data_path(path)?;
+        self.with_controller_mut(|controller| controller.reset(frame, &path));
+        Ok(())
+    }
+
+    fn with_controller_mut(&mut self, func: impl FnOnce(&mut Controller) -> InvalidatedFrames) {
+        let timeline = self.timeline.get_mut().unwrap();
+        let data_cache = self.data_cache.get_mut().unwrap();
+
+        timeline.with_controller_mut(|controller| {
+            let invalidated_frames = func(controller);
+            if let InvalidatedFrames::StartingAt(frame) = invalidated_frames {
+                data_cache.invalidate_frame(frame);
+            }
+            invalidated_frames
+        });
     }
 
     fn data_path(&self, source: &str) -> Result<Arc<GlobalDataPath>, DataPathError> {
@@ -114,12 +171,6 @@ impl Timeline {
             }
         }
     }
-}
-
-fn check_sync<T: Send + Sync>() {}
-
-fn check_all_sync() {
-    check_sync::<Timeline>();
 }
 
 #[derive(Debug, Clone)]
@@ -203,6 +254,21 @@ impl Controller {
         frame_edits.retain(|(edit_path, _)| !Arc::ptr_eq(data_path, edit_path));
         frame_edits.push((Arc::clone(data_path), value));
         InvalidatedFrames::StartingAt(frame)
+    }
+
+    fn reset(&mut self, frame: u32, data_path: &Arc<GlobalDataPath>) -> InvalidatedFrames {
+        if let Some(frame_edits) = self.edits.get_mut(&frame) {
+            let mut found = false;
+            frame_edits.retain(|(edit_path, _)| {
+                let matches = Arc::ptr_eq(data_path, edit_path);
+                found |= matches;
+                !matches
+            });
+            if found {
+                return InvalidatedFrames::StartingAt(frame);
+            }
+        }
+        InvalidatedFrames::None
     }
 }
 

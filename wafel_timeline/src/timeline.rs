@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     time::{Duration, Instant},
 };
 
@@ -24,6 +24,7 @@ pub struct GameTimeline<M: GameMemory, C: GameController<M>> {
     slots: Slots<M>,
     hotspots: HashMap<String, u32>,
     errors: BTreeMap<u32, Vec<C::Error>>,
+    frames_with_errors: BTreeSet<u32>,
 }
 
 impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
@@ -40,6 +41,7 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
             slots,
             hotspots: HashMap::new(),
             errors: BTreeMap::new(),
+            frames_with_errors: BTreeSet::new(),
         }
     }
 
@@ -107,11 +109,10 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
                 let errors =
                     self.controller
                         .apply(&self.memory, &mut self.slots.base.slot, new_frame);
-                if errors.is_empty() {
-                    self.errors.remove(&new_frame);
-                } else {
-                    self.errors.insert(new_frame, errors);
+                if !errors.is_empty() {
+                    self.frames_with_errors.insert(new_frame);
                 }
+                self.errors.insert(new_frame, errors);
             }
             &self.slots.base
         };
@@ -127,12 +128,11 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
     pub fn frame(&mut self, frame: u32, require_base: bool) -> (&M::Slot, &[C::Error]) {
         let slot_index = self.request_frame(frame, require_base);
         let slot = &self.slots.get(slot_index).slot;
-        let error = self
+        let errors = self
             .errors
             .get(&frame)
-            .map(Vec::as_slice)
-            .unwrap_or_default();
-        (slot, error)
+            .expect("errors not calculated for frame");
+        (slot, errors)
     }
 
     /// Returns a mutable slot holding the state for the given frame, and the errors that the
@@ -150,20 +150,32 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
         slot_wrapper.frame = Frame::Unknown;
 
         let slot = &mut slot_wrapper.slot;
-        let error = self
+        let errors = self
             .errors
             .get(&frame)
-            .map(Vec::as_slice)
-            .unwrap_or_default();
-        (slot, error)
+            .expect("errors not calculated for frame");
+        (slot, errors)
     }
 
     /// Returns the earliest error that is encountered in the timeline.
-    pub fn earliest_error(&self) -> Option<(u32, &C::Error)> {
-        self.errors
-            .iter()
-            .next()
-            .map(|(&frame, errors)| (frame, errors.get(0).unwrap()))
+    ///
+    /// The `max_frame` parameter is required to make this method deterministic.
+    pub fn earliest_error(&mut self, max_frame: u32) -> Option<(u32, &C::Error)> {
+        if self.errors.get(&max_frame).is_none() {
+            // Errors haven't be calculated up to this frame yet
+            self.frame(max_frame, false);
+        }
+        match self.frames_with_errors.iter().next() {
+            Some(&frame) => {
+                let error = self
+                    .errors
+                    .get(&frame)
+                    .and_then(|errors| errors.get(0))
+                    .expect("mismatch between frames_with_errors and errors");
+                Some((frame, error))
+            }
+            None => None,
+        }
     }
 
     /// Perform housekeeping to improve scrolling near hotspots.
@@ -245,6 +257,7 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
             }
         }
         self.errors.split_off(&invalidated_frame);
+        self.frames_with_errors.split_off(&invalidated_frame);
     }
 
     /// Set a hotspot with a given name.
