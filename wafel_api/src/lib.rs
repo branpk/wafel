@@ -15,7 +15,7 @@ use wafel_data_path::{DataPathError, GlobalDataPath};
 pub use wafel_data_type::Value;
 use wafel_layout::{DataLayout, DllLayout, DllLayoutError};
 use wafel_memory::{DllGameMemory, DllLoadError, GameMemory, MemoryError};
-use wafel_timeline::{GameController, GameTimeline};
+use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
 
 // TODO: Data cache
 
@@ -41,7 +41,7 @@ impl Timeline {
         let (memory, base_slot) = DllGameMemory::load(dll_path, "sm64_init", "sm64_update")?;
         let memory = Arc::new(memory);
 
-        let controller = Controller {};
+        let controller = Controller::new();
 
         let timeline = GameTimeline::new(Arc::clone(&memory), base_slot, controller, 30);
         let timeline = Mutex::new(timeline);
@@ -72,12 +72,17 @@ impl Timeline {
     }
 
     // Expose EditRange API:
-    // - create_range(&mut self, path: &str, frames: Range<u32>, value: Value) -> EditRangeId
+    // - write_range(&mut self, frames: Range<u32>, path: &str, value: Value) -> EditRange
+    // - write(&mut self, frames: Range<u32>, path: &str, value: Value) -> EditRange
+    // -
     // - move_range(&mut self, id: EditRangeId, frames: Range<u32>)
     // - set_range_value(&mut self, id: EditRangeId, value: Value)
     // - delete_range(&mut self, id: EditRangeId)
     // etc
     // Then drag/drop functionality is implemented on top of this API
+    //
+    // OR: don't for now. Just use basic 1-frame write and implement the RangeEdits API on top
+    // of that
 
     #[track_caller]
     pub fn write(&mut self, frame: u32, path: &str, value: Value) {
@@ -88,9 +93,7 @@ impl Timeline {
     pub fn try_write(&mut self, frame: u32, path: &str, value: Value) -> Result<(), Error> {
         let path = self.data_path(path)?;
         let timeline = self.timeline.get_mut().unwrap();
-        timeline.with_controller_mut(|controller| {
-            todo!();
-        });
+        timeline.with_controller_mut(|controller| controller.write(frame, &path, value));
         Ok(())
     }
 
@@ -119,6 +122,11 @@ pub enum Error {
     DllLoadError(DllLoadError),
     DataPathError(DataPathError),
     MemoryError(MemoryError),
+    ApplyEditError {
+        path: Arc<GlobalDataPath>,
+        value: Value,
+        error: MemoryError,
+    },
 }
 
 impl fmt::Display for Error {
@@ -128,6 +136,9 @@ impl fmt::Display for Error {
             Error::DllLoadError(error) => write!(f, "{}", error),
             Error::DataPathError(error) => write!(f, "{}", error),
             Error::MemoryError(error) => write!(f, "{}", error),
+            Error::ApplyEditError { path, value, error } => {
+                write!(f, "while applying edit {} = {}: {}", path, value, error)
+            }
         }
     }
 }
@@ -158,12 +169,46 @@ impl From<MemoryError> for Error {
     }
 }
 
-struct Controller {}
+#[derive(Debug, Clone, Default)]
+struct Controller {
+    edits: HashMap<u32, Vec<(Arc<GlobalDataPath>, Value)>>,
+}
+
+impl Controller {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    fn write(
+        &mut self,
+        frame: u32,
+        data_path: &Arc<GlobalDataPath>,
+        value: Value,
+    ) -> InvalidatedFrames {
+        let frame_edits = self.edits.entry(frame).or_default();
+        frame_edits.retain(|(edit_path, _)| !Arc::ptr_eq(data_path, edit_path));
+        frame_edits.push((Arc::clone(data_path), value));
+        InvalidatedFrames::StartingAt(frame)
+    }
+}
 
 impl<M: GameMemory> GameController<M> for Controller {
     type Error = Error;
 
     fn apply(&self, memory: &M, slot: &mut M::Slot, frame: u32) -> Option<Self::Error> {
-        todo!()
+        let mut error = None;
+        if let Some(frame_edits) = self.edits.get(&frame) {
+            for (path, value) in frame_edits {
+                path.write(&mut memory.with_slot_mut(slot), value.clone())
+                    .unwrap_or_else(|e| {
+                        error = Some(Error::ApplyEditError {
+                            path: Arc::clone(path),
+                            value: value.clone(),
+                            error: e,
+                        });
+                    });
+            }
+        }
+        error
     }
 }
