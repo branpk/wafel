@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref};
 
 use wafel_data_type::{
     Address, DataType, DataTypeRef, FloatType, FloatValue, IntType, IntValue, TypeName, Value,
@@ -14,6 +14,16 @@ pub trait SymbolLookup {
     ///
     /// Returns None if the symbol is undefined.
     fn symbol_address(&self, symbol: &str) -> Option<Address>;
+}
+
+impl<R, M> SymbolLookup for R
+where
+    R: Deref<Target = M>,
+    M: SymbolLookup,
+{
+    fn symbol_address(&self, symbol: &str) -> Option<Address> {
+        self.deref().symbol_address(symbol)
+    }
 }
 
 /// Trait for a view of memory that allows reading values by address.
@@ -388,4 +398,42 @@ pub trait GameMemory {
     /// To advance a backup slot, you should first copy it to the base slot,
     /// then advance the base slot, then copy it back.
     fn advance_base_slot(&self, base_slot: &mut Self::Slot);
+}
+
+impl<R, M> GameMemory for R
+where
+    R: Deref<Target = M>,
+    M: GameMemory + 'static,
+{
+    type Slot = M::Slot;
+
+    type StaticView<'a> = M::StaticView<'a>;
+
+    type SlotView<'a> = M::SlotView<'a>;
+
+    type SlotViewMut<'a> = M::SlotViewMut<'a>;
+
+    fn static_view(&self) -> Self::StaticView<'_> {
+        self.deref().static_view()
+    }
+
+    fn with_slot<'a>(&'a self, slot: &'a Self::Slot) -> Self::SlotView<'a> {
+        self.deref().with_slot(slot)
+    }
+
+    fn with_slot_mut<'a>(&'a self, slot: &'a mut Self::Slot) -> Self::SlotViewMut<'a> {
+        self.deref().with_slot_mut(slot)
+    }
+
+    fn create_backup_slot(&self) -> Self::Slot {
+        self.deref().create_backup_slot()
+    }
+
+    fn copy_slot(&self, dst: &mut Self::Slot, src: &Self::Slot) {
+        self.deref().copy_slot(dst, src)
+    }
+
+    fn advance_base_slot(&self, base_slot: &mut Self::Slot) {
+        self.deref().advance_base_slot(base_slot)
+    }
 }

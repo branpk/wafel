@@ -40,7 +40,7 @@ pub(crate) struct Slots<M: GameMemory> {
 }
 
 impl<M: GameMemory> Slots<M> {
-    pub(crate) fn new(memory: &mut M, base_slot: M::Slot, num_backup_slots: usize) -> Self {
+    pub(crate) fn new(memory: &M, base_slot: M::Slot, num_backup_slots: usize) -> Self {
         let base_slot = SlotWrapper {
             index: SlotIndex::Base,
             slot: base_slot,

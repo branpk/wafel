@@ -32,8 +32,8 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
     /// `memory` should be a freshly created `Memory` object.
     /// Otherwise, frame 0 will be defined as whatever the current contents of the
     /// base slot are.
-    pub fn new(mut memory: M, base_slot: M::Slot, controller: C, num_backup_slots: usize) -> Self {
-        let slots = Slots::new(&mut memory, base_slot, num_backup_slots);
+    pub fn new(memory: M, base_slot: M::Slot, controller: C, num_backup_slots: usize) -> Self {
+        let slots = Slots::new(&memory, base_slot, num_backup_slots);
         Self {
             memory,
             controller,
