@@ -280,8 +280,8 @@ impl Value {
 
     /// Convert the value to an array and return its elements, panicking on failure.
     #[track_caller]
-    pub fn as_array_with_len(&self) -> &[Value] {
-        match self.try_as_array() {
+    pub fn as_array_with_len(&self, length: usize) -> &[Value] {
+        match self.try_as_array_with_len(length) {
             Ok(elements) => elements,
             Err(error) => panic!("{}", error),
         }
