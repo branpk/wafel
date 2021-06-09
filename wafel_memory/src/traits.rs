@@ -389,6 +389,10 @@ pub trait GameMemory {
     fn create_backup_slot(&self) -> Self::Slot;
 
     /// Copy data from one slot to another.
+    ///
+    /// # Panics
+    ///
+    /// Panics if either slot is not owned by this [GameMemory] instance.
     fn copy_slot(&self, dst: &mut Self::Slot, src: &Self::Slot);
 
     /// Advance the base slot by one frame.

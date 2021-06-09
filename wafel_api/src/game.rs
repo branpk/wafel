@@ -10,8 +10,37 @@ use wafel_memory::{DllGameMemory, GameMemory};
 
 use crate::Error;
 
+/// An SM64 API that uses a traditional frame advance / save state model.
+///
+/// # Example
+///
+/// ```
+/// use wafel_api::Game;
+///
+/// let mut game = unsafe { Game::open("libsm64/sm64_us.dll") };
+///
+/// let power_on = game.save_state();
+///
+/// game.advance_n(1500);
+/// assert_eq!(game.read("gCurrLevelNum"), game.constant("LEVEL_BOWSER_1"));
+///
+/// game.load_state(&power_on);
+/// for frame in 0..1000 {
+///     if frame % 2 == 1 {
+///         game.write("gControllerPads[0].button", game.constant("START_BUTTON"));
+///     }
+///     game.advance();
+/// }
+///
+/// game.advance_n(500);
+/// assert_eq!(
+///     game.read("gCurrLevelNum"),
+///     game.constant("LEVEL_CASTLE_GROUNDS")
+/// );
+/// ```
 #[derive(Debug)]
 pub struct Game {
+    id: Arc<()>,
     layout: Arc<DataLayout>,
     memory: DllGameMemory,
     base_slot_frame: u32,
@@ -56,6 +85,7 @@ impl Game {
         let (memory, base_slot) = DllGameMemory::load(dll_path, "sm64_init", "sm64_update")?;
 
         Ok(Self {
+            id: Arc::new(()),
             layout,
             memory,
             base_slot_frame: 0,
@@ -150,13 +180,31 @@ impl Game {
     pub fn save_state(&self) -> SaveState {
         let mut slot = self.memory.create_backup_slot();
         self.memory.copy_slot(&mut slot, &self.base_slot);
-        SaveState::new(self.base_slot_frame, slot)
+        SaveState::new(Arc::clone(&self.id), self.base_slot_frame, slot)
     }
 
     /// Load a save state.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the save state was produced by a different [Game] instance.
+    #[track_caller]
     pub fn load_state(&mut self, state: &SaveState) {
+        if let Err(error) = self.try_load_state(state) {
+            panic!("{}", error);
+        }
+    }
+
+    /// Load a save state.
+    ///
+    /// Returns an error if the save state was produced by a different [Game] instance.
+    pub fn try_load_state(&mut self, state: &SaveState) -> Result<(), Error> {
+        if !Arc::ptr_eq(&self.id, &state.game_id) {
+            return Err(Error::SaveStateMismatch);
+        }
         self.memory.copy_slot(&mut self.base_slot, &state.slot);
         self.base_slot_frame = state.frame;
+        Ok(())
     }
 
     /// Return the value of the macro constant or enum variant with the given name.
@@ -185,15 +233,21 @@ impl Game {
     }
 }
 
+/// A save state used by [Game].
 #[derive(Debug)]
 pub struct SaveState {
+    game_id: Arc<()>,
     frame: u32,
     slot: <DllGameMemory as GameMemory>::Slot,
 }
 
 impl SaveState {
-    fn new(frame: u32, slot: <DllGameMemory as GameMemory>::Slot) -> Self {
-        Self { frame, slot }
+    fn new(game_id: Arc<()>, frame: u32, slot: <DllGameMemory as GameMemory>::Slot) -> Self {
+        Self {
+            game_id,
+            frame,
+            slot,
+        }
     }
 
     /// Return the frame that the save state was taken on.

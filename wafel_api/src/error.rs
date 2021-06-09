@@ -20,6 +20,7 @@ pub enum Error {
         error: MemoryError,
     },
     LayoutLookupError(LayoutLookupError),
+    SaveStateMismatch,
 }
 
 impl fmt::Display for Error {
@@ -34,6 +35,9 @@ impl fmt::Display for Error {
                 write!(f, "while applying edit {} = {}:\n  {}", path, value, error)
             }
             Error::LayoutLookupError(error) => write!(f, "{}", error),
+            Error::SaveStateMismatch => {
+                write!(f, "save state was created by a different Game instance")
+            }
         }
     }
 }
