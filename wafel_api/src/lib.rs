@@ -71,6 +71,14 @@ impl Timeline {
         Ok(value)
     }
 
+    // Expose EditRange API:
+    // - create_range(&mut self, path: &str, frames: Range<u32>, value: Value) -> EditRangeId
+    // - move_range(&mut self, id: EditRangeId, frames: Range<u32>)
+    // - set_range_value(&mut self, id: EditRangeId, value: Value)
+    // - delete_range(&mut self, id: EditRangeId)
+    // etc
+    // Then drag/drop functionality is implemented on top of this API
+
     #[track_caller]
     pub fn write(&mut self, frame: u32, path: &str, value: Value) {
         self.try_write(frame, path, value)
@@ -79,7 +87,7 @@ impl Timeline {
 
     pub fn try_write(&mut self, frame: u32, path: &str, value: Value) -> Result<(), Error> {
         let path = self.data_path(path)?;
-        let mut timeline = self.timeline.lock().unwrap();
+        let timeline = self.timeline.get_mut().unwrap();
         timeline.with_controller_mut(|controller| {
             todo!();
         });
