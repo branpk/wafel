@@ -29,7 +29,7 @@ impl Address {
 }
 
 /// A dynamically typed value.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     /// Represents a null value.
     ///
@@ -97,6 +97,19 @@ impl Value {
         }
     }
 
+    /// Convert the value to an int, allowing in-range floats that are integers.
+    #[allow(clippy::float_cmp)]
+    pub fn as_int_lenient(&self) -> Result<IntValue, ValueTypeError> {
+        match *self {
+            Value::Int(n) => Ok(n),
+            Value::Float(r) if r as IntValue as FloatValue == r => Ok(r as IntValue),
+            _ => Err(ValueTypeError {
+                expected: "int".into(),
+                actual: self.clone(),
+            }),
+        }
+    }
+
     /// Convert the value to a usize.
     pub fn as_usize(&self) -> Result<usize, ValueTypeError> {
         self.as_int().and_then(|n| {
@@ -116,6 +129,18 @@ impl Value {
                 expected: "float".into(),
                 actual: self.clone(),
             })
+        }
+    }
+
+    /// Convert the value to a float, allowing in-range integers.
+    pub fn as_float_lenient(&self) -> Result<FloatValue, ValueTypeError> {
+        match *self {
+            Value::Float(r) => Ok(r),
+            Value::Int(n) if n as FloatValue as IntValue == n => Ok(n as FloatValue),
+            _ => Err(ValueTypeError {
+                expected: "float".into(),
+                actual: self.clone(),
+            }),
         }
     }
 

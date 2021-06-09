@@ -171,9 +171,9 @@ fn write_value_impl<M: MemoryWrite + ?Sized>(
 ) -> Result<(), MemoryError> {
     match data_type.as_ref() {
         DataType::Void => value.as_null()?,
-        DataType::Int(int_type) => memory.write_int(address, *int_type, value.as_int()?)?,
+        DataType::Int(int_type) => memory.write_int(address, *int_type, value.as_int_lenient()?)?,
         DataType::Float(float_type) => {
-            memory.write_float(address, *float_type, value.as_float()?)?
+            memory.write_float(address, *float_type, value.as_float_lenient()?)?
         }
         DataType::Pointer { .. } => memory.write_address(address, value.as_address()?)?,
         DataType::Array {

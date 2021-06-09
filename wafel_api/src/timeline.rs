@@ -145,7 +145,7 @@ impl Timeline {
     pub fn write(&mut self, frame: u32, path: &str, value: Value) {
         match self.try_write(frame, path, value) {
             Ok(()) => {}
-            Err(error) => panic!("Error:\n  failed to write '{}':\n{}\n", path, error),
+            Err(error) => panic!("Error:\n  failed to write '{}':\n  {}\n", path, error),
         }
     }
 
@@ -215,6 +215,31 @@ impl Timeline {
                 Ok(path)
             }
         }
+    }
+
+    /// Return the value of the macro constant or enum variant with the given name.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the constant doesn't exist.
+    /// Unless the name has a typo, it is likely that either Wafel is out of date or it is just
+    /// a limitation of how Wafel obtains constants from the source.
+    #[track_caller]
+    pub fn constant(&self, name: &str) -> Value {
+        match self.try_constant(name) {
+            Ok(value) => value,
+            Err(error) => panic!("Error:\n  {}\n", error),
+        }
+    }
+
+    /// Return the value of the macro constant or enum variant with the given name.
+    ///
+    /// Returns an error if the constant doesn't exist.
+    /// Unless the name has a typo, it is likely that either Wafel is out of date or it is just
+    /// a limitation of how Wafel obtains constants from the source.
+    pub fn try_constant(&self, name: &str) -> Result<Value, Error> {
+        let value = self.layout.constant(name)?;
+        Ok(value.value.into())
     }
 }
 
