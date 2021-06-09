@@ -81,9 +81,11 @@ impl DllGameMemory {
     /// Both should take no arguments.
     ///
     /// # Safety
-    /// Loading the same DLL multiple times is unsafe.
     ///
-    /// Furthermore if the DLL is accessed from anywhere else, this will likely result in UB.
+    /// This method is inherently unsafe:
+    /// - If the DLL image is modified (either on disk before load or in memory) from anywhere
+    ///   except this [DllGameMemory], this is UB.
+    /// - The init and update functions can run arbitrary code in the DLL.
     pub unsafe fn load(
         dll_path: &str,
         init_function_name: &str,
