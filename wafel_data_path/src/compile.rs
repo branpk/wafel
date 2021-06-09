@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while1},
@@ -9,7 +11,7 @@ use nom::{
     Err, IResult,
 };
 use wafel_data_type::{Address, DataType, DataTypeRef, Field, Namespace, TypeName};
-use wafel_layout::DataLayoutRef;
+use wafel_layout::DataLayout;
 use wafel_memory::SymbolLookup;
 
 use crate::{
@@ -19,7 +21,7 @@ use crate::{
 };
 
 pub(crate) fn data_path(
-    layout: &DataLayoutRef,
+    layout: &Arc<DataLayout>,
     symbol_lookup: &impl SymbolLookup,
     source: &str,
 ) -> Result<DataPath, DataPathError> {
@@ -30,7 +32,7 @@ pub(crate) fn data_path(
 }
 
 fn data_path_impl(
-    layout: &DataLayoutRef,
+    layout: &Arc<DataLayout>,
     symbol_lookup: &impl SymbolLookup,
     source: &str,
 ) -> Result<DataPath, DataPathCompileError> {
@@ -53,7 +55,7 @@ fn data_path_impl(
                 root,
                 edges: Vec::new(),
                 concrete_type: root_type,
-                layout: DataLayoutRef::clone(layout),
+                layout: Arc::clone(layout),
             };
 
             for edge in ast.edges {
@@ -71,7 +73,7 @@ fn data_path_impl(
                 root: root.clone(),
                 edges: Vec::new(),
                 concrete_type: root,
-                layout: DataLayoutRef::clone(layout),
+                layout: Arc::clone(layout),
             };
 
             for edge in ast.edges {
@@ -84,7 +86,7 @@ fn data_path_impl(
 }
 
 fn follow_edge<T>(
-    layout: &DataLayoutRef,
+    layout: &Arc<DataLayout>,
     mut path: DataPathImpl<T>,
     edge: EdgeAst,
 ) -> Result<DataPathImpl<T>, DataPathCompileError> {
@@ -98,7 +100,7 @@ fn follow_edge<T>(
                     root: path.root,
                     edges,
                     concrete_type: layout.concrete_type(base)?,
-                    layout: DataLayoutRef::clone(layout),
+                    layout: Arc::clone(layout),
                 };
             }
             follow_field_access(layout, path, field_name)
@@ -123,7 +125,7 @@ fn follow_edge<T>(
                         length: None,
                         stride,
                     }),
-                    layout: DataLayoutRef::clone(layout),
+                    layout: Arc::clone(layout),
                 };
             }
             follow_subscript(layout, path, index)
@@ -139,7 +141,7 @@ fn follow_edge<T>(
 }
 
 fn follow_field_access<T>(
-    layout: &DataLayoutRef,
+    layout: &Arc<DataLayout>,
     path: DataPathImpl<T>,
     field_name: String,
 ) -> Result<DataPathImpl<T>, DataPathCompileError> {
@@ -153,7 +155,7 @@ fn follow_field_access<T>(
                     root: path.root,
                     edges,
                     concrete_type: layout.concrete_type(data_type)?,
-                    layout: DataLayoutRef::clone(layout),
+                    layout: Arc::clone(layout),
                 })
             }
             None => Err(UndefinedField {
@@ -165,7 +167,7 @@ fn follow_field_access<T>(
 }
 
 fn follow_subscript<T>(
-    layout: &DataLayoutRef,
+    layout: &Arc<DataLayout>,
     path: DataPathImpl<T>,
     index: usize,
 ) -> Result<DataPathImpl<T>, DataPathCompileError> {
@@ -190,7 +192,7 @@ fn follow_subscript<T>(
                 root: path.root,
                 edges,
                 concrete_type: layout.concrete_type(&base)?,
-                layout: DataLayoutRef::clone(layout),
+                layout: Arc::clone(layout),
             })
         }
         _ => Err(NotAnArray),

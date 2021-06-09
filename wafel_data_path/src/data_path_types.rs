@@ -1,7 +1,7 @@
-use std::fmt;
+use std::{fmt, sync::Arc};
 
 use wafel_data_type::{Address, DataTypeRef, Value};
-use wafel_layout::DataLayoutRef;
+use wafel_layout::DataLayout;
 use wafel_memory::{MemoryError, MemoryRead, MemoryWrite, SymbolLookup};
 
 use crate::{
@@ -23,7 +23,7 @@ pub(crate) struct DataPathImpl<R> {
     /// This should be "concrete", i.e. not a TypeName.
     pub(crate) concrete_type: DataTypeRef,
     /// A reference to the global DataLayout.
-    pub(crate) layout: DataLayoutRef,
+    pub(crate) layout: Arc<DataLayout>,
 }
 
 /// An operation that is applied when evaluating a data path.
@@ -60,7 +60,7 @@ impl GlobalDataPath {
     ///
     /// See module documentation for syntax.
     pub fn compile(
-        layout: &DataLayoutRef,
+        layout: &Arc<DataLayout>,
         symbol_lookup: &impl SymbolLookup,
         source: &str,
     ) -> Result<Self, DataPathError> {
@@ -156,7 +156,7 @@ impl LocalDataPath {
     ///
     /// See module documentation for syntax.
     pub fn compile(
-        layout: &DataLayoutRef,
+        layout: &Arc<DataLayout>,
         symbol_lookup: &impl SymbolLookup,
         source: &str,
     ) -> Result<Self, DataPathError> {
@@ -199,7 +199,7 @@ impl DataPath {
     ///
     /// See module documentation for syntax.
     pub fn compile(
-        layout: &DataLayoutRef,
+        layout: &Arc<DataLayout>,
         symbol_lookup: &impl SymbolLookup,
         source: &str,
     ) -> Result<Self, DataPathError> {
@@ -259,7 +259,7 @@ fn concat_paths<R: Clone>(
                 .cloned()
                 .collect(),
             concrete_type: path2.concrete_type.clone(),
-            layout: DataLayoutRef::clone(&path1.layout),
+            layout: Arc::clone(&path1.layout),
         })
     } else {
         Err(ConcatTypeMismatch {

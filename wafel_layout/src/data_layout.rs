@@ -1,14 +1,11 @@
 //! Recording and looking up type and global variable definitions.
 
-use std::{collections::HashMap, fmt, sync::Arc};
+use std::{collections::HashMap, fmt};
 
 use serde::{Deserialize, Serialize};
 use wafel_data_type::{DataType, DataTypeRef, IntValue, TypeName};
 
 use crate::LayoutLookupError::{self, *};
-
-/// A shared reference to a data layout.
-pub type DataLayoutRef = Arc<DataLayout>;
 
 /// A description of accessible variables and types.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

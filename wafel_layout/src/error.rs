@@ -1,18 +1,18 @@
 #![allow(missing_docs)]
 
-use std::{error::Error, fmt, io};
+use std::{error::Error, fmt, io, sync::Arc};
 
 use wafel_data_type::{shallow::BuildDataTypesError, TypeName};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DllLayoutError {
     pub kind: DllLayoutErrorKind,
     pub unit: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DllLayoutErrorKind {
-    FileReadError(io::Error),
+    FileReadError(Arc<io::Error>),
     ObjectReadError(object::Error),
     DwarfReadError(gimli::Error),
     BuildDataTypesError(BuildDataTypesError<String>),
@@ -105,7 +105,7 @@ impl From<gimli::Error> for DllLayoutError {
 
 impl From<io::Error> for DllLayoutErrorKind {
     fn from(v: io::Error) -> Self {
-        Self::FileReadError(v)
+        Self::FileReadError(Arc::new(v))
     }
 }
 
