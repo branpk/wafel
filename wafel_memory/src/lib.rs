@@ -26,3 +26,4 @@ mod dll_memory;
 mod dll_slot_impl;
 mod error;
 mod traits;
+mod unique_dll;

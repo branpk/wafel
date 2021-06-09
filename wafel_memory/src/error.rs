@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use std::{error::Error, fmt};
+use std::{error::Error, fmt, io};
 
 use wafel_data_type::{TypeName, ValueTypeError};
 use wafel_layout::DllLayoutError;
@@ -66,6 +66,7 @@ impl From<ValueTypeError> for MemoryError {
 #[derive(Debug)]
 pub enum DllLoadError {
     DlOpenError(dlopen::Error),
+    IoError(io::Error),
     DllLayoutError(DllLayoutError),
     UndefinedSymbol(String),
 }
@@ -74,6 +75,7 @@ impl fmt::Display for DllLoadError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DllLoadError::DlOpenError(error) => write!(f, "failed to open DLL: {}", error),
+            DllLoadError::IoError(error) => write!(f, "failed to open DLL: {}", error),
             DllLoadError::DllLayoutError(error) => write!(f, "{}", error),
             DllLoadError::UndefinedSymbol(name) => write!(f, "undefined symbol {}", name),
         }
@@ -85,6 +87,12 @@ impl Error for DllLoadError {}
 impl From<dlopen::Error> for DllLoadError {
     fn from(v: dlopen::Error) -> Self {
         Self::DlOpenError(v)
+    }
+}
+
+impl From<io::Error> for DllLoadError {
+    fn from(v: io::Error) -> Self {
+        Self::IoError(v)
     }
 }
 

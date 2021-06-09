@@ -15,6 +15,7 @@ use wafel_layout::{read_dll_segments, DllSegment};
 use crate::{
     dll_slot_impl::{BasePointer, BaseSlot, BufferSlot, SlotImpl},
     error::DllLoadError,
+    unique_dll::UniqueLibrary,
     GameMemory,
     MemoryError::{self, *},
     MemoryReadPrimitive, MemoryWritePrimitive, SymbolLookup,
@@ -62,7 +63,7 @@ fn next_memory_id() -> usize {
 pub struct DllGameMemory {
     id: usize,
     /// The loaded DLL
-    library: Library,
+    library: UniqueLibrary,
     base_pointer: BasePointer,
     base_size: usize,
     /// Info on the segments that are included in backup slots (.data and .bss).
@@ -97,7 +98,7 @@ impl DllGameMemory {
             .max()
             .unwrap_or(0);
 
-        let library = Library::open(dll_path)?;
+        let library = UniqueLibrary::open(dll_path)?;
 
         let init_function: unsafe extern "C" fn() = library
             .symbol(init_function_name)
