@@ -12,6 +12,8 @@ use crate::Error;
 
 /// An SM64 API that uses a traditional frame advance / save state model.
 ///
+/// See [crate level docs](crate) for more details on which API to use.
+///
 /// # Example
 ///
 /// ```

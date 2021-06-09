@@ -11,6 +11,38 @@ use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
 
 use crate::{data_cache::DataCache, Error};
 
+/// An SM64 API that allows reads and writes to arbitrary frames without frame advance or
+/// save states.
+///
+/// See [crate level docs](crate) for more details on which API to use.
+///
+/// # Example
+///
+/// ```
+/// use wafel_api::Timeline;
+///
+/// let mut timeline = unsafe { Timeline::open("libsm64/sm64_us.dll") };
+///
+/// assert_eq!(
+///     timeline.read(1500, "gCurrLevelNum"),
+///     timeline.constant("LEVEL_BOWSER_1")
+/// );
+///
+/// for frame in 0..1000 {
+///     if frame % 2 == 1 {
+///         timeline.write(
+///             frame,
+///             "gControllerPads[0].button",
+///             timeline.constant("START_BUTTON"),
+///         );
+///     }
+/// }
+///
+/// assert_eq!(
+///     timeline.read(1500, "gCurrLevelNum"),
+///     timeline.constant("LEVEL_CASTLE_GROUNDS")
+/// );
+/// ```
 #[derive(Debug)]
 pub struct Timeline {
     memory: Arc<DllGameMemory>,
