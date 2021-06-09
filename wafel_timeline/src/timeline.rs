@@ -13,6 +13,10 @@ use crate::{
 
 // TODO: Async loading
 
+/// An implementation of the Wafel timeline algorithm.
+///
+/// This struct wraps a [GameMemory] and a [GameController] and provides the ability to request
+/// the game state on arbitrary frames using the [frame](GameTimeline::frame) method.
 #[derive(Debug)]
 pub struct GameTimeline<M: GameMemory, C: GameController<M>> {
     memory: M,
@@ -100,10 +104,9 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
             // Advance base slot to requested frame
             while self.slots.base.frame != Frame::At(requested_frame) {
                 let new_frame = self.slots.advance_base_slot(&self.memory);
-                let error = self
-                    .controller
-                    .apply(&self.memory, &mut self.slots.base.slot, new_frame)
-                    .err();
+                let error =
+                    self.controller
+                        .apply(&self.memory, &mut self.slots.base.slot, new_frame);
                 self.errors.insert(new_frame, error);
             }
             &self.slots.base
@@ -153,7 +156,7 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
         (slot, error)
     }
 
-    /// Perform housekeeping to keep the hotspots fast to scroll near.
+    /// Perform housekeeping to improve scrolling near hotspots.
     pub fn balance_distribution(&mut self, max_run_time: Duration) {
         let start_time = Instant::now();
 
@@ -201,14 +204,20 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
         }
     }
 
+    /// Return a reference to the underlying game memory.
     pub fn memory(&self) -> &M {
         &self.memory
     }
 
+    /// Return an immutable reference to the underlying controller.
     pub fn controller(&self) -> &C {
         &self.controller
     }
 
+    /// Make changes to the underlying controller.
+    ///
+    /// The returned [InvalidatedFrames] object must include every frame i for which
+    /// the behavior of `controller.apply(_, i, _)` may now be different.
     pub fn with_controller_mut(&mut self, func: impl FnOnce(&mut C) -> InvalidatedFrames) {
         let invalidated_frames = func(&mut self.controller);
         if let InvalidatedFrames::StartingAt(frame) = invalidated_frames {
@@ -216,6 +225,7 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
         }
     }
 
+    /// Invalidate a frame and all frames after it.
     pub fn invalidate_frame(&mut self, invalidated_frame: u32) {
         for slot in self.slots.iter_mut() {
             if let Frame::At(slot_frame) = slot.frame {
@@ -227,14 +237,23 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
         self.errors.split_off(&invalidated_frame);
     }
 
+    /// Set a hotspot with a given name.
+    ///
+    /// A hotspot is a hint to the algorithm that scrolling should be smooth near the
+    /// given frame.
+    ///
+    /// Note that the optimal `num_backup_slots` is proportional to the number
+    /// of hotspots.
     pub fn set_hotspot(&mut self, name: &str, frame: u32) {
         self.hotspots.insert(name.to_owned(), frame);
     }
 
+    /// Delete a hotspot with the given name, if it exists.
     pub fn delete_hotspot(&mut self, name: &str) {
         self.hotspots.remove(name);
     }
 
+    /// Return the currently loaded frames for debugging purposes.
     pub fn cached_frames(&self) -> Vec<u32> {
         self.slots
             .iter()
@@ -244,13 +263,5 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
                 Frame::Unknown => None,
             })
             .collect()
-    }
-
-    pub fn num_advances(&self) -> usize {
-        self.slots.num_advances
-    }
-
-    pub fn num_copies(&self) -> usize {
-        self.slots.num_copies
     }
 }

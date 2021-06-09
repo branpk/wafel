@@ -2,10 +2,18 @@ use wafel_memory::GameMemory;
 
 /// Applies edits at the end of each frame to control the game.
 pub trait GameController<M: GameMemory> {
+    /// Error type if the controller fails to apply edits.
     type Error;
 
     /// Apply edits to the given state.
-    fn apply(&self, memory: &M, slot: &mut M::Slot, frame: u32) -> Result<(), Self::Error>;
+    ///
+    /// Even if this method returns an error, the edits that were made to `slot` are still
+    /// incorporated into the timeline.
+    /// The error will be returned when
+    /// [GameTimeline::frame](crate::GameTimeline::frame) is called.
+    ///
+    /// This method must be deterministic.
+    fn apply(&self, memory: &M, slot: &mut M::Slot, frame: u32) -> Option<Self::Error>;
 }
 
 /// A set of frames that should be invalidated after a controller mutation.

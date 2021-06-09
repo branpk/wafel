@@ -37,10 +37,6 @@ pub(crate) struct Slots<M: GameMemory> {
     pub(crate) power_on: SlotWrapper<M::Slot>,
     pub(crate) base: SlotWrapper<M::Slot>,
     pub(crate) backups: Vec<SlotWrapper<M::Slot>>,
-    /// Debug stat counting number of frame advances.
-    pub(crate) num_advances: usize,
-    /// Debug stat counting number of slot copies.
-    pub(crate) num_copies: usize,
 }
 
 impl<M: GameMemory> Slots<M> {
@@ -75,8 +71,6 @@ impl<M: GameMemory> Slots<M> {
             power_on: power_on_slot,
             base: base_slot,
             backups: backup_slots,
-            num_advances: 0,
-            num_copies: 0,
         }
     }
 
@@ -119,7 +113,6 @@ impl<M: GameMemory> Slots<M> {
 
             memory.copy_slot(&mut dst.slot, &src.slot);
             dst.frame = src.frame;
-            self.num_copies = self.num_copies.saturating_add(1);
         }
     }
 
@@ -137,7 +130,6 @@ impl<M: GameMemory> Slots<M> {
             Frame::At(frame) => {
                 memory.advance_base_slot(&mut base.slot);
                 new_frame = frame + 1;
-                self.num_advances = self.num_advances.saturating_add(1);
             }
             _ => panic!("base.frame = Frame::Unknown"),
         };
