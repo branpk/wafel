@@ -73,8 +73,16 @@ impl Value {
         matches!(self, Value::Null)
     }
 
+    /// Panics if the value is not null.
+    #[track_caller]
+    pub fn as_null(&self) {
+        if let Err(error) = self.try_as_null() {
+            panic!("{}", error);
+        }
+    }
+
     /// Returns an error if the value is not null.
-    pub fn as_null(&self) -> Result<(), ValueTypeError> {
+    pub fn try_as_null(&self) -> Result<(), ValueTypeError> {
         if self.is_null() {
             Ok(())
         } else {
@@ -85,8 +93,17 @@ impl Value {
         }
     }
 
+    /// Convert the value to an int, panicking if it is not an int.
+    #[track_caller]
+    pub fn as_int(&self) -> IntValue {
+        match self.try_as_int() {
+            Ok(n) => n,
+            Err(error) => panic!("{}", error),
+        }
+    }
+
     /// Convert the value to an int.
-    pub fn as_int(&self) -> Result<IntValue, ValueTypeError> {
+    pub fn try_as_int(&self) -> Result<IntValue, ValueTypeError> {
         if let Value::Int(n) = *self {
             Ok(n)
         } else {
@@ -98,8 +115,19 @@ impl Value {
     }
 
     /// Convert the value to an int, allowing in-range floats that are integers.
+    ///
+    /// Panics if the conversion fails.
+    #[track_caller]
+    pub fn as_int_lenient(&self) -> IntValue {
+        match self.try_as_int_lenient() {
+            Ok(n) => n,
+            Err(error) => panic!("{}", error),
+        }
+    }
+
+    /// Convert the value to an int, allowing in-range floats that are integers.
     #[allow(clippy::float_cmp)]
-    pub fn as_int_lenient(&self) -> Result<IntValue, ValueTypeError> {
+    pub fn try_as_int_lenient(&self) -> Result<IntValue, ValueTypeError> {
         match *self {
             Value::Int(n) => Ok(n),
             Value::Float(r) if r as IntValue as FloatValue == r => Ok(r as IntValue),
@@ -110,9 +138,18 @@ impl Value {
         }
     }
 
+    /// Convert the value to a usize, panicking on failure.
+    #[track_caller]
+    pub fn as_usize(&self) -> usize {
+        match self.try_as_usize() {
+            Ok(n) => n,
+            Err(error) => panic!("{}", error),
+        }
+    }
+
     /// Convert the value to a usize.
-    pub fn as_usize(&self) -> Result<usize, ValueTypeError> {
-        self.as_int().and_then(|n| {
+    pub fn try_as_usize(&self) -> Result<usize, ValueTypeError> {
+        self.try_as_int().and_then(|n| {
             usize::try_from(n).map_err(|_| ValueTypeError {
                 expected: "usize".into(),
                 actual: self.clone(),
@@ -120,8 +157,17 @@ impl Value {
         })
     }
 
+    /// Convert the value to a float, panicking if the value is not a float.
+    #[track_caller]
+    pub fn as_float(&self) -> FloatValue {
+        match self.try_as_float() {
+            Ok(r) => r,
+            Err(error) => panic!("{}", error),
+        }
+    }
+
     /// Convert the value to a float.
-    pub fn as_float(&self) -> Result<FloatValue, ValueTypeError> {
+    pub fn try_as_float(&self) -> Result<FloatValue, ValueTypeError> {
         if let Value::Float(r) = *self {
             Ok(r)
         } else {
@@ -132,8 +178,19 @@ impl Value {
         }
     }
 
+    /// Convert the value to a usize, allowing in-range integers.
+    ///
+    /// Panics on failure.
+    #[track_caller]
+    pub fn as_float_lenient(&self) -> FloatValue {
+        match self.try_as_float_lenient() {
+            Ok(r) => r,
+            Err(error) => panic!("{}", error),
+        }
+    }
+
     /// Convert the value to a float, allowing in-range integers.
-    pub fn as_float_lenient(&self) -> Result<FloatValue, ValueTypeError> {
+    pub fn try_as_float_lenient(&self) -> Result<FloatValue, ValueTypeError> {
         match *self {
             Value::Float(r) => Ok(r),
             Value::Int(n) if n as FloatValue as IntValue == n => Ok(n as FloatValue),
@@ -144,13 +201,31 @@ impl Value {
         }
     }
 
+    /// Convert the value to a float, and then truncate to an f32, panicking on failure.
+    #[track_caller]
+    pub fn as_f32(&self) -> f32 {
+        match self.try_as_f32() {
+            Ok(r) => r,
+            Err(error) => panic!("{}", error),
+        }
+    }
+
     /// Convert the value to a float and then truncate to an f32.
-    pub fn as_f32(&self) -> Result<f32, ValueTypeError> {
-        self.as_float().map(|r| r as f32)
+    pub fn try_as_f32(&self) -> Result<f32, ValueTypeError> {
+        self.try_as_float().map(|r| r as f32)
+    }
+
+    /// Convert the value to an address, panicking on failure.
+    #[track_caller]
+    pub fn as_address(&self) -> Address {
+        match self.try_as_address() {
+            Ok(r) => r,
+            Err(error) => panic!("{}", error),
+        }
     }
 
     /// Convert the value to an address.
-    pub fn as_address(&self) -> Result<Address, ValueTypeError> {
+    pub fn try_as_address(&self) -> Result<Address, ValueTypeError> {
         if let Value::Address(address) = self {
             Ok(*address)
         } else {
@@ -161,8 +236,17 @@ impl Value {
         }
     }
 
+    /// Convert the value to a struct and return its fields, panicking on failure.
+    #[track_caller]
+    pub fn as_struct(&self) -> &HashMap<String, Value> {
+        match self.try_as_struct() {
+            Ok(fields) => fields,
+            Err(error) => panic!("{}", error),
+        }
+    }
+
     /// Convert the value to a struct and return its fields.
-    pub fn as_struct(&self) -> Result<&HashMap<String, Value>, ValueTypeError> {
+    pub fn try_as_struct(&self) -> Result<&HashMap<String, Value>, ValueTypeError> {
         if let Value::Struct { fields } = self {
             Ok(fields)
         } else {
@@ -173,8 +257,17 @@ impl Value {
         }
     }
 
+    /// Convert the value to an array and return its elements, panicking on failure.
+    #[track_caller]
+    pub fn as_array(&self) -> &[Value] {
+        match self.try_as_array() {
+            Ok(elements) => elements,
+            Err(error) => panic!("{}", error),
+        }
+    }
+
     /// Convert the value to an array and return its elements.
-    pub fn as_array(&self) -> Result<&[Value], ValueTypeError> {
+    pub fn try_as_array(&self) -> Result<&[Value], ValueTypeError> {
         if let Value::Array(elements) = self {
             Ok(elements)
         } else {
@@ -185,9 +278,18 @@ impl Value {
         }
     }
 
+    /// Convert the value to an array and return its elements, panicking on failure.
+    #[track_caller]
+    pub fn as_array_with_len(&self) -> &[Value] {
+        match self.try_as_array() {
+            Ok(elements) => elements,
+            Err(error) => panic!("{}", error),
+        }
+    }
+
     /// Convert the value to an array and return its elements.
-    pub fn as_array_with_len(&self, length: usize) -> Result<&[Value], ValueTypeError> {
-        let elements = self.as_array()?;
+    pub fn try_as_array_with_len(&self, length: usize) -> Result<&[Value], ValueTypeError> {
+        let elements = self.try_as_array()?;
         if elements.len() == length {
             Ok(elements)
         } else {
@@ -198,23 +300,41 @@ impl Value {
         }
     }
 
+    /// Convert the value to an array of three i16s, panicking on failure.
+    #[track_caller]
+    pub fn as_i16_3(&self) -> [i16; 3] {
+        match self.try_as_i16_3() {
+            Ok(elements) => elements,
+            Err(error) => panic!("{}", error),
+        }
+    }
+
     /// Convert the value to an array of three i16s.
-    pub fn as_i16_3(&self) -> Result<[i16; 3], ValueTypeError> {
-        let elements = self.as_array_with_len(3)?;
+    pub fn try_as_i16_3(&self) -> Result<[i16; 3], ValueTypeError> {
+        let elements = self.try_as_array_with_len(3)?;
         Ok([
-            elements[0].as_int()? as i16,
-            elements[1].as_int()? as i16,
-            elements[2].as_int()? as i16,
+            elements[0].try_as_int()? as i16,
+            elements[1].try_as_int()? as i16,
+            elements[2].try_as_int()? as i16,
         ])
     }
 
+    /// Convert the value to an array of three f32s, panicking on failure.
+    #[track_caller]
+    pub fn as_f32_3(&self) -> [f32; 3] {
+        match self.try_as_f32_3() {
+            Ok(elements) => elements,
+            Err(error) => panic!("{}", error),
+        }
+    }
+
     /// Convert the value to an array of three f32s.
-    pub fn as_f32_3(&self) -> Result<[f32; 3], ValueTypeError> {
-        let elements = self.as_array_with_len(3)?;
+    pub fn try_as_f32_3(&self) -> Result<[f32; 3], ValueTypeError> {
+        let elements = self.try_as_array_with_len(3)?;
         Ok([
-            elements[0].as_float()? as f32,
-            elements[1].as_float()? as f32,
-            elements[2].as_float()? as f32,
+            elements[0].try_as_f32()?,
+            elements[1].try_as_f32()?,
+            elements[2].try_as_f32()?,
         ])
     }
 }

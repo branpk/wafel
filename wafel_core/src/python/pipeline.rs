@@ -459,7 +459,7 @@ impl PyPipeline {
             let pos_coords = timeline
                 .frame(frame)?
                 .path_read(&pos_path)?
-                .as_f32_3()
+                .try_as_f32_3()
                 .map_err(Error::from)?;
             nodes.push(scene::ObjectPathNode {
                 pos: Point3f::from_slice(&pos_coords).into(),

@@ -247,15 +247,15 @@ pub trait Memory: Sized {
         match data_type.as_ref() {
             DataType::Int(int_type) => {
                 let address = to_relocatable(address)?;
-                self.write_slot_int(slot, &address, *int_type, value.as_int()?)?;
+                self.write_slot_int(slot, &address, *int_type, value.try_as_int()?)?;
             }
             DataType::Float(float_type) => {
                 let address = to_relocatable(address)?;
-                self.write_slot_float(slot, &address, *float_type, value.as_float()?)?;
+                self.write_slot_float(slot, &address, *float_type, value.try_as_float()?)?;
             }
             DataType::Pointer { .. } => {
                 let address = to_relocatable(address)?;
-                self.write_slot_address(slot, &address, &value.as_address()?)?;
+                self.write_slot_address(slot, &address, &value.try_as_address()?)?;
             }
             _ => {
                 return Err(MemoryErrorCause::UnwritableValue {

@@ -170,7 +170,7 @@ impl DataVariables {
                 let mut value = state.path_read(&path)?;
 
                 if let Some(flag) = spec.flag {
-                    let flag_set = (value.as_int()? & flag) != 0;
+                    let flag_set = (value.try_as_int()? & flag) != 0;
                     value = Value::Int(flag_set as IntValue);
                 }
 
@@ -192,8 +192,8 @@ impl DataVariables {
         match self.path(state, variable)? {
             Some(path) => {
                 if let Some(flag) = spec.flag {
-                    let flag_set = value.as_int()? != 0;
-                    let prev_value = state.path_read(&path)?.as_int()?;
+                    let flag_set = value.try_as_int()? != 0;
+                    let prev_value = state.path_read(&path)?.try_as_int()?;
                     value = Value::Int(if flag_set {
                         prev_value | flag
                     } else {

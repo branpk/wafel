@@ -170,20 +170,22 @@ fn write_value_impl<M: MemoryWrite + ?Sized>(
     resolve_type: &mut impl FnMut(&TypeName) -> Option<std::sync::Arc<DataType>>,
 ) -> Result<(), MemoryError> {
     match data_type.as_ref() {
-        DataType::Void => value.as_null()?,
-        DataType::Int(int_type) => memory.write_int(address, *int_type, value.as_int_lenient()?)?,
-        DataType::Float(float_type) => {
-            memory.write_float(address, *float_type, value.as_float_lenient()?)?
+        DataType::Void => value.try_as_null()?,
+        DataType::Int(int_type) => {
+            memory.write_int(address, *int_type, value.try_as_int_lenient()?)?
         }
-        DataType::Pointer { .. } => memory.write_address(address, value.as_address()?)?,
+        DataType::Float(float_type) => {
+            memory.write_float(address, *float_type, value.try_as_float_lenient()?)?
+        }
+        DataType::Pointer { .. } => memory.write_address(address, value.try_as_address()?)?,
         DataType::Array {
             base,
             length,
             stride,
         } => {
             let elements = match *length {
-                Some(length) => value.as_array_with_len(length)?,
-                None => value.as_array()?,
+                Some(length) => value.try_as_array_with_len(length)?,
+                None => value.try_as_array()?,
             };
             for (i, element) in elements.iter().enumerate() {
                 write_value_impl(
@@ -196,7 +198,7 @@ fn write_value_impl<M: MemoryWrite + ?Sized>(
             }
         }
         DataType::Struct { fields } => {
-            let field_values = value.as_struct()?;
+            let field_values = value.try_as_struct()?;
             for name in field_values.keys() {
                 if !fields.contains_key(name) {
                     return Err(WriteExtraField(name.clone()));

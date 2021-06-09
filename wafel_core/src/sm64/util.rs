@@ -21,7 +21,7 @@ pub fn object_path(
 ) -> Result<Option<GlobalDataPath>, Error> {
     let active_flags = state
         .read(&format!("gObjectPool[{}].activeFlags", object.0))?
-        .as_int()?;
+        .try_as_int()?;
 
     if active_flags == 0 {
         return Ok(None);
@@ -41,7 +41,7 @@ pub fn object_behavior(
 ) -> Result<ObjectBehavior, Error> {
     let behavior_path =
         object_path.concat(&state.memory().local_path("struct Object.behavior")?)?;
-    let behavior_address = state.path_read(&behavior_path)?.as_address()?;
+    let behavior_address = state.path_read(&behavior_path)?.try_as_address()?;
     Ok(ObjectBehavior(behavior_address))
 }
 
@@ -50,7 +50,7 @@ pub fn surface_path(
     state: &impl State,
     surface: SurfaceSlot,
 ) -> Result<Option<GlobalDataPath>, Error> {
-    let num_surfaces = state.read("gSurfacesAllocated")?.as_usize()?;
+    let num_surfaces = state.read("gSurfacesAllocated")?.try_as_usize()?;
     if surface.0 >= num_surfaces {
         return Ok(None);
     }
@@ -76,11 +76,13 @@ pub fn frame_log(state: &impl State) -> Result<Vec<HashMap<String, Value>>, Erro
         .map(|(name, constant)| (constant.value, name.clone()))
         .collect();
 
-    let log_length = state.read("gFrameLogLength")?.as_usize()?;
+    let log_length = state.read("gFrameLogLength")?.try_as_usize()?;
 
     (0..log_length)
         .map(|i| -> Result<_, Error> {
-            let event_type_value = state.read(&format!("gFrameLog[{}].type", i))?.as_int()?;
+            let event_type_value = state
+                .read(&format!("gFrameLog[{}].type", i))?
+                .try_as_int()?;
             let event_type = event_types.get(&event_type_value).ok_or({
                 SM64ErrorCause::InvalidFrameLogEventType {
                     value: event_type_value,
@@ -90,7 +92,7 @@ pub fn frame_log(state: &impl State) -> Result<Vec<HashMap<String, Value>>, Erro
             let variant_name = frame_log_event_variant_name(event_type);
             let mut event = state
                 .read(&format!("gFrameLog[{}].__anon.{}", i, variant_name))?
-                .as_struct()?
+                .try_as_struct()?
                 .clone();
 
             event.insert("type".to_owned(), Value::String(event_type.clone()));
@@ -135,9 +137,9 @@ fn read_surfaces(state: &impl SlotState) -> Result<Vec<Surface>, Error> {
     if surface_pool_addr.is_null() {
         return Ok(Vec::new());
     }
-    let surface_pool_addr = surface_pool_addr.as_address()?;
+    let surface_pool_addr = surface_pool_addr.try_as_address()?;
 
-    let surfaces_allocated = state.read("gSurfacesAllocated")?.as_int()? as usize;
+    let surfaces_allocated = state.read("gSurfacesAllocated")?.try_as_int()? as usize;
 
     let surface_size = memory
         .global_path("sSurfacePool")?
