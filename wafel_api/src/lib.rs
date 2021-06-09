@@ -13,7 +13,7 @@ use std::{
 
 use wafel_data_path::{DataPathError, GlobalDataPath};
 pub use wafel_data_type::Value;
-use wafel_layout::{DataLayout, DllLayout, DllLayoutError};
+use wafel_layout::{DataLayout, DllLayout, DllLayoutError, SM64ExtrasError};
 use wafel_memory::{DllGameMemory, DllLoadError, GameMemory, MemoryError};
 use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
 
@@ -29,13 +29,15 @@ pub struct Timeline {
 impl Timeline {
     #[track_caller]
     pub unsafe fn open(dll_path: &str) -> Self {
-        Self::try_open(dll_path)
-            .unwrap_or_else(|error| panic!("failed to open {}: {}", dll_path, error))
+        match Self::try_open(dll_path) {
+            Ok(timeline) => timeline,
+            Err(error) => panic!("Error:\n  failed to open {}:\n  {}\n", dll_path, error),
+        }
     }
 
     pub unsafe fn try_open(dll_path: &str) -> Result<Self, Error> {
         let mut layout = DllLayout::read(&dll_path)?.data_layout;
-        layout.add_sm64_extras();
+        layout.add_sm64_extras()?;
         let layout = Arc::new(layout);
 
         let (memory, base_slot) = DllGameMemory::load(dll_path, "sm64_init", "sm64_update")?;
@@ -56,18 +58,20 @@ impl Timeline {
 
     #[track_caller]
     pub fn read(&self, frame: u32, path: &str) -> Value {
-        self.try_read(frame, path)
-            .unwrap_or_else(|error| panic!("failed to read '{}': {}", path, error))
+        match self.try_read(frame, path) {
+            Ok(value) => value,
+            Err(error) => panic!("Error:\n  failed to read '{}':\n  {}\n", path, error),
+        }
     }
 
     pub fn try_read(&self, frame: u32, path: &str) -> Result<Value, Error> {
         let path = self.data_path(path)?;
         let mut timeline = self.timeline.lock().unwrap();
-        let (slot, error) = timeline.frame(frame, false);
-        if let Some(error) = error {
+        let slot = timeline.frame(frame, false).0;
+        let value = path.read(&self.memory.with_slot(slot))?;
+        if let Some((_, error)) = timeline.earliest_error() {
             return Err(error.clone());
         }
-        let value = path.read(&self.memory.with_slot(slot))?;
         Ok(value)
     }
 
@@ -86,8 +90,10 @@ impl Timeline {
 
     #[track_caller]
     pub fn write(&mut self, frame: u32, path: &str, value: Value) {
-        self.try_write(frame, path, value)
-            .unwrap_or_else(|error| panic!("failed to write '{}': {}", path, error))
+        match self.try_write(frame, path, value) {
+            Ok(()) => {}
+            Err(error) => panic!("Error:\n  failed to write '{}':\n{}\n", path, error),
+        }
     }
 
     pub fn try_write(&mut self, frame: u32, path: &str, value: Value) -> Result<(), Error> {
@@ -119,6 +125,7 @@ fn check_all_sync() {
 #[derive(Debug, Clone)]
 pub enum Error {
     DllLayoutError(DllLayoutError),
+    SM64ExtrasError(SM64ExtrasError),
     DllLoadError(DllLoadError),
     DataPathError(DataPathError),
     MemoryError(MemoryError),
@@ -133,11 +140,12 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::DllLayoutError(error) => write!(f, "{}", error),
+            Error::SM64ExtrasError(error) => write!(f, "{}", error),
             Error::DllLoadError(error) => write!(f, "{}", error),
             Error::DataPathError(error) => write!(f, "{}", error),
             Error::MemoryError(error) => write!(f, "{}", error),
             Error::ApplyEditError { path, value, error } => {
-                write!(f, "while applying edit {} = {}: {}", path, value, error)
+                write!(f, "while applying edit {} = {}:\n  {}", path, value, error)
             }
         }
     }
@@ -148,6 +156,12 @@ impl error::Error for Error {}
 impl From<DllLayoutError> for Error {
     fn from(v: DllLayoutError) -> Self {
         Self::DllLayoutError(v)
+    }
+}
+
+impl From<SM64ExtrasError> for Error {
+    fn from(v: SM64ExtrasError) -> Self {
+        Self::SM64ExtrasError(v)
     }
 }
 
@@ -195,20 +209,19 @@ impl Controller {
 impl<M: GameMemory> GameController<M> for Controller {
     type Error = Error;
 
-    fn apply(&self, memory: &M, slot: &mut M::Slot, frame: u32) -> Option<Self::Error> {
-        let mut error = None;
+    fn apply(&self, memory: &M, slot: &mut M::Slot, frame: u32) -> Vec<Self::Error> {
+        let mut errors = Vec::new();
         if let Some(frame_edits) = self.edits.get(&frame) {
             for (path, value) in frame_edits {
-                path.write(&mut memory.with_slot_mut(slot), value.clone())
-                    .unwrap_or_else(|e| {
-                        error = Some(Error::ApplyEditError {
-                            path: Arc::clone(path),
-                            value: value.clone(),
-                            error: e,
-                        });
+                if let Err(error) = path.write(&mut memory.with_slot_mut(slot), value.clone()) {
+                    errors.push(Error::ApplyEditError {
+                        path: Arc::clone(path),
+                        value: value.clone(),
+                        error,
                     });
+                }
             }
         }
-        error
+        errors
     }
 }

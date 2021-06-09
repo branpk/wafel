@@ -88,7 +88,7 @@ impl GlobalDataPath {
     pub fn address(&self, memory: &impl MemoryRead) -> Result<Option<Address>, MemoryError> {
         self.address_impl(memory)
             .map_err(|error| MemoryError::Context {
-                context: format!("while evaluating '{}'", self),
+                context: format!("while evaluating {}", self),
                 error: Box::new(error),
             })
     }
@@ -119,7 +119,7 @@ impl GlobalDataPath {
                     self.0.layout.data_type(type_name).ok().cloned()
                 })
                 .map_err(|error| MemoryError::Context {
-                    context: format!("while evaluating '{}'", self),
+                    context: format!("while reading {}", self),
                     error: Box::new(error),
                 }),
             None => Ok(Value::Null),
@@ -138,7 +138,7 @@ impl GlobalDataPath {
                     self.0.layout.data_type(type_name).ok().cloned()
                 })
                 .map_err(|error| MemoryError::Context {
-                    context: format!("while evaluating '{}'", self),
+                    context: format!("while writing {}", self),
                     error: Box::new(error),
                 }),
             None => Ok(()),

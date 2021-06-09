@@ -1,6 +1,6 @@
 //! Dynamically typed value used for reading and writing to memory.
 
-use std::{collections::HashMap, convert::TryFrom, fmt, ops::Add};
+use std::{array::IntoIter, collections::HashMap, convert::TryFrom, fmt, ops::Add};
 
 use serde::{Deserialize, Serialize};
 
@@ -231,5 +231,136 @@ impl fmt::Display for Value {
                 )
             }
         }
+    }
+}
+
+impl From<()> for Value {
+    fn from((): ()) -> Self {
+        Self::Null
+    }
+}
+
+macro_rules! value_from_int {
+    ($ty:ty) => {
+        impl From<$ty> for Value {
+            fn from(v: $ty) -> Self {
+                Self::Int(v.into())
+            }
+        }
+    };
+}
+
+value_from_int!(i8);
+value_from_int!(u8);
+value_from_int!(i16);
+value_from_int!(u16);
+value_from_int!(i32);
+value_from_int!(u32);
+value_from_int!(i64);
+value_from_int!(u64);
+value_from_int!(i128);
+
+macro_rules! value_from_float {
+    ($ty:ty) => {
+        impl From<$ty> for Value {
+            fn from(v: $ty) -> Self {
+                Self::Float(v.into())
+            }
+        }
+    };
+}
+
+value_from_float!(f32);
+value_from_float!(f64);
+
+impl From<String> for Value {
+    fn from(v: String) -> Self {
+        Self::String(v)
+    }
+}
+
+impl From<&str> for Value {
+    fn from(v: &str) -> Self {
+        Self::String(v.to_string())
+    }
+}
+
+impl From<Address> for Value {
+    fn from(v: Address) -> Self {
+        Self::Address(v)
+    }
+}
+
+impl<V: Into<Value>> From<HashMap<String, V>> for Value {
+    fn from(v: HashMap<String, V>) -> Self {
+        Self::Struct {
+            fields: Box::new(v.into_iter().map(|(k, v)| (k, v.into())).collect()),
+        }
+    }
+}
+
+impl<V: Into<Value>> From<HashMap<&str, V>> for Value {
+    fn from(v: HashMap<&str, V>) -> Self {
+        Self::Struct {
+            fields: Box::new(
+                v.into_iter()
+                    .map(|(k, v)| (k.to_string(), v.into()))
+                    .collect(),
+            ),
+        }
+    }
+}
+
+impl<T: Into<Value>, const N: usize> From<[(String, T); N]> for Value {
+    fn from(v: [(String, T); N]) -> Self {
+        IntoIter::new(v).collect::<HashMap<_, _>>().into()
+    }
+}
+
+impl<T: Into<Value> + Clone> From<&[(String, T)]> for Value {
+    fn from(v: &[(String, T)]) -> Self {
+        v.iter().cloned().collect::<HashMap<_, _>>().into()
+    }
+}
+
+impl<T: Into<Value>> From<Vec<(String, T)>> for Value {
+    fn from(v: Vec<(String, T)>) -> Self {
+        v.into_iter().collect::<HashMap<_, _>>().into()
+    }
+}
+
+impl<T: Into<Value>, const N: usize> From<[(&str, T); N]> for Value {
+    fn from(v: [(&str, T); N]) -> Self {
+        IntoIter::new(v).collect::<HashMap<_, _>>().into()
+    }
+}
+
+impl<T: Into<Value> + Clone> From<&[(&str, T)]> for Value {
+    fn from(v: &[(&str, T)]) -> Self {
+        v.iter().cloned().collect::<HashMap<_, _>>().into()
+    }
+}
+
+impl<T: Into<Value>> From<Vec<(&str, T)>> for Value {
+    fn from(v: Vec<(&str, T)>) -> Self {
+        v.into_iter().collect::<HashMap<_, _>>().into()
+    }
+}
+
+impl<T: Into<Value>, const N: usize> From<[T; N]> for Value {
+    fn from(v: [T; N]) -> Self {
+        Self::Array(IntoIter::new(v).map(|v| v.into()).collect())
+    }
+}
+
+impl<T: Into<Value> + Clone> From<&[T]> for Value {
+    fn from(v: &[T]) -> Self {
+        Self::Array(v.iter().map(|v| v.clone().into()).collect())
+    }
+}
+
+impl<T: Into<Value>> From<Vec<T>> for Value {
+    fn from(v: Vec<T>) -> Self {
+        Self::Array(v.into_iter().map(|v| v.into()).collect())
     }
 }

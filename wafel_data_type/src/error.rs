@@ -25,7 +25,7 @@ impl fmt::Display for ValueTypeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "expected value of type: {}, found: {}",
+            "expected value of type {}, found {}",
             self.expected, self.actual
         )
     }

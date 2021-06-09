@@ -26,7 +26,7 @@ pub enum MemoryError {
 impl fmt::Display for MemoryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            MemoryError::Context { context, error } => write!(f, "{}: {}", context, error),
+            MemoryError::Context { context, error } => write!(f, "{}:\n  {}", context, error),
             MemoryError::ValueTypeError(error) => write!(f, "{}", error),
             MemoryError::UndefinedTypeName(type_name) => {
                 write!(f, "undefined type name: {}", type_name)

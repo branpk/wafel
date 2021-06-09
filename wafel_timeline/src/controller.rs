@@ -9,11 +9,10 @@ pub trait GameController<M: GameMemory> {
     ///
     /// Even if this method returns an error, the edits that were made to `slot` are still
     /// incorporated into the timeline.
-    /// The error will be returned when
-    /// [GameTimeline::frame](crate::GameTimeline::frame) is called.
+    /// The errors can be queried from the timeline.
     ///
     /// This method must be deterministic.
-    fn apply(&self, memory: &M, slot: &mut M::Slot, frame: u32) -> Option<Self::Error>;
+    fn apply(&self, memory: &M, slot: &mut M::Slot, frame: u32) -> Vec<Self::Error>;
 }
 
 /// A set of frames that should be invalidated after a controller mutation.

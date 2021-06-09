@@ -23,7 +23,7 @@ pub struct GameTimeline<M: GameMemory, C: GameController<M>> {
     controller: C,
     slots: Slots<M>,
     hotspots: HashMap<String, u32>,
-    errors: BTreeMap<u32, Option<C::Error>>,
+    errors: BTreeMap<u32, Vec<C::Error>>,
 }
 
 impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
@@ -104,10 +104,14 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
             // Advance base slot to requested frame
             while self.slots.base.frame != Frame::At(requested_frame) {
                 let new_frame = self.slots.advance_base_slot(&self.memory);
-                let error =
+                let errors =
                     self.controller
                         .apply(&self.memory, &mut self.slots.base.slot, new_frame);
-                self.errors.insert(new_frame, error);
+                if errors.is_empty() {
+                    self.errors.remove(&new_frame);
+                } else {
+                    self.errors.insert(new_frame, errors);
+                }
             }
             &self.slots.base
         };
@@ -118,30 +122,27 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
         result_slot.index
     }
 
-    /// Returns a slot holding the state for the given frame, and the error that the
+    /// Returns a slot holding the state for the given frame, and the errors that the
     /// controller returned on that frame, if any.
-    pub fn frame(&mut self, frame: u32, require_base: bool) -> (&M::Slot, &Option<C::Error>) {
+    pub fn frame(&mut self, frame: u32, require_base: bool) -> (&M::Slot, &[C::Error]) {
         let slot_index = self.request_frame(frame, require_base);
         let slot = &self.slots.get(slot_index).slot;
         let error = self
             .errors
             .get(&frame)
-            .expect("missing error for requested frame");
+            .map(Vec::as_slice)
+            .unwrap_or_default();
         (slot, error)
     }
 
-    /// Returns a mutable slot holding the state for the given frame, and the error that the
+    /// Returns a mutable slot holding the state for the given frame, and the errors that the
     /// controller returned on that frame, if any.
     ///
     /// Note that mutating the slot has no effect on the timeline, even on the requested
     /// frame.
     /// This method is primarily useful for running functions on the base slot without worrying
     /// about the function mutating data.
-    pub fn frame_mut(
-        &mut self,
-        frame: u32,
-        require_base: bool,
-    ) -> (&mut M::Slot, &Option<C::Error>) {
+    pub fn frame_mut(&mut self, frame: u32, require_base: bool) -> (&mut M::Slot, &[C::Error]) {
         let slot_index = self.request_frame(frame, require_base);
         let slot_wrapper = self.slots.get_mut(slot_index);
 
@@ -152,8 +153,17 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
         let error = self
             .errors
             .get(&frame)
-            .expect("missing error for requested frame");
+            .map(Vec::as_slice)
+            .unwrap_or_default();
         (slot, error)
+    }
+
+    /// Returns the earliest error that is encountered in the timeline.
+    pub fn earliest_error(&self) -> Option<(u32, &C::Error)> {
+        self.errors
+            .iter()
+            .next()
+            .map(|(&frame, errors)| (frame, errors.get(0).unwrap()))
     }
 
     /// Perform housekeeping to improve scrolling near hotspots.

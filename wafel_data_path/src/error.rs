@@ -45,7 +45,7 @@ impl fmt::Display for DataPathError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DataPathError::CompileError { source, error } => {
-                write!(f, "while compiling '{}': {}", source, error)
+                write!(f, "while compiling '{}':\n  {}", source, error)
             }
             DataPathError::ConcatTypeMismatch {
                 path1,

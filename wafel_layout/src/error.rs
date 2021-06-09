@@ -36,7 +36,7 @@ pub enum DllLayoutErrorKind {
 impl fmt::Display for DllLayoutError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.unit {
-            Some(unit) => write!(f, "in unit {}: {}", unit, self.kind),
+            Some(unit) => write!(f, "in unit {}:\n  {}", unit, self.kind),
             None => write!(f, "{}", self.kind),
         }
     }
