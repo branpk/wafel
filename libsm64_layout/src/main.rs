@@ -10,7 +10,7 @@
 
 use std::{fs, process};
 
-use clap::{App, Arg};
+use clap::{App, Arg, ArgGroup};
 use wafel_layout::DllLayout;
 
 fn main() {
@@ -19,6 +19,7 @@ fn main() {
         .arg(
             Arg::with_name("input")
                 .short("i")
+                .long("input")
                 .value_name("FILE")
                 .help("path to sm64_xx.dll (NOT the .locked file)")
                 .required(true),
@@ -26,14 +27,24 @@ fn main() {
         .arg(
             Arg::with_name("output")
                 .short("o")
+                .long("output")
                 .value_name("FILE")
-                .help("path to the output JSON file")
-                .required(true),
+                .help("path to the output JSON file"),
+        )
+        .arg(
+            Arg::with_name("stdout")
+                .long("stdout")
+                .help("print the JSON text to stdout"),
+        )
+        .group(
+            ArgGroup::with_name("output-option")
+                .args(&["output", "stdout"])
+                .required(true)
+                .multiple(true),
         )
         .get_matches();
 
     let input_filename = matches.value_of("input").unwrap();
-    let output_filename = matches.value_of("output").unwrap();
 
     let mut layout = DllLayout::read(input_filename).unwrap_or_else(|error| {
         eprintln!("Error while parsing {}: {}", input_filename, error);
@@ -53,8 +64,13 @@ fn main() {
         process::exit(1);
     });
 
-    fs::write(output_filename, &layout_json).unwrap_or_else(|error| {
-        eprintln!("Error while writing {}: {}", output_filename, error);
-        process::exit(1);
-    });
+    if let Some(output_filename) = matches.value_of("output") {
+        fs::write(output_filename, &layout_json).unwrap_or_else(|error| {
+            eprintln!("Error while writing {}: {}", output_filename, error);
+            process::exit(1);
+        });
+    }
+    if matches.is_present("stdout") {
+        print!("{}", layout_json);
+    }
 }
