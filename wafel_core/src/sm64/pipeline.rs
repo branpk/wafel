@@ -34,13 +34,16 @@ impl Pipeline {
 
     /// Destroy the pipeline, returning its variable edits.
     pub(crate) fn into_edits(self) -> RangeEdits<Variable, Value> {
-        self.range_edits
+        self.range_edits.without_drag_state()
     }
 
     /// Overwrite all edits with the given edits.
-    pub(crate) fn set_edits(&mut self, edits: RangeEdits<Variable, Value>) {
-        // set range_edits, apply EditOperations for all frames
-        todo!()
+    pub(crate) fn set_edits(&mut self, edits: RangeEdits<Variable, Value>) -> Result<(), Error> {
+        self.timeline.reset_all();
+        self.range_edits = edits;
+        let ops = self.range_edits.initial_ops();
+        self.apply_edit_ops(ops)?;
+        Ok(())
     }
 
     /// Read a variable.
@@ -58,10 +61,11 @@ impl Pipeline {
                         .set(&mut self.timeline, frame, &column, value)?;
                 }
                 EditOperation::Reset(column, frame) => {
+                    // Need to handle int masks (add to data path syntax? - or handle in wafel_api)
                     todo!()
                 }
-                EditOperation::Insert(frame) => todo!(),
-                EditOperation::Delete(frame) => todo!(),
+                EditOperation::Insert(frame) => self.timeline.insert_frame(frame),
+                EditOperation::Delete(frame) => self.timeline.delete_frame(frame),
             }
         }
         Ok(())

@@ -48,6 +48,29 @@ impl<C: Hash + Eq + Clone, V: Clone> RangeEdits<C, V> {
         }
     }
 
+    /// Return the edit ranges definitions without the interactive drag state.
+    pub(crate) fn without_drag_state(mut self) -> Self {
+        self.drag_state = None;
+        self
+    }
+
+    /// Return the set of operations needed to initialize the edit ranges.
+    pub(crate) fn initial_ops(&self) -> Vec<EditOperation<C, V>> {
+        let mut ops = Vec::new();
+        for (column, ranges) in &self.ranges {
+            for range in ranges.ranges.values() {
+                for frame in range.frames.clone() {
+                    ops.push(EditOperation::Write(
+                        column.clone(),
+                        frame,
+                        range.value.clone(),
+                    ));
+                }
+            }
+        }
+        ops
+    }
+
     /// Edit the value of a given cell.
     ///
     /// If the cell is in an edit range, the entire edit range is given the

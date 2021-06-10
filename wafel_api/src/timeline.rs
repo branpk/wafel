@@ -127,7 +127,7 @@ impl Timeline {
     /// A hotspot is a hint to the algorithm that scrolling should be smooth near the
     /// given frame.
     ///
-    /// [balance_distribution](Timeline::balance_distribution) must also be called frequently
+    /// [balance_distribution](Self::balance_distribution) must also be called frequently
     /// to maintain this.
     pub fn set_hotspot(&mut self, name: &str, frame: u32) {
         self.timeline.lock().unwrap().set_hotspot(name, frame);
@@ -369,6 +369,21 @@ impl Timeline {
         Ok(())
     }
 
+    /// Clear all previous calls to [write](Self::write).
+    pub fn reset_all(&mut self) {
+        self.with_controller_mut(|controller| controller.reset_all());
+    }
+
+    /// Shift all edits to the right, starting at the given frame.
+    pub fn insert_frame(&mut self, frame: u32) {
+        self.with_controller_mut(|controller| controller.insert_frame(frame));
+    }
+
+    /// Delete edits at the given frame, shifting all later edits to the left.
+    pub fn delete_frame(&mut self, frame: u32) {
+        self.with_controller_mut(|controller| controller.delete_frame(frame));
+    }
+
     fn with_controller_mut(&mut self, func: impl FnOnce(&mut Controller) -> InvalidatedFrames) {
         let data_cache = self.data_cache.get_mut().unwrap();
         let timeline = self.timeline.get_mut().unwrap();
@@ -501,12 +516,20 @@ impl Timeline {
 
 #[derive(Debug, Clone, Default)]
 struct Controller {
-    edits: HashMap<u32, Vec<(Arc<GlobalDataPath>, Value)>>,
+    edits: Vec<Vec<(Arc<GlobalDataPath>, Value)>>,
 }
 
 impl Controller {
     fn new() -> Self {
         Self::default()
+    }
+
+    fn get_mut(&mut self, frame: u32) -> &mut Vec<(Arc<GlobalDataPath>, Value)> {
+        let index = frame as usize;
+        if index >= self.edits.len() {
+            self.edits.resize_with(index + 1, Vec::new);
+        }
+        &mut self.edits[index]
     }
 
     fn write(
@@ -515,14 +538,14 @@ impl Controller {
         data_path: &Arc<GlobalDataPath>,
         value: Value,
     ) -> InvalidatedFrames {
-        let frame_edits = self.edits.entry(frame).or_default();
+        let frame_edits = self.get_mut(frame);
         frame_edits.retain(|(edit_path, _)| !Arc::ptr_eq(data_path, edit_path));
         frame_edits.push((Arc::clone(data_path), value));
         InvalidatedFrames::StartingAt(frame)
     }
 
     fn reset(&mut self, frame: u32, data_path: &Arc<GlobalDataPath>) -> InvalidatedFrames {
-        if let Some(frame_edits) = self.edits.get_mut(&frame) {
+        if let Some(frame_edits) = self.edits.get_mut(frame as usize) {
             let mut found = false;
             frame_edits.retain(|(edit_path, _)| {
                 let matches = Arc::ptr_eq(data_path, edit_path);
@@ -535,6 +558,31 @@ impl Controller {
         }
         InvalidatedFrames::None
     }
+
+    fn reset_all(&mut self) -> InvalidatedFrames {
+        self.edits.clear();
+        InvalidatedFrames::StartingAt(0)
+    }
+
+    fn insert_frame(&mut self, frame: u32) -> InvalidatedFrames {
+        let index = frame as usize;
+        if index < self.edits.len() {
+            self.edits.insert(index, Vec::new());
+            InvalidatedFrames::StartingAt(frame)
+        } else {
+            InvalidatedFrames::None
+        }
+    }
+
+    fn delete_frame(&mut self, frame: u32) -> InvalidatedFrames {
+        let index = frame as usize;
+        if index < self.edits.len() {
+            self.edits.remove(index);
+            InvalidatedFrames::StartingAt(frame)
+        } else {
+            InvalidatedFrames::None
+        }
+    }
 }
 
 impl<M: GameMemory> GameController<M> for Controller {
@@ -542,7 +590,7 @@ impl<M: GameMemory> GameController<M> for Controller {
 
     fn apply(&self, memory: &M, slot: &mut M::Slot, frame: u32) -> Vec<Self::Error> {
         let mut errors = Vec::new();
-        if let Some(frame_edits) = self.edits.get(&frame) {
+        if let Some(frame_edits) = self.edits.get(frame as usize) {
             for (path, value) in frame_edits {
                 if let Err(error) = path.write(&mut memory.with_slot_mut(slot), value.clone()) {
                     errors.push(Error::ApplyEditError {

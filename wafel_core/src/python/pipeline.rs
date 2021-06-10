@@ -108,7 +108,7 @@ impl PyPipeline {
             .borrow_mut(py)
             .get_mut()
             .pipeline
-            .set_edits(edits);
+            .set_edits(edits)?;
 
         Ok(py_pipeline)
     }
