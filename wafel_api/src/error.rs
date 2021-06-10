@@ -23,6 +23,8 @@ pub enum Error {
     SaveStateMismatch,
     ValueTypeError(ValueTypeError),
     InvalidFrameLogEventType(IntValue),
+    UnsizedSurfacePoolPointer,
+    UnsizedObjectPoolArray,
 }
 
 impl fmt::Display for Error {
@@ -43,6 +45,12 @@ impl fmt::Display for Error {
             Error::ValueTypeError(error) => write!(f, "{}", error),
             Error::InvalidFrameLogEventType(value) => {
                 write!(f, "invalid frame log event type: {}", value)
+            }
+            Error::UnsizedSurfacePoolPointer => {
+                write!(f, "surface pool array does not have a stride")
+            }
+            Error::UnsizedObjectPoolArray => {
+                write!(f, "object pool array does not have a stride")
             }
         }
     }

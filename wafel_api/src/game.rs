@@ -4,7 +4,9 @@ use wafel_data_type::{Address, Value};
 use wafel_layout::{DataLayout, DllLayout};
 use wafel_memory::{DllGameMemory, GameMemory, MemoryRead};
 
-use crate::{data_path_cache::DataPathCache, frame_log::read_frame_log, Error};
+use crate::{
+    data_path_cache::DataPathCache, frame_log::read_frame_log, read_surfaces, Error, Surface,
+};
 
 /// An SM64 API that uses a traditional frame advance / save state model.
 ///
@@ -116,7 +118,7 @@ impl Game {
     ///
     /// Returns an error if the path fails to compile or reading from memory fails.
     pub fn try_read(&self, path: &str) -> Result<Value, Error> {
-        let path = self.data_path_cache.get(path)?;
+        let path = self.data_path_cache.global(path)?;
         let value = path.read(&self.memory.with_slot(&self.base_slot))?;
         Ok(value)
     }
@@ -170,7 +172,7 @@ impl Game {
     ///
     /// Returns an error if the path fails to compile or reading from memory fails.
     pub fn try_address(&self, path: &str) -> Result<Option<Address>, Error> {
-        let path = self.data_path_cache.get(path)?;
+        let path = self.data_path_cache.global(path)?;
         let address = path.address(&self.memory.with_slot(&self.base_slot))?;
         Ok(address)
     }
@@ -196,7 +198,7 @@ impl Game {
     ///
     /// Returns an error if the data path fails to compile or the write fails.
     pub fn try_write(&mut self, path: &str, value: Value) -> Result<(), Error> {
-        let path = self.data_path_cache.get(path)?;
+        let path = self.data_path_cache.global(path)?;
         path.write(&mut self.memory.with_slot_mut(&mut self.base_slot), value)?;
         Ok(())
     }
@@ -275,7 +277,7 @@ impl Game {
         Ok(value.value.into())
     }
 
-    /// Get the Wafel frame log for the previous frame advance.
+    /// Read the Wafel frame log for the previous frame advance.
     ///
     /// # Panics
     ///
@@ -287,13 +289,34 @@ impl Game {
         }
     }
 
-    /// Get the Wafel frame log for the previous frame advance.
+    /// Read the Wafel frame log for the previous frame advance.
     ///
     /// Returns an error if reading the frame log fails, e.g. it contains an invalid event type.
     pub fn try_frame_log(&self) -> Result<Vec<HashMap<String, Value>>, Error> {
         let memory = self.memory.with_slot(&self.base_slot);
         let frame_log = read_frame_log(&memory, &self.layout, &self.data_path_cache)?;
         Ok(frame_log)
+    }
+
+    /// Read the currently loaded surfaces.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the read fails.
+    pub fn surfaces(&self) -> Vec<Surface> {
+        match self.try_surfaces() {
+            Ok(surfaces) => surfaces,
+            Err(error) => panic!("Error:\n   failed to read surfaces:\n  {}\n", error),
+        }
+    }
+
+    /// Read the currently loaded surfaces.
+    ///
+    /// Returns an error if the read fails.
+    pub fn try_surfaces(&self) -> Result<Vec<Surface>, Error> {
+        let memory = self.memory.with_slot(&self.base_slot);
+        let surfaces = read_surfaces(&memory, &self.data_path_cache)?;
+        Ok(surfaces)
     }
 }
 

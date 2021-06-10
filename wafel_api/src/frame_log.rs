@@ -24,14 +24,14 @@ pub(crate) fn read_frame_log(
         .collect();
 
     let log_length = data_path_cache
-        .get("gFrameLogLength")?
+        .global("gFrameLogLength")?
         .read(memory)?
         .try_as_usize()?;
 
     (0..log_length)
         .map(|i| -> Result<_, Error> {
             let event_type_value = data_path_cache
-                .get(&format!("gFrameLog[{}].type", i))?
+                .global(&format!("gFrameLog[{}].type", i))?
                 .read(memory)?
                 .try_as_int()?;
             let event_type = event_types
@@ -40,7 +40,7 @@ pub(crate) fn read_frame_log(
 
             let variant_name = frame_log_event_variant_name(event_type);
             let mut event = data_path_cache
-                .get(&format!("gFrameLog[{}].__anon.{}", i, variant_name))?
+                .global(&format!("gFrameLog[{}].__anon.{}", i, variant_name))?
                 .read(memory)?
                 .try_as_struct()?
                 .clone();

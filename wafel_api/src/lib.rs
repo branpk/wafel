@@ -21,6 +21,7 @@
 
 pub use error::*;
 pub use game::*;
+pub use surface::*;
 pub use timeline::*;
 pub use wafel_data_type::{Address, FloatValue, IntValue, Value};
 
@@ -29,4 +30,5 @@ mod data_path_cache;
 mod error;
 mod frame_log;
 mod game;
+mod surface;
 mod timeline;

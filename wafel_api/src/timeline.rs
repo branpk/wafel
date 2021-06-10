@@ -10,7 +10,8 @@ use wafel_memory::{DllGameMemory, DllSlotMemoryView, GameMemory, MemoryRead};
 use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
 
 use crate::{
-    data_cache::DataCache, data_path_cache::DataPathCache, frame_log::read_frame_log, Error,
+    data_cache::DataCache, data_path_cache::DataPathCache, frame_log::read_frame_log,
+    read_surfaces, Error, Surface,
 };
 
 /// An SM64 API that allows reads and writes to arbitrary frames without frame advance or
@@ -149,7 +150,7 @@ impl Timeline {
     /// - Reading from memory fails
     /// - A `write` on a previous frame failed
     pub fn try_read(&self, frame: u32, path: &str) -> Result<Value, Error> {
-        let path = self.data_path_cache.get(path)?;
+        let path = self.data_path_cache.global(path)?;
         let mut data_cache = self.data_cache.lock().unwrap();
 
         let value = match data_cache.get(frame, &path) {
@@ -232,7 +233,7 @@ impl Timeline {
     /// - Reading from memory fails
     /// - A `write` on a previous frame failed
     pub fn try_address(&self, frame: u32, path: &str) -> Result<Option<Address>, Error> {
-        let path = self.data_path_cache.get(path)?;
+        let path = self.data_path_cache.global(path)?;
         self.with_slot_memory(frame, |memory| Ok(path.address(memory)?))
     }
 
@@ -265,7 +266,7 @@ impl Timeline {
     /// Instead, write errors will be returned if `read` is called on a frame later than or
     /// equal to `frame`.
     pub fn try_write(&mut self, frame: u32, path: &str, value: Value) -> Result<(), Error> {
-        let path = self.data_path_cache.get(path)?;
+        let path = self.data_path_cache.global(path)?;
         self.with_controller_mut(|controller| controller.write(frame, &path, value));
         Ok(())
     }
@@ -293,7 +294,7 @@ impl Timeline {
     ///
     /// Returns an error if the data path fails to compile.
     pub fn try_reset(&mut self, frame: u32, path: &str) -> Result<(), Error> {
-        let path = self.data_path_cache.get(path)?;
+        let path = self.data_path_cache.global(path)?;
         self.with_controller_mut(|controller| controller.reset(frame, &path));
         Ok(())
     }
@@ -336,7 +337,7 @@ impl Timeline {
         Ok(value.value.into())
     }
 
-    /// Get the Wafel frame log for the previous frame advance.
+    /// Read the Wafel frame log for the previous frame advance.
     ///
     /// # Panics
     ///
@@ -349,7 +350,7 @@ impl Timeline {
         }
     }
 
-    /// Get the Wafel frame log for the previous frame advance.
+    /// Read the Wafel frame log for the previous frame advance.
     ///
     /// Returns an error if reading the frame log fails, e.g. it contains an invalid event type,
     /// or if a `write` on a previous frame failed.
@@ -357,6 +358,25 @@ impl Timeline {
         self.with_slot_memory(frame, |memory| {
             read_frame_log(memory, &self.layout, &self.data_path_cache)
         })
+    }
+
+    /// Read the currently loaded surfaces.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the read fails or if a `write` on a previous frame failed.
+    pub fn surfaces(&self, frame: u32) -> Vec<Surface> {
+        match self.try_surfaces(frame) {
+            Ok(surfaces) => surfaces,
+            Err(error) => panic!("Error:\n   failed to read surfaces:\n  {}\n", error),
+        }
+    }
+
+    /// Read the currently loaded surfaces.
+    ///
+    /// Returns an error if the read fails or if a `write` on a previous frame failed.
+    pub fn try_surfaces(&self, frame: u32) -> Result<Vec<Surface>, Error> {
+        self.with_slot_memory(frame, |memory| read_surfaces(memory, &self.data_path_cache))
     }
 }
 
