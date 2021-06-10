@@ -2,7 +2,7 @@
 
 #![allow(missing_docs)]
 
-use crate::{data_path::LocalDataPath, error::Error};
+use crate::error::Error;
 use derive_more::{Display, Error, From};
 use std::io;
 use wafel_data_type::{DataTypeRef, IntValue};
@@ -17,8 +17,6 @@ pub enum SM64ErrorCause {
     MissingObject { variable: String },
     #[display(fmt = "variable is missing surface: {}", variable)]
     MissingSurface { variable: String },
-    #[display(fmt = "invalid root type (must be object or surface): {}", path)]
-    InvalidVariableRoot { path: LocalDataPath },
     #[display(fmt = "while loading layout extensions: {}", _0)]
     LoadObjectFieldsError(LayoutExtensionErrorCause),
     #[display(fmt = "unimplemented conversion from {} to python object", value)]

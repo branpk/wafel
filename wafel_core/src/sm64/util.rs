@@ -1,11 +1,8 @@
 use graphics::scene::{self, Scene};
 use wafel_api::Timeline;
 
-use super::{ObjectBehavior, ObjectSlot, SM64ErrorCause, SurfaceSlot};
-use crate::{
-    error::Error, geo::Point3f, geo::Vector3f, graphics, memory::Memory, timeline::SlotState,
-};
-use wafel_data_type::{FloatType, IntType};
+use super::{ObjectBehavior, ObjectSlot, SurfaceSlot};
+use crate::{error::Error, geo::Point3f, geo::Vector3f, graphics};
 
 /// Get the data path for an object, or None if the object is inactive.
 pub fn object_path(

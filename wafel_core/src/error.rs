@@ -11,12 +11,7 @@ use derive_more::{Display, Error, From};
 use wafel_data_type::ValueTypeError;
 use wafel_layout::{LayoutLookupError, SM64ExtrasError};
 
-use crate::{
-    data_path::DataPathErrorCause,
-    dll::{DllError, DllErrorCause},
-    memory::MemoryErrorCause,
-    sm64::SM64ErrorCause,
-};
+use crate::sm64::SM64ErrorCause;
 
 pub type Error = WithContext<ErrorCause>;
 
@@ -30,12 +25,6 @@ pub enum ErrorCause {
     LayoutLookupError(LayoutLookupError),
     #[from]
     SM64ExtrasError(SM64ExtrasError),
-    #[from]
-    MemoryError(MemoryErrorCause),
-    #[from]
-    DataPathError(DataPathErrorCause),
-    #[from]
-    DllError(DllErrorCause),
     #[from]
     SM64Error(SM64ErrorCause),
 }
@@ -61,30 +50,6 @@ impl From<LayoutLookupError> for Error {
 impl From<SM64ExtrasError> for Error {
     fn from(value: SM64ExtrasError) -> Self {
         ErrorCause::SM64ExtrasError(value).into()
-    }
-}
-
-impl From<MemoryErrorCause> for Error {
-    fn from(value: MemoryErrorCause) -> Self {
-        ErrorCause::MemoryError(value).into()
-    }
-}
-
-impl From<DataPathErrorCause> for Error {
-    fn from(value: DataPathErrorCause) -> Self {
-        ErrorCause::DataPathError(value).into()
-    }
-}
-
-impl From<DllErrorCause> for Error {
-    fn from(value: DllErrorCause) -> Self {
-        ErrorCause::DllError(value).into()
-    }
-}
-
-impl From<DllError> for Error {
-    fn from(value: DllError) -> Self {
-        value.cause_into()
     }
 }
 
