@@ -5,7 +5,7 @@ use super::{ObjectBehavior, ObjectSlot, SurfaceSlot};
 use crate::{error::Error, geo::Point3f, geo::Vector3f, graphics};
 
 /// Get the data path for an object, or None if the object is inactive.
-pub fn object_path(
+pub(crate) fn object_path(
     timeline: &Timeline,
     frame: u32,
     object: ObjectSlot,
@@ -21,7 +21,7 @@ pub fn object_path(
     Ok(Some(format!("gObjectPool[{}]", object.0)))
 }
 
-pub fn concat_object_path(object_path: &str, field_path: &str) -> String {
+pub(crate) fn concat_object_path(object_path: &str, field_path: &str) -> String {
     let path_suffix = field_path
         .strip_prefix("struct Object")
         .expect("invalid object field path");
@@ -29,7 +29,7 @@ pub fn concat_object_path(object_path: &str, field_path: &str) -> String {
 }
 
 /// Get the behavior address for an object.
-pub fn object_behavior(
+pub(crate) fn object_behavior(
     timeline: &Timeline,
     frame: u32,
     object_path: &str,
@@ -40,7 +40,7 @@ pub fn object_behavior(
 }
 
 /// Get the data path for a surface, or None if the surface is inactive.
-pub fn surface_path(
+pub(crate) fn surface_path(
     timeline: &Timeline,
     frame: u32,
     surface: SurfaceSlot,
@@ -54,7 +54,7 @@ pub fn surface_path(
     Ok(Some(format!("sSurfacePool[{}]", surface)))
 }
 
-pub fn concat_surface_path(surface_path: &str, field_path: &str) -> String {
+pub(crate) fn concat_surface_path(surface_path: &str, field_path: &str) -> String {
     let path_suffix = field_path
         .strip_prefix("struct Surface")
         .expect("invalid surface field path");
@@ -62,7 +62,7 @@ pub fn concat_surface_path(surface_path: &str, field_path: &str) -> String {
 }
 
 /// Load the SM64 surfaces from the game state and add them to the scene.
-pub fn read_surfaces_to_scene(
+pub(crate) fn read_surfaces_to_scene(
     scene: &mut Scene,
     timeline: &Timeline,
     frame: u32,
@@ -98,7 +98,7 @@ pub fn read_surfaces_to_scene(
 }
 
 /// Load the SM64 objects from the game state and add them to the scene.
-pub fn read_objects_to_scene(
+pub(crate) fn read_objects_to_scene(
     scene: &mut Scene,
     timeline: &Timeline,
     frame: u32,
@@ -115,7 +115,7 @@ pub fn read_objects_to_scene(
 }
 
 /// Trace a ray until it hits a surface, and return the surface's index in the surface pool.
-pub fn trace_ray_to_surface(
+pub(crate) fn trace_ray_to_surface(
     timeline: &Timeline,
     frame: u32,
     ray: (Point3f, Vector3f),

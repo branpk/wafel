@@ -48,17 +48,6 @@ impl<C: Hash + Eq + Clone, V: Clone> RangeEdits<C, V> {
         }
     }
 
-    /// Find all the edits for a given frame, across columns.
-    pub(crate) fn edits(&self, frame: u32) -> Vec<(&C, &V)> {
-        let mut edits = Vec::new();
-        for column in self.ranges.keys() {
-            if let Some(range) = self.find_range(column, frame) {
-                edits.push((column, &range.value))
-            }
-        }
-        edits
-    }
-
     /// Edit the value of a given cell.
     ///
     /// If the cell is in an edit range, the entire edit range is given the

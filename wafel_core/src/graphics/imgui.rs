@@ -357,6 +357,8 @@ impl ImguiRenderer {
                     clip_y0 = clip_y0.min(output_size.1 as f32);
                     clip_x1 = clip_x1.min(output_size.0 as f32);
                     clip_y1 = clip_y1.min(output_size.1 as f32);
+
+                    #[allow(clippy::float_cmp)]
                     if clip_x0 == clip_x1 || clip_y0 == clip_y1 {
                         continue;
                     }

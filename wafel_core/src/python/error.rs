@@ -29,7 +29,7 @@ impl From<Error> for PyErr {
     }
 }
 
-pub fn init() {
+pub(crate) fn init() {
     panic::set_hook(Box::new(panic_hook));
     LogTracer::init().unwrap();
     tracing::subscriber::set_global_default(tracing_subscriber::Registry::default().with(LogLayer))
@@ -51,7 +51,7 @@ fn panic_hook(info: &PanicInfo<'_>) {
     log::error_acquire(format!("Panic details:\n{}", panic_details));
 }
 
-pub struct LogLayer;
+struct LogLayer;
 
 #[derive(Default)]
 struct MessageVisitor {

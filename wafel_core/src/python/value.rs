@@ -6,7 +6,7 @@ use pyo3::{
 };
 use wafel_data_type::Value;
 
-pub fn value_to_py_object(py: Python<'_>, value: &Value) -> PyResult<PyObject> {
+pub(crate) fn value_to_py_object(py: Python<'_>, value: &Value) -> PyResult<PyObject> {
     match value {
         Value::None => Ok(py.None()),
         Value::Int(n) => Ok(n.to_object(py)),
@@ -29,7 +29,7 @@ pub fn value_to_py_object(py: Python<'_>, value: &Value) -> PyResult<PyObject> {
     }
 }
 
-pub fn py_object_to_value(py: Python<'_>, value: &PyObject) -> PyResult<Value> {
+pub(crate) fn py_object_to_value(py: Python<'_>, value: &PyObject) -> PyResult<Value> {
     if value.is_none(py) {
         Ok(Value::None)
     } else if let Ok(long_value) = value.cast_as::<PyLong>(py) {

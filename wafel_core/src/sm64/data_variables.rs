@@ -90,19 +90,19 @@ struct DataVariableSpec {
 }
 
 #[derive(Debug)]
-pub struct DataVariables {
+pub(crate) struct DataVariables {
     specs: IndexMap<String, DataVariableSpec>,
 }
 
 impl DataVariables {
-    pub fn all(timeline: &Timeline) -> Result<Self, Error> {
+    pub(crate) fn all(timeline: &Timeline) -> Result<Self, Error> {
         let mut builder = Builder::new();
         build_variables(&mut builder);
         let specs = builder.build(timeline)?;
         Ok(Self { specs })
     }
 
-    pub fn group<'a>(&'a self, group: &'a str) -> impl Iterator<Item = Variable> + 'a {
+    pub(crate) fn group<'a>(&'a self, group: &'a str) -> impl Iterator<Item = Variable> + 'a {
         self.specs
             .iter()
             .filter(move |(_, spec)| spec.group == group)
@@ -159,7 +159,7 @@ impl DataVariables {
         }
     }
 
-    pub fn get(
+    pub(crate) fn get(
         &self,
         timeline: &Timeline,
         frame: u32,
@@ -184,7 +184,7 @@ impl DataVariables {
         }
     }
 
-    pub fn set(
+    pub(crate) fn set(
         &self,
         timeline: &mut Timeline,
         frame: u32,
@@ -211,13 +211,17 @@ impl DataVariables {
     }
 
     /// Get the label for the given variable if it has one.
-    pub fn label(&self, variable: &Variable) -> Result<Option<&str>, Error> {
+    pub(crate) fn label(&self, variable: &Variable) -> Result<Option<&str>, Error> {
         let spec = self.variable_spec(&variable.name)?;
         Ok(spec.label.as_ref().map(String::as_ref))
     }
 
     /// Get the concrete data type for the given variable.
-    pub fn data_type(&self, timeline: &Timeline, variable: &Variable) -> Result<DataType, Error> {
+    pub(crate) fn data_type(
+        &self,
+        timeline: &Timeline,
+        variable: &Variable,
+    ) -> Result<DataType, Error> {
         let spec = self.variable_spec(&variable.name)?;
         match &spec.path {
             Path::Global(path) | Path::Object(path) | Path::Surface(path) => {
@@ -227,7 +231,7 @@ impl DataVariables {
     }
 
     /// Get the bit flag for the given variable if it has one.
-    pub fn flag(&self, variable: &Variable) -> Result<Option<IntValue>, Error> {
+    pub(crate) fn flag(&self, variable: &Variable) -> Result<Option<IntValue>, Error> {
         let spec = self.variable_spec(&variable.name)?;
         Ok(spec.flag)
     }

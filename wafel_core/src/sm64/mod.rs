@@ -2,9 +2,9 @@
 
 pub use error::*;
 pub use input::*;
-pub use pipeline::*;
+pub(crate) use pipeline::*;
 pub use range_edit::*;
-pub use util::*;
+pub(crate) use util::*;
 pub use variable::*;
 
 mod data_variables;
