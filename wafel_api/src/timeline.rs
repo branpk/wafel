@@ -7,7 +7,7 @@ use std::{
 use wafel_data_path::{DataPath, GlobalDataPath};
 use wafel_data_type::{Address, Value};
 use wafel_layout::{DataLayout, DllLayout};
-use wafel_memory::{DllGameMemory, DllSlotMemoryView, GameMemory, MemoryRead};
+use wafel_memory::{DllGameMemory, DllSlotMemoryView, GameMemory, MemoryRead, SymbolLookup};
 use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
 
 use crate::{
@@ -52,6 +52,7 @@ use crate::{
 pub struct Timeline {
     memory: Arc<DllGameMemory>,
     layout: Arc<DataLayout>,
+    symbols_by_address: HashMap<Address, String>,
     timeline: Mutex<GameTimeline<Arc<DllGameMemory>, Controller>>,
     data_path_cache: DataPathCache,
     data_cache: Mutex<DataCache>,
@@ -98,6 +99,12 @@ impl Timeline {
         let (memory, base_slot) = DllGameMemory::load(dll_path, "sm64_init", "sm64_update")?;
         let memory = Arc::new(memory);
 
+        let symbols_by_address = layout
+            .globals
+            .keys()
+            .filter_map(|name| memory.symbol_address(name).map(|addr| (addr, name.clone())))
+            .collect();
+
         let controller = Controller::new();
 
         let timeline = GameTimeline::new(Arc::clone(&memory), base_slot, controller, 30);
@@ -108,6 +115,7 @@ impl Timeline {
         Ok(Self {
             memory,
             layout,
+            symbols_by_address,
             timeline,
             data_path_cache,
             data_cache: Mutex::new(DataCache::new()),
@@ -261,6 +269,13 @@ impl Timeline {
     pub fn try_address(&self, frame: u32, path: &str) -> Result<Option<Address>, Error> {
         let path = self.data_path_cache.global(path)?;
         self.with_slot_memory(frame, |memory| Ok(path.address(memory)?))
+    }
+
+    /// Return the name of the global variable at the given address.
+    ///
+    /// Returns None if no global variable is at the address.
+    pub fn address_to_symbol(&self, address: Address) -> Option<String> {
+        self.symbols_by_address.get(&address).cloned()
     }
 
     /// Return a simplified description of the type of the given variable.

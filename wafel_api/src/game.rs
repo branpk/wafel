@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use wafel_data_path::DataPath;
 use wafel_data_type::{Address, Value};
 use wafel_layout::{DataLayout, DllLayout};
-use wafel_memory::{DllGameMemory, GameMemory, MemoryRead};
+use wafel_memory::{DllGameMemory, GameMemory, MemoryRead, SymbolLookup};
 
 use crate::{
     data_path_cache::DataPathCache, frame_log::read_frame_log, read_object_hitboxes, read_surfaces,
@@ -45,6 +45,7 @@ pub struct Game {
     id: Arc<()>,
     layout: Arc<DataLayout>,
     memory: Arc<DllGameMemory>,
+    symbols_by_address: HashMap<Address, String>,
     base_slot_frame: u32,
     base_slot: <DllGameMemory as GameMemory>::Slot,
     data_path_cache: DataPathCache,
@@ -87,12 +88,19 @@ impl Game {
         let (memory, base_slot) = DllGameMemory::load(dll_path, "sm64_init", "sm64_update")?;
         let memory = Arc::new(memory);
 
+        let symbols_by_address = layout
+            .globals
+            .keys()
+            .filter_map(|name| memory.symbol_address(name).map(|addr| (addr, name.clone())))
+            .collect();
+
         let data_path_cache = DataPathCache::new(&memory, &layout);
 
         Ok(Self {
             id: Arc::new(()),
             layout,
             memory,
+            symbols_by_address,
             base_slot_frame: 0,
             base_slot,
             data_path_cache,
@@ -177,6 +185,13 @@ impl Game {
         let path = self.data_path_cache.global(path)?;
         let address = path.address(&self.memory.with_slot(&self.base_slot))?;
         Ok(address)
+    }
+
+    /// Return the name of the global variable at the given address.
+    ///
+    /// Returns None if no global variable is at the address.
+    pub fn address_to_symbol(&self, address: Address) -> Option<String> {
+        self.symbols_by_address.get(&address).cloned()
     }
 
     /// Return a simplified description of the type of the given variable.

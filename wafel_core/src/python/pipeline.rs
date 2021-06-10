@@ -15,9 +15,7 @@ use crate::{
 use lazy_static::lazy_static;
 use pyo3::{prelude::*, types::PyBytes};
 use std::{collections::HashMap, sync::Mutex};
-use wafel_data_type::{Address, IntType, Value};
-
-const NUM_BACKUP_SLOTS: usize = 30;
+use wafel_data_type::Value;
 
 lazy_static! {
     static ref VALID_PIPELINES: Mutex<Vec<Py<PyPipeline>>> = Mutex::new(Vec::new());
@@ -36,23 +34,12 @@ pub struct PyPipeline {
 #[derive(Debug)]
 struct ValidPipeline {
     pipeline: Pipeline,
-    symbols_by_address: HashMap<Address, String>,
 }
 
 impl PyPipeline {
     fn new(pipeline: Pipeline) -> PyResult<Self> {
-        let memory = pipeline.timeline().memory();
-        let symbols_by_address = memory
-            .all_symbol_address()
-            .into_iter()
-            .map(|(key, value)| (value, key.to_owned()))
-            .collect();
-
         Ok(Self {
-            valid: Some(ValidPipeline {
-                pipeline,
-                symbols_by_address,
-            }),
+            valid: Some(ValidPipeline { pipeline }),
         })
     }
 
@@ -183,13 +170,15 @@ impl PyPipeline {
     }
 
     /// Insert a new state at the given frame, shifting edits forward.
-    pub fn insert_frame(&mut self, frame: u32) {
-        self.get_mut().pipeline.insert_frame(frame);
+    pub fn insert_frame(&mut self, frame: u32) -> Result<(), PyErr> {
+        self.get_mut().pipeline.insert_frame(frame)?;
+        Ok(())
     }
 
     /// Delete the state at the given frame, shifting edits backward.
-    pub fn delete_frame(&mut self, frame: u32) {
-        self.get_mut().pipeline.delete_frame(frame);
+    pub fn delete_frame(&mut self, frame: u32) -> Result<(), PyErr> {
+        self.get_mut().pipeline.delete_frame(frame)?;
+        Ok(())
     }
 
     /// Begin a drag operation starting at `source_variable`.
@@ -210,13 +199,15 @@ impl PyPipeline {
     ///
     /// The ranges will appear to be updated, but won't be committed until `release_drag` is
     /// called.
-    pub fn update_drag(&mut self, target_frame: u32) {
-        self.get_mut().pipeline.update_drag(target_frame);
+    pub fn update_drag(&mut self, target_frame: u32) -> Result<(), PyErr> {
+        self.get_mut().pipeline.update_drag(target_frame)?;
+        Ok(())
     }
 
     /// End the drag operation, committing range changes.
-    pub fn release_drag(&mut self) {
-        self.get_mut().pipeline.release_drag();
+    pub fn release_drag(&mut self) -> Result<(), PyErr> {
+        self.get_mut().pipeline.release_drag()?;
+        Ok(())
     }
 
     /// Find the edit range containing a variable, if present.
@@ -354,12 +345,11 @@ impl PyPipeline {
     /// Get a human readable name for the given object behavior, if possible.
     pub fn object_behavior_name(&self, behavior: &PyObjectBehavior) -> String {
         let address = behavior.behavior.0;
-        let symbol = self.get().symbols_by_address.get(&address);
+        let timeline = self.get().pipeline.timeline();
 
-        if let Some(symbol) = symbol {
-            symbol.strip_prefix("bhv").unwrap_or(symbol).to_owned()
-        } else {
-            format!("Object[{}]", address)
+        match timeline.address_to_symbol(address) {
+            Some(symbol) => symbol.strip_prefix("bhv").unwrap_or(&symbol).to_owned(),
+            None => format!("Object[{}]", address),
         }
     }
 
