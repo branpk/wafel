@@ -1,13 +1,13 @@
 use std::{iter::Peekable, str::Chars};
 
-use wafel_data_type::{Namespace, TypeName};
+use wafel_data_type::{IntValue, Namespace, TypeName};
 
 use crate::DataPathCompileError::{self, ParseError};
 
 pub(crate) struct PathAst {
     pub(crate) root: RootAst,
     pub(crate) edges: Vec<EdgeAst>,
-    pub(crate) mask: Option<usize>,
+    pub(crate) mask: Option<IntOrConstant>,
 }
 
 pub(crate) enum RootAst {
@@ -17,8 +17,13 @@ pub(crate) enum RootAst {
 
 pub(crate) enum EdgeAst {
     Field(String),
-    Subscript(usize),
+    Subscript(IntOrConstant),
     Nullable,
+}
+
+pub(crate) enum IntOrConstant {
+    Int(IntValue),
+    Constant(String),
 }
 
 pub(crate) fn parse_data_path(source: &str) -> Result<PathAst, DataPathCompileError> {
@@ -103,7 +108,7 @@ impl<'s> Parser<'s> {
     fn subscript(&mut self) -> Result<EdgeAst, DataPathCompileError> {
         self.char('[')?;
         self.skip_whitespace();
-        let index = self.usize()?;
+        let index = self.usize_or_constant()?;
         self.char(']')?;
         self.skip_whitespace();
         Ok(EdgeAst::Subscript(index))
@@ -115,11 +120,11 @@ impl<'s> Parser<'s> {
         Ok(EdgeAst::Nullable)
     }
 
-    fn mask_opt(&mut self) -> Result<Option<usize>, DataPathCompileError> {
+    fn mask_opt(&mut self) -> Result<Option<IntOrConstant>, DataPathCompileError> {
         if self.chars.peek() == Some(&'&') {
             self.chars.next();
             self.skip_whitespace();
-            let mask = self.usize()?;
+            let mask = self.usize_or_constant()?;
             Ok(Some(mask))
         } else {
             Ok(None)
@@ -147,6 +152,18 @@ impl<'s> Parser<'s> {
 
         self.skip_whitespace();
         Ok(name)
+    }
+
+    fn usize_or_constant(&mut self) -> Result<IntOrConstant, DataPathCompileError> {
+        match self.chars.peek() {
+            Some(&c) if c.is_ascii_digit() => {
+                self.usize().map(|n| IntOrConstant::Int(n as IntValue))
+            }
+            Some(&c) if c.is_ascii_alphabetic() || c == '_' => {
+                self.name().map(IntOrConstant::Constant)
+            }
+            _ => Err(self.expected("an unsigned integer or constant name")),
+        }
     }
 
     fn usize(&mut self) -> Result<usize, DataPathCompileError> {

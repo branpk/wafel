@@ -6,8 +6,9 @@ use wafel_layout::{DataLayout, DllLayout};
 use wafel_memory::{DllGameMemory, GameMemory, MemoryRead, SymbolLookup};
 
 use crate::{
-    data_path_cache::DataPathCache, frame_log::read_frame_log, read_object_hitboxes, read_surfaces,
-    simplified_data_type, DataType, Error, ObjectHitbox, Surface,
+    data_path_cache::DataPathCache, frame_log::read_frame_log, mario::mario_action_names,
+    read_object_hitboxes, read_surfaces, simplified_data_type, DataType, Error, ObjectHitbox,
+    Surface,
 };
 
 /// An SM64 API that uses a traditional frame advance / save state model.
@@ -321,6 +322,11 @@ impl Game {
     pub fn try_constant(&self, name: &str) -> Result<Value, Error> {
         let value = self.layout.constant(name)?;
         Ok(value.value.into())
+    }
+
+    /// Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`).
+    pub fn mario_action_names(&self) -> HashMap<u32, String> {
+        mario_action_names(&self.layout)
     }
 
     /// Read the Wafel frame log for the previous frame advance.

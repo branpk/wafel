@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use wafel_data_type::{Address, DataType, DataTypeRef, Field};
+use wafel_data_type::{Address, DataType, DataTypeRef, Field, IntValue};
 use wafel_layout::DataLayout;
 use wafel_memory::SymbolLookup;
 
 use crate::{
-    parse::{parse_data_path, EdgeAst, RootAst},
+    parse::{parse_data_path, EdgeAst, IntOrConstant, RootAst},
     DataPath,
     DataPathCompileError::{self, *},
     DataPathEdge, DataPathError, DataPathImpl, GlobalDataPath, LocalDataPath,
@@ -57,7 +57,7 @@ fn data_path_impl(
                 if !path.concrete_type.is_int() {
                     return Err(MaskOnNonInt);
                 }
-                path.mask = Some(mask);
+                path.mask = Some(int_or_constant(layout, mask)?);
             }
 
             DataPath::Global(GlobalDataPath(path))
@@ -83,7 +83,7 @@ fn data_path_impl(
                 if !path.concrete_type.is_int() {
                     return Err(MaskOnNonInt);
                 }
-                path.mask = Some(mask);
+                path.mask = Some(int_or_constant(layout, mask)?);
             }
 
             DataPath::Local(LocalDataPath(path))
@@ -91,6 +91,19 @@ fn data_path_impl(
     };
 
     Ok(path)
+}
+
+fn int_or_constant(
+    layout: &DataLayout,
+    value: IntOrConstant,
+) -> Result<IntValue, DataPathCompileError> {
+    match value {
+        IntOrConstant::Int(int) => Ok(int as IntValue),
+        IntOrConstant::Constant(name) => {
+            let constant = layout.constant(&name)?;
+            Ok(constant.value)
+        }
+    }
 }
 
 fn follow_edge<T>(
@@ -115,6 +128,7 @@ fn follow_edge<T>(
             follow_field_access(layout, path, field_name)
         }
         EdgeAst::Subscript(index) => {
+            let index = int_or_constant(layout, index)? as usize;
             if let DataType::Pointer { base, stride } = path.concrete_type.as_ref() {
                 let stride = if index == 0 {
                     // If index = 0, then stride doesn't matter, so use 0 if it's unknown

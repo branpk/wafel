@@ -33,6 +33,7 @@ mod data_type;
 mod error;
 mod frame_log;
 mod game;
+mod mario;
 mod object;
 mod surface;
 mod timeline;

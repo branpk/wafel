@@ -19,7 +19,7 @@ pub(crate) struct DataPathImpl<R> {
     /// The operations to perform when evaluating the path.
     pub(crate) edges: Vec<DataPathEdge>,
     /// The mask to apply for an integer variable.
-    pub(crate) mask: Option<usize>,
+    pub(crate) mask: Option<IntValue>,
     /// The type of the value that the path points to.
     ///
     /// This should be "concrete", i.e. not a TypeName.
@@ -130,7 +130,7 @@ impl GlobalDataPath {
                 })?;
                 if let Some(mask) = self.0.mask {
                     let full_value = value.try_as_int().expect("mask on non-integer type");
-                    value = (full_value & mask as IntValue).into();
+                    value = (full_value & mask).into();
                 }
                 Ok(value)
             }
@@ -160,7 +160,6 @@ impl GlobalDataPath {
             Some(address) => {
                 match self.0.mask {
                     Some(mask) => {
-                        let mask = mask as IntValue;
                         let mask_value = value.try_as_int()?;
                         match self.concrete_type().as_ref() {
                             DataType::Int(int_type) => {

@@ -12,8 +12,8 @@ use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
 
 use crate::{
     data_cache::DataCache, data_path_cache::DataPathCache, frame_log::read_frame_log,
-    read_object_hitboxes, read_surfaces, simplified_data_type, DataType, Error, ObjectHitbox,
-    Surface,
+    mario::mario_action_names, read_object_hitboxes, read_surfaces, simplified_data_type, DataType,
+    Error, ObjectHitbox, Surface,
 };
 
 /// An SM64 API that allows reads and writes to arbitrary frames without frame advance or
@@ -434,17 +434,7 @@ impl Timeline {
 
     /// Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`).
     pub fn mario_action_names(&self) -> HashMap<u32, String> {
-        self.layout
-            .constants
-            .iter()
-            .filter(|(name, _)| {
-                name.starts_with("ACT_")
-                    && !name.starts_with("ACT_FLAG_")
-                    && !name.starts_with("ACT_GROUP_")
-                    && !name.starts_with("ACT_ID_")
-            })
-            .map(|(name, constant)| (constant.value as u32, name.clone()))
-            .collect()
+        mario_action_names(&self.layout)
     }
 
     /// Read the Wafel frame log for the previous frame advance.
