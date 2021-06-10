@@ -382,8 +382,8 @@ impl PyPipeline {
         py: Python<'_>,
         frame: u32,
     ) -> PyResult<Vec<HashMap<String, PyObject>>> {
-        let state = self.get().pipeline.timeline().frame(frame)?;
-        let events = frame_log(&state)?;
+        let timeline = self.get().pipeline.timeline();
+        let events = timeline.try_frame_log(frame).map_err(Error::from)?;
 
         let convert_event = |event: HashMap<String, Value>| -> PyResult<HashMap<String, PyObject>> {
             event
