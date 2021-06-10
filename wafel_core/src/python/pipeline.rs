@@ -323,19 +323,13 @@ impl PyPipeline {
 
     /// Return a map from mario action values to human readable names.
     pub fn action_names(&self) -> HashMap<u32, String> {
-        let data_layout = self.get().pipeline.timeline().memory().data_layout();
-        data_layout
-            .constants
-            .iter()
-            .filter(|(name, _)| {
-                name.starts_with("ACT_")
-                    && !name.starts_with("ACT_FLAG_")
-                    && !name.starts_with("ACT_GROUP_")
-                    && !name.starts_with("ACT_ID_")
-            })
-            .map(|(name, constant)| {
+        let timeline = self.get().pipeline.timeline();
+        timeline
+            .mario_action_names()
+            .into_iter()
+            .map(|(value, name)| {
                 (
-                    constant.value as u32,
+                    value,
                     name.strip_prefix("ACT_")
                         .unwrap()
                         .replace("_", " ")
