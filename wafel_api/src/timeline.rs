@@ -6,10 +6,12 @@ use std::{
 use wafel_data_path::GlobalDataPath;
 use wafel_data_type::{Address, Value};
 use wafel_layout::{DataLayout, DllLayout};
-use wafel_memory::{DllGameMemory, GameMemory, MemoryRead};
+use wafel_memory::{DllGameMemory, DllSlotMemoryView, GameMemory, MemoryRead};
 use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
 
-use crate::{data_cache::DataCache, data_path_cache::DataPathCache, Error};
+use crate::{
+    data_cache::DataCache, data_path_cache::DataPathCache, frame_log::read_frame_log, Error,
+};
 
 /// An SM64 API that allows reads and writes to arbitrary frames without frame advance or
 /// save states.
@@ -127,6 +129,17 @@ impl Timeline {
         }
     }
 
+    fn with_slot_memory<R>(
+        &self,
+        frame: u32,
+        f: impl FnOnce(&DllSlotMemoryView<'_>) -> Result<R, Error>,
+    ) -> Result<R, Error> {
+        let mut timeline = self.timeline.lock().unwrap();
+        let slot = timeline.frame_checked(frame, false)?;
+        let slot_memory = self.memory.with_slot(slot);
+        f(&slot_memory)
+    }
+
     /// Read a value from memory on the given frame.
     ///
     /// See the crate documentation for [wafel_data_path] for the path syntax.
@@ -137,36 +150,29 @@ impl Timeline {
     /// - A `write` on a previous frame failed
     pub fn try_read(&self, frame: u32, path: &str) -> Result<Value, Error> {
         let path = self.data_path_cache.get(path)?;
-        let mut timeline = self.timeline.lock().unwrap();
         let mut data_cache = self.data_cache.lock().unwrap();
 
         let value = match data_cache.get(frame, &path) {
             Some(value) => value,
-            None => self.read_and_cache(&mut data_cache, &mut timeline, frame, &path)?,
+            None => self.read_and_cache(&mut data_cache, frame, &path)?,
         };
-
-        match timeline.earliest_error(frame) {
-            Some((_, error)) => Err(error.clone()),
-            None => Ok(value),
-        }
+        Ok(value)
     }
 
     fn read_and_cache(
         &self,
         data_cache: &mut DataCache,
-        timeline: &mut GameTimeline<Arc<DllGameMemory>, Controller>,
         frame: u32,
         path: &Arc<GlobalDataPath>,
     ) -> Result<Value, Error> {
-        let slot = timeline.frame(frame, false).0;
-        let slot_memory = self.memory.with_slot(slot);
+        self.with_slot_memory(frame, |memory| {
+            data_cache.preload_frame(frame, memory);
 
-        data_cache.preload_frame(frame, &slot_memory);
+            let value = path.read(memory)?;
+            data_cache.insert(frame, path, value.clone());
 
-        let value = path.read(&slot_memory)?;
-        data_cache.insert(frame, path, value.clone());
-
-        Ok(value)
+            Ok(value)
+        })
     }
 
     /// Read a null terminated string from memory on the given frame.
@@ -190,11 +196,7 @@ impl Timeline {
     /// - Reading from memory fails
     /// - A `write` on a previous frame failed
     pub fn try_read_string_at(&self, frame: u32, address: Address) -> Result<Vec<u8>, Error> {
-        let mut timeline = self.timeline.lock().unwrap();
-        let slot = timeline.frame(frame, false).0;
-        let slot_memory = self.memory.with_slot(slot);
-        let bytes = slot_memory.read_string(address)?;
-        Ok(bytes)
+        self.with_slot_memory(frame, |memory| Ok(memory.read_string(address)?))
     }
 
     /// Find the address of a path on the given frame.
@@ -231,11 +233,7 @@ impl Timeline {
     /// - A `write` on a previous frame failed
     pub fn try_address(&self, frame: u32, path: &str) -> Result<Option<Address>, Error> {
         let path = self.data_path_cache.get(path)?;
-        let mut timeline = self.timeline.lock().unwrap();
-        let slot = timeline.frame(frame, false).0;
-        let slot_memory = self.memory.with_slot(slot);
-        let address = path.address(&slot_memory)?;
-        Ok(address)
+        self.with_slot_memory(frame, |memory| Ok(path.address(memory)?))
     }
 
     /// Write a value on the given frame.
@@ -284,7 +282,7 @@ impl Timeline {
     pub fn reset(&mut self, frame: u32, path: &str) {
         match self.try_reset(frame, path) {
             Ok(()) => {}
-            Err(error) => panic!("Error:\n  failed to reset '{}':\n{}\n", path, error),
+            Err(error) => panic!("Error:\n  failed to reset '{}':\n  {}\n", path, error),
         }
     }
 
@@ -301,8 +299,8 @@ impl Timeline {
     }
 
     fn with_controller_mut(&mut self, func: impl FnOnce(&mut Controller) -> InvalidatedFrames) {
-        let timeline = self.timeline.get_mut().unwrap();
         let data_cache = self.data_cache.get_mut().unwrap();
+        let timeline = self.timeline.get_mut().unwrap();
 
         timeline.with_controller_mut(|controller| {
             let invalidated_frames = func(controller);
@@ -336,6 +334,29 @@ impl Timeline {
     pub fn try_constant(&self, name: &str) -> Result<Value, Error> {
         let value = self.layout.constant(name)?;
         Ok(value.value.into())
+    }
+
+    /// Get the Wafel frame log for the previous frame advance.
+    ///
+    /// # Panics
+    ///
+    /// Panics if reading the frame log fails, e.g. it contains an invalid event type, or if a
+    /// `write` on a previous frame failed.
+    pub fn frame_log(&self, frame: u32) -> Vec<HashMap<String, Value>> {
+        match self.try_frame_log(frame) {
+            Ok(frame_log) => frame_log,
+            Err(error) => panic!("Error:\n  failed to read frame log:\n  {}\n", error),
+        }
+    }
+
+    /// Get the Wafel frame log for the previous frame advance.
+    ///
+    /// Returns an error if reading the frame log fails, e.g. it contains an invalid event type,
+    /// or if a `write` on a previous frame failed.
+    pub fn try_frame_log(&self, frame: u32) -> Result<Vec<HashMap<String, Value>>, Error> {
+        self.with_slot_memory(frame, |memory| {
+            read_frame_log(memory, &self.layout, &self.data_path_cache)
+        })
     }
 }
 

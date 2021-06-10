@@ -3,7 +3,7 @@
 use std::{error, fmt, sync::Arc};
 
 use wafel_data_path::{DataPathError, GlobalDataPath};
-use wafel_data_type::Value;
+use wafel_data_type::{IntValue, Value, ValueTypeError};
 use wafel_layout::{DllLayoutError, LayoutLookupError, SM64ExtrasError};
 use wafel_memory::{DllLoadError, MemoryError};
 
@@ -21,6 +21,8 @@ pub enum Error {
     },
     LayoutLookupError(LayoutLookupError),
     SaveStateMismatch,
+    ValueTypeError(ValueTypeError),
+    InvalidFrameLogEventType(IntValue),
 }
 
 impl fmt::Display for Error {
@@ -37,6 +39,10 @@ impl fmt::Display for Error {
             Error::LayoutLookupError(error) => write!(f, "{}", error),
             Error::SaveStateMismatch => {
                 write!(f, "save state was created by a different Game instance")
+            }
+            Error::ValueTypeError(error) => write!(f, "{}", error),
+            Error::InvalidFrameLogEventType(value) => {
+                write!(f, "invalid frame log event type: {}", value)
             }
         }
     }
@@ -77,5 +83,11 @@ impl From<MemoryError> for Error {
 impl From<LayoutLookupError> for Error {
     fn from(v: LayoutLookupError) -> Self {
         Self::LayoutLookupError(v)
+    }
+}
+
+impl From<ValueTypeError> for Error {
+    fn from(v: ValueTypeError) -> Self {
+        Self::ValueTypeError(v)
     }
 }

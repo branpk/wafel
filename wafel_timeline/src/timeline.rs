@@ -123,7 +123,7 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
         result_slot.index
     }
 
-    /// Returns a slot holding the state for the given frame, and the errors that the
+    /// Return a slot holding the state for the given frame, and the errors that the
     /// controller returned on that frame, if any.
     pub fn frame(&mut self, frame: u32, require_base: bool) -> (&M::Slot, &[C::Error]) {
         let slot_index = self.request_frame(frame, require_base);
@@ -135,7 +135,7 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
         (slot, errors)
     }
 
-    /// Returns a mutable slot holding the state for the given frame, and the errors that the
+    /// Return a mutable slot holding the state for the given frame, and the errors that the
     /// controller returned on that frame, if any.
     ///
     /// Note that mutating the slot has no effect on the timeline, even on the requested
@@ -157,7 +157,7 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
         (slot, errors)
     }
 
-    /// Returns the earliest error that is encountered in the timeline.
+    /// Return the earliest error that is encountered in the timeline.
     ///
     /// The `max_frame` parameter is required to make this method deterministic.
     pub fn earliest_error(&mut self, max_frame: u32) -> Option<(u32, &C::Error)> {
@@ -175,6 +175,41 @@ impl<M: GameMemory, C: GameController<M>> GameTimeline<M, C> {
                 Some((frame, error))
             }
             None => None,
+        }
+    }
+
+    /// Return a slot holding the state for the given frame.
+    ///
+    /// Returns an error if any controller errors occurred on or before the given frame.
+    pub fn frame_checked(&mut self, frame: u32, require_base: bool) -> Result<&M::Slot, C::Error>
+    where
+        C::Error: Clone,
+    {
+        match self.earliest_error(frame) {
+            Some((_, error)) => Err(error.clone()),
+            None => Ok(self.frame(frame, require_base).0),
+        }
+    }
+
+    /// Return a mutable slot holding the state for the given frame.
+    ///
+    /// Note that mutating the slot has no effect on the timeline, even on the requested
+    /// frame.
+    /// This method is primarily useful for running functions on the base slot without worrying
+    /// about the function mutating data.
+    ///
+    /// Returns an error if any controller errors occurred on or before the given frame.
+    pub fn frame_mut_checked(
+        &mut self,
+        frame: u32,
+        require_base: bool,
+    ) -> Result<&mut M::Slot, C::Error>
+    where
+        C::Error: Clone,
+    {
+        match self.earliest_error(frame) {
+            Some((_, error)) => Err(error.clone()),
+            None => Ok(self.frame_mut(frame, require_base).0),
         }
     }
 

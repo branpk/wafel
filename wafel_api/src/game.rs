@@ -1,10 +1,10 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use wafel_data_type::{Address, Value};
 use wafel_layout::{DataLayout, DllLayout};
 use wafel_memory::{DllGameMemory, GameMemory, MemoryRead};
 
-use crate::{data_path_cache::DataPathCache, Error};
+use crate::{data_path_cache::DataPathCache, frame_log::read_frame_log, Error};
 
 /// An SM64 API that uses a traditional frame advance / save state model.
 ///
@@ -273,6 +273,27 @@ impl Game {
     pub fn try_constant(&self, name: &str) -> Result<Value, Error> {
         let value = self.layout.constant(name)?;
         Ok(value.value.into())
+    }
+
+    /// Get the Wafel frame log for the previous frame advance.
+    ///
+    /// # Panics
+    ///
+    /// Panics if reading the frame log fails, e.g. it contains an invalid event type.
+    pub fn frame_log(&self) -> Vec<HashMap<String, Value>> {
+        match self.try_frame_log() {
+            Ok(frame_log) => frame_log,
+            Err(error) => panic!("Error:\n  failed to read frame log:\n  {}\n", error),
+        }
+    }
+
+    /// Get the Wafel frame log for the previous frame advance.
+    ///
+    /// Returns an error if reading the frame log fails, e.g. it contains an invalid event type.
+    pub fn try_frame_log(&self) -> Result<Vec<HashMap<String, Value>>, Error> {
+        let memory = self.memory.with_slot(&self.base_slot);
+        let frame_log = read_frame_log(&memory, &self.layout, &self.data_path_cache)?;
+        Ok(frame_log)
     }
 }
 
