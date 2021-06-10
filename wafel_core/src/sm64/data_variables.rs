@@ -181,7 +181,7 @@ impl DataVariables {
 
                 Ok(value)
             }
-            None => Ok(Value::Null),
+            None => Ok(Value::None),
         }
     }
 

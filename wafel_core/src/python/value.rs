@@ -8,7 +8,7 @@ use wafel_data_type::Value;
 
 pub fn value_to_py_object(py: Python<'_>, value: &Value) -> PyResult<PyObject> {
     match value {
-        Value::Null => Ok(py.None()),
+        Value::None => Ok(py.None()),
         Value::Int(n) => Ok(n.to_object(py)),
         Value::Float(r) => Ok(r.to_object(py)),
         Value::String(s) => Ok(s.to_object(py)),
@@ -31,7 +31,7 @@ pub fn value_to_py_object(py: Python<'_>, value: &Value) -> PyResult<PyObject> {
 
 pub fn py_object_to_value(py: Python<'_>, value: &PyObject) -> PyResult<Value> {
     if value.is_none(py) {
-        Ok(Value::Null)
+        Ok(Value::None)
     } else if let Ok(long_value) = value.cast_as::<PyLong>(py) {
         Ok(Value::Int(long_value.extract()?))
     } else if let Ok(float_value) = value.cast_as::<PyFloat>(py) {

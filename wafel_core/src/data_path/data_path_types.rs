@@ -114,7 +114,7 @@ impl GlobalDataPath {
             Some(address) => memory
                 .read_value(slot, &address, &self.0.concrete_type)
                 .map_err(|error| error.context(format!("path {}", self.0.source))),
-            None => Ok(Value::Null),
+            None => Ok(Value::None),
         }
     }
 

@@ -145,7 +145,7 @@ fn read_surfaces(state: &impl SlotState) -> Result<Vec<Surface>, Error> {
     let memory = state.memory();
 
     let surface_pool_addr = state.read("sSurfacePool?")?;
-    if surface_pool_addr.is_null() {
+    if surface_pool_addr.is_none() {
         return Ok(Vec::new());
     }
     let surface_pool_addr = surface_pool_addr.try_as_address()?;

@@ -122,7 +122,7 @@ impl GlobalDataPath {
                     context: format!("while reading {}", self),
                     error: Box::new(error),
                 }),
-            None => Ok(Value::Null),
+            None => Ok(Value::None),
         }
     }
 

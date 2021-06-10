@@ -18,7 +18,7 @@
 //! There are a few differences:
 //! - `p.x` automatically dereferences a pointer type `p`
 //! - `*` is not used for pointer dereferencing. Instead you can use `[0]`, `->`, or `.`
-//! - `?` denotes that a pointer may be null. If so, the entire expression returns `Value::Null`.
+//! - `?` denotes that a pointer may be null. If so, the entire expression returns `Value::None`.
 //!   If `?` is not used, an error is thrown instead.
 
 #![warn(

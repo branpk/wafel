@@ -31,12 +31,11 @@ impl Address {
 /// A dynamically typed value.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
-    /// Represents a null value.
+    /// Represents the lack of a value.
     ///
-    /// When evaluating a data path, this only occurs when `?` is used on an invalid
-    /// pointer. Otherwise, `Value::Address` will be used (or an error will be thrown
-    /// when it is dereferenced).
-    Null,
+    /// For example, when evaluating a data path and `?` is used on a null pointer,
+    /// `Value::None` is returned for the entire path.
+    None,
     /// An integer value, regardless of the underlying `IntType` size.
     Int(IntValue),
     /// A float value, regardless of the underlying `FloatType` size.
@@ -68,22 +67,22 @@ pub type IntValue = i128;
 pub type FloatValue = f64;
 
 impl Value {
-    /// Return true if the value is null.
-    pub fn is_null(&self) -> bool {
-        matches!(self, Value::Null)
+    /// Return true if the value is `Value::None`.
+    pub fn is_none(&self) -> bool {
+        matches!(self, Value::None)
     }
 
-    /// Panics if the value is not null.
+    /// Panics if the value is not `Value::None`.
     #[track_caller]
-    pub fn as_null(&self) {
-        if let Err(error) = self.try_as_null() {
+    pub fn as_none(&self) {
+        if let Err(error) = self.try_as_none() {
             panic!("{}", error);
         }
     }
 
-    /// Returns an error if the value is not null.
-    pub fn try_as_null(&self) -> Result<(), ValueTypeError> {
-        if self.is_null() {
+    /// Returns an error if the value is not `Value::None`.
+    pub fn try_as_none(&self) -> Result<(), ValueTypeError> {
+        if self.is_none() {
             Ok(())
         } else {
             Err(ValueTypeError {
@@ -348,7 +347,7 @@ impl fmt::Display for Address {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Value::Null => write!(f, "null"),
+            Value::None => write!(f, "none"),
             Value::Int(n) => write!(f, "{}", n),
             Value::Float(r) => write!(f, "{}", r),
             Value::String(s) => write!(f, "{:?}", s),
@@ -381,7 +380,7 @@ impl fmt::Display for Value {
 
 impl From<()> for Value {
     fn from((): ()) -> Self {
-        Self::Null
+        Self::None
     }
 }
 

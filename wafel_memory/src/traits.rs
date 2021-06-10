@@ -73,7 +73,7 @@ fn read_value_impl<M: MemoryRead + ?Sized>(
     resolve_type: &mut impl FnMut(&TypeName) -> Option<DataTypeRef>,
 ) -> Result<Value, MemoryError> {
     let value = match data_type.as_ref() {
-        DataType::Void => Value::Null,
+        DataType::Void => Value::None,
         DataType::Int(int_type) => Value::Int(memory.read_int(address, *int_type)?),
         DataType::Float(float_type) => Value::Float(memory.read_float(address, *float_type)?),
         DataType::Pointer { .. } => Value::Address(memory.read_address(address)?),
@@ -170,7 +170,7 @@ fn write_value_impl<M: MemoryWrite + ?Sized>(
     resolve_type: &mut impl FnMut(&TypeName) -> Option<std::sync::Arc<DataType>>,
 ) -> Result<(), MemoryError> {
     match data_type.as_ref() {
-        DataType::Void => value.try_as_null()?,
+        DataType::Void => value.try_as_none()?,
         DataType::Int(int_type) => {
             memory.write_int(address, *int_type, value.try_as_int_lenient()?)?
         }
