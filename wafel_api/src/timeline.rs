@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use wafel_data_path::GlobalDataPath;
+use wafel_data_path::{DataPath, GlobalDataPath};
 use wafel_data_type::{Address, Value};
 use wafel_layout::{DataLayout, DllLayout};
 use wafel_memory::{DllGameMemory, DllSlotMemoryView, GameMemory, MemoryRead};
@@ -11,7 +11,8 @@ use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
 
 use crate::{
     data_cache::DataCache, data_path_cache::DataPathCache, frame_log::read_frame_log,
-    read_object_hitboxes, read_surfaces, Error, ObjectHitbox, Surface,
+    read_object_hitboxes, read_surfaces, simplified_data_type, DataType, Error, ObjectHitbox,
+    Surface,
 };
 
 /// An SM64 API that allows reads and writes to arbitrary frames without frame advance or
@@ -235,6 +236,35 @@ impl Timeline {
     pub fn try_address(&self, frame: u32, path: &str) -> Result<Option<Address>, Error> {
         let path = self.data_path_cache.global(path)?;
         self.with_slot_memory(frame, |memory| Ok(path.address(memory)?))
+    }
+
+    /// Return a simplified description of the type of the given variable.
+    ///
+    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the path fails to compile or type resolution fails.
+    #[track_caller]
+    pub fn data_type(&self, path: &str) -> DataType {
+        match self.try_data_type(path) {
+            Ok(data_type) => data_type,
+            Err(error) => panic!("Error:\n  {}\n", error),
+        }
+    }
+
+    /// Return a simplified description of the type of the given variable.
+    ///
+    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the path fails to compile or type resolution fails.
+    pub fn try_data_type(&self, path: &str) -> Result<DataType, Error> {
+        let path = DataPath::compile(&self.layout, &self.memory, path)?;
+        let data_type = path.concrete_type();
+        let simplified = simplified_data_type(&self.layout, &data_type)?;
+        Ok(simplified)
     }
 
     /// Write a value on the given frame.

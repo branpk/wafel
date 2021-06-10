@@ -19,15 +19,17 @@
     unreachable_pub
 )]
 
+pub use data_type::*;
 pub use error::*;
 pub use game::*;
 pub use object::*;
 pub use surface::*;
 pub use timeline::*;
-pub use wafel_data_type::{Address, FloatValue, IntValue, Value};
+pub use wafel_data_type::{Address, FloatType, FloatValue, IntType, IntValue, Value};
 
 mod data_cache;
 mod data_path_cache;
+mod data_type;
 mod error;
 mod frame_log;
 mod game;

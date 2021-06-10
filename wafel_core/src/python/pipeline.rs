@@ -274,22 +274,18 @@ impl PyPipeline {
 
     /// Return true if the variable has an integer data type.
     pub fn is_int(&self, variable: &PyVariable) -> PyResult<bool> {
-        Ok(self
-            .get()
-            .pipeline
-            .data_variables()
-            .data_type(&variable.variable)?
-            .is_int())
+        let timeline = self.get().pipeline.timeline();
+        let data_variables = self.get().pipeline.data_variables();
+        let data_type = data_variables.data_type(timeline, &variable.variable)?;
+        Ok(data_type.is_int())
     }
 
     /// Return true if the variable has a float data type.
     pub fn is_float(&self, variable: &PyVariable) -> PyResult<bool> {
-        Ok(self
-            .get()
-            .pipeline
-            .data_variables()
-            .data_type(&variable.variable)?
-            .is_float())
+        let timeline = self.get().pipeline.timeline();
+        let data_variables = self.get().pipeline.data_variables();
+        let data_type = data_variables.data_type(timeline, &variable.variable)?;
+        Ok(data_type.is_float())
     }
 
     /// Return true if the variable is a bit flag.

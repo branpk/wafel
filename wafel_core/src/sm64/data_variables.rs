@@ -1,6 +1,5 @@
 use indexmap::IndexMap;
-use wafel_api::{IntValue, Timeline, Value};
-use wafel_data_type::DataTypeRef;
+use wafel_api::{DataType, IntValue, Timeline, Value};
 
 use crate::error::Error;
 
@@ -218,12 +217,12 @@ impl DataVariables {
     }
 
     /// Get the concrete data type for the given variable.
-    pub fn data_type(&self, variable: &Variable) -> Result<DataTypeRef, Error> {
+    pub fn data_type(&self, timeline: &Timeline, variable: &Variable) -> Result<DataType, Error> {
         let spec = self.variable_spec(&variable.name)?;
         match &spec.path {
-            Path::Global(path) => Ok(path.concrete_type()),
-            Path::Object(path) => Ok(path.concrete_type()),
-            Path::Surface(path) => Ok(path.concrete_type()),
+            Path::Global(path) | Path::Object(path) | Path::Surface(path) => {
+                Ok(timeline.try_data_type(path)?)
+            }
         }
     }
 
