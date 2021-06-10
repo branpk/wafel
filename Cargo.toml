@@ -2,6 +2,7 @@
 members = [
     "libsm64_layout",
     "wafel_api",
+    "wafel_app_model",
     "wafel_core",
     "wafel_data_path",
     "wafel_data_type",

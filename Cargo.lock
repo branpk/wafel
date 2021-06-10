@@ -2470,6 +2470,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "wafel_app_model"
+version = "0.1.0"
+dependencies = [
+ "wafel_api",
+]
+
+[[package]]
 name = "wafel_core"
 version = "0.1.0"
 dependencies = [
