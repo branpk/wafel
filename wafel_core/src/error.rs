@@ -9,7 +9,6 @@ use std::{
 
 use derive_more::{Display, Error, From};
 use wafel_data_type::ValueTypeError;
-use wafel_layout::{LayoutLookupError, SM64ExtrasError};
 
 use crate::sm64::SM64ErrorCause;
 
@@ -21,10 +20,6 @@ pub enum ErrorCause {
     ApiError(wafel_api::Error),
     #[from]
     ValueTypeError(ValueTypeError),
-    #[from]
-    LayoutLookupError(LayoutLookupError),
-    #[from]
-    SM64ExtrasError(SM64ExtrasError),
     #[from]
     SM64Error(SM64ErrorCause),
 }
@@ -38,18 +33,6 @@ impl From<wafel_api::Error> for Error {
 impl From<ValueTypeError> for Error {
     fn from(value: ValueTypeError) -> Self {
         ErrorCause::ValueTypeError(value).into()
-    }
-}
-
-impl From<LayoutLookupError> for Error {
-    fn from(value: LayoutLookupError) -> Self {
-        ErrorCause::LayoutLookupError(value).into()
-    }
-}
-
-impl From<SM64ExtrasError> for Error {
-    fn from(value: SM64ExtrasError) -> Self {
-        ErrorCause::SM64ExtrasError(value).into()
     }
 }
 
