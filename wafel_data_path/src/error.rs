@@ -68,6 +68,7 @@ pub enum DataPathCompileError {
     IndexOutOfBounds { index: usize, length: usize },
     NullableNotAPointer,
     UnsizedBaseType,
+    MaskOnNonInt,
 }
 
 impl fmt::Display for DataPathCompileError {
@@ -95,6 +96,9 @@ impl fmt::Display for DataPathCompileError {
             }
             DataPathCompileError::UnsizedBaseType => {
                 write!(f, "indexing through pointer with unsized base type")
+            }
+            DataPathCompileError::MaskOnNonInt => {
+                write!(f, "mask applied to non-integer variable")
             }
         }
     }

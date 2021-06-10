@@ -7,6 +7,7 @@ use crate::DataPathCompileError::{self, ParseError};
 pub(crate) struct PathAst {
     pub(crate) root: RootAst,
     pub(crate) edges: Vec<EdgeAst>,
+    pub(crate) mask: Option<usize>,
 }
 
 pub(crate) enum RootAst {
@@ -37,16 +38,21 @@ impl<'s> Parser<'s> {
 
     fn parse(mut self) -> Result<PathAst, DataPathCompileError> {
         self.skip_whitespace();
-        self.path()
+        let path = self.path()?;
+        if self.chars.peek().is_some() {
+            return Err(self.expected("end of string"));
+        }
+        Ok(path)
     }
 
     fn path(&mut self) -> Result<PathAst, DataPathCompileError> {
         let root = self.root()?;
         let mut edges = Vec::new();
-        while self.chars.peek().is_some() {
+        while self.chars.peek().is_some() && *self.chars.peek().unwrap() != '&' {
             edges.push(self.edge()?);
         }
-        Ok(PathAst { root, edges })
+        let mask = self.mask_opt()?;
+        Ok(PathAst { root, edges, mask })
     }
 
     fn root(&mut self) -> Result<RootAst, DataPathCompileError> {
@@ -109,6 +115,17 @@ impl<'s> Parser<'s> {
         Ok(EdgeAst::Nullable)
     }
 
+    fn mask_opt(&mut self) -> Result<Option<usize>, DataPathCompileError> {
+        if self.chars.peek() == Some(&'&') {
+            self.chars.next();
+            self.skip_whitespace();
+            let mask = self.usize()?;
+            Ok(Some(mask))
+        } else {
+            Ok(None)
+        }
+    }
+
     fn name(&mut self) -> Result<String, DataPathCompileError> {
         let mut name = String::new();
         match self.chars.peek() {
@@ -133,8 +150,26 @@ impl<'s> Parser<'s> {
     }
 
     fn usize(&mut self) -> Result<usize, DataPathCompileError> {
+        if self.chars.peek() == Some(&'0') {
+            self.chars.next();
+            if self.chars.peek() == Some(&'x') {
+                self.chars.next();
+                self.hex_usize()
+            } else {
+                self.decimal_usize(true)
+            }
+        } else {
+            self.decimal_usize(false)
+        }
+    }
+
+    fn decimal_usize(&mut self, zero_prefix: bool) -> Result<usize, DataPathCompileError> {
         let mut digits = String::new();
-        while let Some(&c) = self.chars.peek().filter(|c| c.is_ascii_digit()) {
+        if zero_prefix {
+            digits.push('0');
+        }
+
+        while let Some(&c) = self.chars.peek().filter(|&&c| c.is_ascii_digit()) {
             digits.push(c);
             self.chars.next();
         }
@@ -145,6 +180,24 @@ impl<'s> Parser<'s> {
 
         let result = digits
             .parse()
+            .map_err(|_| ParseError(format!("integer out of range: {}", digits)))?;
+
+        self.skip_whitespace();
+        Ok(result)
+    }
+
+    fn hex_usize(&mut self) -> Result<usize, DataPathCompileError> {
+        let mut digits = String::new();
+        while let Some(&c) = self.chars.peek().filter(|&&c| c.is_ascii_hexdigit()) {
+            digits.push(c);
+            self.chars.next();
+        }
+
+        if digits.is_empty() {
+            return Err(self.expected("a hex integer"));
+        }
+
+        let result = usize::from_str_radix(&digits, 16)
             .map_err(|_| ParseError(format!("integer out of range: {}", digits)))?;
 
         self.skip_whitespace();

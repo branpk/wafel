@@ -29,7 +29,7 @@ fn data_path_impl(
 ) -> Result<DataPath, DataPathCompileError> {
     let ast = parse_data_path(source)?;
 
-    match ast.root {
+    let path = match ast.root {
         RootAst::Global(root_name) => {
             let root: Address =
                 symbol_lookup
@@ -44,6 +44,7 @@ fn data_path_impl(
                 source: source.to_owned(),
                 root,
                 edges: Vec::new(),
+                mask: None,
                 concrete_type: root_type,
                 layout: Arc::clone(layout),
             };
@@ -52,7 +53,14 @@ fn data_path_impl(
                 path = follow_edge(layout, path, edge)?;
             }
 
-            Ok(DataPath::Global(GlobalDataPath(path)))
+            if let Some(mask) = ast.mask {
+                if !path.concrete_type.is_int() {
+                    return Err(MaskOnNonInt);
+                }
+                path.mask = Some(mask);
+            }
+
+            DataPath::Global(GlobalDataPath(path))
         }
         RootAst::Local(root_name) => {
             let root = layout.data_type(&root_name)?;
@@ -62,6 +70,7 @@ fn data_path_impl(
                 source: source.to_owned(),
                 root: root.clone(),
                 edges: Vec::new(),
+                mask: None,
                 concrete_type: root,
                 layout: Arc::clone(layout),
             };
@@ -70,9 +79,18 @@ fn data_path_impl(
                 path = follow_edge(layout, path, edge)?;
             }
 
-            Ok(DataPath::Local(LocalDataPath(path)))
+            if let Some(mask) = ast.mask {
+                if !path.concrete_type.is_int() {
+                    return Err(MaskOnNonInt);
+                }
+                path.mask = Some(mask);
+            }
+
+            DataPath::Local(LocalDataPath(path))
         }
-    }
+    };
+
+    Ok(path)
 }
 
 fn follow_edge<T>(
@@ -89,6 +107,7 @@ fn follow_edge<T>(
                     source: path.source,
                     root: path.root,
                     edges,
+                    mask: None,
                     concrete_type: layout.concrete_type(base)?,
                     layout: Arc::clone(layout),
                 };
@@ -110,6 +129,7 @@ fn follow_edge<T>(
                     source: path.source,
                     root: path.root,
                     edges,
+                    mask: None,
                     concrete_type: DataTypeRef::new(DataType::Array {
                         base: base.clone(),
                         length: None,
@@ -144,6 +164,7 @@ fn follow_field_access<T>(
                     source: path.source,
                     root: path.root,
                     edges,
+                    mask: None,
                     concrete_type: layout.concrete_type(data_type)?,
                     layout: Arc::clone(layout),
                 })
@@ -181,6 +202,7 @@ fn follow_subscript<T>(
                 source: path.source,
                 root: path.root,
                 edges,
+                mask: None,
                 concrete_type: layout.concrete_type(&base)?,
                 layout: Arc::clone(layout),
             })

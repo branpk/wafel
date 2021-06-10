@@ -404,6 +404,18 @@ value_from_int!(i64);
 value_from_int!(u64);
 value_from_int!(i128);
 
+impl From<usize> for Value {
+    fn from(v: usize) -> Self {
+        Self::Int(v as IntValue)
+    }
+}
+
+impl From<isize> for Value {
+    fn from(v: isize) -> Self {
+        Self::Int(v as IntValue)
+    }
+}
+
 macro_rules! value_from_float {
     ($ty:ty) => {
         impl From<$ty> for Value {

@@ -1,6 +1,6 @@
 use std::{fmt, sync::Arc};
 
-use wafel_data_type::{Address, DataTypeRef, Value};
+use wafel_data_type::{Address, DataType, DataTypeRef, IntValue, Value};
 use wafel_layout::DataLayout;
 use wafel_memory::{MemoryError, MemoryRead, MemoryWrite, SymbolLookup};
 
@@ -18,6 +18,8 @@ pub(crate) struct DataPathImpl<R> {
     pub(crate) root: R,
     /// The operations to perform when evaluating the path.
     pub(crate) edges: Vec<DataPathEdge>,
+    /// The mask to apply for an integer variable.
+    pub(crate) mask: Option<usize>,
     /// The type of the value that the path points to.
     ///
     /// This should be "concrete", i.e. not a TypeName.
@@ -113,15 +115,25 @@ impl GlobalDataPath {
 
     /// Evaluate the path and return the value stored in the variable.
     pub fn read(&self, memory: &impl MemoryRead) -> Result<Value, MemoryError> {
-        match self.address(memory)? {
-            Some(address) => memory
-                .read_value(address, &self.0.concrete_type, |type_name| {
+        self.read_impl(memory)
+            .map_err(|error| MemoryError::Context {
+                context: format!("while reading {}", self),
+                error: Box::new(error),
+            })
+    }
+
+    fn read_impl(&self, memory: &impl MemoryRead) -> Result<Value, MemoryError> {
+        match self.address_impl(memory)? {
+            Some(address) => {
+                let mut value = memory.read_value(address, &self.0.concrete_type, |type_name| {
                     self.0.layout.data_type(type_name).ok().cloned()
-                })
-                .map_err(|error| MemoryError::Context {
-                    context: format!("while reading {}", self),
-                    error: Box::new(error),
-                }),
+                })?;
+                if let Some(mask) = self.0.mask {
+                    let full_value = value.try_as_int().expect("mask on non-integer type");
+                    value = (full_value & mask as IntValue).into();
+                }
+                Ok(value)
+            }
             None => Ok(Value::None),
         }
     }
@@ -132,15 +144,42 @@ impl GlobalDataPath {
         memory: &mut M,
         value: Value,
     ) -> Result<(), MemoryError> {
-        match self.address(memory)? {
-            Some(address) => memory
-                .write_value(address, &self.0.concrete_type, value, |type_name| {
-                    self.0.layout.data_type(type_name).ok().cloned()
-                })
-                .map_err(|error| MemoryError::Context {
-                    context: format!("while writing {}", self),
-                    error: Box::new(error),
-                }),
+        self.write_impl(memory, value)
+            .map_err(|error| MemoryError::Context {
+                context: format!("while writing {}", self),
+                error: Box::new(error),
+            })
+    }
+
+    fn write_impl<M: MemoryRead + MemoryWrite>(
+        &self,
+        memory: &mut M,
+        value: Value,
+    ) -> Result<(), MemoryError> {
+        match self.address_impl(memory)? {
+            Some(address) => {
+                match self.0.mask {
+                    Some(mask) => {
+                        let mask = mask as IntValue;
+                        let mask_value = value.try_as_int()?;
+                        match self.concrete_type().as_ref() {
+                            DataType::Int(int_type) => {
+                                let mut full_value = memory.read_int(address, *int_type)?;
+                                full_value &= !mask;
+                                full_value |= mask_value & mask;
+                                memory.write_int(address, *int_type, full_value)?;
+                            }
+                            _ => panic!("mask on non-integer type"),
+                        }
+                    }
+                    None => {
+                        memory.write_value(address, &self.0.concrete_type, value, |type_name| {
+                            self.0.layout.data_type(type_name).ok().cloned()
+                        })?;
+                    }
+                }
+                Ok(())
+            }
             None => Ok(()),
         }
     }
@@ -258,6 +297,7 @@ fn concat_paths<R: Clone>(
                 .chain(path2.edges.iter())
                 .cloned()
                 .collect(),
+            mask: path2.mask,
             concrete_type: path2.concrete_type.clone(),
             layout: Arc::clone(&path1.layout),
         })
