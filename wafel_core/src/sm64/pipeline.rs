@@ -61,8 +61,8 @@ impl Pipeline {
                         .set(&mut self.timeline, frame, &column, value)?;
                 }
                 EditOperation::Reset(column, frame) => {
-                    // Need to handle int masks (add to data path syntax? - or handle in wafel_api)
-                    todo!()
+                    self.data_variables
+                        .reset(&mut self.timeline, frame, &column)?;
                 }
                 EditOperation::Insert(frame) => self.timeline.insert_frame(frame),
                 EditOperation::Delete(frame) => self.timeline.delete_frame(frame),

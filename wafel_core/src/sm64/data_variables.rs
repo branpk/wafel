@@ -86,7 +86,8 @@ struct DataVariableSpec {
     group: String,
     path: Path,
     label: Option<String>,
-    flag: Option<IntValue>,
+    flag: Option<String>,
+    flag_mask: Option<usize>,
 }
 
 #[derive(Debug)]
@@ -130,8 +131,8 @@ impl DataVariables {
             }
         })?;
 
-        match &spec.path {
-            Path::Global(path) => Ok(Some(path.clone())),
+        let path = match &spec.path {
+            Path::Global(path) => Some(path.clone()),
             Path::Object(path) => {
                 let object = variable.try_object()?;
                 match util::object_path(timeline, frame, object)? {
@@ -144,18 +145,21 @@ impl DataVariables {
                             }
                         }
 
-                        Ok(Some(util::concat_object_path(&object_path, path)))
+                        Some(util::concat_object_path(&object_path, path))
                     }
-                    None => Ok(None),
+                    None => None,
                 }
             }
             Path::Surface(path) => {
                 let surface = variable.try_surface()?;
-                match util::surface_path(timeline, frame, surface)? {
-                    Some(surface_path) => Ok(Some(util::concat_surface_path(&surface_path, path))),
-                    None => Ok(None),
-                }
+                util::surface_path(timeline, frame, surface)?
+                    .map(|surface_path| util::concat_surface_path(&surface_path, path))
             }
+        };
+
+        match (path, spec.flag.clone()) {
+            (Some(path), Some(flag)) => Ok(Some(format!("{} & {}", path, flag))),
+            (path, _) => Ok(path),
         }
     }
 
@@ -173,9 +177,9 @@ impl DataVariables {
             Some(path) => {
                 let mut value = timeline.try_read(frame, &path)?;
 
-                if let Some(flag) = spec.flag {
-                    let flag_set = (value.try_as_int()? & flag) != 0;
-                    value = Value::Int(flag_set as IntValue);
+                if spec.flag.is_some() {
+                    // Convert to a boolean value
+                    value = Value::Int((value.try_as_int()? != 0) as IntValue);
                 }
 
                 Ok(value)
@@ -195,18 +199,27 @@ impl DataVariables {
 
         let spec = self.variable_spec(&variable.name)?;
         if let Some(path) = self.path(timeline, frame, variable)? {
-            if let Some(flag) = spec.flag {
-                let flag_set = value.try_as_int()? != 0;
-                let prev_value = timeline.try_read(frame, &path)?.try_as_int()?;
-                value = Value::Int(if flag_set {
-                    prev_value | flag
-                } else {
-                    prev_value & !flag
-                });
+            if let Some(flag_mask) = spec.flag_mask {
+                if value.try_as_int()? != 0 {
+                    value = flag_mask.into();
+                }
             }
             timeline.try_write(frame, &path, value)?;
         }
 
+        Ok(())
+    }
+
+    pub(crate) fn reset(
+        &self,
+        timeline: &mut Timeline,
+        frame: u32,
+        variable: &Variable,
+    ) -> Result<(), Error> {
+        assert!(variable.frame.is_none() || variable.frame == Some(frame));
+        if let Some(path) = self.path(timeline, frame, variable)? {
+            timeline.try_reset(frame, &path)?;
+        }
         Ok(())
     }
 
@@ -231,9 +244,9 @@ impl DataVariables {
     }
 
     /// Get the bit flag for the given variable if it has one.
-    pub(crate) fn flag(&self, variable: &Variable) -> Result<Option<IntValue>, Error> {
+    pub(crate) fn flag(&self, variable: &Variable) -> Result<Option<usize>, Error> {
         let spec = self.variable_spec(&variable.name)?;
-        Ok(spec.flag)
+        Ok(spec.flag_mask)
     }
 }
 
@@ -265,8 +278,10 @@ impl Builder {
                     Path::Global(path_source)
                 };
 
-                let flag = match variable.flag {
-                    Some(flag_name) => Some(timeline.try_constant(&flag_name)?.try_as_int()?),
+                let flag_mask = match variable.flag.clone() {
+                    Some(flag_name) => {
+                        Some(timeline.try_constant(&flag_name)?.try_as_int()? as usize)
+                    }
                     None => None,
                 };
 
@@ -274,7 +289,8 @@ impl Builder {
                     group: group.name.clone(),
                     path,
                     label: variable.label,
-                    flag,
+                    flag: variable.flag,
+                    flag_mask,
                 };
 
                 specs.insert(variable.name, spec);
