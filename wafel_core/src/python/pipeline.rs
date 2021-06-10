@@ -234,17 +234,16 @@ impl PyPipeline {
     }
 
     /// Perform housekeeping to improve scrolling near hotspots.
-    pub fn balance_distribution(&mut self, max_run_time_seconds: f32) -> PyResult<()> {
+    pub fn balance_distribution(&mut self, max_run_time_seconds: f32) {
         self.get_mut()
             .pipeline
             .timeline_mut()
-            .balance_distribution(std::time::Duration::from_secs_f32(max_run_time_seconds))?;
-        Ok(())
+            .balance_distribution(max_run_time_seconds);
     }
 
     /// Return the set of currently loaded frames for debugging purposes.
     pub fn cached_frames(&self) -> Vec<u32> {
-        self.get().pipeline.timeline().cached_frames()
+        self.get().pipeline.timeline().dbg_cached_frames()
     }
 
     /// Return the number of frame advances since the timeline was created.
@@ -259,7 +258,7 @@ impl PyPipeline {
 
     /// Return the size of the data cache in bytes.
     pub fn data_cache_size(&self) -> usize {
-        self.get().pipeline.timeline().data_size_cache()
+        self.get().pipeline.timeline().dbg_data_cache_size()
     }
 
     /// Return the label for the variable if it has one.

@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
 use wafel_data_path::{DataPath, GlobalDataPath};
@@ -111,6 +112,30 @@ impl Timeline {
             data_path_cache,
             data_cache: Mutex::new(DataCache::new()),
         })
+    }
+
+    /// Set a hotspot with a given name.
+    ///
+    /// A hotspot is a hint to the algorithm that scrolling should be smooth near the
+    /// given frame.
+    ///
+    /// [balance_distribution](Timeline::balance_distribution) must also be called frequently
+    /// to maintain this.
+    pub fn set_hotspot(&mut self, name: &str, frame: u32) {
+        self.timeline.lock().unwrap().set_hotspot(name, frame);
+    }
+
+    /// Delete a hotspot with the given name, if it exists.
+    pub fn delete_hotspot(&mut self, name: &str) {
+        self.timeline.lock().unwrap().delete_hotspot(name)
+    }
+
+    /// Perform housekeeping to improve scrolling near hotspots.
+    pub fn balance_distribution(&mut self, max_run_time_seconds: f32) {
+        self.timeline
+            .lock()
+            .unwrap()
+            .balance_distribution(Duration::from_secs_f32(max_run_time_seconds));
     }
 
     /// Read a value from memory on the given frame.
@@ -340,6 +365,16 @@ impl Timeline {
             }
             invalidated_frames
         });
+    }
+
+    /// Return the size of the data cache in bytes.
+    pub fn dbg_data_cache_size(&self) -> usize {
+        self.data_cache.lock().unwrap().byte_size()
+    }
+
+    /// Return a list of the frames that are currently loaded by the algorithm.
+    pub fn dbg_cached_frames(&self) -> Vec<u32> {
+        self.timeline.lock().unwrap().cached_frames()
     }
 
     /// Return the value of the macro constant or enum variant with the given name.
