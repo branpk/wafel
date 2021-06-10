@@ -1,14 +1,10 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::sync::Arc;
 
-use wafel_data_path::{DataPathError, GlobalDataPath};
 use wafel_data_type::{Address, Value};
 use wafel_layout::{DataLayout, DllLayout};
 use wafel_memory::{DllGameMemory, GameMemory, MemoryRead};
 
-use crate::Error;
+use crate::{data_path_cache::DataPathCache, Error};
 
 /// An SM64 API that uses a traditional frame advance / save state model.
 ///
@@ -44,10 +40,10 @@ use crate::Error;
 pub struct Game {
     id: Arc<()>,
     layout: Arc<DataLayout>,
-    memory: DllGameMemory,
+    memory: Arc<DllGameMemory>,
     base_slot_frame: u32,
     base_slot: <DllGameMemory as GameMemory>::Slot,
-    data_path_cache: Mutex<HashMap<String, Arc<GlobalDataPath>>>,
+    data_path_cache: DataPathCache,
 }
 
 impl Game {
@@ -85,6 +81,9 @@ impl Game {
         let layout = Arc::new(layout);
 
         let (memory, base_slot) = DllGameMemory::load(dll_path, "sm64_init", "sm64_update")?;
+        let memory = Arc::new(memory);
+
+        let data_path_cache = DataPathCache::new(&memory, &layout);
 
         Ok(Self {
             id: Arc::new(()),
@@ -92,7 +91,7 @@ impl Game {
             memory,
             base_slot_frame: 0,
             base_slot,
-            data_path_cache: Mutex::new(HashMap::new()),
+            data_path_cache,
         })
     }
 
@@ -117,7 +116,7 @@ impl Game {
     ///
     /// Returns an error if the path fails to compile or reading from memory fails.
     pub fn try_read(&self, path: &str) -> Result<Value, Error> {
-        let path = self.data_path(path)?;
+        let path = self.data_path_cache.get(path)?;
         let value = path.read(&self.memory.with_slot(&self.base_slot))?;
         Ok(value)
     }
@@ -171,7 +170,7 @@ impl Game {
     ///
     /// Returns an error if the path fails to compile or reading from memory fails.
     pub fn try_address(&self, path: &str) -> Result<Option<Address>, Error> {
-        let path = self.data_path(path)?;
+        let path = self.data_path_cache.get(path)?;
         let address = path.address(&self.memory.with_slot(&self.base_slot))?;
         Ok(address)
     }
@@ -197,21 +196,9 @@ impl Game {
     ///
     /// Returns an error if the data path fails to compile or the write fails.
     pub fn try_write(&mut self, path: &str, value: Value) -> Result<(), Error> {
-        let path = self.data_path(path)?;
+        let path = self.data_path_cache.get(path)?;
         path.write(&mut self.memory.with_slot_mut(&mut self.base_slot), value)?;
         Ok(())
-    }
-
-    fn data_path(&self, source: &str) -> Result<Arc<GlobalDataPath>, DataPathError> {
-        let mut cache = self.data_path_cache.lock().unwrap();
-        match cache.get(source) {
-            Some(path) => Ok(Arc::clone(path)),
-            None => {
-                let path = Arc::new(GlobalDataPath::compile(&self.layout, &self.memory, source)?);
-                cache.insert(source.to_string(), path.clone());
-                Ok(path)
-            }
-        }
     }
 
     /// Get the frame of the current game state.

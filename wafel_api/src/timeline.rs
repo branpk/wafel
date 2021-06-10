@@ -3,13 +3,13 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use wafel_data_path::{DataPathError, GlobalDataPath};
+use wafel_data_path::GlobalDataPath;
 use wafel_data_type::{Address, Value};
 use wafel_layout::{DataLayout, DllLayout};
 use wafel_memory::{DllGameMemory, GameMemory, MemoryRead};
 use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
 
-use crate::{data_cache::DataCache, Error};
+use crate::{data_cache::DataCache, data_path_cache::DataPathCache, Error};
 
 /// An SM64 API that allows reads and writes to arbitrary frames without frame advance or
 /// save states.
@@ -48,7 +48,7 @@ pub struct Timeline {
     memory: Arc<DllGameMemory>,
     layout: Arc<DataLayout>,
     timeline: Mutex<GameTimeline<Arc<DllGameMemory>, Controller>>,
-    data_path_cache: Mutex<HashMap<String, Arc<GlobalDataPath>>>,
+    data_path_cache: DataPathCache,
     data_cache: Mutex<DataCache>,
 }
 
@@ -98,11 +98,13 @@ impl Timeline {
         let timeline = GameTimeline::new(Arc::clone(&memory), base_slot, controller, 30);
         let timeline = Mutex::new(timeline);
 
+        let data_path_cache = DataPathCache::new(&memory, &layout);
+
         Ok(Self {
             memory,
             layout,
             timeline,
-            data_path_cache: Mutex::new(HashMap::new()),
+            data_path_cache,
             data_cache: Mutex::new(DataCache::new()),
         })
     }
@@ -134,7 +136,7 @@ impl Timeline {
     /// - Reading from memory fails
     /// - A `write` on a previous frame failed
     pub fn try_read(&self, frame: u32, path: &str) -> Result<Value, Error> {
-        let path = self.data_path(path)?;
+        let path = self.data_path_cache.get(path)?;
         let mut timeline = self.timeline.lock().unwrap();
         let mut data_cache = self.data_cache.lock().unwrap();
 
@@ -228,7 +230,7 @@ impl Timeline {
     /// - Reading from memory fails
     /// - A `write` on a previous frame failed
     pub fn try_address(&self, frame: u32, path: &str) -> Result<Option<Address>, Error> {
-        let path = self.data_path(path)?;
+        let path = self.data_path_cache.get(path)?;
         let mut timeline = self.timeline.lock().unwrap();
         let slot = timeline.frame(frame, false).0;
         let slot_memory = self.memory.with_slot(slot);
@@ -265,7 +267,7 @@ impl Timeline {
     /// Instead, write errors will be returned if `read` is called on a frame later than or
     /// equal to `frame`.
     pub fn try_write(&mut self, frame: u32, path: &str, value: Value) -> Result<(), Error> {
-        let path = self.data_path(path)?;
+        let path = self.data_path_cache.get(path)?;
         self.with_controller_mut(|controller| controller.write(frame, &path, value));
         Ok(())
     }
@@ -293,7 +295,7 @@ impl Timeline {
     ///
     /// Returns an error if the data path fails to compile.
     pub fn try_reset(&mut self, frame: u32, path: &str) -> Result<(), Error> {
-        let path = self.data_path(path)?;
+        let path = self.data_path_cache.get(path)?;
         self.with_controller_mut(|controller| controller.reset(frame, &path));
         Ok(())
     }
@@ -309,18 +311,6 @@ impl Timeline {
             }
             invalidated_frames
         });
-    }
-
-    fn data_path(&self, source: &str) -> Result<Arc<GlobalDataPath>, DataPathError> {
-        let mut cache = self.data_path_cache.lock().unwrap();
-        match cache.get(source) {
-            Some(path) => Ok(Arc::clone(path)),
-            None => {
-                let path = Arc::new(GlobalDataPath::compile(&self.layout, &self.memory, source)?);
-                cache.insert(source.to_string(), path.clone());
-                Ok(path)
-            }
-        }
     }
 
     /// Return the value of the macro constant or enum variant with the given name.

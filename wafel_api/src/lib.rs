@@ -25,6 +25,7 @@ pub use timeline::*;
 pub use wafel_data_type::{Address, FloatValue, IntValue, Value};
 
 mod data_cache;
+mod data_path_cache;
 mod error;
 mod game;
 mod timeline;
