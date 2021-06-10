@@ -10,7 +10,7 @@ use crate::{
     graphics::scene::Scene,
     sm64::read_objects_to_scene,
     sm64::trace_ray_to_surface,
-    sm64::{frame_log, object_behavior, object_path, read_surfaces_to_scene, ObjectSlot, Pipeline},
+    sm64::{object_behavior, object_path, read_surfaces_to_scene, ObjectSlot, Pipeline},
 };
 use lazy_static::lazy_static;
 use pyo3::{prelude::*, types::PyBytes};
@@ -401,9 +401,10 @@ impl PyPipeline {
         frame: u32,
         ray: ([f32; 3], [f32; 3]),
     ) -> PyResult<Option<usize>> {
-        let state = self.get().pipeline.timeline().frame_uncached(frame)?;
+        let timeline = self.get().pipeline.timeline();
         let index = trace_ray_to_surface(
-            &state,
+            timeline,
+            frame,
             (
                 Point3f::from_slice(&ray.0),
                 Vector3f::from_row_slice(&ray.1),
@@ -415,8 +416,8 @@ impl PyPipeline {
 
     /// Load the SM64 surfaces from the game state and add them to the scene.
     pub fn read_surfaces_to_scene(&self, scene: &mut Scene, frame: u32) -> PyResult<()> {
-        let state = self.get().pipeline.timeline().frame_uncached(frame)?;
-        read_surfaces_to_scene(scene, &state)?;
+        let timeline = self.get().pipeline.timeline();
+        read_surfaces_to_scene(scene, timeline, frame)?;
         Ok(())
     }
 

@@ -3,16 +3,9 @@ use wafel_api::Timeline;
 
 use super::{ObjectBehavior, ObjectSlot, SM64ErrorCause, SurfaceSlot};
 use crate::{
-    error::Error,
-    geo::Point3f,
-    geo::Vector3f,
-    graphics,
-    memory::Memory,
-    timeline::{SlotState, State},
+    error::Error, geo::Point3f, geo::Vector3f, graphics, memory::Memory, timeline::SlotState,
 };
-use std::collections::HashMap;
-use wafel_data_type::{FloatType, IntType, IntValue, Value};
-use wafel_layout::ConstantSource;
+use wafel_data_type::{FloatType, IntType};
 
 /// Get the data path for an object, or None if the object is inactive.
 pub fn object_path(
@@ -71,84 +64,14 @@ pub fn concat_surface_path(surface_path: &str, field_path: &str) -> String {
     format!("{}{}", surface_path, path_suffix)
 }
 
-#[derive(Debug, Clone)]
-struct Surface {
-    normal: [f32; 3],
-    vertices: [[i16; 3]; 3],
-}
-
-fn read_surfaces(state: &impl SlotState) -> Result<Vec<Surface>, Error> {
-    let memory = state.memory();
-
-    let surface_pool_addr = state.read("sSurfacePool?")?;
-    if surface_pool_addr.is_none() {
-        return Ok(Vec::new());
-    }
-    let surface_pool_addr = surface_pool_addr.try_as_address()?;
-
-    let surfaces_allocated = state.read("gSurfacesAllocated")?.try_as_int()? as usize;
-
-    let surface_size = memory
-        .global_path("sSurfacePool")?
-        .concrete_type()
-        .stride()
-        .ok()
-        .flatten()
-        .ok_or(SM64ErrorCause::UnsizedSurfacePoolPointer)?;
-
-    let offset = |path| -> Result<usize, Error> { memory.local_path(path)?.field_offset() };
-    let o_normal = offset("struct Surface.normal")?;
-    let o_vertex1 = offset("struct Surface.vertex1")?;
-    let o_vertex2 = offset("struct Surface.vertex2")?;
-    let o_vertex3 = offset("struct Surface.vertex3")?;
-
-    let read_f32 = |address| -> Result<f32, Error> {
-        let classified_address = memory.classify_address(&address);
-        let result = memory.read_float(state.slot(), &classified_address, FloatType::F32)? as f32;
-        Ok(result)
-    };
-    let read_f32_3 = |address| -> Result<[f32; 3], Error> {
-        Ok([
-            read_f32(address)?,
-            read_f32(address + 4)?,
-            read_f32(address + 8)?,
-        ])
-    };
-
-    let read_s16 = |address| -> Result<i16, Error> {
-        let classified_address = memory.classify_address(&address);
-        let result = memory.read_int(state.slot(), &classified_address, IntType::S16)? as i16;
-        Ok(result)
-    };
-    let read_s16_3 = |address| -> Result<[i16; 3], Error> {
-        Ok([
-            read_s16(address)?,
-            read_s16(address + 2)?,
-            read_s16(address + 4)?,
-        ])
-    };
-
-    let mut surfaces = Vec::new();
-    for index in 0..surfaces_allocated {
-        let surface_addr = surface_pool_addr + index * surface_size;
-
-        let normal = read_f32_3(surface_addr + o_normal)?;
-        let vertex1 = read_s16_3(surface_addr + o_vertex1)?;
-        let vertex2 = read_s16_3(surface_addr + o_vertex2)?;
-        let vertex3 = read_s16_3(surface_addr + o_vertex3)?;
-
-        surfaces.push(Surface {
-            normal,
-            vertices: [vertex1, vertex2, vertex3],
-        });
-    }
-
-    Ok(surfaces)
-}
-
 /// Load the SM64 surfaces from the game state and add them to the scene.
-pub fn read_surfaces_to_scene(scene: &mut Scene, state: &impl SlotState) -> Result<(), Error> {
-    scene.surfaces = read_surfaces(state)?
+pub fn read_surfaces_to_scene(
+    scene: &mut Scene,
+    timeline: &Timeline,
+    frame: u32,
+) -> Result<(), Error> {
+    scene.surfaces = timeline
+        .try_surfaces(frame)?
         .iter()
         .map(|surface| {
             let ty = if surface.normal[1] > 0.01 {
@@ -235,14 +158,15 @@ pub fn read_objects_to_scene(scene: &mut Scene, state: &impl SlotState) -> Resul
 
 /// Trace a ray until it hits a surface, and return the surface's index in the surface pool.
 pub fn trace_ray_to_surface(
-    state: &impl SlotState,
+    timeline: &Timeline,
+    frame: u32,
     ray: (Point3f, Vector3f),
 ) -> Result<Option<(usize, Point3f)>, Error> {
     let mut nearest: Option<(f32, (usize, Point3f))> = None;
 
     let vertex_to_vec = |p: [i16; 3]| Point3f::new(p[0] as f32, p[1] as f32, p[2] as f32);
 
-    let surfaces = read_surfaces(state)?;
+    let surfaces = timeline.try_surfaces(frame)?;
     for (i, surface) in surfaces.iter().enumerate() {
         let normal = Vector3f::from_row_slice(&surface.normal);
         let vertices = [
