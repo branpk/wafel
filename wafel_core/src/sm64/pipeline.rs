@@ -21,7 +21,7 @@ impl Pipeline {
     ///
     /// # Safety
     ///
-    /// This method is inherently unsafe. See the docs for [wafel_memory::DllGameMemory].
+    /// This method is inherently unsafe. See docs for [Timeline::open](wafel_api::Timeline::open).
     pub unsafe fn new(dll_path: &str) -> Result<Self, Error> {
         let timeline = Timeline::try_open(dll_path)?;
         let data_variables = DataVariables::all(&timeline)?;

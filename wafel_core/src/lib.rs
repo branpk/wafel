@@ -1,9 +1,11 @@
 //! Rust code for Wafel.
 
-#![warn(missing_docs)]
-#![warn(missing_debug_implementations)]
-#![warn(rust_2018_idioms)]
-#![allow(clippy::float_cmp)]
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    rust_2018_idioms,
+    unreachable_pub
+)]
 #![feature(try_blocks)]
 #![feature(backtrace)]
 

@@ -64,6 +64,21 @@ pub trait MemoryRead {
     ) -> Result<Value, MemoryError> {
         read_value_impl(self, address, data_type, &mut resolve_type)
     }
+
+    /// Read a null terminated C string from the given address.
+    fn read_string(&self, address: Address) -> Result<Vec<u8>, MemoryError> {
+        let mut bytes = Vec::new();
+        let mut current = address;
+        loop {
+            let byte = self.read_int(current, IntType::U8)? as u8;
+            if byte == 0 {
+                break;
+            }
+            bytes.push(byte);
+            current = current + 1;
+        }
+        Ok(bytes)
+    }
 }
 
 fn read_value_impl<M: MemoryRead + ?Sized>(

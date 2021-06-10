@@ -4,9 +4,9 @@ use std::{
 };
 
 use wafel_data_path::{DataPathError, GlobalDataPath};
-use wafel_data_type::Value;
+use wafel_data_type::{Address, Value};
 use wafel_layout::{DataLayout, DllLayout};
-use wafel_memory::{DllGameMemory, GameMemory};
+use wafel_memory::{DllGameMemory, GameMemory, MemoryRead};
 
 use crate::Error;
 
@@ -120,6 +120,60 @@ impl Game {
         let path = self.data_path(path)?;
         let value = path.read(&self.memory.with_slot(&self.base_slot))?;
         Ok(value)
+    }
+
+    /// Read a null terminated string from memory at the given address.
+    ///
+    /// # Panics
+    ///
+    /// Panics if reading from memory fails.
+    #[track_caller]
+    pub fn read_string_at(&self, address: Address) -> Vec<u8> {
+        match self.try_read_string_at(address) {
+            Ok(bytes) => bytes,
+            Err(error) => panic!("Error:\n  failed to read string:\n  {}\n", error),
+        }
+    }
+
+    /// Read a null terminated string from memory at the given address.
+    ///
+    /// Returns an error if reading from memory fails.
+    pub fn try_read_string_at(&self, address: Address) -> Result<Vec<u8>, Error> {
+        let memory = self.memory.with_slot(&self.base_slot);
+        let bytes = memory.read_string(address)?;
+        Ok(bytes)
+    }
+
+    /// Find the address of a path.
+    ///
+    /// This method returns `None` if `?` is used in the path and the expression before
+    /// `?` evaluates to a null pointer.
+    ///
+    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the path fails to compile or reading from memory fails.
+    #[track_caller]
+    pub fn address(&self, path: &str) -> Option<Address> {
+        match self.try_address(path) {
+            Ok(address) => address,
+            Err(error) => panic!("Error:\n  failed to read '{}':\n  {}\n", path, error),
+        }
+    }
+
+    /// Find the address of a path.
+    ///
+    /// This method returns `None` if `?` is used in the path and the expression before
+    /// `?` evaluates to a null pointer.
+    ///
+    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    ///
+    /// Returns an error if the path fails to compile or reading from memory fails.
+    pub fn try_address(&self, path: &str) -> Result<Option<Address>, Error> {
+        let path = self.data_path(path)?;
+        let address = path.address(&self.memory.with_slot(&self.base_slot))?;
+        Ok(address)
     }
 
     /// Write a value to memory.

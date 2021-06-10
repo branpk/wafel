@@ -8,11 +8,9 @@ use crate::{
     geo::Vector3f,
     graphics::scene,
     graphics::scene::Scene,
-    memory::Memory,
     sm64::read_objects_to_scene,
     sm64::trace_ray_to_surface,
     sm64::{frame_log, object_behavior, object_path, read_surfaces_to_scene, ObjectSlot, Pipeline},
-    timeline::{SlotState, State},
 };
 use lazy_static::lazy_static;
 use pyo3::{prelude::*, types::PyBytes};
@@ -75,13 +73,12 @@ impl PyPipeline {
 impl PyPipeline {
     /// Load a new pipeline using the given DLL.
     ///
-    /// To help ensure DLL safety and avoid memory leaks, this method also invalidates
-    /// all existing pipelines that were created using this method.
+    /// To help avoid memory leaks, this method also invalidates all existing pipelines that were
+    /// created using this method.
     ///
     /// # Safety
     ///
-    /// See `dll::Memory::load`. As long as the DLL is only loaded via this method,
-    /// this method is safe.
+    /// This method is inherently unsafe. See docs for [Timeline::open](wafel_api::Timeline::open).
     #[staticmethod]
     pub unsafe fn load(py: Python<'_>, dll_path: &str) -> PyResult<Py<Self>> {
         let mut valid_pipelines = VALID_PIPELINES.lock().unwrap();
@@ -105,7 +102,7 @@ impl PyPipeline {
     ///
     /// # Safety
     ///
-    /// See `PyPipeline::load`.
+    /// This method is inherently unsafe. See docs for [Timeline::open](wafel_api::Timeline::open).
     #[staticmethod]
     pub unsafe fn load_reusing_edits(
         py: Python<'_>,
@@ -117,7 +114,7 @@ impl PyPipeline {
             .invalidate()
             .expect("pipeline has been invalidated")
             .pipeline
-            .into_edits()?;
+            .into_edits();
 
         let py_pipeline = Self::load(py, dll_path)?;
         py_pipeline
@@ -127,16 +124,6 @@ impl PyPipeline {
             .set_edits(edits);
 
         Ok(py_pipeline)
-    }
-
-    /// Print the data layout to a string for debugging.
-    pub fn dump_layout(&self) -> String {
-        self.get()
-            .pipeline
-            .timeline()
-            .memory()
-            .data_layout()
-            .to_string()
     }
 
     /// Read a variable.
@@ -160,7 +147,7 @@ impl PyPipeline {
         value: PyObject,
     ) -> PyResult<()> {
         let value = py_object_to_value(py, &value)?;
-        self.get_mut().pipeline.write(&variable.variable, &value)?;
+        self.get_mut().pipeline.write(&variable.variable, value)?;
         Ok(())
     }
 
@@ -174,15 +161,23 @@ impl PyPipeline {
     ///
     /// None is only returned if `?` is used in the path.
     pub fn path_address(&self, frame: u32, path: &str) -> PyResult<Option<PyAddress>> {
-        let state = self.get().pipeline.timeline().frame(frame)?;
-        let address = state.address(path)?.map(|address| PyAddress { address });
-        Ok(address)
+        let address = self
+            .get()
+            .pipeline
+            .timeline()
+            .try_address(frame, path)
+            .map_err(Error::from)?;
+        Ok(address.map(|address| PyAddress { address }))
     }
 
     /// Read from the given path.
     pub fn path_read(&self, py: Python<'_>, frame: u32, path: &str) -> PyResult<PyObject> {
-        let state = self.get().pipeline.timeline().frame(frame)?;
-        let value = state.read(path)?;
+        let value = self
+            .get()
+            .pipeline
+            .timeline()
+            .try_read(frame, path)
+            .map_err(Error::from)?;
         let py_object = value_to_py_object(py, &value)?;
         Ok(py_object)
     }
@@ -207,7 +202,7 @@ impl PyPipeline {
         let source_value = py_object_to_value(py, &source_value)?;
         self.get_mut()
             .pipeline
-            .begin_drag(&source_variable.variable, &source_value)?;
+            .begin_drag(&source_variable.variable, source_value)?;
         Ok(())
     }
 
@@ -254,12 +249,12 @@ impl PyPipeline {
 
     /// Return the number of frame advances since the timeline was created.
     pub fn num_advances(&self) -> usize {
-        self.get().pipeline.timeline().num_advances()
+        0 // TODO
     }
 
     /// Return the number of slot copies since the timeline was created.
     pub fn num_copies(&self) -> usize {
-        self.get().pipeline.timeline().num_copies()
+        0 // TODO
     }
 
     /// Return the size of the data cache in bytes.
@@ -325,22 +320,9 @@ impl PyPipeline {
         address: &PyAddress,
     ) -> PyResult<&'p PyBytes> {
         let timeline = self.get().pipeline.timeline();
-        let state = timeline.frame_uncached(frame)?;
-        let memory = timeline.memory();
-
-        let mut bytes = Vec::new();
-
-        let mut byte_address = address.address;
-        loop {
-            let classified_address = memory.classify_address(&byte_address);
-            let byte = memory.read_int(state.slot(), &classified_address, IntType::U8)? as u8;
-            if byte == 0 {
-                break;
-            }
-            bytes.push(byte);
-            byte_address = byte_address + 1;
-        }
-
+        let bytes = timeline
+            .try_read_string_at(frame, address.address)
+            .map_err(Error::from)?;
         Ok(PyBytes::new(py, &bytes))
     }
 
@@ -370,10 +352,10 @@ impl PyPipeline {
 
     /// Get the object behavior for an object, or None if the object is not active.
     pub fn object_behavior(&self, frame: u32, object: usize) -> PyResult<Option<PyObjectBehavior>> {
-        let state = self.get().pipeline.timeline().frame(frame)?;
-        match object_path(&state, ObjectSlot(object))? {
+        let timeline = self.get().pipeline.timeline();
+        match object_path(timeline, frame, ObjectSlot(object))? {
             Some(object_path) => {
-                let behavior = object_behavior(&state, &object_path)?;
+                let behavior = object_behavior(timeline, frame, &object_path)?;
                 Ok(Some(PyObjectBehavior { behavior }))
             }
             None => Ok(None),

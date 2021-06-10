@@ -4,9 +4,9 @@ use std::{
 };
 
 use wafel_data_path::{DataPathError, GlobalDataPath};
-use wafel_data_type::Value;
+use wafel_data_type::{Address, Value};
 use wafel_layout::{DataLayout, DllLayout};
-use wafel_memory::{DllGameMemory, GameMemory};
+use wafel_memory::{DllGameMemory, GameMemory, MemoryRead};
 use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
 
 use crate::{data_cache::DataCache, Error};
@@ -62,8 +62,10 @@ impl Timeline {
     ///
     /// # Safety
     ///
-    /// This method is inherently unsafe. See the documentation for
-    /// [DllGameMemory::load].
+    /// This method is inherently unsafe:
+    /// - If the DLL image is modified (either on disk before load or in memory) from anywhere
+    ///   except this [Timeline], this is UB.
+    /// - The DLL can easily execute arbitrary code.
     #[track_caller]
     pub unsafe fn open(dll_path: &str) -> Self {
         match Self::try_open(dll_path) {
@@ -79,8 +81,10 @@ impl Timeline {
     ///
     /// # Safety
     ///
-    /// This method is inherently unsafe. See the documentation for
-    /// [DllGameMemory::load].
+    /// This method is inherently unsafe:
+    /// - If the DLL image is modified (either on disk before load or in memory) from anywhere
+    ///   except this [Timeline], this is UB.
+    /// - The DLL can easily execute arbitrary code.
     pub unsafe fn try_open(dll_path: &str) -> Result<Self, Error> {
         let mut layout = DllLayout::read(&dll_path)?.data_layout;
         layout.add_sm64_extras()?;
@@ -161,6 +165,75 @@ impl Timeline {
         data_cache.insert(frame, path, value.clone());
 
         Ok(value)
+    }
+
+    /// Read a null terminated string from memory on the given frame.
+    ///
+    /// # Panics
+    ///
+    /// Panics if:
+    /// - Reading from memory fails
+    /// - A `write` on a previous frame failed
+    #[track_caller]
+    pub fn read_string_at(&self, frame: u32, address: Address) -> Vec<u8> {
+        match self.try_read_string_at(frame, address) {
+            Ok(bytes) => bytes,
+            Err(error) => panic!("Error:\n  failed to read string:\n  {}\n", error),
+        }
+    }
+
+    /// Read a null terminated string from memory on the given frame.
+    ///
+    /// Returns an error if:
+    /// - Reading from memory fails
+    /// - A `write` on a previous frame failed
+    pub fn try_read_string_at(&self, frame: u32, address: Address) -> Result<Vec<u8>, Error> {
+        let mut timeline = self.timeline.lock().unwrap();
+        let slot = timeline.frame(frame, false).0;
+        let slot_memory = self.memory.with_slot(slot);
+        let bytes = slot_memory.read_string(address)?;
+        Ok(bytes)
+    }
+
+    /// Find the address of a path on the given frame.
+    ///
+    /// This method returns `None` if `?` is used in the path and the expression before
+    /// `?` evaluates to a null pointer.
+    ///
+    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    ///
+    /// # Panics
+    ///
+    /// Panics if:
+    /// - The path fails to compile
+    /// - Reading from memory fails
+    /// - A `write` on a previous frame failed
+    #[track_caller]
+    pub fn address(&self, frame: u32, path: &str) -> Option<Address> {
+        match self.try_address(frame, path) {
+            Ok(address) => address,
+            Err(error) => panic!("Error:\n  failed to read '{}':\n  {}\n", path, error),
+        }
+    }
+
+    /// Find the address of a path on the given frame.
+    ///
+    /// This method returns `None` if `?` is used in the path and the expression before
+    /// `?` evaluates to a null pointer.
+    ///
+    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    ///
+    /// Returns an error if:
+    /// - The path fails to compile
+    /// - Reading from memory fails
+    /// - A `write` on a previous frame failed
+    pub fn try_address(&self, frame: u32, path: &str) -> Result<Option<Address>, Error> {
+        let path = self.data_path(path)?;
+        let mut timeline = self.timeline.lock().unwrap();
+        let slot = timeline.frame(frame, false).0;
+        let slot_memory = self.memory.with_slot(slot);
+        let address = path.address(&slot_memory)?;
+        Ok(address)
     }
 
     /// Write a value on the given frame.
