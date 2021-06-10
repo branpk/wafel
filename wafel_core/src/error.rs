@@ -8,7 +8,7 @@ use std::{
 };
 
 use derive_more::{Display, Error, From};
-use wafel_data_type::ValueTypeError;
+use wafel_api::ValueTypeError;
 
 use crate::sm64::SM64ErrorCause;
 

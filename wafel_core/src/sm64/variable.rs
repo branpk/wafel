@@ -6,7 +6,7 @@ use std::{
     fmt::{self, Display},
     rc::Rc,
 };
-use wafel_data_type::Address;
+use wafel_api::Address;
 
 /// A wrapper for an object slot index.
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

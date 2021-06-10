@@ -1,5 +1,4 @@
-use wafel_api::Timeline;
-use wafel_data_type::Value;
+use wafel_api::{Timeline, Value};
 
 use crate::error::Error;
 

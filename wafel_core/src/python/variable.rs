@@ -9,8 +9,7 @@ use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
-use wafel_api::Value;
-use wafel_data_type::Address;
+use wafel_api::{Address, Value};
 
 /// An abstract game variable.
 #[pyclass(name = "Variable", unsendable)]

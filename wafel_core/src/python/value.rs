@@ -4,7 +4,7 @@ use pyo3::{
     prelude::*,
     types::{IntoPyDict, PyFloat, PyList, PyLong},
 };
-use wafel_data_type::Value;
+use wafel_api::Value;
 
 pub(crate) fn value_to_py_object(py: Python<'_>, value: &Value) -> PyResult<PyObject> {
     match value {

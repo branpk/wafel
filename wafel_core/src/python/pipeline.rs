@@ -15,7 +15,7 @@ use crate::{
 use lazy_static::lazy_static;
 use pyo3::{prelude::*, types::PyBytes};
 use std::{collections::HashMap, sync::Mutex};
-use wafel_data_type::Value;
+use wafel_api::Value;
 
 lazy_static! {
     static ref VALID_PIPELINES: Mutex<Vec<Py<PyPipeline>>> = Mutex::new(Vec::new());
