@@ -5,4 +5,8 @@
     unreachable_pub
 )]
 
+pub use model::*;
+pub use range_edit::{EditRange, EditRangeId};
+
+mod model;
 mod range_edit;

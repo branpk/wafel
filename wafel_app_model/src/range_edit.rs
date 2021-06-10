@@ -9,17 +9,17 @@ use std::{
 
 /// A unique identifier for an edit range.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) struct EditRangeId(pub(crate) usize);
+pub struct EditRangeId(pub(crate) usize);
 
 /// A range of contiguous cells in a single column which are edited to the same value.
 #[derive(Debug, Clone)]
-pub(crate) struct EditRange<V> {
+pub struct EditRange<V> {
     /// The id of the range.
-    pub(crate) id: EditRangeId,
+    pub id: EditRangeId,
     /// The frames included in the range.
-    pub(crate) frames: Range<u32>,
+    pub frames: Range<u32>,
     /// The value that each variable in the range is edited to.
-    pub(crate) value: V,
+    pub value: V,
 }
 
 #[derive(Debug, Clone)]
