@@ -1,12 +1,9 @@
-use super::{data_variables::DataVariables, EditRange, RangeEdits, Variable};
-use crate::{
-    dll,
-    error::Error,
-    memory::Memory,
-    timeline::{InvalidatedFrames, SlotStateMut},
-};
 use wafel_api::Timeline;
 use wafel_data_type::Value;
+
+use crate::error::Error;
+
+use super::{data_variables::DataVariables, EditOperation, EditRange, RangeEdits, Variable};
 
 /// An abstraction for reading and writing variables.
 ///
@@ -21,6 +18,10 @@ pub struct Pipeline {
 
 impl Pipeline {
     /// Create a new pipeline using the given libsm64 DLL.
+    ///
+    /// # Safety
+    ///
+    /// This method is inherently unsafe. See the docs for [wafel_memory::DllGameMemory].
     pub unsafe fn new(dll_path: &str) -> Result<Self, Error> {
         let timeline = Timeline::try_open(dll_path)?;
         let data_variables = DataVariables::all(&timeline)?;
@@ -44,17 +45,34 @@ impl Pipeline {
 
     /// Read a variable.
     pub fn read(&self, variable: &Variable) -> Result<Value, Error> {
-        let state = self.timeline.frame(variable.try_frame()?)?;
-        self.data_variables().get(&state, &variable.without_frame())
+        let frame = variable.try_frame()?;
+        let value = self.data_variables.get(&self.timeline, frame, variable)?;
+        Ok(value)
+    }
+
+    fn apply_edit_ops(&mut self, ops: Vec<EditOperation<Variable, Value>>) -> Result<(), Error> {
+        for op in ops {
+            match op {
+                EditOperation::Write(column, frame, value) => {
+                    self.data_variables
+                        .set(&mut self.timeline, frame, &column, value)?;
+                }
+                EditOperation::Reset(column, frame) => {
+                    todo!()
+                }
+                EditOperation::Insert(frame) => todo!(),
+                EditOperation::Delete(frame) => todo!(),
+            }
+        }
+        Ok(())
     }
 
     /// Write a variable.
-    pub fn write(&mut self, variable: &Variable, value: &Value) -> Result<(), Error> {
+    pub fn write(&mut self, variable: &Variable, value: Value) -> Result<(), Error> {
         let column = variable.without_frame();
         let frame = variable.try_frame()?;
-        self.timeline.with_controller_mut(|controller| {
-            controller.edits.write(&column, frame, value.clone())
-        });
+        let ops = self.range_edits.write(&column, frame, value);
+        self.apply_edit_ops(ops)?;
         Ok(())
     }
 
@@ -62,8 +80,8 @@ impl Pipeline {
     pub fn reset(&mut self, variable: &Variable) -> Result<(), Error> {
         let column = variable.without_frame();
         let frame = variable.try_frame()?;
-        self.timeline
-            .with_controller_mut(|controller| controller.edits.reset(&column, frame));
+        let ops = self.range_edits.reset(&column, frame);
+        self.apply_edit_ops(ops)?;
         Ok(())
     }
 
@@ -71,15 +89,14 @@ impl Pipeline {
     pub fn begin_drag(
         &mut self,
         source_variable: &Variable,
-        source_value: &Value,
+        source_value: Value,
     ) -> Result<(), Error> {
         let column = source_variable.without_frame();
         let source_frame = source_variable.try_frame()?;
-        self.timeline.with_controller_mut(|controller| {
-            controller
-                .edits
-                .begin_drag(&column, source_frame, source_value)
-        });
+        let ops = self
+            .range_edits
+            .begin_drag(&column, source_frame, source_value);
+        self.apply_edit_ops(ops)?;
         Ok(())
     }
 
@@ -87,69 +104,53 @@ impl Pipeline {
     ///
     /// The ranges will appear to be updated, but won't be committed until `release_drag` is
     /// called.
-    pub fn update_drag(&mut self, target_frame: u32) {
-        self.timeline
-            .with_controller_mut(|controller| controller.edits.update_drag(target_frame));
+    pub fn update_drag(&mut self, target_frame: u32) -> Result<(), Error> {
+        let ops = self.range_edits.update_drag(target_frame);
+        self.apply_edit_ops(ops)?;
+        Ok(())
     }
 
     /// End the drag operation, committing range changes.
-    pub fn release_drag(&mut self) {
-        self.timeline
-            .with_controller_mut(|controller| controller.edits.release_drag());
+    pub fn release_drag(&mut self) -> Result<(), Error> {
+        let ops = self.range_edits.release_drag();
+        self.apply_edit_ops(ops)?;
+        Ok(())
     }
 
     /// Find the edit range containing a variable, if present.
     pub fn find_edit_range(&self, variable: &Variable) -> Result<Option<&EditRange<Value>>, Error> {
-        let controller = self.timeline.controller();
-        Ok(controller
-            .edits
-            .find_range(&variable.without_frame(), variable.try_frame()?))
+        let column = variable.without_frame();
+        let frame = variable.try_frame()?;
+        let range = self.range_edits.find_range(&column, frame);
+        Ok(range)
     }
 
     /// Insert a new state at the given frame, shifting edits forward.
-    pub fn insert_frame(&mut self, frame: u32) {
-        self.timeline
-            .with_controller_mut(|controller| controller.edits.insert_frame(frame));
+    pub fn insert_frame(&mut self, frame: u32) -> Result<(), Error> {
+        let ops = self.range_edits.insert_frame(frame);
+        self.apply_edit_ops(ops)?;
+        Ok(())
     }
 
     /// Delete the state at the given frame, shifting edits backward.
-    pub fn delete_frame(&mut self, frame: u32) {
-        self.timeline
-            .with_controller_mut(|controller| controller.edits.delete_frame(frame));
+    pub fn delete_frame(&mut self, frame: u32) -> Result<(), Error> {
+        let ops = self.range_edits.delete_frame(frame);
+        self.apply_edit_ops(ops)?;
+        Ok(())
     }
 
     /// Get the data variables for this pipeline.
     pub fn data_variables(&self) -> &DataVariables {
-        &self.timeline.controller().data_variables
+        &self.data_variables
     }
 
     /// Get the timeline for this pipeline.
-    pub fn timeline(&self) -> &Timeline<M, SM64Controller> {
+    pub fn timeline(&self) -> &Timeline {
         &self.timeline
     }
 
     /// Get the timeline for this pipeline.
-    pub fn timeline_mut(&mut self) -> &mut Timeline<M, SM64Controller> {
+    pub fn timeline_mut(&mut self) -> &mut Timeline {
         &mut self.timeline
     }
-}
-
-/// Build a Pipeline using the dll path.
-///
-/// # Safety
-///
-/// See `dll::Memory::load`.
-pub unsafe fn load_dll_pipeline(
-    dll_path: &str,
-    num_backup_slots: usize,
-) -> Result<Pipeline<dll::Memory>, Error> {
-    let (mut memory, base_slot) = dll::Memory::load(dll_path, "sm64_init", "sm64_update")?;
-    memory.data_layout_mut().add_sm64_extras()?;
-
-    let data_variables = DataVariables::all(&memory)?;
-    let controller = SM64Controller::new(data_variables);
-    let timeline = Timeline::new(memory, base_slot, controller, num_backup_slots)?;
-    let pipeline = Pipeline::new(timeline);
-
-    Ok(pipeline)
 }

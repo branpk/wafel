@@ -55,7 +55,9 @@ pub fn surface_path(
     frame: u32,
     surface: SurfaceSlot,
 ) -> Result<Option<String>, Error> {
-    let num_surfaces = timeline.read(frame, "gSurfacesAllocated")?.try_as_usize()?;
+    let num_surfaces = timeline
+        .try_read(frame, "gSurfacesAllocated")?
+        .try_as_usize()?;
     if surface.0 >= num_surfaces {
         return Ok(None);
     }

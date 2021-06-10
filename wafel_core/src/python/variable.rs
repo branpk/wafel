@@ -9,6 +9,7 @@ use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
+use wafel_api::Value;
 use wafel_data_type::Address;
 
 /// An abstract game variable.
@@ -178,7 +179,7 @@ pub struct PyAddress {
 #[pyclass(name = "EditRange")]
 #[derive(Debug)]
 pub struct PyEditRange {
-    pub(crate) range: EditRange,
+    pub(crate) range: EditRange<Value>,
 }
 
 #[pymethods]

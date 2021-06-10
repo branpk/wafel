@@ -3,7 +3,6 @@ use super::{
     PyAddress, PyEditRange, PyObjectBehavior, PyVariable,
 };
 use crate::{
-    dll,
     error::Error,
     geo::Point3f,
     geo::Vector3f,
@@ -12,10 +11,7 @@ use crate::{
     memory::Memory,
     sm64::read_objects_to_scene,
     sm64::trace_ray_to_surface,
-    sm64::{
-        frame_log, load_dll_pipeline, object_behavior, object_path, read_surfaces_to_scene,
-        ObjectSlot, Pipeline,
-    },
+    sm64::{frame_log, object_behavior, object_path, read_surfaces_to_scene, ObjectSlot, Pipeline},
     timeline::{SlotState, State},
 };
 use lazy_static::lazy_static;
@@ -41,12 +37,12 @@ pub struct PyPipeline {
 
 #[derive(Debug)]
 struct ValidPipeline {
-    pipeline: Pipeline<dll::Memory>,
+    pipeline: Pipeline,
     symbols_by_address: HashMap<Address, String>,
 }
 
 impl PyPipeline {
-    fn new(pipeline: Pipeline<dll::Memory>) -> PyResult<Self> {
+    fn new(pipeline: Pipeline) -> PyResult<Self> {
         let memory = pipeline.timeline().memory();
         let symbols_by_address = memory
             .all_symbol_address()
@@ -95,7 +91,7 @@ impl PyPipeline {
             pipeline_py.borrow_mut(py).invalidate();
         }
 
-        let pipeline = load_dll_pipeline(dll_path, NUM_BACKUP_SLOTS)?;
+        let pipeline = Pipeline::new(dll_path)?;
         let pipeline_py = Py::new(py, PyPipeline::new(pipeline)?)?;
 
         valid_pipelines.push(pipeline_py.clone());
