@@ -431,13 +431,12 @@ impl PyPipeline {
     /// Add an object path for mario to the scene, using the given frame range.
     pub fn read_mario_path(&self, frame_start: u32, frame_end: u32) -> PyResult<scene::ObjectPath> {
         let timeline = self.get().pipeline.timeline();
-        let pos_path = timeline.memory().global_path("gMarioState->pos")?;
 
         let mut nodes = Vec::new();
         for frame in frame_start..frame_end {
             let pos_coords = timeline
-                .frame(frame)?
-                .path_read(&pos_path)?
+                .try_read(frame, "gMarioState->pos")
+                .map_err(Error::from)?
                 .try_as_f32_3()
                 .map_err(Error::from)?;
             nodes.push(scene::ObjectPathNode {
