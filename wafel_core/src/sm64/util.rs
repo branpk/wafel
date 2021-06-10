@@ -101,56 +101,17 @@ pub fn read_surfaces_to_scene(
 }
 
 /// Load the SM64 objects from the game state and add them to the scene.
-pub fn read_objects_to_scene(scene: &mut Scene, state: &impl SlotState) -> Result<(), Error> {
-    let memory = state.memory();
-    let object_pool_addr = state.address("gObjectPool")?.unwrap();
-
-    let object_size = memory
-        .global_path("gObjectPool")?
-        .concrete_type()
-        .stride()
-        .ok()
-        .flatten()
-        .ok_or(SM64ErrorCause::UnsizedObjectPoolArray)?;
-
-    let offset = |path| -> Result<usize, Error> { memory.local_path(path)?.field_offset() };
-    let o_active_flags = offset("struct Object.activeFlags")?;
-    let o_pos_x = offset("struct Object.oPosX")?;
-    let o_pos_y = offset("struct Object.oPosY")?;
-    let o_pos_z = offset("struct Object.oPosZ")?;
-    let o_hitbox_height = offset("struct Object.hitboxHeight")?;
-    let o_hitbox_radius = offset("struct Object.hitboxRadius")?;
-
-    let active_flag_active = memory.data_layout().constant("ACTIVE_FLAG_ACTIVE")?.value as i16;
-
-    let read_f32 = |address| -> Result<f32, Error> {
-        let classified_address = memory.classify_address(&address);
-        let result = memory.read_float(state.slot(), &classified_address, FloatType::F32)? as f32;
-        Ok(result)
-    };
-
-    let read_s16 = |address| -> Result<i16, Error> {
-        let classified_address = memory.classify_address(&address);
-        let result = memory.read_int(state.slot(), &classified_address, IntType::S16)? as i16;
-        Ok(result)
-    };
-
-    for slot in 0..240 {
-        let object_addr = object_pool_addr + slot * object_size;
-
-        let active_flags = read_s16(object_addr + o_active_flags)?;
-        if (active_flags & active_flag_active) != 0 {
-            scene.objects.push(scene::Object {
-                pos: Point3f::new(
-                    read_f32(object_addr + o_pos_x)?,
-                    read_f32(object_addr + o_pos_y)?,
-                    read_f32(object_addr + o_pos_z)?,
-                )
-                .into(),
-                hitbox_height: read_f32(object_addr + o_hitbox_height)?,
-                hitbox_radius: read_f32(object_addr + o_hitbox_radius)?,
-            })
-        }
+pub fn read_objects_to_scene(
+    scene: &mut Scene,
+    timeline: &Timeline,
+    frame: u32,
+) -> Result<(), Error> {
+    for object in timeline.try_object_hitboxes(frame)? {
+        scene.objects.push(scene::Object {
+            pos: Point3f::new(object.pos[0], object.pos[1], object.pos[2]).into(),
+            hitbox_height: object.hitbox_height,
+            hitbox_radius: object.hitbox_radius,
+        });
     }
 
     Ok(())

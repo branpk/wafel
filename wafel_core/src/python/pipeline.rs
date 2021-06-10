@@ -423,8 +423,8 @@ impl PyPipeline {
 
     /// Load the SM64 objects from the game state and add them to the scene.
     pub fn read_objects_to_scene(&self, scene: &mut Scene, frame: u32) -> PyResult<()> {
-        let state = self.get().pipeline.timeline().frame_uncached(frame)?;
-        read_objects_to_scene(scene, &state)?;
+        let timeline = self.get().pipeline.timeline();
+        read_objects_to_scene(scene, timeline, frame)?;
         Ok(())
     }
 

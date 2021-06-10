@@ -11,7 +11,7 @@ use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
 
 use crate::{
     data_cache::DataCache, data_path_cache::DataPathCache, frame_log::read_frame_log,
-    read_surfaces, Error, Surface,
+    read_object_hitboxes, read_surfaces, Error, ObjectHitbox, Surface,
 };
 
 /// An SM64 API that allows reads and writes to arbitrary frames without frame advance or
@@ -343,6 +343,7 @@ impl Timeline {
     ///
     /// Panics if reading the frame log fails, e.g. it contains an invalid event type, or if a
     /// `write` on a previous frame failed.
+    #[track_caller]
     pub fn frame_log(&self, frame: u32) -> Vec<HashMap<String, Value>> {
         match self.try_frame_log(frame) {
             Ok(frame_log) => frame_log,
@@ -365,6 +366,7 @@ impl Timeline {
     /// # Panics
     ///
     /// Panics if the read fails or if a `write` on a previous frame failed.
+    #[track_caller]
     pub fn surfaces(&self, frame: u32) -> Vec<Surface> {
         match self.try_surfaces(frame) {
             Ok(surfaces) => surfaces,
@@ -377,6 +379,28 @@ impl Timeline {
     /// Returns an error if the read fails or if a `write` on a previous frame failed.
     pub fn try_surfaces(&self, frame: u32) -> Result<Vec<Surface>, Error> {
         self.with_slot_memory(frame, |memory| read_surfaces(memory, &self.data_path_cache))
+    }
+
+    /// Read the hitboxes for active objects.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the read fails or if a `write` on a previous frame failed.
+    #[track_caller]
+    pub fn object_hitboxes(&self, frame: u32) -> Vec<ObjectHitbox> {
+        match self.try_object_hitboxes(frame) {
+            Ok(hitboxes) => hitboxes,
+            Err(error) => panic!("Error:\n   failed to read object hitboxes:\n  {}\n", error),
+        }
+    }
+
+    /// Read the hitboxes for active objects.
+    ///
+    /// Returns an error if the read fails or if a `write` on a previous frame failed.
+    pub fn try_object_hitboxes(&self, frame: u32) -> Result<Vec<ObjectHitbox>, Error> {
+        self.with_slot_memory(frame, |memory| {
+            read_object_hitboxes(memory, &self.layout, &self.data_path_cache)
+        })
     }
 }
 

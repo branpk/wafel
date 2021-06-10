@@ -5,7 +5,8 @@ use wafel_layout::{DataLayout, DllLayout};
 use wafel_memory::{DllGameMemory, GameMemory, MemoryRead};
 
 use crate::{
-    data_path_cache::DataPathCache, frame_log::read_frame_log, read_surfaces, Error, Surface,
+    data_path_cache::DataPathCache, frame_log::read_frame_log, read_object_hitboxes, read_surfaces,
+    Error, ObjectHitbox, Surface,
 };
 
 /// An SM64 API that uses a traditional frame advance / save state model.
@@ -282,6 +283,7 @@ impl Game {
     /// # Panics
     ///
     /// Panics if reading the frame log fails, e.g. it contains an invalid event type.
+    #[track_caller]
     pub fn frame_log(&self) -> Vec<HashMap<String, Value>> {
         match self.try_frame_log() {
             Ok(frame_log) => frame_log,
@@ -303,6 +305,7 @@ impl Game {
     /// # Panics
     ///
     /// Panics if the read fails.
+    #[track_caller]
     pub fn surfaces(&self) -> Vec<Surface> {
         match self.try_surfaces() {
             Ok(surfaces) => surfaces,
@@ -317,6 +320,28 @@ impl Game {
         let memory = self.memory.with_slot(&self.base_slot);
         let surfaces = read_surfaces(&memory, &self.data_path_cache)?;
         Ok(surfaces)
+    }
+
+    /// Read the hitboxes for active objects.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the read fails.
+    #[track_caller]
+    pub fn object_hitboxes(&self) -> Vec<ObjectHitbox> {
+        match self.try_object_hitboxes() {
+            Ok(hitboxes) => hitboxes,
+            Err(error) => panic!("Error:\n   failed to read object hitboxes:\n  {}\n", error),
+        }
+    }
+
+    /// Read the hitboxes for active objects.
+    ///
+    /// Returns an error if the read fails.
+    pub fn try_object_hitboxes(&self) -> Result<Vec<ObjectHitbox>, Error> {
+        let memory = self.memory.with_slot(&self.base_slot);
+        let hitboxes = read_object_hitboxes(&memory, &self.layout, &self.data_path_cache)?;
+        Ok(hitboxes)
     }
 }
 
