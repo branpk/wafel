@@ -34,3 +34,4 @@ pub use error::*;
 mod compile;
 mod data_path_types;
 mod error;
+mod parse;

@@ -1,20 +1,11 @@
 use std::sync::Arc;
 
-use nom::{
-    branch::alt,
-    bytes::complete::{tag, take_while1},
-    character::{complete::space1, is_alphanumeric, is_digit},
-    combinator::{all_consuming, map},
-    error::{convert_error, ParseError, VerboseError},
-    multi::many0,
-    sequence::{preceded, separated_pair, terminated, tuple},
-    Err, IResult,
-};
-use wafel_data_type::{Address, DataType, DataTypeRef, Field, Namespace, TypeName};
+use wafel_data_type::{Address, DataType, DataTypeRef, Field};
 use wafel_layout::DataLayout;
 use wafel_memory::SymbolLookup;
 
 use crate::{
+    parse::{parse_data_path, EdgeAst, RootAst},
     DataPath,
     DataPathCompileError::{self, *},
     DataPathEdge, DataPathError, DataPathImpl, GlobalDataPath, LocalDataPath,
@@ -36,8 +27,7 @@ fn data_path_impl(
     symbol_lookup: &impl SymbolLookup,
     source: &str,
 ) -> Result<DataPath, DataPathCompileError> {
-    let (_, ast): (_, PathAst) = all_consuming(parse_path::<VerboseError<&str>>)(source)
-        .map_err(|e| to_path_error(source, e))?;
+    let ast = parse_data_path(source)?;
 
     match ast.root {
         RootAst::Global(root_name) => {
@@ -197,95 +187,4 @@ fn follow_subscript<T>(
         }
         _ => Err(NotAnArray),
     }
-}
-
-struct PathAst {
-    root: RootAst,
-    edges: Vec<EdgeAst>,
-}
-
-enum RootAst {
-    Global(String),
-    Local(TypeName),
-}
-
-enum EdgeAst {
-    Field(String),
-    Subscript(usize),
-    Nullable,
-}
-
-fn to_path_error<'a>(source: &'a str, error: Err<VerboseError<&'a str>>) -> DataPathCompileError {
-    DataPathCompileError::ParseError {
-        message: match error {
-            Err::Error(e) | Err::Failure(e) => convert_error(source, e),
-            _ => "Incomplete".to_owned(),
-        },
-    }
-}
-
-fn parse_path<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, PathAst, E> {
-    map(tuple((parse_root, many0(parse_edge))), |(root, edges)| {
-        PathAst { root, edges }
-    })(i)
-}
-
-fn parse_root<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, RootAst, E> {
-    alt((
-        map(parse_local_root, RootAst::Local),
-        map(parse_global_root, RootAst::Global),
-    ))(i)
-}
-
-fn parse_global_root<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, String, E> {
-    map(parse_name, str::to_owned)(i)
-}
-
-fn parse_local_root<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, TypeName, E> {
-    map(
-        separated_pair(parse_namespace, space1, parse_name),
-        |(namespace, name)| TypeName {
-            namespace,
-            name: name.to_owned(),
-        },
-    )(i)
-}
-
-fn parse_namespace<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Namespace, E> {
-    alt((
-        map(tag("struct"), |_| Namespace::Struct),
-        map(tag("union"), |_| Namespace::Union),
-        map(tag("typedef"), |_| Namespace::Typedef),
-    ))(i)
-}
-
-fn parse_edge<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, EdgeAst, E> {
-    alt((parse_field, parse_subscript, parse_nullable))(i)
-}
-
-fn parse_field<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, EdgeAst, E> {
-    map(preceded(alt((tag("."), tag("->"))), parse_name), |name| {
-        EdgeAst::Field(name.to_owned())
-    })(i)
-}
-
-fn parse_subscript<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, EdgeAst, E> {
-    map(
-        preceded(tag("["), terminated(parse_int, tag("]"))),
-        EdgeAst::Subscript,
-    )(i)
-}
-
-fn parse_nullable<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, EdgeAst, E> {
-    map(tag("?"), |_| EdgeAst::Nullable)(i)
-}
-
-fn parse_name<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    take_while1(|c| is_alphanumeric(c as u8) || c == '_')(i)
-}
-
-fn parse_int<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, usize, E> {
-    map(take_while1(|c| is_digit(c as u8)), |s: &str| {
-        s.parse::<usize>().unwrap()
-    })(i)
 }

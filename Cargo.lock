@@ -2509,7 +2509,6 @@ dependencies = [
 name = "wafel_data_path"
 version = "0.1.0"
 dependencies = [
- "nom",
  "wafel_data_type",
  "wafel_layout",
  "wafel_memory",

@@ -28,19 +28,6 @@ pub enum DataPathError {
     },
 }
 
-#[derive(Debug, Clone)]
-pub enum DataPathCompileError {
-    LayoutLookupError(LayoutLookupError),
-    ParseError { message: String },
-    UndefinedSymbol { name: String },
-    UndefinedField { name: String },
-    NotAStruct { field_name: String },
-    NotAnArray,
-    IndexOutOfBounds { index: usize, length: usize },
-    NullableNotAPointer,
-    UnsizedBaseType,
-}
-
 impl fmt::Display for DataPathError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -70,11 +57,26 @@ impl fmt::Display for DataPathError {
 
 impl Error for DataPathError {}
 
+#[derive(Debug, Clone)]
+pub enum DataPathCompileError {
+    ParseError(String),
+    LayoutLookupError(LayoutLookupError),
+    UndefinedSymbol { name: String },
+    UndefinedField { name: String },
+    NotAStruct { field_name: String },
+    NotAnArray,
+    IndexOutOfBounds { index: usize, length: usize },
+    NullableNotAPointer,
+    UnsizedBaseType,
+}
+
 impl fmt::Display for DataPathCompileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            DataPathCompileError::ParseError(message) => {
+                write!(f, "syntax error: {}", message)
+            }
             DataPathCompileError::LayoutLookupError(error) => write!(f, "{}", error),
-            DataPathCompileError::ParseError { message } => write!(f, "parse error: {}", message),
             DataPathCompileError::UndefinedField { name } => write!(f, "undefined field {}", name),
             DataPathCompileError::UndefinedSymbol { name } => {
                 write!(f, "undefined symbol {}", name)
