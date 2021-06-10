@@ -145,7 +145,7 @@ impl DataVariables {
                             }
                         }
 
-                        Ok(Some(util::concat_object_path(object_path, path)))
+                        Ok(Some(util::concat_object_path(&object_path, path)))
                     }
                     None => Ok(None),
                 }
@@ -153,7 +153,7 @@ impl DataVariables {
             Path::Surface(path) => {
                 let surface = variable.try_surface()?;
                 match util::surface_path(timeline, frame, surface)? {
-                    Some(surface_path) => Ok(Some(util::concat_surface_path(surface_path, path)?)),
+                    Some(surface_path) => Ok(Some(util::concat_surface_path(&surface_path, path))),
                     None => Ok(None),
                 }
             }
@@ -172,7 +172,7 @@ impl DataVariables {
         let path = self.path(timeline, frame, variable)?;
         match path {
             Some(path) => {
-                let mut value = timeline.try_read(&path)?;
+                let mut value = timeline.try_read(frame, &path)?;
 
                 if let Some(flag) = spec.flag {
                     let flag_set = (value.try_as_int()? & flag) != 0;
@@ -198,14 +198,14 @@ impl DataVariables {
         if let Some(path) = self.path(timeline, frame, variable)? {
             if let Some(flag) = spec.flag {
                 let flag_set = value.try_as_int()? != 0;
-                let prev_value = timeline.try_read(&path)?.try_as_int()?;
+                let prev_value = timeline.try_read(frame, &path)?.try_as_int()?;
                 value = Value::Int(if flag_set {
                     prev_value | flag
                 } else {
                     prev_value & !flag
                 });
             }
-            timeline.try_write(&path, &value)?;
+            timeline.try_write(frame, &path, value)?;
         }
 
         Ok(())
@@ -253,19 +253,19 @@ impl Builder {
         let mut specs = IndexMap::new();
         for group in self.groups {
             for variable in group.variables {
-                let path = variable.path.unwrap();
-                if path.starts_with("struct Object") {
-                    Path::Object(path)
-                } else if path.starts_with("struct Surface") {
-                    Path::Surface(path)
+                let path_source = variable.path.unwrap();
+                let path = if path_source.starts_with("struct Object") {
+                    Path::Object(path_source)
+                } else if path_source.starts_with("struct Surface") {
+                    Path::Surface(path_source)
                 } else {
-                    Path::Global(path)
-                }
+                    Path::Global(path_source)
+                };
 
-                let flag = variable
-                    .flag
-                    .map(|flag_name| timeline.try_constant(&flag_name)?.try_as_int()?)
-                    .transpose()?;
+                let flag = match variable.flag {
+                    Some(flag_name) => Some(timeline.try_constant(&flag_name)?.try_as_int()?),
+                    None => None,
+                };
 
                 let spec = DataVariableSpec {
                     group: group.name.clone(),
