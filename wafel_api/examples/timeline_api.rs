@@ -42,4 +42,13 @@ fn main() {
         timeline.read(2500, "gMarioState.action"),
         timeline.constant("ACT_FREEFALL")
     );
+
+    eprintln!("{:08X}", timeline.read(2500, "gMarioState.action").as_int());
+    eprintln!("{:08X}", timeline.constant("ACT_ID_MASK").as_int());
+    eprintln!(
+        "{:08X}",
+        timeline
+            .read(2500, "gMarioState.action & ACT_ID_MASK")
+            .as_int()
+    );
 }

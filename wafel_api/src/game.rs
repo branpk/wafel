@@ -110,7 +110,7 @@ impl Game {
 
     /// Read a value from memory.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// # Panics
     ///
@@ -125,7 +125,7 @@ impl Game {
 
     /// Read a value from memory.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// Returns an error if the path fails to compile or reading from memory fails.
     pub fn try_read(&self, path: &str) -> Result<Value, Error> {
@@ -161,7 +161,7 @@ impl Game {
     /// This method returns `None` if `?` is used in the path and the expression before
     /// `?` evaluates to a null pointer.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// # Panics
     ///
@@ -179,7 +179,7 @@ impl Game {
     /// This method returns `None` if `?` is used in the path and the expression before
     /// `?` evaluates to a null pointer.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// Returns an error if the path fails to compile or reading from memory fails.
     pub fn try_address(&self, path: &str) -> Result<Option<Address>, Error> {
@@ -197,7 +197,7 @@ impl Game {
 
     /// Return a simplified description of the type of the given variable.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// # Panics
     ///
@@ -212,7 +212,7 @@ impl Game {
 
     /// Return a simplified description of the type of the given variable.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// # Panics
     ///
@@ -226,7 +226,7 @@ impl Game {
 
     /// Write a value to memory.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// # Panics
     ///
@@ -241,7 +241,7 @@ impl Game {
 
     /// Write a value to memory.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// Returns an error if the data path fails to compile or the write fails.
     pub fn try_write(&mut self, path: &str, value: Value) -> Result<(), Error> {

@@ -15,11 +15,7 @@
 //! Local paths are similar, but the global variable is replaced with a type namespace and name,
 //! e.g. `struct Foo.x`, `typedef Foo.x`.
 //!
-//! There are a few differences:
-//! - `p.x` automatically dereferences a pointer type `p`
-//! - `*` is not used for pointer dereferencing. Instead you can use `[0]`, `->`, or `.`
-//! - `?` denotes that a pointer may be null. If so, the entire expression returns `Value::None`.
-//!   If `?` is not used, an error is thrown instead.
+//! The crate documentation for `wafel_api` has more details about the syntax.
 
 #![warn(
     missing_docs,

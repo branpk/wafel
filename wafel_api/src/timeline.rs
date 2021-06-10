@@ -148,7 +148,7 @@ impl Timeline {
 
     /// Read a value from memory on the given frame.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// # Panics
     ///
@@ -177,7 +177,7 @@ impl Timeline {
 
     /// Read a value from memory on the given frame.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// Returns an error if:
     /// - The path fails to compile
@@ -239,7 +239,7 @@ impl Timeline {
     /// This method returns `None` if `?` is used in the path and the expression before
     /// `?` evaluates to a null pointer.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// # Panics
     ///
@@ -260,7 +260,7 @@ impl Timeline {
     /// This method returns `None` if `?` is used in the path and the expression before
     /// `?` evaluates to a null pointer.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// Returns an error if:
     /// - The path fails to compile
@@ -280,7 +280,7 @@ impl Timeline {
 
     /// Return a simplified description of the type of the given variable.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// # Panics
     ///
@@ -295,7 +295,7 @@ impl Timeline {
 
     /// Return a simplified description of the type of the given variable.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// # Panics
     ///
@@ -309,7 +309,7 @@ impl Timeline {
 
     /// Write a value on the given frame.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// # Panics
     ///
@@ -328,7 +328,7 @@ impl Timeline {
 
     /// Write a value on the given frame.
     ///
-    /// See the crate documentation for [wafel_data_path] for the path syntax.
+    /// See the [crate documentation](crate) for the path syntax.
     ///
     /// Returns an error if the data path fails to compile.
     /// Note that this method does not return an error if there is a write error, e.g. null
