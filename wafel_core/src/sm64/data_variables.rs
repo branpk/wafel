@@ -1,12 +1,10 @@
-use super::{util, SM64ErrorCause, Variable};
-use crate::{
-    data_path::{DataPath, GlobalDataPath, LocalDataPath},
-    error::Error,
-    memory::Memory,
-    timeline::{SlotStateMut, State},
-};
 use indexmap::IndexMap;
-use wafel_data_type::{DataTypeRef, IntValue, Value};
+use wafel_api::{IntValue, Timeline, Value};
+use wafel_data_type::DataTypeRef;
+
+use crate::error::Error;
+
+use super::{util, SM64ErrorCause, Variable};
 
 #[rustfmt::skip]
 fn build_variables(builder: &mut Builder) {
@@ -79,9 +77,9 @@ fn build_variables(builder: &mut Builder) {
 
 #[derive(Debug, Clone)]
 enum Path {
-    Global(GlobalDataPath),
-    Object(LocalDataPath),
-    Surface(LocalDataPath),
+    Global(String),
+    Object(String),
+    Surface(String),
 }
 
 #[derive(Debug, Clone)]
@@ -98,10 +96,10 @@ pub struct DataVariables {
 }
 
 impl DataVariables {
-    pub fn all(memory: &impl Memory) -> Result<Self, Error> {
+    pub fn all(timeline: &Timeline) -> Result<Self, Error> {
         let mut builder = Builder::new();
         build_variables(&mut builder);
-        let specs = builder.build(memory)?;
+        let specs = builder.build(timeline)?;
         Ok(Self { specs })
     }
 
@@ -123,9 +121,10 @@ impl DataVariables {
 
     fn path(
         &self,
-        state: &impl State,
+        timeline: &Timeline,
+        frame: u32,
         variable: &Variable,
-    ) -> Result<Option<GlobalDataPath>, Error> {
+    ) -> Result<Option<String>, Error> {
         let spec = self.specs.get(variable.name.as_ref()).ok_or_else(|| {
             SM64ErrorCause::UnhandledVariable {
                 variable: variable.to_string(),
@@ -136,38 +135,44 @@ impl DataVariables {
             Path::Global(path) => Ok(Some(path.clone())),
             Path::Object(path) => {
                 let object = variable.try_object()?;
-                match util::object_path(state, object)? {
+                match util::object_path(timeline, frame, object)? {
                     Some(object_path) => {
                         if let Some(expected_behavior) = &variable.object_behavior {
-                            let actual_behavior = util::object_behavior(state, &object_path)?;
+                            let actual_behavior =
+                                util::object_behavior(timeline, frame, &object_path)?;
                             if &actual_behavior != expected_behavior {
                                 return Ok(None);
                             }
                         }
 
-                        Ok(Some(object_path.concat(path)?))
+                        Ok(Some(util::concat_object_path(object_path, path)))
                     }
                     None => Ok(None),
                 }
             }
             Path::Surface(path) => {
                 let surface = variable.try_surface()?;
-                match util::surface_path(state, surface)? {
-                    Some(surface_path) => Ok(Some(surface_path.concat(path)?)),
+                match util::surface_path(timeline, frame, surface)? {
+                    Some(surface_path) => Ok(Some(util::concat_surface_path(surface_path, path)?)),
                     None => Ok(None),
                 }
             }
         }
     }
 
-    pub fn get(&self, state: &impl State, variable: &Variable) -> Result<Value, Error> {
-        assert!(variable.frame.is_none() || variable.frame == Some(state.frame()));
+    pub fn get(
+        &self,
+        timeline: &Timeline,
+        frame: u32,
+        variable: &Variable,
+    ) -> Result<Value, Error> {
+        assert!(variable.frame.is_none() || variable.frame == Some(frame));
 
         let spec = self.variable_spec(&variable.name)?;
-        let path = self.path(state, variable)?;
+        let path = self.path(timeline, frame, variable)?;
         match path {
             Some(path) => {
-                let mut value = state.path_read(&path)?;
+                let mut value = timeline.try_read(&path)?;
 
                 if let Some(flag) = spec.flag {
                     let flag_set = (value.try_as_int()? & flag) != 0;
@@ -182,29 +187,28 @@ impl DataVariables {
 
     pub fn set(
         &self,
-        state: &mut impl SlotStateMut,
+        timeline: &mut Timeline,
+        frame: u32,
         variable: &Variable,
         mut value: Value,
     ) -> Result<(), Error> {
-        assert!(variable.frame.is_none() || variable.frame == Some(state.frame()));
+        assert!(variable.frame.is_none() || variable.frame == Some(frame));
 
         let spec = self.variable_spec(&variable.name)?;
-        match self.path(state, variable)? {
-            Some(path) => {
-                if let Some(flag) = spec.flag {
-                    let flag_set = value.try_as_int()? != 0;
-                    let prev_value = state.path_read(&path)?.try_as_int()?;
-                    value = Value::Int(if flag_set {
-                        prev_value | flag
-                    } else {
-                        prev_value & !flag
-                    });
-                }
-
-                state.path_write(&path, &value)
+        if let Some(path) = self.path(timeline, frame, variable)? {
+            if let Some(flag) = spec.flag {
+                let flag_set = value.try_as_int()? != 0;
+                let prev_value = timeline.try_read(&path)?.try_as_int()?;
+                value = Value::Int(if flag_set {
+                    prev_value | flag
+                } else {
+                    prev_value & !flag
+                });
             }
-            None => Ok(()),
+            timeline.try_write(&path, &value)?;
         }
+
+        Ok(())
     }
 
     /// Get the label for the given variable if it has one.
@@ -245,33 +249,23 @@ impl Builder {
         self.groups.push(group_builder);
     }
 
-    fn build(self, memory: &impl Memory) -> Result<IndexMap<String, DataVariableSpec>, Error> {
-        let object_struct = memory.local_path("struct Object")?.root_type();
-        let surface_struct = memory.local_path("struct Surface")?.root_type();
-
+    fn build(self, timeline: &Timeline) -> Result<IndexMap<String, DataVariableSpec>, Error> {
         let mut specs = IndexMap::new();
         for group in self.groups {
             for variable in group.variables {
-                let path = memory.data_path(&variable.path.unwrap())?;
-                let path = match path {
-                    DataPath::Global(path) => Path::Global(path),
-                    DataPath::Local(path) => {
-                        let root_type = path.root_type();
-                        if root_type == object_struct {
-                            Path::Object(path)
-                        } else if root_type == surface_struct {
-                            Path::Surface(path)
-                        } else {
-                            return Err(SM64ErrorCause::InvalidVariableRoot { path }.into());
-                        }
-                    }
-                };
+                let path = variable.path.unwrap();
+                if path.starts_with("struct Object") {
+                    Path::Object(path)
+                } else if path.starts_with("struct Surface") {
+                    Path::Surface(path)
+                } else {
+                    Path::Global(path)
+                }
 
                 let flag = variable
                     .flag
-                    .map(|flag_name| memory.data_layout().constant(&flag_name))
-                    .transpose()?
-                    .map(|constant| constant.value);
+                    .map(|flag_name| timeline.try_constant(&flag_name)?.try_as_int()?)
+                    .transpose()?;
 
                 let spec = DataVariableSpec {
                     group: group.name.clone(),

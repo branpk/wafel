@@ -2497,6 +2497,7 @@ dependencies = [
  "tracing",
  "tracing-log",
  "tracing-subscriber",
+ "wafel_api",
  "wafel_data_type",
  "wafel_layout",
  "wgpu",

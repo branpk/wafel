@@ -3,63 +3,43 @@ use crate::{
     dll,
     error::Error,
     memory::Memory,
-    timeline::{Controller, InvalidatedFrames, SlotStateMut, Timeline},
+    timeline::{InvalidatedFrames, SlotStateMut},
 };
+use wafel_api::Timeline;
 use wafel_data_type::Value;
-
-/// SM64 controller implementation.
-#[derive(Debug)]
-pub struct SM64Controller {
-    data_variables: DataVariables,
-    edits: RangeEdits,
-}
-
-impl SM64Controller {
-    /// Create a new SM64Controller that allows reading/writing the given data variables.
-    pub fn new(data_variables: DataVariables) -> Self {
-        Self {
-            data_variables,
-            edits: RangeEdits::new(),
-        }
-    }
-}
-
-impl<M: Memory> Controller<M> for SM64Controller {
-    fn apply(&self, state: &mut impl SlotStateMut) -> Result<(), Error> {
-        for (variable, value) in self.edits.edits(state.frame()) {
-            self.data_variables.set(state, variable, value.clone())?;
-        }
-        Ok(())
-    }
-}
 
 /// An abstraction for reading and writing variables.
 ///
 /// Note that writing a value to a variable and then reading the variable does not
 /// necessarily result in the original value.
 #[derive(Debug)]
-pub struct Pipeline<M: Memory> {
-    timeline: Timeline<M, SM64Controller>,
+pub struct Pipeline {
+    timeline: Timeline,
+    data_variables: DataVariables,
+    range_edits: RangeEdits<Variable, Value>,
 }
 
-impl<M: Memory> Pipeline<M> {
-    /// Create a new pipeline over the given timeline.
-    pub fn new(timeline: Timeline<M, SM64Controller>) -> Self {
-        Self { timeline }
+impl Pipeline {
+    /// Create a new pipeline using the given libsm64 DLL.
+    pub unsafe fn new(dll_path: &str) -> Result<Self, Error> {
+        let timeline = Timeline::try_open(dll_path)?;
+        let data_variables = DataVariables::all(&timeline)?;
+        Ok(Self {
+            timeline,
+            data_variables,
+            range_edits: RangeEdits::new(),
+        })
     }
 
     /// Destroy the pipeline, returning its variable edits.
-    pub fn into_edits(self) -> Result<RangeEdits, Error> {
-        let (_, _, controller) = self.timeline.into_parts()?;
-        Ok(controller.edits)
+    pub fn into_edits(self) -> RangeEdits<Variable, Value> {
+        self.range_edits
     }
 
     /// Overwrite all edits with the given edits.
-    pub fn set_edits(&mut self, edits: RangeEdits) {
-        self.timeline.with_controller_mut(|controller| {
-            controller.edits = edits;
-            InvalidatedFrames::StartingAt(0)
-        })
+    pub fn set_edits(&mut self, edits: RangeEdits<Variable, Value>) {
+        // set range_edits, apply EditOperations for all frames
+        todo!()
     }
 
     /// Read a variable.
@@ -119,7 +99,7 @@ impl<M: Memory> Pipeline<M> {
     }
 
     /// Find the edit range containing a variable, if present.
-    pub fn find_edit_range(&self, variable: &Variable) -> Result<Option<&EditRange>, Error> {
+    pub fn find_edit_range(&self, variable: &Variable) -> Result<Option<&EditRange<Value>>, Error> {
         let controller = self.timeline.controller();
         Ok(controller
             .edits

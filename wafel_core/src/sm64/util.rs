@@ -1,8 +1,8 @@
 use graphics::scene::{self, Scene};
+use wafel_api::Timeline;
 
 use super::{ObjectBehavior, ObjectSlot, SM64ErrorCause, SurfaceSlot};
 use crate::{
-    data_path::GlobalDataPath,
     error::Error,
     geo::Point3f,
     geo::Vector3f,
@@ -16,48 +16,57 @@ use wafel_layout::ConstantSource;
 
 /// Get the data path for an object, or None if the object is inactive.
 pub fn object_path(
-    state: &impl State,
+    timeline: &Timeline,
+    frame: u32,
     object: ObjectSlot,
-) -> Result<Option<GlobalDataPath>, Error> {
-    let active_flags = state
-        .read(&format!("gObjectPool[{}].activeFlags", object.0))?
+) -> Result<Option<String>, Error> {
+    let active_flags = timeline
+        .try_read(frame, &format!("gObjectPool[{}].activeFlags", object.0))?
         .try_as_int()?;
 
     if active_flags == 0 {
         return Ok(None);
     }
 
-    let object_path = state
-        .memory()
-        .global_path(&format!("gObjectPool[{}]", object.0))?;
+    Ok(Some(format!("gObjectPool[{}]", object.0)))
+}
 
-    Ok(Some(object_path))
+pub fn concat_object_path(object_path: &str, field_path: &str) -> String {
+    let path_suffix = field_path
+        .strip_prefix("struct Object")
+        .expect("invalid object field path");
+    format!("{}{}", object_path, path_suffix)
 }
 
 /// Get the behavior address for an object.
 pub fn object_behavior(
-    state: &impl State,
-    object_path: &GlobalDataPath,
+    timeline: &Timeline,
+    frame: u32,
+    object_path: &str,
 ) -> Result<ObjectBehavior, Error> {
-    let behavior_path =
-        object_path.concat(&state.memory().local_path("struct Object.behavior")?)?;
-    let behavior_address = state.path_read(&behavior_path)?.try_as_address()?;
+    let behavior_path = concat_object_path(object_path, "struct Object.behavior");
+    let behavior_address = timeline.try_read(frame, &behavior_path)?.try_as_address()?;
     Ok(ObjectBehavior(behavior_address))
 }
 
 /// Get the data path for a surface, or None if the surface is inactive.
 pub fn surface_path(
-    state: &impl State,
+    timeline: &Timeline,
+    frame: u32,
     surface: SurfaceSlot,
-) -> Result<Option<GlobalDataPath>, Error> {
-    let num_surfaces = state.read("gSurfacesAllocated")?.try_as_usize()?;
+) -> Result<Option<String>, Error> {
+    let num_surfaces = timeline.read(frame, "gSurfacesAllocated")?.try_as_usize()?;
     if surface.0 >= num_surfaces {
         return Ok(None);
     }
-    let surface_path = state
-        .memory()
-        .global_path(&format!("sSurfacePool[{}]", surface))?;
-    Ok(Some(surface_path))
+    Ok(Some(format!("sSurfacePool[{}]", surface)))
+}
+
+pub fn concat_surface_path(surface_path: &str, field_path: &str) -> String {
+    let path_suffix = field_path
+        .strip_prefix("struct Surface")
+        .expect("invalid surface field path");
+    format!("{}{}", surface_path, path_suffix)
 }
 
 /// Get the wafel frame log.

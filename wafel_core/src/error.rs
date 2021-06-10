@@ -23,6 +23,8 @@ pub type Error = WithContext<ErrorCause>;
 #[derive(Debug, Display, Error, From)]
 pub enum ErrorCause {
     #[from]
+    ApiError(wafel_api::Error),
+    #[from]
     ValueTypeError(ValueTypeError),
     #[from]
     LayoutLookupError(LayoutLookupError),
@@ -36,6 +38,12 @@ pub enum ErrorCause {
     DllError(DllErrorCause),
     #[from]
     SM64Error(SM64ErrorCause),
+}
+
+impl From<wafel_api::Error> for Error {
+    fn from(value: wafel_api::Error) -> Self {
+        ErrorCause::ApiError(value).into()
+    }
 }
 
 impl From<ValueTypeError> for Error {

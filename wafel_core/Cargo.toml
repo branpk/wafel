@@ -8,6 +8,7 @@ name = "wafel_core"
 crate-type = ["cdylib"]
 
 [dependencies]
+wafel_api = { path = "../wafel_api" }
 wafel_data_type = { path = "../wafel_data_type" }
 wafel_layout = { path = "../wafel_layout" }
 derive_more = "0.99.14"

@@ -22,7 +22,7 @@
 pub use error::*;
 pub use game::*;
 pub use timeline::*;
-pub use wafel_data_type::{Address, Value};
+pub use wafel_data_type::{Address, FloatValue, IntValue, Value};
 
 mod data_cache;
 mod error;
