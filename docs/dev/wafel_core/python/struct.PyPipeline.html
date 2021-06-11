@@ -7,11 +7,11 @@ necessarily result in the original value.</p>
 <p>To help avoid memory leaks, this method also invalidates all existing pipelines that were
 created using this method.</p>
 <h1 id="safety" class="section-header"><a href="#safety">Safety</a></h1>
-<p>This method is inherently unsafe. See docs for <a href="../../wafel_api/timeline/struct.Timeline.html#method.open">Timeline::open</a>.</p>
+<p>This method is inherently unsafe. See docs for <a href="wafel_api::Timeline::open">Timeline::open</a>.</p>
 </div></details><details class="rustdoc-toggle method-toggle" open><summary><div id="method.load_reusing_edits" class="method has-srclink"><code>pub unsafe fn <a href="#method.load_reusing_edits" class="fnname">load_reusing_edits</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;py: Python&lt;'_&gt;, <br>&nbsp;&nbsp;&nbsp;&nbsp;dll_path: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;prev_pipeline: Py&lt;<a class="struct" href="struct.PyPipeline.html" title="struct wafel_core::python::PyPipeline">PyPipeline</a>&gt;<br>) -&gt; PyResult&lt;Py&lt;Self&gt;&gt;</code><a href="#method.load_reusing_edits" class="anchor"></a><a class="srclink" href="../../src/wafel_core/python/pipeline.rs.html#94-114" title="goto source code">[src]</a></div></summary><div class="docblock"><p>Load a new pipeline using the given DLL, reusing the edits of the given pipeline.</p>
 <p>This method invalidates <code>prev_pipeline</code>.</p>
 <h1 id="safety-1" class="section-header"><a href="#safety-1">Safety</a></h1>
-<p>This method is inherently unsafe. See docs for <a href="../../wafel_api/timeline/struct.Timeline.html#method.open">Timeline::open</a>.</p>
+<p>This method is inherently unsafe. See docs for <a href="wafel_api::Timeline::open">Timeline::open</a>.</p>
 </div></details><details class="rustdoc-toggle method-toggle" open><summary><div id="method.read" class="method has-srclink"><code>pub fn <a href="#method.read" class="fnname">read</a>(&amp;self, py: Python&lt;'_&gt;, variable: &amp;<a class="struct" href="struct.PyVariable.html" title="struct wafel_core::python::PyVariable">PyVariable</a>) -&gt; PyResult&lt;PyObject&gt;</code><a href="#method.read" class="anchor"></a><a class="srclink" href="../../src/wafel_core/python/pipeline.rs.html#120-124" title="goto source code">[src]</a></div></summary><div class="docblock"><p>Read a variable.</p>
 <p>If the variable is a data variable, the value will be read from memory
 on the variable’s frame.</p>

@@ -422,6 +422,10 @@
 <span id="420">420</span>
 <span id="421">421</span>
 <span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">sync::Arc</span>};
 
@@ -445,7 +449,7 @@
 <span class="doccomment">/// ```no_run</span>
 <span class="doccomment">/// use wafel_api::Game;</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// let mut game = unsafe { Game::open(&quot;libsm64/sm64_us.dll&quot;) };</span>
+<span class="doccomment">/// let mut game = unsafe { Game::new(&quot;libsm64/sm64_us.dll&quot;) };</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// let power_on = game.save_state();</span>
 <span class="doccomment">///</span>
@@ -489,11 +493,13 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Safety</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// This method is inherently unsafe. See the documentation for</span>
-    <span class="doccomment">/// [DllGameMemory::load].</span>
+    <span class="doccomment">/// This method is inherently unsafe:</span>
+    <span class="doccomment">/// - If the DLL image is modified (either on disk before load or in memory) from anywhere</span>
+    <span class="doccomment">///   except this [Game], this is UB.</span>
+    <span class="doccomment">/// - The DLL can easily execute arbitrary code.</span>
     <span class="attribute">#[<span class="ident">track_caller</span>]</span>
-    <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">open</span>(<span class="ident">dll_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">match</span> <span class="self">Self</span><span class="ident">::try_open</span>(<span class="ident">dll_path</span>) {
+    <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">dll_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">match</span> <span class="self">Self</span><span class="ident">::try_new</span>(<span class="ident">dll_path</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">timeline</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">timeline</span>,
             <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic!</span>(<span class="string">&quot;Error:\n  failed to open {}:\n  {}\n&quot;</span>, <span class="ident">dll_path</span>, <span class="ident">error</span>),
         }
@@ -506,9 +512,11 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Safety</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// This method is inherently unsafe. See the documentation for</span>
-    <span class="doccomment">/// [DllGameMemory::load].</span>
-    <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">try_open</span>(<span class="ident">dll_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// This method is inherently unsafe:</span>
+    <span class="doccomment">/// - If the DLL image is modified (either on disk before load or in memory) from anywhere</span>
+    <span class="doccomment">///   except this [Game], this is UB.</span>
+    <span class="doccomment">/// - The DLL can easily execute arbitrary code.</span>
+    <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">try_new</span>(<span class="ident">dll_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">layout</span> <span class="op">=</span> <span class="ident">DllLayout::read</span>(<span class="kw-2">&amp;</span><span class="ident">dll_path</span>)<span class="question-mark">?</span>.<span class="ident">data_layout</span>;
         <span class="ident">layout</span>.<span class="ident">add_sm64_extras</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">layout</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">layout</span>);
