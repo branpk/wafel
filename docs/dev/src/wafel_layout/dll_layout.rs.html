@@ -748,7 +748,6 @@
 <span id="746">746</span>
 <span id="747">747</span>
 <span id="748">748</span>
-<span id="749">749</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Debugging and structural information extracted from a DLL.</span>
 
@@ -835,8 +834,7 @@
                 .<span class="ident">unwrap_or</span>(<span class="ident">Cow::Borrowed</span>(<span class="kw-2">&amp;</span>[])))
         };
         <span class="kw">let</span> <span class="ident">dwarf_cow</span> <span class="op">=</span> <span class="ident">Dwarf::load</span>(<span class="kw-2">&amp;</span><span class="ident">load_section</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">dwarf</span> <span class="op">=</span>
-            <span class="ident">dwarf_cow</span>.<span class="ident">borrow</span>(<span class="op">|</span><span class="ident">section</span><span class="op">|</span> <span class="ident">EndianSlice::new</span>(<span class="kw-2">&amp;</span><span class="ident">section</span>, <span class="ident">RunTimeEndian::default</span>()));
+        <span class="kw">let</span> <span class="ident">dwarf</span> <span class="op">=</span> <span class="ident">dwarf_cow</span>.<span class="ident">borrow</span>(<span class="op">|</span><span class="ident">section</span><span class="op">|</span> <span class="ident">EndianSlice::new</span>(<span class="ident">section</span>, <span class="ident">RunTimeEndian::default</span>()));
 
         <span class="comment">// Read layout from dwarf</span>
         <span class="kw">let</span> <span class="ident">data_layout</span> <span class="op">=</span> <span class="ident">load_data_layout_from_dwarf</span>(<span class="kw-2">&amp;</span><span class="ident">dwarf</span>)<span class="question-mark">?</span>;
