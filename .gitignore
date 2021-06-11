@@ -1,0 +1,13 @@
+__pycache__
+*.pyd
+.mypy_cache
+.vscode
+
+/build
+/libsm64/*
+!/libsm64/*.locked
+/roms
+/log.txt
+/settings.json
+/imgui.ini
+/target
