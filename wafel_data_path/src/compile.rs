@@ -217,7 +217,7 @@ fn follow_subscript<T>(
                 root: path.root,
                 edges,
                 mask: None,
-                concrete_type: layout.concrete_type(&base)?,
+                concrete_type: layout.concrete_type(base)?,
                 layout: Arc::clone(layout),
             })
         }

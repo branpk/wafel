@@ -165,7 +165,7 @@ pub fn build_data_types<Id: Clone + Eq + Hash>(
     let mut types: HashMap<Id, DataTypeRef> = HashMap::new();
     for &id in &sorted {
         let pre_data_type = pre_types
-            .get(&id)
+            .get(id)
             .ok_or_else(|| BuildDataTypesError::UndefinedTypeId(id.clone()))?;
         let data_type = pre_data_type
             .shallow_type
