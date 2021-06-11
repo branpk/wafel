@@ -1,0 +1,49 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="The main SM64 API for Wafel."><meta name="keywords" content="rust, rustlang, rust-lang, wafel_api"><title>wafel_api - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../ayu.css" disabled ><script id="default-settings"></script><script src="../storage.js"></script><script src="../crates.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../down-arrow.svg");}</style></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../wafel_api/index.html'><div class='logo-container rust-logo'><img src='../rust-logo.png' alt='logo'></div></a><p class="location">Crate wafel_api</p><div class="block version"><p>Version 0.1.0</p></div><div class="sidebar-elems"><a id="all-types" href="all.html"><p>See all wafel_api's items</p></a><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#types">Type Definitions</a></li></ul></div><div id="sidebar-vars" data-name="wafel_api" data-ty="mod" data-relpath=""></div><script defer src="sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img src="../brush.svg" width="18" height="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../settings.html" title="settings"><img src="../wheel.svg" width="18" height="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="in-band">Crate <a class="mod" href="#">wafel_api</a><button id="copy-path" onclick="copy_path(this)" title="copy path"><img src="../clipboard.svg" width="19" height="18" alt="Copy item import" title="Copy item import to clipboard"></button></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../src/wafel_api/lib.rs.html#1-63" title="goto source code">[src]</a></span></h1><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>The main SM64 API for Wafel.</p>
+<p>This crate provides two different APIs: <a href="struct.Game.html" title="Game">Game</a> and <a href="struct.Timeline.html" title="Timeline">Timeline</a>.</p>
+<p>The <a href="struct.Game.html" title="Game">Game</a> API uses a traditional frame advance / save state model.</p>
+<p>The <a href="struct.Timeline.html" title="Timeline">Timeline</a> API is higher level and manages save states internally. It allows accessing
+arbitrary frames in any order. This is the API used by the Wafel application for its
+rewind functionality.</p>
+<p>For now, I would recommend using the <a href="struct.Game.html" title="Game">Game</a> API for brute forcing purposes. The <a href="struct.Timeline.html" title="Timeline">Timeline</a>
+API works, but the algorithm is currently optimized for Wafel’s UI, so it may not be as
+fast in a brute forcing setting.</p>
+<h1 id="data-paths" class="section-header"><a href="#data-paths">Data paths</a></h1>
+<p>Many API methods take in a string <code>path</code> parameter. This string uses a C-like syntax to
+denote a location in memory.</p>
+<p>The following are all valid syntax:</p>
+<ul>
+<li><code>gMarioState.pos</code></li>
+<li><code>gObjectPool[12].oPosX</code></li>
+<li><code>gMarioState[0].wall?.normal</code></li>
+<li><code>gMarioState.action &amp; ACT_ID_MASK</code></li>
+</ul>
+<p>Note:</p>
+<ul>
+<li><code>p.x</code> automatically dereferences a pointer <code>p</code>. The syntax <code>p-&gt;x</code> can also be used.</li>
+<li><code>*</code> is not used for pointer dereferencing. Instead you can use <code>[0]</code>, <code>-&gt;</code>, or <code>.</code>.</li>
+<li>A mask can be applied using <code>&amp;</code>. The mask must be an integer literal or constant name.</li>
+<li>Array indices must be an integer literal or constant name.</li>
+<li><code>?</code> denotes that a pointer may be null. If so, the entire expression returns <code>Value::None</code>.
+If <code>?</code> is not used, an error is thrown instead.</li>
+</ul>
+<p>Variable and constant names are automatically pulled from the decomp source code.
+However, the names may be different if Wafel is out of date from decomp.</p>
+</div></details><h2 id="structs" class="section-header"><a href="#structs">Structs</a></h2>
+<table><tr class="module-item"><td><a class="struct" href="struct.Address.html" title="wafel_api::Address struct">Address</a></td><td class="docblock-short"><p>A raw pointer value that can be stored in memory.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Game.html" title="wafel_api::Game struct">Game</a></td><td class="docblock-short"><p>An SM64 API that uses a traditional frame advance / save state model.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.ObjectHitbox.html" title="wafel_api::ObjectHitbox struct">ObjectHitbox</a></td><td class="docblock-short"><p>Hitbox information for an SM64 object.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.SaveState.html" title="wafel_api::SaveState struct">SaveState</a></td><td class="docblock-short"><p>A save state used by <a href="struct.Game.html" title="Game">Game</a>.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Surface.html" title="wafel_api::Surface struct">Surface</a></td><td class="docblock-short"><p>An SM64 surface (currently missing several fields).</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Timeline.html" title="wafel_api::Timeline struct">Timeline</a></td><td class="docblock-short"><p>An SM64 API that allows reads and writes to arbitrary frames without frame advance or
+save states.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.ValueTypeError.html" title="wafel_api::ValueTypeError struct">ValueTypeError</a></td><td class="docblock-short"></td></tr></table><h2 id="enums" class="section-header"><a href="#enums">Enums</a></h2>
+<table><tr class="module-item"><td><a class="enum" href="enum.DataType.html" title="wafel_api::DataType enum">DataType</a></td><td class="docblock-short"><p>A simplified description of a variable’s data type.</p>
+</td></tr><tr class="module-item"><td><a class="enum" href="enum.Error.html" title="wafel_api::Error enum">Error</a></td><td class="docblock-short"></td></tr><tr class="module-item"><td><a class="enum" href="enum.FloatType.html" title="wafel_api::FloatType enum">FloatType</a></td><td class="docblock-short"><p>Float types of different sizes.</p>
+</td></tr><tr class="module-item"><td><a class="enum" href="enum.IntType.html" title="wafel_api::IntType enum">IntType</a></td><td class="docblock-short"><p>Integer types of different sizes and signedness.</p>
+</td></tr><tr class="module-item"><td><a class="enum" href="enum.Value.html" title="wafel_api::Value enum">Value</a></td><td class="docblock-short"><p>A dynamically typed value.</p>
+</td></tr></table><h2 id="types" class="section-header"><a href="#types">Type Definitions</a></h2>
+<table><tr class="module-item"><td><a class="type" href="type.FloatValue.html" title="wafel_api::FloatValue type">FloatValue</a></td><td class="docblock-short"><p>An integer value.</p>
+</td></tr><tr class="module-item"><td><a class="type" href="type.IntValue.html" title="wafel_api::IntValue type">IntValue</a></td><td class="docblock-short"><p>An integer value.</p>
+</td></tr></table></section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../" data-current-crate="wafel_api" data-search-index-js="../search-index.js" data-search-js="../search.js"></div><script src="../main.js"></script></body></html>
