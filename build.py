@@ -2,7 +2,6 @@ import subprocess
 import sys
 import shutil
 import os
-from glob import glob
 
 import wafel.config as config
 from wafel.game_versions import lock_game_version, unlocked_game_versions, find_locked_dlls
@@ -71,11 +70,13 @@ if 'dist' in sys.argv[1:]:
     )
 
   print('Copying tools')
-  os.makedirs(os.path.join('build', 'dist', 'tools'))
-  shutil.copyfile(
-    os.path.join('target', 'release', 'libsm64_layout.exe'),
-    os.path.join('build', 'dist', 'tools', 'libsm64_layout.exe')
-  )
+  os.makedirs('build/dist/tools')
+  shutil.copyfile('target/release/libsm64_layout.exe', 'build/dist/tools/libsm64_layout.exe')
+
+  print('Copying bindings')
+  os.makedirs(os.path.join('build/dist/bindings'))
+  shutil.copyfile('target/release/wafel.dll', 'build/dist/bindings/wafel.pyd')
+  shutil.copyfile('wafel_python/wafel.pyi', 'build/dist/bindings/wafel.pyi')
 
   print('Copying .pdb')
   shutil.copyfile('target/release/wafel_core.pdb', 'build/dist/wafel_core.pdb')
