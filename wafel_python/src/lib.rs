@@ -103,6 +103,7 @@ pub struct Address {
 }
 
 // TODO: __str__, __repr__
+// TODO: Fields
 #[pyclass]
 #[derive(Debug)]
 pub struct Surface {
@@ -110,6 +111,7 @@ pub struct Surface {
 }
 
 // TODO: __str__, __repr__
+// TODO: Fields
 #[pyclass]
 #[derive(Debug)]
 pub struct ObjectHitbox {
