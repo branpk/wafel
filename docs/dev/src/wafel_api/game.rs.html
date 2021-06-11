@@ -420,6 +420,8 @@
 <span id="418">418</span>
 <span id="419">419</span>
 <span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">sync::Arc</span>};
 
@@ -451,6 +453,8 @@
 <span class="doccomment">/// assert_eq!(game.read(&quot;gCurrLevelNum&quot;), game.constant(&quot;LEVEL_BOWSER_1&quot;));</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// game.load_state(&amp;power_on);</span>
+<span class="doccomment">/// assert_eq!(game.frame(), 0);</span>
+<span class="doccomment">///</span>
 <span class="doccomment">/// for frame in 0..1000 {</span>
 <span class="doccomment">///     if frame % 2 == 1 {</span>
 <span class="doccomment">///         game.write(&quot;gControllerPads[0].button&quot;, game.constant(&quot;START_BUTTON&quot;));</span>
