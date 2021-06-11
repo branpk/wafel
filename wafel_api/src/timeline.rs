@@ -23,7 +23,7 @@ use crate::{
 ///
 /// # Example
 ///
-/// ```
+/// ```no_run
 /// use wafel_api::Timeline;
 ///
 /// let mut timeline = unsafe { Timeline::open("libsm64/sm64_us.dll") };

@@ -17,7 +17,7 @@ use crate::{
 ///
 /// # Example
 ///
-/// ```
+/// ```no_run
 /// use wafel_api::Game;
 ///
 /// let mut game = unsafe { Game::open("libsm64/sm64_us.dll") };
