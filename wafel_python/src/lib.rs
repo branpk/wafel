@@ -1,6 +1,6 @@
 //! Python bindings for [wafel_api].
 //!
-//! Currently on the [Game](api::Game) API is implemented, not [Timeline](api::Timeline).
+//! Currently only the [Game](api::Game) API is implemented, not [Timeline](api::Timeline).
 
 #![warn(missing_debug_implementations, rust_2018_idioms, unreachable_pub)]
 
