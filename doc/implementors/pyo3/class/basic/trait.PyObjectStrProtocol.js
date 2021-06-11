@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["wafel_core"] = [{"text":"impl&lt;'p&gt; PyObjectStrProtocol&lt;'p&gt; for <a class=\"struct\" href=\"wafel_core/python/struct.PyVariable.html\" title=\"struct wafel_core::python::PyVariable\">PyVariable</a>","synthetic":false,"types":["wafel_core::python::variable::PyVariable"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
