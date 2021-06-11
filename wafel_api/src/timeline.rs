@@ -26,7 +26,7 @@ use crate::{
 /// ```no_run
 /// use wafel_api::Timeline;
 ///
-/// let mut timeline = unsafe { Timeline::open("libsm64/sm64_us.dll") };
+/// let mut timeline = unsafe { Timeline::new("libsm64/sm64_us.dll") };
 ///
 /// assert_eq!(
 ///     timeline.read(1500, "gCurrLevelNum"),
@@ -73,8 +73,8 @@ impl Timeline {
     ///   except this [Timeline], this is UB.
     /// - The DLL can easily execute arbitrary code.
     #[track_caller]
-    pub unsafe fn open(dll_path: &str) -> Self {
-        match Self::try_open(dll_path) {
+    pub unsafe fn new(dll_path: &str) -> Self {
+        match Self::try_new(dll_path) {
             Ok(timeline) => timeline,
             Err(error) => panic!("Error:\n  failed to open {}:\n  {}\n", dll_path, error),
         }
@@ -91,7 +91,7 @@ impl Timeline {
     /// - If the DLL image is modified (either on disk before load or in memory) from anywhere
     ///   except this [Timeline], this is UB.
     /// - The DLL can easily execute arbitrary code.
-    pub unsafe fn try_open(dll_path: &str) -> Result<Self, Error> {
+    pub unsafe fn try_new(dll_path: &str) -> Result<Self, Error> {
         let mut layout = DllLayout::read(&dll_path)?.data_layout;
         layout.add_sm64_extras()?;
         let layout = Arc::new(layout);

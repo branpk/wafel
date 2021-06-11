@@ -1,7 +1,7 @@
 use wafel_api::Timeline;
 
 fn main() {
-    let mut timeline = unsafe { Timeline::open("libsm64/sm64_us.dll") };
+    let mut timeline = unsafe { Timeline::new("libsm64/sm64_us.dll") };
 
     assert_eq!(
         timeline.read(1500, "gCurrLevelNum"),

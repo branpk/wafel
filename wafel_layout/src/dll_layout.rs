@@ -83,8 +83,7 @@ impl DllLayout {
                 .unwrap_or(Cow::Borrowed(&[])))
         };
         let dwarf_cow = Dwarf::load(&load_section)?;
-        let dwarf =
-            dwarf_cow.borrow(|section| EndianSlice::new(&section, RunTimeEndian::default()));
+        let dwarf = dwarf_cow.borrow(|section| EndianSlice::new(section, RunTimeEndian::default()));
 
         // Read layout from dwarf
         let data_layout = load_data_layout_from_dwarf(&dwarf)?;

@@ -94,7 +94,7 @@ impl<C: Hash + Eq + Clone, V: Clone> RangeEdits<C, V> {
     ///
     /// If the cell is in an edit range, the edit range is split into two.
     pub(crate) fn reset(&mut self, column: &C, frame: u32) -> Vec<EditOperation<C, V>> {
-        match self.find_range(&column, frame) {
+        match self.find_range(column, frame) {
             Some(range) => {
                 let range = range.clone();
                 let mut ops = self.rollback_drag();
@@ -179,7 +179,7 @@ impl<C: Hash + Eq + Clone, V: Clone> RangeEdits<C, V> {
         if let Some(DragState { column, preview }) = &mut self.drag_state {
             let column = column.clone();
             let ranges = self.ranges.entry(column.clone()).or_default();
-            let frames_to_update = preview.update_drag_target(&ranges, target_frame);
+            let frames_to_update = preview.update_drag_target(ranges, target_frame);
             self.ops_for_update(&column, frames_to_update)
         } else {
             Vec::new()

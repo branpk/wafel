@@ -24,6 +24,46 @@ You can download the latest version from the [Releases page](https://github.com/
 Please log bugs and feature requests on Github [here](https://github.com/branpk/wafel/issues/new).
 This increases visibility for other users, and I'm more likely to see them than on Discord.
 
+## Wafel as a library
+
+Wafel exposes a mid-level SM64 API that is intended to be useful for scripting / brute forcing.
+This API is still fairly basic, but it can be extended with more useful features over time.
+
+```python
+import wafel
+
+game = wafel.Game("../wafel/libsm64/sm64_us.dll")
+
+power_on = game.save_state()
+
+game.advance_n(1500)
+assert game.read("gCurrLevelNum") == game.constant("LEVEL_BOWSER_1")
+
+game.load_state(power_on)
+assert game.frame() == 0
+
+for frame in range(0, 1000):
+    if frame % 2 == 1:
+        game.write("gControllerPads[0].button", game.constant("START_BUTTON"))
+    game.advance()
+
+game.advance_n(500)
+assert game.read("gCurrLevelNum") == game.constant("LEVEL_CASTLE_GROUNDS")
+```
+
+Installing:
+- For Python, download the latest Wafel release, and include `bindings/wafel.pyd` and
+  `bindings/wafel.pyi` in your project root. The `.pyi` file should allow your IDE to
+  provide documentation and type hints.
+- For Rust, include the dependency `wafel_api = { git = "https://github.com/branpk/wafel" }` (requires nightly).
+
+Rust documentation is available [here](https://branpk.github.io/wafel/docs/dev/wafel_api/).
+For Python, documentation is included in `wafel.pyi`, but you may also need to reference the
+Rust documentation.
+
+Wafel's low level code (beneath `wafel_api`) is also split up into Rust crates so that it can be
+used in other SM64 projects if needed.
+
 ## Building
 
 To build from source, you'll need the following installed (be sure to use 64 bit versions):

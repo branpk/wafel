@@ -22,7 +22,7 @@ impl Pipeline {
     ///
     /// This method is inherently unsafe. See docs for [Timeline::open](wafel_api::Timeline::open).
     pub(crate) unsafe fn new(dll_path: &str) -> Result<Self, Error> {
-        let timeline = Timeline::try_open(dll_path)?;
+        let timeline = Timeline::try_new(dll_path)?;
         let data_variables = DataVariables::all(&timeline)?;
         Ok(Self {
             timeline,

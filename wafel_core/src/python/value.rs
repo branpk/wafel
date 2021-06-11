@@ -13,7 +13,7 @@ pub(crate) fn value_to_py_object(py: Python<'_>, value: &Value) -> PyResult<PyOb
         Value::Float(r) => Ok(r.to_object(py)),
         Value::String(s) => Ok(s.to_object(py)),
         Value::Address(address) => Ok(PyAddress { address: *address }.into_py(py)),
-        Value::Struct { fields } => Ok(fields
+        Value::Struct(fields) => Ok(fields
             .iter()
             .map(|(name, value)| value_to_py_object(py, value).map(|object| (name, object)))
             .collect::<PyResult<Vec<_>>>()?

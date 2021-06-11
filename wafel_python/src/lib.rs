@@ -4,11 +4,16 @@
 
 #![warn(missing_debug_implementations, rust_2018_idioms, unreachable_pub)]
 
-use std::collections::HashMap;
+use std::{
+    collections::{hash_map::DefaultHasher, HashMap},
+    hash::{Hash, Hasher},
+};
 
 use pyo3::{
+    basic::CompareOp,
     prelude::*,
     types::{IntoPyDict, PyDict, PyFloat, PyList, PyLong, PyString},
+    PyObjectProtocol,
 };
 use wafel_api as api;
 
@@ -37,7 +42,7 @@ fn value_to_py_object(py: Python<'_>, value: api::Value) -> PyResult<PyObject> {
         api::Value::Float(r) => Ok(r.to_object(py)),
         api::Value::String(s) => Ok(s.to_object(py)),
         api::Value::Address(address) => Ok(Address { inner: address }.into_py(py)),
-        api::Value::Struct { fields } => Ok(fields
+        api::Value::Struct(fields) => Ok(fields
             .into_iter()
             .map(|(name, value)| value_to_py_object(py, value).map(|object| (name, object)))
             .collect::<PyResult<Vec<_>>>()?
@@ -53,7 +58,6 @@ fn value_to_py_object(py: Python<'_>, value: api::Value) -> PyResult<PyObject> {
     }
 }
 
-// TODO: Current exception is probably wrong when dict has non-string key
 fn py_object_to_value(py: Python<'_>, value: PyObject) -> PyResult<api::Value> {
     if value.is_none(py) {
         Ok(api::Value::None)
@@ -72,9 +76,7 @@ fn py_object_to_value(py: Python<'_>, value: PyObject) -> PyResult<api::Value> {
                 for (name, value) in entries {
                     fields.insert(name, py_object_to_value(py, value)?);
                 }
-                Ok(api::Value::Struct {
-                    fields: Box::new(fields),
-                })
+                Ok(api::Value::Struct(Box::new(fields)))
             }
             Err(_) => Err(PyErr::new::<WafelError, _>(format!(
                 "invalid data value: {}",
@@ -95,43 +97,126 @@ fn py_object_to_value(py: Python<'_>, value: PyObject) -> PyResult<api::Value> {
     }
 }
 
-// TODO: __str__, __repr__, __eq__, __hash__
 #[pyclass]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Address {
     inner: api::Address,
 }
 
-// TODO: __str__, __repr__
-// TODO: Fields
+#[pymethods]
+impl Address {
+    fn is_null(&self) -> bool {
+        self.inner.is_null()
+    }
+}
+
+#[pyproto]
+impl PyObjectProtocol for Address {
+    fn __str__(&'p self) -> String {
+        format!("{}", self.inner)
+    }
+
+    fn __repr__(&'p self) -> String {
+        format!("{}", self.inner)
+    }
+
+    fn __hash__(&'p self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    fn __richcmp__(&'p self, other: Address, op: CompareOp) -> PyResult<bool> {
+        match op {
+            CompareOp::Eq => Ok(self == &other),
+            CompareOp::Ne => Ok(self != &other),
+            _ => Err(PyErr::new::<WafelError, _>("unimplemented comparison")),
+        }
+    }
+}
+
 #[pyclass]
 #[derive(Debug)]
 pub struct Surface {
     inner: api::Surface,
 }
 
-// TODO: __str__, __repr__
-// TODO: Fields
+#[pymethods]
+impl Surface {
+    #[getter]
+    fn normal(&self) -> [f32; 3] {
+        self.inner.normal
+    }
+
+    #[getter]
+    fn vertices(&self) -> Vec<[i16; 3]> {
+        self.inner.vertices.to_vec()
+    }
+}
+
+#[pyproto]
+impl PyObjectProtocol for Surface {
+    fn __str__(&'p self) -> String {
+        format!("{:?}", self.inner)
+    }
+
+    fn __repr__(&'p self) -> String {
+        format!("{:?}", self.inner)
+    }
+}
+
 #[pyclass]
 #[derive(Debug)]
 pub struct ObjectHitbox {
     inner: api::ObjectHitbox,
 }
 
-// TODO: __str__, __repr__
+#[pymethods]
+impl ObjectHitbox {
+    #[getter]
+    fn pos(&self) -> [f32; 3] {
+        self.inner.pos
+    }
+
+    #[getter]
+    fn hitbox_height(&self) -> f32 {
+        self.inner.hitbox_height
+    }
+
+    #[getter]
+    fn hitbox_radius(&self) -> f32 {
+        self.inner.hitbox_radius
+    }
+}
+
+#[pyproto]
+impl PyObjectProtocol for ObjectHitbox {
+    fn __str__(&'p self) -> String {
+        format!("{:?}", self.inner)
+    }
+
+    fn __repr__(&'p self) -> String {
+        format!("{:?}", self.inner)
+    }
+}
+
 #[pyclass]
 #[derive(Debug)]
 pub struct Game {
+    dll_path: String,
     inner: api::Game,
 }
 
 #[pymethods]
 impl Game {
-    #[staticmethod]
+    #[new]
     #[allow(clippy::missing_safety_doc)]
     pub unsafe fn open(dll_path: &str) -> PyResult<Self> {
-        let inner = api::Game::try_open(dll_path).map_err(err)?;
-        Ok(Game { inner })
+        let inner = api::Game::try_new(dll_path).map_err(err)?;
+        Ok(Game {
+            dll_path: dll_path.to_string(),
+            inner,
+        })
     }
 
     pub fn read(&self, py: Python<'_>, path: &str) -> PyResult<PyObject> {
@@ -218,6 +303,17 @@ impl Game {
     }
 }
 
+#[pyproto]
+impl PyObjectProtocol for Game {
+    fn __str__(&'p self) -> String {
+        format!("Game({:?})", self.dll_path)
+    }
+
+    fn __repr__(&'p self) -> String {
+        format!("Game({:?})", self.dll_path)
+    }
+}
+
 fn convert_frame_log(
     py: Python<'_>,
     events: Vec<HashMap<String, api::Value>>,
@@ -234,9 +330,15 @@ fn convert_frame_log(
     Ok(py_events)
 }
 
-// TODO: __str__, __repr__
 #[pyclass]
 #[derive(Debug)]
 pub struct SaveState {
     inner: api::SaveState,
+}
+
+#[pymethods]
+impl SaveState {
+    fn frame(&self) -> u32 {
+        self.inner.frame()
+    }
 }

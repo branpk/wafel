@@ -20,7 +20,7 @@ use crate::{
 /// ```no_run
 /// use wafel_api::Game;
 ///
-/// let mut game = unsafe { Game::open("libsm64/sm64_us.dll") };
+/// let mut game = unsafe { Game::new("libsm64/sm64_us.dll") };
 ///
 /// let power_on = game.save_state();
 ///
@@ -64,11 +64,13 @@ impl Game {
     ///
     /// # Safety
     ///
-    /// This method is inherently unsafe. See the documentation for
-    /// [DllGameMemory::load].
+    /// This method is inherently unsafe:
+    /// - If the DLL image is modified (either on disk before load or in memory) from anywhere
+    ///   except this [Game], this is UB.
+    /// - The DLL can easily execute arbitrary code.
     #[track_caller]
-    pub unsafe fn open(dll_path: &str) -> Self {
-        match Self::try_open(dll_path) {
+    pub unsafe fn new(dll_path: &str) -> Self {
+        match Self::try_new(dll_path) {
             Ok(timeline) => timeline,
             Err(error) => panic!("Error:\n  failed to open {}:\n  {}\n", dll_path, error),
         }
@@ -81,9 +83,11 @@ impl Game {
     ///
     /// # Safety
     ///
-    /// This method is inherently unsafe. See the documentation for
-    /// [DllGameMemory::load].
-    pub unsafe fn try_open(dll_path: &str) -> Result<Self, Error> {
+    /// This method is inherently unsafe:
+    /// - If the DLL image is modified (either on disk before load or in memory) from anywhere
+    ///   except this [Game], this is UB.
+    /// - The DLL can easily execute arbitrary code.
+    pub unsafe fn try_new(dll_path: &str) -> Result<Self, Error> {
         let mut layout = DllLayout::read(&dll_path)?.data_layout;
         layout.add_sm64_extras()?;
         let layout = Arc::new(layout);

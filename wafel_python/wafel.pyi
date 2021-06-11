@@ -11,17 +11,36 @@ class WafelError:
 class Address:
     """A memory address."""
 
+    def is_null(self) -> bool:
+        """Return true if the address is equal to zero."""
+
 class Surface:
     """An SM64 surface (currently missing several fields)."""
+
+    @property
+    def normal(self) -> List[float]:
+        """The surface's normal vector."""
+    @property
+    def vertices(self) -> List[List[int]]:
+        """The surface's vertex coordinates."""
 
 class ObjectHitbox:
     """Hitbox information for an SM64 object."""
 
+    @property
+    def pos(self) -> List[float]:
+        """The object's position (oPosX, oPosY, oPosZ)."""
+    @property
+    def hitbox_height(self) -> float:
+        """The object's hitbox height (hitboxHeight)."""
+    @property
+    def hitbox_radius(self) -> float:
+        """The object's hitbox radius (hitboxRadius)."""
+
 class Game:
     """An SM64 API that uses a traditional frame advance / save state model."""
 
-    @staticmethod
-    def open(dll_path: str) -> "Game":
+    def __init__(self, dll_path: str) -> None:
         """Load a libsm64 DLL."""
     def read(self, path: str) -> object:
         """Read a value from memory.
@@ -84,3 +103,5 @@ class Game:
 
 class SaveState:
     """A save state used by Game."""
+    def frame(self) -> int:
+        """Return the frame that the save state was token on."""

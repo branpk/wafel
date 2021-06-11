@@ -118,9 +118,7 @@ fn read_value_impl<M: MemoryRead + ?Sized>(
                 )?;
                 field_values.insert(name.clone(), field_value);
             }
-            Value::Struct {
-                fields: Box::new(field_values),
-            }
+            Value::Struct(Box::new(field_values))
         }
         DataType::Union { .. } => return Err(ReadUnion),
         DataType::Name(type_name) => {

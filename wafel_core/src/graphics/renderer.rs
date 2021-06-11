@@ -295,7 +295,7 @@ impl Renderer {
                 label: None,
                 color_attachments: &[wgpu::RenderPassColorAttachment {
                     view: &multisample_texture_view,
-                    resolve_target: Some(&output_view),
+                    resolve_target: Some(output_view),
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
                             r: 0.06,
@@ -419,7 +419,7 @@ fn upload_vertex_buffer<T: Pod>(device: &wgpu::Device, vertices: &[T]) -> (usize
         vertices.len(),
         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: None,
-            contents: cast_slice(&vertices),
+            contents: cast_slice(vertices),
             usage: wgpu::BufferUsage::VERTEX,
         }),
     )
@@ -474,7 +474,7 @@ fn create_surface_pipeline(
         layout: Some(
             &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: None,
-                bind_group_layouts: &[&transform_bind_group_layout],
+                bind_group_layouts: &[transform_bind_group_layout],
                 push_constant_ranges: &[],
             }),
         ),
@@ -549,7 +549,7 @@ fn create_color_pipeline(
         layout: Some(
             &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: None,
-                bind_group_layouts: &[&transform_bind_group_layout],
+                bind_group_layouts: &[transform_bind_group_layout],
                 push_constant_ranges: &[],
             }),
         ),
@@ -629,7 +629,7 @@ fn create_screen_dot_pipeline(
         layout: Some(
             &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: None,
-                bind_group_layouts: &[&transform_bind_group_layout],
+                bind_group_layouts: &[transform_bind_group_layout],
                 push_constant_ranges: &[],
             }),
         ),

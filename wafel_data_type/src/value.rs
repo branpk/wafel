@@ -45,13 +45,10 @@ pub enum Value {
     /// An address value.
     Address(Address),
     /// A struct value.
-    Struct {
-        /// The fields of a struct.
-        ///
-        /// If a field's name is present in the original struct definition, it will match the
-        /// name used here. Anonymous fields will be given a name, typically `__anon`.
-        fields: Box<HashMap<String, Value>>,
-    },
+    ///
+    /// If a field's name is present in the original struct definition, it will match the
+    /// name used here. Anonymous fields will be given a name, typically `__anon`.
+    Struct(Box<HashMap<String, Value>>),
     /// An array value.
     Array(Vec<Value>),
 }
@@ -246,7 +243,7 @@ impl Value {
 
     /// Convert the value to a struct and return its fields.
     pub fn try_as_struct(&self) -> Result<&HashMap<String, Value>, ValueTypeError> {
-        if let Value::Struct { fields } = self {
+        if let Value::Struct(fields) = self {
             Ok(fields)
         } else {
             Err(ValueTypeError {
@@ -340,7 +337,7 @@ impl Value {
 
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:#X}", self.0)
+        write!(f, "Address({:#X})", self.0)
     }
 }
 
@@ -352,7 +349,7 @@ impl fmt::Display for Value {
             Value::Float(r) => write!(f, "{}", r),
             Value::String(s) => write!(f, "{:?}", s),
             Value::Address(a) => write!(f, "{}", a),
-            Value::Struct { fields } => {
+            Value::Struct(fields) => {
                 write!(
                     f,
                     "{{ {} }}",
@@ -449,21 +446,19 @@ impl From<Address> for Value {
 
 impl<V: Into<Value>> From<HashMap<String, V>> for Value {
     fn from(v: HashMap<String, V>) -> Self {
-        Self::Struct {
-            fields: Box::new(v.into_iter().map(|(k, v)| (k, v.into())).collect()),
-        }
+        Self::Struct(Box::new(
+            v.into_iter().map(|(k, v)| (k, v.into())).collect(),
+        ))
     }
 }
 
 impl<V: Into<Value>> From<HashMap<&str, V>> for Value {
     fn from(v: HashMap<&str, V>) -> Self {
-        Self::Struct {
-            fields: Box::new(
-                v.into_iter()
-                    .map(|(k, v)| (k.to_string(), v.into()))
-                    .collect(),
-            ),
-        }
+        Self::Struct(Box::new(
+            v.into_iter()
+                .map(|(k, v)| (k.to_string(), v.into()))
+                .collect(),
+        ))
     }
 }
 

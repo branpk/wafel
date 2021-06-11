@@ -1,7 +1,7 @@
 use wafel_api::Game;
 
 fn main() {
-    let mut game = unsafe { Game::open("libsm64/sm64_us.dll") };
+    let mut game = unsafe { Game::new("libsm64/sm64_us.dll") };
 
     let power_on = game.save_state();
 
