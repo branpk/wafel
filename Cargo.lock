@@ -2427,6 +2427,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "wafel_python"
+version = "0.1.0"
+dependencies = [
+ "pyo3",
+ "wafel_api",
+]
+
+[[package]]
 name = "wafel_timeline"
 version = "0.1.0"
 dependencies = [

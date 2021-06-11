@@ -28,6 +28,8 @@ use crate::{
 /// assert_eq!(game.read("gCurrLevelNum"), game.constant("LEVEL_BOWSER_1"));
 ///
 /// game.load_state(&power_on);
+/// assert_eq!(game.frame(), 0);
+///
 /// for frame in 0..1000 {
 ///     if frame % 2 == 1 {
 ///         game.write("gControllerPads[0].button", game.constant("START_BUTTON"));

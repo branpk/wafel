@@ -1,0 +1,12 @@
+[package]
+name = "wafel_python"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+name = "wafel"
+crate-type = ["cdylib"]
+
+[dependencies]
+wafel_api = { path = "../wafel_api" }
+pyo3 = { version = "0.13.2", features = ["extension-module"] }
