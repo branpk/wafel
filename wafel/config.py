@@ -9,7 +9,7 @@ from wafel.util import assert_not_none, log
 
 
 # Important: be sure to re-run `python build.py dist lock` after changing!
-version = (0, 6, 4)
+version = (0, 7, 0)
 
 dev_mode: bool
 assets_directory: str
