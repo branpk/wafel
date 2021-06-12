@@ -32,7 +32,7 @@ This API is still fairly basic, but it can be extended with more useful features
 ```python
 import wafel
 
-game = wafel.Game("../wafel/libsm64/sm64_us.dll")
+game = wafel.Game("libsm64/sm64_us.dll")
 
 power_on = game.save_state()
 
