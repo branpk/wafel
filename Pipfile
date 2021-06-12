@@ -8,6 +8,7 @@ pyinstaller = "*"
 mypy = "*"
 pylint = "*"
 black = "*"
+setuptools-rust = "*"
 
 [packages]
 imgui = { version = "*", extras = ["cython", "glfw"] }

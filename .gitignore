@@ -4,6 +4,7 @@ __pycache__
 .vscode
 
 /build
+/dist
 /libsm64/*
 !/libsm64/*.locked
 /roms
@@ -11,3 +12,4 @@ __pycache__
 /settings.json
 /imgui.ini
 /target
+*.egg-info

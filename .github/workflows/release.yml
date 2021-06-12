@@ -19,10 +19,23 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
+          python-version: '3.7'
+      - uses: actions/setup-python@v2
+        with:
           python-version: '3.8'
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      - run: pip install pipenv
       - run: |
-          pip install pipenv
-          pipenv install --dev
+          pipenv install --dev --python 3.7
+          pipenv run python setup.py bdist_wheel
+      - run: |
+          pipenv install --dev --python 3.8
+          pipenv run python setup.py bdist_wheel
+      - run: |
+          pipenv install --dev --python 3.9
+          pipenv run python setup.py bdist_wheel
       - run: pipenv run python build.py dist
 
       - uses: actions/upload-artifact@v2

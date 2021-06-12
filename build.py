@@ -28,6 +28,12 @@ if sys.argv[1:] == [] or 'dist' in sys.argv[1:]:
 if 'dist' in sys.argv[1:]:
   shutil.rmtree('build/dist', ignore_errors=True)
 
+  # TODO: Need to ensure it runs on nightly
+  subprocess.run(
+    [sys.executable, 'setup.py', 'bdist_wheel'],
+    check=True,
+  )
+
   import ctypes
   import ctypes.util
   from glfw.library import glfw, msvcr
@@ -74,9 +80,8 @@ if 'dist' in sys.argv[1:]:
   shutil.copyfile('target/release/libsm64_layout.exe', 'build/dist/tools/libsm64_layout.exe')
 
   print('Copying bindings')
-  os.makedirs(os.path.join('build/dist/bindings'))
-  shutil.copyfile('target/release/wafel.dll', 'build/dist/bindings/wafel.pyd')
-  shutil.copyfile('wafel_python/wafel.pyi', 'build/dist/bindings/wafel.pyi')
+  os.makedirs('build/dist/bindings')
+  shutil.copytree('dist', 'build/dist/bindings/python')
 
   print('Copying .pdb')
   shutil.copyfile('target/release/wafel_core.pdb', 'build/dist/wafel_core.pdb')
