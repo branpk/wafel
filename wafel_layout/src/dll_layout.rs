@@ -68,7 +68,7 @@ impl fmt::Display for DllSegment {
 
 impl DllLayout {
     /// Construct a DllLayout from the DWARF debugging information in a DLL.
-    pub fn read(dll_path: &impl AsRef<Path>) -> Result<Self, DllLayoutError> {
+    pub fn read(dll_path: impl AsRef<Path>) -> Result<Self, DllLayoutError> {
         let dll_path = get_dwarf_dll_path(dll_path);
 
         // Read object file
