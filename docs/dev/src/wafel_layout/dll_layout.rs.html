@@ -748,6 +748,23 @@
 <span id="746">746</span>
 <span id="747">747</span>
 <span id="748">748</span>
+<span id="749">749</span>
+<span id="750">750</span>
+<span id="751">751</span>
+<span id="752">752</span>
+<span id="753">753</span>
+<span id="754">754</span>
+<span id="755">755</span>
+<span id="756">756</span>
+<span id="757">757</span>
+<span id="758">758</span>
+<span id="759">759</span>
+<span id="760">760</span>
+<span id="761">761</span>
+<span id="762">762</span>
+<span id="763">763</span>
+<span id="764">764</span>
+<span id="765">765</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Debugging and structural information extracted from a DLL.</span>
 
@@ -903,6 +920,7 @@
     <span class="doccomment">/// The offset to the type&#39;s dwarf entry.</span>
     <span class="ident">Offset</span>(<span class="ident">O</span>),
     <span class="ident">Void</span>,
+    <span class="ident">U64</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">O</span>: <span class="ident">fmt::Display</span><span class="op">&gt;</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">TypeId</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span> {
@@ -910,6 +928,7 @@
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">TypeId::Offset</span>(<span class="ident">offset</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">offset</span>),
             <span class="ident">TypeId::Void</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;void&quot;</span>),
+            <span class="ident">TypeId::U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;u64&quot;</span>),
         }
     }
 }
@@ -969,6 +988,13 @@
             <span class="ident">PreDataType</span> {
                 <span class="ident">shallow_type</span>: <span class="ident">ShallowDataType::Void</span>,
                 <span class="ident">size</span>: <span class="ident">PreDataTypeSize::Known</span>(<span class="number">0</span>),
+            },
+        );
+        <span class="self">self</span>.<span class="ident">pre_types</span>.<span class="ident">insert</span>(
+            <span class="ident">TypeId::U64</span>,
+            <span class="ident">PreDataType</span> {
+                <span class="ident">shallow_type</span>: <span class="ident">ShallowDataType::Int</span>(<span class="ident">IntType::U64</span>),
+                <span class="ident">size</span>: <span class="ident">PreDataTypeSize::Known</span>(<span class="number">8</span>),
             },
         );
 
@@ -1056,6 +1082,10 @@
             <span class="string">&quot;signed char&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ShallowDataType::Int</span>(<span class="ident">IntType::S8</span>),
             <span class="string">&quot;short int&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ShallowDataType::Int</span>(<span class="ident">IntType::S16</span>),
             <span class="string">&quot;_Bool&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ShallowDataType::Int</span>(<span class="ident">IntType::S32</span>),
+            <span class="string">&quot;__int128 unsigned&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ShallowDataType::Array</span> {
+                <span class="ident">base</span>: <span class="ident">TypeId::U64</span>,
+                <span class="ident">length</span>: <span class="prelude-val">Some</span>(<span class="number">2</span>),
+            },
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">DllLayoutErrorKind::UnknownBaseTypeName</span> { <span class="ident">name</span> }),
         };
         <span class="self">self</span>.<span class="ident">pre_types</span>.<span class="ident">insert</span>(
@@ -1259,7 +1289,7 @@
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">DllLayoutErrorKind</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">entry</span> <span class="op">=</span> <span class="ident">node</span>.<span class="ident">entry</span>();
 
-        <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">attr_usize</span>(<span class="ident">entry</span>, <span class="ident">gimli::DW_AT_byte_size</span>)<span class="question-mark">?</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">size</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">attr_usize</span>(<span class="ident">entry</span>, <span class="ident">gimli::DW_AT_byte_size</span>)<span class="question-mark">?</span> {
             <span class="prelude-val">Some</span>(<span class="ident">size</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">PreDataTypeSize::Known</span>(<span class="ident">size</span>),
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">PreDataTypeSize::Unknown</span>,
         };
@@ -1277,6 +1307,10 @@
         <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">attr_usize</span>(<span class="ident">subrange_entry</span>, <span class="ident">gimli::DW_AT_upper_bound</span>)<span class="question-mark">?</span>
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">n</span><span class="op">|</span> <span class="ident">n</span> <span class="op">+</span> <span class="number">1</span>);
+
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">length</span>) <span class="op">=</span> <span class="ident">length</span> {
+            <span class="ident">size</span> <span class="op">=</span> <span class="ident">PreDataTypeSize::DeferMult</span>(<span class="ident">base_type</span>, <span class="ident">length</span>);
+        }
 
         <span class="self">self</span>.<span class="ident">pre_types</span>.<span class="ident">insert</span>(
             <span class="ident">type_id</span>,

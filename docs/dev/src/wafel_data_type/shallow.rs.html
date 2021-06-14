@@ -265,6 +265,12 @@
 <span id="263">263</span>
 <span id="264">264</span>
 <span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Non-recursive version of data types that can be resolved into regular data types.</span>
 
@@ -377,6 +383,7 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">PreDataTypeSize</span><span class="op">&lt;</span><span class="ident">Id</span><span class="op">&gt;</span> {
     <span class="ident">Known</span>(<span class="ident">usize</span>),
     <span class="ident">Defer</span>(<span class="ident">Id</span>),
+    <span class="ident">DeferMult</span>(<span class="ident">Id</span>, <span class="ident">usize</span>),
     <span class="ident">Unknown</span>,
 }
 
@@ -405,13 +412,18 @@
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="ident">Id</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;_</span> {
     <span class="kw">move</span> <span class="op">|</span><span class="ident">id</span>: <span class="kw-2">&amp;</span><span class="ident">Id</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">id</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">scale</span> <span class="op">=</span> <span class="number">1</span>;
         <span class="kw">loop</span> {
             <span class="kw">let</span> <span class="ident">pre_type</span> <span class="op">=</span> <span class="ident">pre_types</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">id</span>)<span class="question-mark">?</span>;
             <span class="kw">match</span> <span class="ident">pre_type</span>.<span class="ident">size</span>.<span class="ident">clone</span>() {
                 <span class="ident">PreDataTypeSize::Defer</span>(<span class="ident">defer_id</span>) <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="ident">id</span> <span class="op">=</span> <span class="ident">defer_id</span>;
                 }
-                <span class="ident">PreDataTypeSize::Known</span>(<span class="ident">size</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span> <span class="prelude-val">Some</span>(<span class="ident">size</span>),
+                <span class="ident">PreDataTypeSize::DeferMult</span>(<span class="ident">defer_id</span>, <span class="ident">count</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">id</span> <span class="op">=</span> <span class="ident">defer_id</span>;
+                    <span class="ident">scale</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">count</span>;
+                }
+                <span class="ident">PreDataTypeSize::Known</span>(<span class="ident">size</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span> <span class="prelude-val">Some</span>(<span class="ident">scale</span> <span class="op">*</span> <span class="ident">size</span>),
                 <span class="ident">PreDataTypeSize::Unknown</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span> <span class="prelude-val">None</span>,
             }
         }
