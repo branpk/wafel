@@ -109,6 +109,7 @@ pub struct PreDataType<Id> {
 pub enum PreDataTypeSize<Id> {
     Known(usize),
     Defer(Id),
+    DeferMult(Id, usize),
     Unknown,
 }
 
@@ -137,13 +138,18 @@ pub fn get_size_from_pre_types<Id: Clone + Eq + Hash>(
 ) -> impl Fn(&Id) -> Option<usize> + '_ {
     move |id: &Id| -> Option<usize> {
         let mut id = id.clone();
+        let mut scale = 1;
         loop {
             let pre_type = pre_types.get(&id)?;
             match pre_type.size.clone() {
                 PreDataTypeSize::Defer(defer_id) => {
                     id = defer_id;
                 }
-                PreDataTypeSize::Known(size) => break Some(size),
+                PreDataTypeSize::DeferMult(defer_id, count) => {
+                    id = defer_id;
+                    scale *= count;
+                }
+                PreDataTypeSize::Known(size) => break Some(scale * size),
                 PreDataTypeSize::Unknown => break None,
             }
         }

@@ -152,6 +152,7 @@ enum TypeId<O> {
     /// The offset to the type's dwarf entry.
     Offset(O),
     Void,
+    U64,
 }
 
 impl<O: fmt::Display> fmt::Display for TypeId<O> {
@@ -159,6 +160,7 @@ impl<O: fmt::Display> fmt::Display for TypeId<O> {
         match self {
             TypeId::Offset(offset) => write!(f, "{}", offset),
             TypeId::Void => write!(f, "void"),
+            TypeId::U64 => write!(f, "u64"),
         }
     }
 }
@@ -218,6 +220,13 @@ where
             PreDataType {
                 shallow_type: ShallowDataType::Void,
                 size: PreDataTypeSize::Known(0),
+            },
+        );
+        self.pre_types.insert(
+            TypeId::U64,
+            PreDataType {
+                shallow_type: ShallowDataType::Int(IntType::U64),
+                size: PreDataTypeSize::Known(8),
             },
         );
 
@@ -305,6 +314,10 @@ where
             "signed char" => ShallowDataType::Int(IntType::S8),
             "short int" => ShallowDataType::Int(IntType::S16),
             "_Bool" => ShallowDataType::Int(IntType::S32),
+            "__int128 unsigned" => ShallowDataType::Array {
+                base: TypeId::U64,
+                length: Some(2),
+            },
             _ => return Err(DllLayoutErrorKind::UnknownBaseTypeName { name }),
         };
         self.pre_types.insert(
@@ -508,7 +521,7 @@ where
     ) -> Result<(), DllLayoutErrorKind> {
         let entry = node.entry();
 
-        let size = match self.attr_usize(entry, gimli::DW_AT_byte_size)? {
+        let mut size = match self.attr_usize(entry, gimli::DW_AT_byte_size)? {
             Some(size) => PreDataTypeSize::Known(size),
             None => PreDataTypeSize::Unknown,
         };
@@ -526,6 +539,10 @@ where
         let length = self
             .attr_usize(subrange_entry, gimli::DW_AT_upper_bound)?
             .map(|n| n + 1);
+
+        if let Some(length) = length {
+            size = PreDataTypeSize::DeferMult(base_type, length);
+        }
 
         self.pre_types.insert(
             type_id,
