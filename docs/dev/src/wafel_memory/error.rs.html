@@ -103,6 +103,8 @@
 <span id="101">101</span>
 <span id="102">102</span>
 <span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
 </pre><pre class="rust">
 <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
 
@@ -174,6 +176,7 @@
     <span class="ident">DlOpenError</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">dlopen::Error</span><span class="op">&gt;</span>),
     <span class="ident">IoError</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">io::Error</span><span class="op">&gt;</span>),
     <span class="ident">DllLayoutError</span>(<span class="ident">DllLayoutError</span>),
+    <span class="ident">MissingDataSegments</span>,
     <span class="ident">UndefinedSymbol</span>(<span class="ident">String</span>),
 }
 
@@ -183,6 +186,7 @@
             <span class="ident">DllLoadError::DlOpenError</span>(<span class="ident">error</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
             <span class="ident">DllLoadError::IoError</span>(<span class="ident">error</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
             <span class="ident">DllLoadError::DllLayoutError</span>(<span class="ident">error</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
+            <span class="ident">DllLoadError::MissingDataSegments</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;missing data sections .data/.bss&quot;</span>),
             <span class="ident">DllLoadError::UndefinedSymbol</span>(<span class="ident">name</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;undefined symbol {}&quot;</span>, <span class="ident">name</span>),
         }
     }
