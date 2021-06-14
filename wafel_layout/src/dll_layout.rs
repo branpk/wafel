@@ -3,8 +3,9 @@
 use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
+    ffi::OsString,
     fmt, fs, iter,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use gimli::{
@@ -67,7 +68,9 @@ impl fmt::Display for DllSegment {
 
 impl DllLayout {
     /// Construct a DllLayout from the DWARF debugging information in a DLL.
-    pub fn read(dll_path: impl AsRef<Path>) -> Result<Self, DllLayoutError> {
+    pub fn read(dll_path: &impl AsRef<Path>) -> Result<Self, DllLayoutError> {
+        let dll_path = get_dwarf_dll_path(dll_path);
+
         // Read object file
         let buffer = fs::read(&dll_path)?;
         let object = object::File::parse(&buffer[..])?;
@@ -93,6 +96,22 @@ impl DllLayout {
             data_layout,
         })
     }
+}
+
+fn get_dwarf_dll_path(dll_path: impl AsRef<Path>) -> PathBuf {
+    let dll_path: &Path = dll_path.as_ref();
+
+    let mut sym_path = OsString::new();
+    sym_path.push(dll_path);
+    sym_path.push(".dSYM");
+    if Path::new(&sym_path).exists() {
+        if let Some(filename) = dll_path.file_name() {
+            sym_path.push("/Contents/Resources/DWARF/");
+            sym_path.push(filename);
+            return PathBuf::from(sym_path);
+        }
+    }
+    dll_path.to_path_buf()
 }
 
 /// Load segment definitions from the DLL.
@@ -141,6 +160,13 @@ where
                 kind,
                 unit: unit_name,
             })?;
+    }
+
+    if layout.globals.is_empty() {
+        return Err(DllLayoutError {
+            kind: DllLayoutErrorKind::NoDwarfInfo,
+            unit: None,
+        });
     }
 
     Ok(layout)

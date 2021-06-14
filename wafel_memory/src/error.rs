@@ -68,6 +68,7 @@ pub enum DllLoadError {
     DlOpenError(Arc<dlopen::Error>),
     IoError(Arc<io::Error>),
     DllLayoutError(DllLayoutError),
+    MissingDataSegments,
     UndefinedSymbol(String),
 }
 
@@ -77,6 +78,7 @@ impl fmt::Display for DllLoadError {
             DllLoadError::DlOpenError(error) => write!(f, "{}", error),
             DllLoadError::IoError(error) => write!(f, "{}", error),
             DllLoadError::DllLayoutError(error) => write!(f, "{}", error),
+            DllLoadError::MissingDataSegments => write!(f, "missing data sections .data/.bss"),
             DllLoadError::UndefinedSymbol(name) => write!(f, "undefined symbol {}", name),
         }
     }

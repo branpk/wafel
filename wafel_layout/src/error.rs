@@ -15,6 +15,7 @@ pub enum DllLayoutErrorKind {
     FileReadError(Arc<io::Error>),
     ObjectReadError(object::Error),
     DwarfReadError(gimli::Error),
+    NoDwarfInfo,
     BuildDataTypesError(BuildDataTypesError<String>),
     MissingAttribute {
         entry_label: String,
@@ -50,6 +51,7 @@ impl fmt::Display for DllLayoutErrorKind {
             DllLayoutErrorKind::FileReadError(error) => write!(f, "file error: {}", error),
             DllLayoutErrorKind::ObjectReadError(error) => write!(f, "object file error: {}", error),
             DllLayoutErrorKind::DwarfReadError(error) => write!(f, "dwarf error: {}", error),
+            DllLayoutErrorKind::NoDwarfInfo => write!(f, "missing dwarf debug symbols"),
             DllLayoutErrorKind::BuildDataTypesError(error) => write!(f, "{}", error),
             DllLayoutErrorKind::MissingAttribute {
                 entry_label,

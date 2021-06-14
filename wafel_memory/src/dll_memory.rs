@@ -92,7 +92,7 @@ impl DllGameMemory {
         update_function_name: &str,
     ) -> Result<(Self, DllSlot), DllLoadError> {
         let all_segments = read_dll_segments(dll_path)?;
-        let data_segments = dll_data_segments(&all_segments);
+        let data_segments = dll_data_segments(&all_segments)?;
 
         let base_size = all_segments
             .iter()
@@ -329,17 +329,21 @@ impl GameMemory for DllGameMemory {
     }
 }
 
-fn dll_data_segments(all_segments: &[DllSegment]) -> Vec<DllSegment> {
+fn dll_data_segments(all_segments: &[DllSegment]) -> Result<Vec<DllSegment>, DllLoadError> {
     // .data and .bss segments are the only ones that need to be copied in backup slots
     let mut data_segments: Vec<DllSegment> = all_segments
         .iter()
-        .filter(|&segment| [".data", ".bss"].contains(&segment.name.as_str()))
+        .filter(|&segment| [".data", ".bss", "__DATA"].contains(&segment.name.as_str()))
         .cloned()
         .collect();
 
+    if data_segments.is_empty() {
+        return Err(DllLoadError::MissingDataSegments);
+    }
+
     // Need to ensure that data segments are disjoint for aliasing restrictions
     data_segments.sort_by_key(|segment| segment.virtual_address);
-    for i in 0..data_segments.len() - 1 {
+    for i in 0..data_segments.len().saturating_sub(1) {
         let segment1 = &data_segments[i];
         let segment2 = &data_segments[i + 1];
         assert!(
@@ -348,7 +352,7 @@ fn dll_data_segments(all_segments: &[DllSegment]) -> Vec<DllSegment> {
         );
     }
 
-    data_segments
+    Ok(data_segments)
 }
 
 unsafe fn dll_base_pointer(
