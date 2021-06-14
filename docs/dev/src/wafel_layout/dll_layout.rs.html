@@ -862,7 +862,7 @@
 
 <span class="kw">impl</span> <span class="ident">DllLayout</span> {
     <span class="doccomment">/// Construct a DllLayout from the DWARF debugging information in a DLL.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read</span>(<span class="ident">dll_path</span>: <span class="kw-2">&amp;</span><span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">Path</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">DllLayoutError</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read</span>(<span class="ident">dll_path</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">Path</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">DllLayoutError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">dll_path</span> <span class="op">=</span> <span class="ident">get_dwarf_dll_path</span>(<span class="ident">dll_path</span>);
 
         <span class="comment">// Read object file</span>
