@@ -33,6 +33,9 @@
 //!
 //! Variable and constant names are automatically pulled from the decomp source code.
 //! However, the names may be different if Wafel is out of date from decomp.
+//!
+//! Object fields such as `oPosX` are supported and can be accessed using the regular `.`
+//! syntax.
 
 #![warn(
     missing_docs,
