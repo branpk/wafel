@@ -160,6 +160,9 @@ pub enum SM64ExtrasError {
     ObjectStructInUse,
     ObjectStructNotStruct,
     MissingRawData,
+    RawDataNotUnion,
+    MissingRawDataArray(String),
+    InvalidIndex(String),
 }
 
 impl fmt::Display for SM64ExtrasError {
@@ -169,6 +172,15 @@ impl fmt::Display for SM64ExtrasError {
             SM64ExtrasError::ObjectStructInUse => write!(f, "Object type already in use"),
             SM64ExtrasError::ObjectStructNotStruct => write!(f, "Object type is not a struct"),
             SM64ExtrasError::MissingRawData => write!(f, "missing rawData field in struct Object"),
+            SM64ExtrasError::RawDataNotUnion => {
+                write!(f, "struct Object rawData field is not a union")
+            }
+            SM64ExtrasError::MissingRawDataArray(array) => {
+                write!(f, "missing rawData.{} array in struct Object", array)
+            }
+            SM64ExtrasError::InvalidIndex(name) => {
+                write!(f, "invalid index in object field {}", name)
+            }
         }
     }
 }

@@ -177,6 +177,7 @@ where
 enum TypeId<O> {
     /// The offset to the type's dwarf entry.
     Offset(O),
+    Temp(O, usize),
     Void,
     U64,
 }
@@ -185,6 +186,7 @@ impl<O: fmt::Display> fmt::Display for TypeId<O> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TypeId::Offset(offset) => write!(f, "{}", offset),
+            TypeId::Temp(offset, id) => write!(f, "{}_{}", offset, id),
             TypeId::Void => write!(f, "void"),
             TypeId::U64 => write!(f, "u64"),
         }
@@ -547,39 +549,60 @@ where
     ) -> Result<(), DllLayoutErrorKind> {
         let entry = node.entry();
 
-        let mut size = match self.attr_usize(entry, gimli::DW_AT_byte_size)? {
+        let root_size = match self.attr_usize(entry, gimli::DW_AT_byte_size)? {
             Some(size) => PreDataTypeSize::Known(size),
             None => PreDataTypeSize::Unknown,
         };
-        let type_id = TypeId::Offset(entry.offset().0);
+        let offset = entry.offset().0;
+        let type_id = TypeId::Offset(offset);
         let base_type = self.req_attr_type_id(entry, gimli::DW_AT_type)?;
         let entry_label = self.entry_label(entry);
 
         // Read length from subrange child
         let mut children = node.children();
-        let subrange_node = children
-            .next()?
-            .ok_or(DllLayoutErrorKind::MissingSubrangeNode { entry_label })?;
-        let subrange_entry = subrange_node.entry();
-        self.expect_tag(subrange_entry, gimli::DW_TAG_subrange_type)?;
-        let length = self
-            .attr_usize(subrange_entry, gimli::DW_AT_upper_bound)?
-            .map(|n| n + 1);
 
-        if let Some(length) = length {
-            size = PreDataTypeSize::DeferMult(base_type, length);
+        let mut lengths: Vec<Option<usize>> = Vec::new();
+        while let Some(subrange_node) = children.next()? {
+            let subrange_entry = subrange_node.entry();
+            self.expect_tag(subrange_entry, gimli::DW_TAG_subrange_type)?;
+            let length = self
+                .attr_usize(subrange_entry, gimli::DW_AT_upper_bound)?
+                .map(|n| n + 1);
+            lengths.push(length);
         }
 
-        self.pre_types.insert(
-            type_id,
-            PreDataType {
-                shallow_type: ShallowDataType::Array {
-                    base: base_type,
-                    length,
+        if lengths.is_empty() {
+            return Err(DllLayoutErrorKind::MissingSubrangeNode { entry_label });
+        }
+
+        for (i, &length) in lengths.iter().enumerate().rev() {
+            let this = if i == 0 {
+                type_id
+            } else {
+                TypeId::Temp(offset, i)
+            };
+            let base = if i == lengths.len() - 1 {
+                base_type
+            } else {
+                TypeId::Temp(offset, i + 1)
+            };
+
+            let mut size = match length {
+                Some(length) => PreDataTypeSize::DeferMult(base, length),
+                None => PreDataTypeSize::Unknown,
+            };
+            if i == 0 && size == PreDataTypeSize::Unknown {
+                size = root_size;
+            }
+
+            self.pre_types.insert(
+                this,
+                PreDataType {
+                    shallow_type: ShallowDataType::Array { base, length },
+                    size,
                 },
-                size,
-            },
-        );
+            );
+        }
 
         Ok(())
     }
