@@ -150,7 +150,6 @@
 <span id="148">148</span>
 <span id="149">149</span>
 <span id="150">150</span>
-<span id="151">151</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">convert::TryFrom</span>};
 
@@ -232,7 +231,6 @@
     } <span class="kw">else</span> {
         <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">RawDataNotUnion</span>);
     };
-    <span class="macro">eprintln!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">raw_data_arrays</span>);
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">object_fields</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
     <span class="kw">for</span> (<span class="ident">name</span>, <span class="ident">defn</span>) <span class="kw">in</span> <span class="ident">as_object</span>(<span class="ident">json</span>) {
