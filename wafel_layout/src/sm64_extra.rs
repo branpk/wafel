@@ -78,7 +78,6 @@ fn read_object_fields(
     } else {
         return Err(RawDataNotUnion);
     };
-    eprintln!("{:#?}", raw_data_arrays);
 
     let mut object_fields: HashMap<String, Field> = HashMap::new();
     for (name, defn) in as_object(json) {
