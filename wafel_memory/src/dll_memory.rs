@@ -178,19 +178,19 @@ impl DllGameMemory {
         }
     }
 
-    fn offset_to_pointer<T>(&self, offset: usize) -> *const T {
-        if offset == 0 {
-            ptr::null()
+    fn unchecked_pointer_to_address<T>(&self, pointer: *const T) -> Address {
+        if pointer.is_null() {
+            Address(0)
         } else {
-            (self.base_pointer.0 as usize).wrapping_add(offset) as *const T
+            Address((pointer as usize).wrapping_sub(self.base_pointer.0 as usize))
         }
     }
 
-    fn pointer_to_offset<T>(&self, pointer: *const T) -> usize {
-        if pointer.is_null() {
-            0
+    fn unchecked_address_to_pointer<T>(&self, address: Address) -> *const T {
+        if address.is_null() {
+            ptr::null()
         } else {
-            (pointer as usize).wrapping_sub(self.base_pointer.0 as usize)
+            (self.base_pointer.0 as usize).wrapping_add(address.0) as *const T
         }
     }
 
@@ -200,7 +200,7 @@ impl DllGameMemory {
     /// Dereferencing should be safe provided junk data is acceptable in T.
     fn static_to_pointer<T>(&self, offset: usize) -> Result<*const T, MemoryError> {
         self.validate_offset::<T>(offset, self.base_size)?;
-        Ok(self.offset_to_pointer(offset))
+        Ok((self.base_pointer.0 as usize).wrapping_add(offset) as *const T)
     }
 
     /// Translate the relocatable address to a pointer.
@@ -291,7 +291,7 @@ impl DllGameMemory {
 impl SymbolLookup for DllGameMemory {
     fn symbol_address(&self, symbol: &str) -> Option<Address> {
         read_symbol(&self.library, symbol)
-            .map(|pointer: *const u8| Address(self.pointer_to_offset(pointer)))
+            .map(|pointer: *const u8| self.unchecked_pointer_to_address(pointer))
     }
 }
 
@@ -414,7 +414,7 @@ impl MemoryReadPrimitive for DllStaticMemoryView<'_> {
 
     fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
         let pointer = unsafe { self.read_primitive::<*const ()>(address)? };
-        Ok(Address(self.memory.pointer_to_offset(pointer)))
+        Ok(self.memory.unchecked_pointer_to_address(pointer))
     }
 }
 
@@ -437,7 +437,7 @@ impl MemoryReadPrimitive for DllSlotMemoryView<'_> {
 
     fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
         let pointer = unsafe { self.read_primitive::<*const ()>(address)? };
-        Ok(Address(self.memory.pointer_to_offset(pointer)))
+        Ok(self.memory.unchecked_pointer_to_address(pointer))
     }
 }
 
@@ -460,7 +460,7 @@ impl MemoryReadPrimitive for DllSlotMemoryViewMut<'_> {
 
     fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
         let pointer = unsafe { self.read_primitive::<*const ()>(address)? };
-        Ok(Address(self.memory.pointer_to_offset(pointer)))
+        Ok(self.memory.unchecked_pointer_to_address(pointer))
     }
 }
 
@@ -476,7 +476,7 @@ impl MemoryWritePrimitive for DllSlotMemoryViewMut<'_> {
     }
 
     fn write_address(&mut self, address: Address, value: Address) -> Result<(), MemoryError> {
-        let value_pointer: *const () = self.memory.offset_to_pointer(value.0);
+        let value_pointer: *const () = self.memory.unchecked_address_to_pointer(value);
         unsafe {
             self.write_primitive(address, value_pointer)?;
         }
