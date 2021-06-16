@@ -28,6 +28,10 @@
       "type": "s64",
       "value": 64
     },
+    "__FLT_HAS_INFINITY__": {
+      "type": "s64",
+      "value": 1
+    },
     "GEO_CONTEXT_AREA_UNLOAD": {
       "type": "s64",
       "value": 2
@@ -122,7 +126,7 @@
     },
     "__MINGW64_VERSION_MAJOR": {
       "type": "s64",
-      "value": 9
+      "value": 10
     },
     "SURFACE_PAINTING_WOBBLE_C9": {
       "type": "s64",
@@ -360,10 +364,6 @@
       "type": "s64",
       "value": 6
     },
-    "ACT_SOFT_BACKWARD_GROUND_KB": {
-      "type": "s64",
-      "value": 132196
-    },
     "SURFACE_FLAG_NO_CAM_COLLISION": {
       "type": "s64",
       "value": 2
@@ -399,6 +399,10 @@
     "UKIKI_ANIM_TURN": {
       "type": "s64",
       "value": 11
+    },
+    "WATER_BOMB_ACT_SHOT_FROM_CANNON": {
+      "type": "s64",
+      "value": 0
     },
     "BOMP_ACT_RETRACT": {
       "type": "s64",
@@ -476,6 +480,10 @@
       "type": "s64",
       "value": 805315798
     },
+    "__core_avx2__": {
+      "type": "s64",
+      "value": 1
+    },
     "BLUE_FISH_ACT_SPAWN": {
       "type": "s64",
       "value": 0
@@ -527,10 +535,6 @@
     "UKIKI_TEXT_HAS_CAP": {
       "type": "s64",
       "value": 4
-    },
-    "__znver1__": {
-      "type": "s64",
-      "value": 1
     },
     "TRIPLET_BUTTERFLY_TYPE_SPAWN_1UP": {
       "type": "s64",
@@ -1011,6 +1015,10 @@
     "MODEL_LLL_LARGE_WOOD_BRIDGE": {
       "type": "s64",
       "value": 59
+    },
+    "__tune_core_avx2__": {
+      "type": "s64",
+      "value": 1
     },
     "OS_VI_DITHER_FILTER": {
       "type": "s64",
@@ -1564,10 +1572,6 @@
       "type": "s64",
       "value": 0
     },
-    "MODEL_SSL_TOX_BOX": {
-      "type": "s64",
-      "value": 199
-    },
     "G_RM_RA_ZB_OPA_INTER": {
       "type": "s64",
       "value": 4465720
@@ -1968,10 +1972,6 @@
       "type": "s64",
       "value": 607846273
     },
-    "__XSAVES__": {
-      "type": "s64",
-      "value": 1
-    },
     "SOUND_BANKS_ALL": {
       "type": "s64",
       "value": 1023
@@ -2023,6 +2023,10 @@
     "BIRD_BP_SPAWNER": {
       "type": "s64",
       "value": 1
+    },
+    "ACT_LAVA_BOOST_LAND": {
+      "type": "s64",
+      "value": 134218297
     },
     "CUTSCENE_READ_MESSAGE": {
       "type": "s64",
@@ -2339,6 +2343,10 @@
     "G_RM_TEX_EDGE": {
       "type": "s64",
       "value": 201879560
+    },
+    "MODEL_SSL_TOX_BOX": {
+      "type": "s64",
+      "value": 199
     },
     "SOUND_PEACH_DEAR_MARIO": {
       "type": "s64",
@@ -2876,10 +2884,6 @@
       "type": "s64",
       "value": 4
     },
-    "__XSAVEC__": {
-      "type": "s64",
-      "value": 1
-    },
     "SWOOP_ACT_MOVE": {
       "type": "s64",
       "value": 1
@@ -3027,10 +3031,6 @@
     "SOUND_ENV_MOVING_SAND_SNOW": {
       "type": "s64",
       "value": 1074135041
-    },
-    "__CLFLUSHOPT__": {
-      "type": "s64",
-      "value": 1
     },
     "MODEL_BETA_BOO_KEY": {
       "type": "s64",
@@ -3432,10 +3432,6 @@
       "type": "s64",
       "value": 939532993
     },
-    "ACT_LAVA_BOOST_LAND": {
-      "type": "s64",
-      "value": 134218297
-    },
     "MODEL_TWEESTER": {
       "type": "s64",
       "value": 86
@@ -3447,10 +3443,6 @@
     "SOUND_MARIO_PUNCH_HOO": {
       "type": "s64",
       "value": 606044289
-    },
-    "SOUND_ACTION_CLAP_HANDS_COLD": {
-      "type": "s64",
-      "value": 103547009
     },
     "MODEL_TTC_LARGE_GEAR": {
       "type": "s64",
@@ -3640,9 +3632,9 @@
       "type": "s64",
       "value": 240
     },
-    "SURFACE_PAINTING_WARP_F1": {
+    "ACT_SOFT_BACKWARD_GROUND_KB": {
       "type": "s64",
-      "value": 241
+      "value": 132196
     },
     "SURFACE_PAINTING_WARP_F2": {
       "type": "s64",
@@ -3928,10 +3920,6 @@
       "type": "s64",
       "value": 6
     },
-    "WATER_BOMB_ACT_SHOT_FROM_CANNON": {
-      "type": "s64",
-      "value": 0
-    },
     "ACT_DOUBLE_JUMP_LAND": {
       "type": "s64",
       "value": 67110002
@@ -3955,6 +3943,10 @@
     "MODEL_BLUE_COIN_SWITCH": {
       "type": "s64",
       "value": 140
+    },
+    "SOUND_OBJ_PIRANHA_PLANT_APPEAR": {
+      "type": "s64",
+      "value": 1347690625
     },
     "G_IM_SIZ_16b_SHIFT": {
       "type": "s64",
@@ -4043,10 +4035,6 @@
     "KLEPTO_ACT_RETREAT": {
       "type": "s64",
       "value": 7
-    },
-    "__CLZERO__": {
-      "type": "s64",
-      "value": 1
     },
     "SOUND_OBJ_SNUFIT_SKEETER_DEATH": {
       "type": "s64",
@@ -5056,10 +5044,6 @@
       "type": "s64",
       "value": 2
     },
-    "__tune_znver1__": {
-      "type": "s64",
-      "value": 1
-    },
     "ACT_HOLD_METAL_WATER_JUMP": {
       "type": "s64",
       "value": 17657
@@ -5122,7 +5106,7 @@
     },
     "__GNUC_MINOR__": {
       "type": "s64",
-      "value": 2
+      "value": 3
     },
     "G_RM_RA_ZB_OPA_DECAL": {
       "type": "s64",
@@ -6264,9 +6248,9 @@
       "type": "s64",
       "value": 2
     },
-    "MARIO_UNKNOWN_08": {
+    "TTC_2D_ROTATOR_BP_2D_COG": {
       "type": "s64",
-      "value": 256
+      "value": 1
     },
     "AMP_BP_ROT_RADIUS_200": {
       "type": "s64",
@@ -6376,9 +6360,9 @@
       "type": "s64",
       "value": 3
     },
-    "TTC_2D_ROTATOR_BP_2D_COG": {
+    "MARIO_UNKNOWN_08": {
       "type": "s64",
-      "value": 1
+      "value": 256
     },
     "SOUND_GENERAL_QUIET_BUBBLE": {
       "type": "s64",
@@ -6643,10 +6627,6 @@
     "CONT_ERR_NOT_READY": {
       "type": "s64",
       "value": 12
-    },
-    "SOUND_MENU_POWER_METER": {
-      "type": "s64",
-      "value": 1879900289
     },
     "MODEL_CASTLE_STAR_DOOR_50_STARS": {
       "type": "s64",
@@ -7312,9 +7292,9 @@
       "type": "s64",
       "value": 2
     },
-    "CONT_OVERRUN_ERROR": {
+    "__tune_haswell__": {
       "type": "s64",
-      "value": 4
+      "value": 1
     },
     "SOUND_GENERAL_QUIET_POUND1_LOWPRIO": {
       "type": "s64",
@@ -7411,6 +7391,10 @@
     "OS_IM_RDBWRITE": {
       "type": "s64",
       "value": 9217
+    },
+    "SOUND_ACTION_CLAP_HANDS_COLD": {
+      "type": "s64",
+      "value": 103547009
     },
     "_OS_CACHE_H_": {
       "type": "void",
@@ -7684,10 +7668,6 @@
       "type": "s64",
       "value": 16910518
     },
-    "__znver1": {
-      "type": "s64",
-      "value": 1
-    },
     "__FLT_EVAL_METHOD__": {
       "type": "s64",
       "value": 0
@@ -7788,6 +7768,10 @@
       "type": "s64",
       "value": 1
     },
+    "INSTANT_WARP_INDEX_STOP": {
+      "type": "s64",
+      "value": 4
+    },
     "SOUND_ACTION_TERRAIN_BODY_HIT_GROUND": {
       "type": "s64",
       "value": 68714625
@@ -7831,6 +7815,10 @@
     "CUTSCENE_KEY_DANCE": {
       "type": "s64",
       "value": 167
+    },
+    "SHAKE_ATTACK": {
+      "type": "s64",
+      "value": 1
     },
     "MODEL_MONTY_MOLE": {
       "type": "s64",
@@ -8480,10 +8468,6 @@
       "type": "s64",
       "value": 1
     },
-    "ACT_FLAG_DIVING": {
-      "type": "s64",
-      "value": 524288
-    },
     "TIME_STOP_ACTIVE": {
       "type": "s64",
       "value": 64
@@ -9048,10 +9032,6 @@
       "type": "s64",
       "value": 35
     },
-    "INSTANT_WARP_INDEX_STOP": {
-      "type": "s64",
-      "value": 4
-    },
     "MODEL_PIRANHA_PLANT": {
       "type": "s64",
       "value": 100
@@ -9123,6 +9103,10 @@
     "_MBI_H_": {
       "type": "void",
       "value": null
+    },
+    "SURFACE_PAINTING_WARP_F1": {
+      "type": "s64",
+      "value": 241
     },
     "G_MWO_MATRIX_XZ_XW_F": {
       "type": "s64",
@@ -9207,10 +9191,6 @@
     "CAM_MOVE_ALREADY_ZOOMED_OUT": {
       "type": "s64",
       "value": 4096
-    },
-    "G_RM_AA_ZB_XLU_LINE": {
-      "type": "s64",
-      "value": 4225112
     },
     "INPUT_IN_WATER": {
       "type": "s64",
@@ -10056,6 +10036,10 @@
       "type": "s64",
       "value": 23
     },
+    "__RTM__": {
+      "type": "s64",
+      "value": 1
+    },
     "G_RM_AA_ZB_OPA_DECAL2": {
       "type": "s64",
       "value": 1125720
@@ -10111,6 +10095,14 @@
     "M_LOG2E": {
       "type": "f64",
       "value": 1.4426950408889634
+    },
+    "__core_avx2": {
+      "type": "s64",
+      "value": 1
+    },
+    "G_RM_AA_ZB_XLU_LINE": {
+      "type": "s64",
+      "value": 4225112
     },
     "MODEL_LUIGI": {
       "type": "s64",
@@ -10300,10 +10292,6 @@
       "type": "s64",
       "value": 32
     },
-    "SOUND_OBJ_PIRANHA_PLANT_APPEAR": {
-      "type": "s64",
-      "value": 1347690625
-    },
     "MODEL_FISH_SHADOW": {
       "type": "s64",
       "value": 186
@@ -10347,6 +10335,10 @@
     "MOV_YCOIN_ACT_LAVA_DEATH": {
       "type": "s64",
       "value": 100
+    },
+    "SOUND_MENU_POWER_METER": {
+      "type": "s64",
+      "value": 1879900289
     },
     "SOUND_GENERAL_BIG_CLOCK": {
       "type": "s64",
@@ -11184,10 +11176,6 @@
       "type": "s64",
       "value": 129
     },
-    "SHAKE_ATTACK": {
-      "type": "s64",
-      "value": 1
-    },
     "__FLT128_DIG__": {
       "type": "s64",
       "value": 33
@@ -11419,6 +11407,10 @@
     "G_TX_CLAMP": {
       "type": "s64",
       "value": 2
+    },
+    "CONT_OVERRUN_ERROR": {
+      "type": "s64",
+      "value": 4
     },
     "G_CD_BAYER": {
       "type": "s64",
@@ -11679,6 +11671,10 @@
     "UNALIGNED": {
       "type": "void",
       "value": null
+    },
+    "__haswell": {
+      "type": "s64",
+      "value": 1
     },
     "SOUND_GENERAL_BUTTON_PRESS": {
       "type": "s64",
@@ -11993,10 +11989,6 @@
       "value": 2
     },
     "FISH_ACT_ROAM": {
-      "type": "s64",
-      "value": 1
-    },
-    "__FLT_HAS_INFINITY__": {
       "type": "s64",
       "value": 1
     },
@@ -12656,10 +12648,6 @@
       "type": "s64",
       "value": 55
     },
-    "__SSE4A__": {
-      "type": "s64",
-      "value": 1
-    },
     "G_RM_AA_ZB_OPA_SURF2": {
       "type": "s64",
       "value": 1122424
@@ -12748,6 +12736,10 @@
       "type": "s64",
       "value": 3
     },
+    "ACT_FLAG_DIVING": {
+      "type": "s64",
+      "value": 524288
+    },
     "MODEL_VCUTM_CHECKERBOARD_PLATFORM_SPAWNER": {
       "type": "s64",
       "value": 55
@@ -12795,10 +12787,6 @@
     "TERRAIN_LOAD_OBJECTS": {
       "type": "s64",
       "value": 67
-    },
-    "__SHA__": {
-      "type": "s64",
-      "value": 1
     },
     "UINT8_MAX": {
       "type": "s64",
@@ -14096,10 +14084,6 @@
       "type": "s64",
       "value": 18
     },
-    "__MWAITX__": {
-      "type": "s64",
-      "value": 1
-    },
     "SURFACE_PAINTING_WOBBLE_B2": {
       "type": "s64",
       "value": 178
@@ -14123,6 +14107,10 @@
     "ACT_DROWNING": {
       "type": "s64",
       "value": 805319364
+    },
+    "__haswell__": {
+      "type": "s64",
+      "value": 1
     },
     "SOUND_OBJ_POUNDING_LOUD": {
       "type": "s64",
@@ -15099,12 +15087,6 @@
         52
       ]
     },
-    "oPlatformOnTrackOffsetY": {
-      "array": "asF32",
-      "indices": [
-        34
-      ]
-    },
     "oSpinningHeartPlayedSound": {
       "array": "asS32",
       "indices": [
@@ -15232,6 +15214,12 @@
       "array": "asS32",
       "indices": [
         30
+      ]
+    },
+    "oPlatformOnTrackOffsetY": {
+      "array": "asF32",
+      "indices": [
+        34
       ]
     },
     "oHootAvailability": {
