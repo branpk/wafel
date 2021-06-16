@@ -249,8 +249,11 @@ pub trait MemoryReadPrimitive {
     ///
     /// # Safety
     ///
-    /// T must be an integral, float, or raw pointer type.
+    /// T must be an integral or float type.
     unsafe fn read_primitive<T: Copy>(&self, address: Address) -> Result<T, MemoryError>;
+
+    /// Read an address from memory.
+    fn read_address(&self, address: Address) -> Result<Address, MemoryError>;
 }
 
 /// A helper trait for implementing [MemoryWrite].
@@ -259,12 +262,15 @@ pub trait MemoryWritePrimitive {
     ///
     /// # Safety
     ///
-    /// T must be an integral, float, or raw pointer type.
+    /// T must be an integral or float type.
     unsafe fn write_primitive<T: Copy>(
         &mut self,
         address: Address,
         value: T,
     ) -> Result<(), MemoryError>;
+
+    /// Write an address to memory.
+    fn write_address(&mut self, address: Address, value: Address) -> Result<(), MemoryError>;
 }
 
 impl<M: MemoryReadPrimitive> MemoryRead for M {
@@ -297,10 +303,7 @@ impl<M: MemoryReadPrimitive> MemoryRead for M {
     }
 
     fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
-        unsafe {
-            let pointer = self.read_primitive::<*const u8>(address)?;
-            Ok(Address(pointer as usize))
-        }
+        MemoryReadPrimitive::read_address(self, address)
     }
 }
 
@@ -340,7 +343,7 @@ impl<M: MemoryWritePrimitive> MemoryWrite for M {
     }
 
     fn write_address(&mut self, address: Address, value: Address) -> Result<(), MemoryError> {
-        unsafe { self.write_primitive(address, value.0 as *const u8) }
+        MemoryWritePrimitive::write_address(self, address, value)
     }
 }
 

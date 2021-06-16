@@ -159,7 +159,7 @@ impl DllGameMemory {
     }
 
     fn classify_address(&self, address: Address) -> ClassifiedAddress {
-        let offset = (address.0 as usize).wrapping_sub(self.base_pointer.0 as usize);
+        let offset = address.0;
         if offset >= self.base_size {
             return ClassifiedAddress::Invalid;
         }
@@ -274,7 +274,9 @@ impl DllGameMemory {
 
 impl SymbolLookup for DllGameMemory {
     fn symbol_address(&self, symbol: &str) -> Option<Address> {
-        read_symbol(&self.library, symbol).map(|pointer: *const u8| Address(pointer as usize))
+        read_symbol(&self.library, symbol).map(|pointer: *const u8| {
+            Address((pointer as usize).wrapping_sub(self.base_pointer.0 as usize))
+        })
     }
 }
 
@@ -394,6 +396,13 @@ impl MemoryReadPrimitive for DllStaticMemoryView<'_> {
             .address_to_static_pointer::<T>(address)
             .map(|p| *p)
     }
+
+    fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
+        let pointer = unsafe { self.read_primitive::<*const ()>(address)? };
+        Ok(Address(
+            (pointer as usize).wrapping_sub(self.memory.base_pointer.0 as usize),
+        ))
+    }
 }
 
 /// A read-only view of both static and non-static memory, backed by a
@@ -411,6 +420,13 @@ impl MemoryReadPrimitive for DllSlotMemoryView<'_> {
         self.memory
             .address_to_pointer::<T>(self.slot, address)
             .map(|p| *p)
+    }
+
+    fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
+        let pointer = unsafe { self.read_primitive::<*const ()>(address)? };
+        Ok(Address(
+            (pointer as usize).wrapping_sub(self.memory.base_pointer.0 as usize),
+        ))
     }
 }
 
@@ -430,6 +446,13 @@ impl MemoryReadPrimitive for DllSlotMemoryViewMut<'_> {
             .address_to_pointer::<T>(self.slot, address)
             .map(|p| *p)
     }
+
+    fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
+        let pointer = unsafe { self.read_primitive::<*const ()>(address)? };
+        Ok(Address(
+            (pointer as usize).wrapping_sub(self.memory.base_pointer.0 as usize),
+        ))
+    }
 }
 
 impl MemoryWritePrimitive for DllSlotMemoryViewMut<'_> {
@@ -440,6 +463,15 @@ impl MemoryWritePrimitive for DllSlotMemoryViewMut<'_> {
     ) -> Result<(), MemoryError> {
         let pointer = self.memory.address_to_pointer_mut(self.slot, address)?;
         *pointer = value;
+        Ok(())
+    }
+
+    fn write_address(&mut self, address: Address, value: Address) -> Result<(), MemoryError> {
+        let value_pointer =
+            (self.memory.base_pointer.0 as usize).wrapping_add(value.0) as *const ();
+        unsafe {
+            self.write_primitive(address, value_pointer)?;
+        }
         Ok(())
     }
 }
