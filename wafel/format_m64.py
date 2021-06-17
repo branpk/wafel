@@ -13,11 +13,13 @@ from wafel.tas_metadata import TasMetadata
 CRC_CODES = {
   'jp': b'\x4e\xaa\x3d\x0e',
   'us': b'\x63\x5a\x2b\xff',
+  'eu': b'\xa0\x3c\xf0\x36',
 }
 
 COUNTRY_CODES = {
   'jp': b'J',
   'us': b'E',
+  'eu': b'P',
 }
 
 
