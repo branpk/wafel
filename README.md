@@ -12,6 +12,16 @@ Thanks to [Thestickman391](https://github.com/thestickman391) for contributing t
 
 Wafel is a backronym for **W**e **A**re **F**inally **E**mulator-**L**ess.
 
+## Game versions
+
+The following SM64 game versions are supported:
+* JP: the original Japanese release
+* US: the original US release
+* EU: aka PAL (experimental, known crashes)
+* SH: Shindou (experimental)
+
+If you would like to use Wafel on an SM64 source hack, reach out and we can try to set it up.
+
 ## Downloading
 
 Currently Windows is the only supported platform (but support for other platforms in the future
