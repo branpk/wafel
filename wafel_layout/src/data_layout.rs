@@ -13,9 +13,18 @@ pub struct DataLayout {
     /// The definitions of structs, unions, and typedefs.
     pub type_defns: HashMap<TypeName, DataTypeRef>,
     /// The types of global variables and functions.
-    pub globals: HashMap<String, DataTypeRef>,
+    pub globals: HashMap<String, Global>,
     /// The values of integer constants.
     pub constants: HashMap<String, Constant>,
+}
+
+/// A global variable or function.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Global {
+    /// The type of the global variable.
+    pub data_type: DataTypeRef,
+    /// The relative address of the variable, if known.
+    pub address: Option<u64>,
 }
 
 /// A constant's value and source.
@@ -79,8 +88,8 @@ impl DataLayout {
         Ok(data_type)
     }
 
-    /// Look up the type of a global variable.
-    pub fn global(&self, name: &str) -> Result<&DataTypeRef, LayoutLookupError> {
+    /// Look up a global variable or function.
+    pub fn global(&self, name: &str) -> Result<&Global, LayoutLookupError> {
         self.globals
             .get(name)
             .ok_or_else(|| UndefinedGlobal(name.to_string()))
@@ -99,8 +108,8 @@ impl fmt::Display for DataLayout {
         for (name, data_type) in &self.type_defns {
             writeln!(f, "{} = {}", name, data_type)?;
         }
-        for (name, data_type) in &self.globals {
-            writeln!(f, "{}: {}", name, data_type)?;
+        for (name, global) in &self.globals {
+            writeln!(f, "{}: {}", name, global.data_type)?;
         }
         for (name, value) in &self.constants {
             writeln!(f, "{} := {}", name, value)?;

@@ -10,7 +10,7 @@ use std::{
 
 use gimli::{
     AttributeValue, DebuggingInformationEntry, DwAt, Dwarf, EndianSlice, EntriesTree,
-    EntriesTreeNode, Reader, RunTimeEndian, SectionId, Unit,
+    EntriesTreeNode, Expression, Reader, RunTimeEndian, SectionId, Unit,
 };
 use object::{Object, ObjectSection, ObjectSegment};
 use serde::{Deserialize, Serialize};
@@ -22,7 +22,7 @@ use wafel_data_type::{
     FloatType, IntType, IntValue, Namespace, TypeName,
 };
 
-use crate::{Constant, ConstantSource, DataLayout, DllLayoutError, DllLayoutErrorKind};
+use crate::{Constant, ConstantSource, DataLayout, DllLayoutError, DllLayoutErrorKind, Global};
 
 /// Debugging and structural information extracted from a DLL.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,9 +41,9 @@ pub struct DllSegment {
     /// The virtual address that the segment is loaded to.
     ///
     /// This is the offset from the loaded DLL's base address.
-    pub virtual_address: usize,
+    pub virtual_address: u64,
     /// The size that the segment has when loaded into memory.
-    pub virtual_size: usize,
+    pub virtual_size: u64,
 }
 
 impl fmt::Display for DllLayout {
@@ -89,7 +89,7 @@ impl DllLayout {
         let dwarf = dwarf_cow.borrow(|section| EndianSlice::new(section, RunTimeEndian::default()));
 
         // Read layout from dwarf
-        let data_layout = load_data_layout_from_dwarf(&dwarf)?;
+        let data_layout = load_data_layout_from_dwarf(&dwarf, object.relative_address_base())?;
 
         Ok(DllLayout {
             segments,
@@ -128,8 +128,8 @@ fn read_dll_segments_impl(object: &object::File<'_>) -> Result<Vec<DllSegment>, 
         if let Some(name) = segment.name()? {
             segments.push(DllSegment {
                 name: name.to_owned(),
-                virtual_address: segment.address() as usize,
-                virtual_size: segment.size() as usize,
+                virtual_address: segment.address() - object.relative_address_base(),
+                virtual_size: segment.size(),
             });
         }
     }
@@ -137,7 +137,10 @@ fn read_dll_segments_impl(object: &object::File<'_>) -> Result<Vec<DllSegment>, 
 }
 
 /// Build a DataLayout from the provided DWARF info.
-fn load_data_layout_from_dwarf<R>(dwarf: &Dwarf<R>) -> Result<DataLayout, DllLayoutError>
+fn load_data_layout_from_dwarf<R>(
+    dwarf: &Dwarf<R>,
+    relative_address_base: u64,
+) -> Result<DataLayout, DllLayoutError>
 where
     R: Reader,
     R::Offset: fmt::Display,
@@ -154,7 +157,7 @@ where
         };
 
         // Extract layout information from each unit and merge into a single DataLayout
-        UnitReader::new(dwarf, &unit)
+        UnitReader::new(dwarf, &unit, relative_address_base)
             .extract_definitions_and_update(&mut layout)
             .map_err(|kind| DllLayoutError {
                 kind,
@@ -197,6 +200,7 @@ impl<O: fmt::Display> fmt::Display for TypeId<O> {
 struct UnitReader<'a, R: Reader> {
     dwarf: &'a Dwarf<R>,
     unit: &'a Unit<R>,
+    relative_address_base: u64,
     /// The types that have been defined so far.
     ///
     /// DWARF defines types incrementally, e.g. writing typedef int Foo[] would
@@ -208,7 +212,11 @@ struct UnitReader<'a, R: Reader> {
     /// Named type definitions.
     type_defns: HashMap<TypeName, ShallowDataType<TypeId<R::Offset>>>,
     /// Named variable definitions.
-    global_defns: HashMap<String, ShallowDataType<TypeId<R::Offset>>>,
+    global_types: HashMap<String, ShallowDataType<TypeId<R::Offset>>>,
+    /// A map from variable declaration offset to the name of the variable.
+    global_decls: HashMap<R::Offset, String>,
+    /// A map from variable to relative address.
+    global_addresses: HashMap<String, u64>,
     /// Constant values.
     constants: HashMap<String, Constant>,
 }
@@ -218,13 +226,16 @@ where
     R: Reader,
     R::Offset: fmt::Display,
 {
-    fn new(dwarf: &'a Dwarf<R>, unit: &'a Unit<R>) -> Self {
+    fn new(dwarf: &'a Dwarf<R>, unit: &'a Unit<R>, relative_address_base: u64) -> Self {
         Self {
             dwarf,
             unit,
+            relative_address_base,
             pre_types: HashMap::new(),
             type_defns: HashMap::new(),
-            global_defns: HashMap::new(),
+            global_types: HashMap::new(),
+            global_decls: HashMap::new(),
+            global_addresses: HashMap::new(),
             constants: HashMap::new(),
         }
     }
@@ -306,9 +317,15 @@ where
         }
 
         // Resolve placeholder type ids in variables
-        for (name, shallow_type) in &self.global_defns {
+        for (name, shallow_type) in &self.global_types {
             let data_type = shallow_type.resolve_direct(get_type, &get_size)?;
-            layout.globals.insert(name.clone(), data_type);
+            let global = layout.globals.entry(name.clone()).or_insert(Global {
+                data_type,
+                address: None,
+            });
+            if let Some(&address) = self.global_addresses.get(name) {
+                global.address = Some(address);
+            }
         }
 
         layout.constants.extend(
@@ -628,12 +645,30 @@ where
         node: EntriesTreeNode<'_, '_, '_, R>,
     ) -> Result<(), DllLayoutErrorKind> {
         let entry = node.entry();
-        if let Some(name) = self.attr_string(entry, gimli::DW_AT_name)? {
-            self.global_defns.insert(
-                name,
+
+        let name = if let Some(name) = self.attr_string(entry, gimli::DW_AT_name)? {
+            self.global_types.insert(
+                name.clone(),
                 ShallowDataType::Alias(self.req_attr_type_id(entry, gimli::DW_AT_type)?),
             );
+            self.global_decls.insert(entry.offset().0, name.clone());
+            name
+        } else {
+            let offset = self.req_attr_offset(entry, gimli::DW_AT_specification)?;
+            let name = self
+                .global_decls
+                .get(&offset)
+                .ok_or(DllLayoutErrorKind::MissingDeclaration)?;
+            name.clone()
+        };
+
+        if let Some(attr) = entry.attr(gimli::DW_AT_location)? {
+            if let Some(expr) = attr.exprloc_value() {
+                let address = self.evaluate_address(expr)?;
+                self.global_addresses.insert(name, address);
+            }
         }
+
         Ok(())
     }
 
@@ -644,9 +679,32 @@ where
         // TODO: Functions
         let entry = node.entry();
         if let Some(name) = self.attr_string(entry, gimli::DW_AT_name)? {
-            self.global_defns.insert(name, ShallowDataType::Void);
+            self.global_types
+                .insert(name.clone(), ShallowDataType::Void);
+            self.global_decls.insert(entry.offset().0, name);
         }
         Ok(())
+    }
+
+    fn evaluate_address(&self, expression: Expression<R>) -> Result<u64, DllLayoutErrorKind> {
+        let mut evaluation = expression.evaluation(self.unit.encoding());
+        let mut evaluation_result = evaluation.evaluate()?;
+        let address_result = loop {
+            match evaluation_result {
+                gimli::EvaluationResult::Complete => break evaluation.result(),
+                gimli::EvaluationResult::RequiresRelocatedAddress(address) => {
+                    evaluation_result = evaluation
+                        .resume_with_relocated_address(address - self.relative_address_base)?;
+                }
+                result => unimplemented!("{:?}", result),
+            }
+        };
+        assert_eq!(address_result.len(), 1, "invalid DW_AT_location result");
+        let address = match address_result[0].location {
+            gimli::Location::Address { address } => address,
+            _ => panic!("invalid DW_AT_location result"),
+        };
+        Ok(address)
     }
 
     /// Read a string attribute from `entry`.
@@ -723,6 +781,18 @@ where
         attr_name: DwAt,
     ) -> Result<String, DllLayoutErrorKind> {
         self.attr_string(entry, attr_name)?
+            .ok_or_else(|| self.missing_attribute(entry, attr_name))
+    }
+
+    /// Read an offset attribute from `entry`.
+    ///
+    /// Return an error if the attribute is not present or is not an offset.
+    fn req_attr_offset(
+        &self,
+        entry: &DebuggingInformationEntry<'_, '_, R>,
+        attr_name: DwAt,
+    ) -> Result<R::Offset, DllLayoutErrorKind> {
+        self.attr_offset(entry, attr_name)?
             .ok_or_else(|| self.missing_attribute(entry, attr_name))
     }
 

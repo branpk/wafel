@@ -31,13 +31,17 @@ fn data_path_impl(
 
     let path = match ast.root {
         RootAst::Global(root_name) => {
-            let root: Address =
-                symbol_lookup
-                    .symbol_address(&root_name)
-                    .ok_or_else(|| UndefinedSymbol {
-                        name: root_name.clone(),
-                    })?;
-            let root_type = layout.global(&root_name)?;
+            let root: Address = layout
+                .global(&root_name)
+                .ok()
+                .and_then(|global| global.address)
+                .map(|address| Address(address as usize)) // TODO: Should pass offset to DllGameMemory which should convert to Address
+                .or_else(|| symbol_lookup.symbol_address(&root_name))
+                .ok_or_else(|| UndefinedSymbol {
+                    name: root_name.clone(),
+                })?;
+
+            let root_type = &layout.global(&root_name)?.data_type;
             let root_type = layout.concrete_type(root_type)?;
 
             let mut path = DataPathImpl {

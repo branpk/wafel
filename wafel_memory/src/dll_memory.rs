@@ -96,7 +96,7 @@ impl DllGameMemory {
 
         let base_size = all_segments
             .iter()
-            .map(|segment| segment.virtual_address + segment.virtual_size)
+            .map(|segment| (segment.virtual_address + segment.virtual_size) as usize)
             .max()
             .unwrap_or(0);
 
@@ -165,14 +165,14 @@ impl DllGameMemory {
         }
 
         let segment = self.data_segments.iter().enumerate().find(|(_, segment)| {
-            offset >= segment.virtual_address
-                && offset < segment.virtual_address + segment.virtual_size
+            offset >= segment.virtual_address as usize
+                && offset < (segment.virtual_address + segment.virtual_size) as usize
         });
 
         match segment {
             Some((i, segment)) => ClassifiedAddress::Relocatable {
                 segment: i,
-                offset: offset - segment.virtual_address,
+                offset: offset - segment.virtual_address as usize,
             },
             None => ClassifiedAddress::Static { offset },
         }
@@ -321,7 +321,7 @@ impl GameMemory for DllGameMemory {
             id,
             self.data_segments
                 .iter()
-                .map(|segment| vec![0; segment.virtual_size])
+                .map(|segment| vec![0; segment.virtual_size as usize])
                 .collect(),
         )))
     }

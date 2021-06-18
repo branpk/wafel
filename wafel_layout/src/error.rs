@@ -10,6 +10,17 @@ pub struct DllLayoutError {
     pub unit: Option<String>,
 }
 
+impl fmt::Display for DllLayoutError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.unit {
+            Some(unit) => write!(f, "in unit {}:\n  {}", unit, self.kind),
+            None => write!(f, "{}", self.kind),
+        }
+    }
+}
+
+impl Error for DllLayoutError {}
+
 #[derive(Debug, Clone)]
 pub enum DllLayoutErrorKind {
     FileReadError(Arc<io::Error>),
@@ -32,18 +43,8 @@ pub enum DllLayoutErrorKind {
     MissingSubrangeNode {
         entry_label: String,
     },
+    MissingDeclaration,
 }
-
-impl fmt::Display for DllLayoutError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.unit {
-            Some(unit) => write!(f, "in unit {}:\n  {}", unit, self.kind),
-            None => write!(f, "{}", self.kind),
-        }
-    }
-}
-
-impl Error for DllLayoutError {}
 
 impl fmt::Display for DllLayoutErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -72,6 +73,7 @@ impl fmt::Display for DllLayoutErrorKind {
             DllLayoutErrorKind::MissingSubrangeNode { entry_label: _ } => {
                 write!(f, "expected subrange node")
             }
+            DllLayoutErrorKind::MissingDeclaration => write!(f, "missing variable declaration"),
         }
     }
 }

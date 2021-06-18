@@ -103,18 +103,27 @@ impl BaseSlot {
     /// No other pointers should write to the DLL memory while the slice is live.
     pub(crate) unsafe fn segment(&self, index: usize) -> Option<&[u8]> {
         let info = self.data_segments.get(index)?;
-        let segment_pointer = self.base_pointer.0.wrapping_add(info.virtual_address);
-        Some(slice::from_raw_parts(segment_pointer, info.virtual_size))
+        let segment_pointer = self
+            .base_pointer
+            .0
+            .wrapping_add(info.virtual_address as usize);
+        Some(slice::from_raw_parts(
+            segment_pointer,
+            info.virtual_size as usize,
+        ))
     }
 
     /// # Safety
     /// No other pointers should access the DLL memory while the slice is live.
     pub(crate) unsafe fn segment_mut(&mut self, index: usize) -> Option<&mut [u8]> {
         let info = self.data_segments.get(index)?;
-        let segment_pointer = self.base_pointer.0.wrapping_add(info.virtual_address);
+        let segment_pointer = self
+            .base_pointer
+            .0
+            .wrapping_add(info.virtual_address as usize);
         Some(slice::from_raw_parts_mut(
             segment_pointer,
-            info.virtual_size,
+            info.virtual_size as usize,
         ))
     }
 }
