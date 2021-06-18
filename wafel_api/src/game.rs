@@ -52,6 +52,7 @@ pub struct Game {
     base_slot_frame: u32,
     base_slot: <DllGameMemory as GameMemory>::Slot,
     data_path_cache: DataPathCache,
+    rerecords: u32,
 }
 
 impl Game {
@@ -111,6 +112,7 @@ impl Game {
             base_slot_frame: 0,
             base_slot,
             data_path_cache,
+            rerecords: 0,
         })
     }
 
@@ -302,7 +304,13 @@ impl Game {
         }
         self.memory.copy_slot(&mut self.base_slot, &state.slot);
         self.base_slot_frame = state.frame;
+        self.rerecords = self.rerecords.saturating_add(1);
         Ok(())
+    }
+
+    /// Return the number of times that a save state has been loaded.
+    pub fn rerecords(&self) -> u32 {
+        self.rerecords
     }
 
     /// Return the value of the macro constant or enum variant with the given name.

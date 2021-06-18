@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use std::{error, fmt, sync::Arc};
+use std::{error, fmt, io, sync::Arc};
 
 use wafel_data_path::{DataPathError, GlobalDataPath};
 use wafel_data_type::{IntValue, Value, ValueTypeError};
@@ -25,6 +25,19 @@ pub enum Error {
     InvalidFrameLogEventType(IntValue),
     UnsizedSurfacePoolPointer,
     UnsizedObjectPoolArray,
+    M64ReadError {
+        filename: String,
+        error: Arc<io::Error>,
+    },
+    InvalidM64Error {
+        filename: String,
+    },
+    M64WriteError {
+        filename: String,
+        error: Arc<io::Error>,
+    },
+    M64AuthorTooLong,
+    M64DescriptionTooLong,
 }
 
 impl fmt::Display for Error {
@@ -52,6 +65,17 @@ impl fmt::Display for Error {
             Error::UnsizedObjectPoolArray => {
                 write!(f, "object pool array does not have a stride")
             }
+            Error::M64ReadError { filename, error } => {
+                write!(f, "failed to read {}:\n  {}", filename, error)
+            }
+            Error::InvalidM64Error { filename } => {
+                write!(f, "invalid .m64 file: {}", filename)
+            }
+            Error::M64WriteError { filename, error } => {
+                write!(f, "failed to write {}:\n  {}", filename, error)
+            }
+            Error::M64AuthorTooLong => write!(f, "author field too long (max 222 bytes)"),
+            Error::M64DescriptionTooLong => write!(f, "description field too long (max 256 bytes)"),
         }
     }
 }
