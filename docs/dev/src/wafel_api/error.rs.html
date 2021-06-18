@@ -101,10 +101,34 @@
 <span id="99"> 99</span>
 <span id="100">100</span>
 <span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
 </pre><pre class="rust">
 <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">error</span>, <span class="ident">fmt</span>, <span class="ident">sync::Arc</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">error</span>, <span class="ident">fmt</span>, <span class="ident">io</span>, <span class="ident">sync::Arc</span>};
 
 <span class="kw">use</span> <span class="ident">wafel_data_path</span>::{<span class="ident">DataPathError</span>, <span class="ident">GlobalDataPath</span>};
 <span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">IntValue</span>, <span class="ident">Value</span>, <span class="ident">ValueTypeError</span>};
@@ -129,6 +153,19 @@
     <span class="ident">InvalidFrameLogEventType</span>(<span class="ident">IntValue</span>),
     <span class="ident">UnsizedSurfacePoolPointer</span>,
     <span class="ident">UnsizedObjectPoolArray</span>,
+    <span class="ident">M64ReadError</span> {
+        <span class="ident">filename</span>: <span class="ident">String</span>,
+        <span class="ident">error</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">io::Error</span><span class="op">&gt;</span>,
+    },
+    <span class="ident">InvalidM64Error</span> {
+        <span class="ident">filename</span>: <span class="ident">String</span>,
+    },
+    <span class="ident">M64WriteError</span> {
+        <span class="ident">filename</span>: <span class="ident">String</span>,
+        <span class="ident">error</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">io::Error</span><span class="op">&gt;</span>,
+    },
+    <span class="ident">M64AuthorTooLong</span>,
+    <span class="ident">M64DescriptionTooLong</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">Error</span> {
@@ -156,6 +193,17 @@
             <span class="ident">Error::UnsizedObjectPoolArray</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;object pool array does not have a stride&quot;</span>)
             }
+            <span class="ident">Error::M64ReadError</span> { <span class="ident">filename</span>, <span class="ident">error</span> } <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;failed to read {}:\n  {}&quot;</span>, <span class="ident">filename</span>, <span class="ident">error</span>)
+            }
+            <span class="ident">Error::InvalidM64Error</span> { <span class="ident">filename</span> } <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;invalid .m64 file: {}&quot;</span>, <span class="ident">filename</span>)
+            }
+            <span class="ident">Error::M64WriteError</span> { <span class="ident">filename</span>, <span class="ident">error</span> } <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;failed to write {}:\n  {}&quot;</span>, <span class="ident">filename</span>, <span class="ident">error</span>)
+            }
+            <span class="ident">Error::M64AuthorTooLong</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;author field too long (max 222 bytes)&quot;</span>),
+            <span class="ident">Error::M64DescriptionTooLong</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;description field too long (max 256 bytes)&quot;</span>),
         }
     }
 }

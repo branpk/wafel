@@ -1,4 +1,4 @@
 (function() {var implementors = {};
-implementors["wafel"] = [{"text":"impl&lt;'p&gt; PyObjectHashProtocol&lt;'p&gt; for <a class=\"struct\" href=\"wafel/struct.Address.html\" title=\"struct wafel::Address\">Address</a>","synthetic":false,"types":["wafel::Address"]}];
+implementors["wafel"] = [{"text":"impl&lt;'p&gt; PyObjectHashProtocol&lt;'p&gt; for <a class=\"struct\" href=\"wafel/struct.Input.html\" title=\"struct wafel::Input\">Input</a>","synthetic":false,"types":["wafel::m64::Input"]},{"text":"impl&lt;'p&gt; PyObjectHashProtocol&lt;'p&gt; for <a class=\"struct\" href=\"wafel/struct.Address.html\" title=\"struct wafel::Address\">Address</a>","synthetic":false,"types":["wafel::Address"]}];
 implementors["wafel_core"] = [{"text":"impl&lt;'p&gt; PyObjectHashProtocol&lt;'p&gt; for <a class=\"struct\" href=\"wafel_core/python/struct.PyVariable.html\" title=\"struct wafel_core::python::PyVariable\">PyVariable</a>","synthetic":false,"types":["wafel_core::python::variable::PyVariable"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

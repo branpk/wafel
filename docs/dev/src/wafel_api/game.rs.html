@@ -426,6 +426,14 @@
 <span id="424">424</span>
 <span id="425">425</span>
 <span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">sync::Arc</span>};
 
@@ -481,6 +489,7 @@
     <span class="ident">base_slot_frame</span>: <span class="ident">u32</span>,
     <span class="ident">base_slot</span>: <span class="op">&lt;</span><span class="ident">DllGameMemory</span> <span class="kw">as</span> <span class="ident">GameMemory</span><span class="op">&gt;</span><span class="ident">::Slot</span>,
     <span class="ident">data_path_cache</span>: <span class="ident">DataPathCache</span>,
+    <span class="ident">rerecords</span>: <span class="ident">u32</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Game</span> {
@@ -540,6 +549,7 @@
             <span class="ident">base_slot_frame</span>: <span class="number">0</span>,
             <span class="ident">base_slot</span>,
             <span class="ident">data_path_cache</span>,
+            <span class="ident">rerecords</span>: <span class="number">0</span>,
         })
     }
 
@@ -731,7 +741,13 @@
         }
         <span class="self">self</span>.<span class="ident">memory</span>.<span class="ident">copy_slot</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">base_slot</span>, <span class="kw-2">&amp;</span><span class="ident">state</span>.<span class="ident">slot</span>);
         <span class="self">self</span>.<span class="ident">base_slot_frame</span> <span class="op">=</span> <span class="ident">state</span>.<span class="ident">frame</span>;
+        <span class="self">self</span>.<span class="ident">rerecords</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">rerecords</span>.<span class="ident">saturating_add</span>(<span class="number">1</span>);
         <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="doccomment">/// Return the number of times that a save state has been loaded.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">rerecords</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u32</span> {
+        <span class="self">self</span>.<span class="ident">rerecords</span>
     }
 
     <span class="doccomment">/// Return the value of the macro constant or enum variant with the given name.</span>
