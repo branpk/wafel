@@ -7,5 +7,6 @@ edition = "2018"
 env_logger = "0.8.4"
 imgui = "0.7.0"
 log = "0.4.14"
+pollster = "0.2.4"
 wgpu = { git = "https://github.com/gfx-rs/wgpu" }
 winit = "0.25.0"
