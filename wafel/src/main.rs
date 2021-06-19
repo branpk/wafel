@@ -1,4 +1,5 @@
 use log::LevelFilter;
+use wafel_graphics::{ImguiPerFrameData, ImguiRenderer};
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -14,7 +15,10 @@ use winit::{
 // )]
 
 fn main() {
-    env_logger::builder().filter_level(LevelFilter::Info).init(); // TODO: Replace with log file
+    env_logger::builder()
+        .filter_level(LevelFilter::Info)
+        .filter_module("wgpu_core::device", LevelFilter::Warn)
+        .init(); // TODO: Replace with log file
     pollster::block_on(run());
 }
 
@@ -76,7 +80,7 @@ async fn run() {
     };
     let mut swap_chain = Some(device.create_swap_chain(&surface, &swap_chain_desc));
 
-    let triangle_renderer = TriangleRenderer::new(&device, swap_chain_format);
+    let mut app = App::new(&device, &queue, swap_chain_format);
 
     let mut first_render = true;
 
@@ -109,6 +113,9 @@ async fn run() {
                         // Draw a black screen as quickly as possible
                         first_render = false;
                     } else {
+                        let draw_data =
+                            app.run_frame(&device, (swap_chain_desc.width, swap_chain_desc.height));
+
                         let mut encoder =
                             device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
                                 label: None,
@@ -127,7 +134,8 @@ async fn run() {
                                     }],
                                     depth_stencil_attachment: None,
                                 });
-                            triangle_renderer.render(&mut render_pass);
+
+                            app.render(&mut render_pass, &draw_data);
                         }
                         queue.submit([encoder.finish()]);
                     }
@@ -139,37 +147,59 @@ async fn run() {
 }
 
 #[derive(Debug)]
-struct TriangleRenderer {
-    pipeline: wgpu::RenderPipeline,
+struct App {
+    imgui_context: imgui::Context,
+    imgui_renderer: ImguiRenderer,
 }
 
-impl TriangleRenderer {
-    fn new(device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Self {
-        let shader = device.create_shader_module(&wgpu::include_wgsl!("../shaders/triangle.wgsl"));
+struct AppDrawData {
+    imgui_per_frame_data: ImguiPerFrameData,
+}
 
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("triangle-pipeline"),
-            layout: None,
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: "main",
-                buffers: &[],
-            },
-            primitive: wgpu::PrimitiveState::default(),
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState::default(),
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: "main",
-                targets: &[output_format.into()],
-            }),
-        });
+impl App {
+    fn new(device: &wgpu::Device, queue: &wgpu::Queue, output_format: wgpu::TextureFormat) -> Self {
+        let mut imgui_context = imgui::Context::create();
 
-        Self { pipeline }
+        let imgui_renderer = ImguiRenderer::new(&mut imgui_context, device, queue, output_format);
+
+        Self {
+            imgui_context,
+            imgui_renderer,
+        }
     }
 
-    fn render<'r>(&'r self, render_pass: &mut wgpu::RenderPass<'r>) {
-        render_pass.set_pipeline(&self.pipeline);
-        render_pass.draw(0..3, 0..1);
+    fn run_frame(&mut self, device: &wgpu::Device, output_size: (u32, u32)) -> AppDrawData {
+        self.imgui_context.io_mut().display_size = [output_size.0 as f32, output_size.1 as f32];
+
+        let ui = self.imgui_context.frame();
+
+        // application logic
+
+        imgui::Window::new(imgui::im_str!("test window"))
+            .size([300.0, 100.0], imgui::Condition::FirstUseEver)
+            .build(&ui, || {
+                ui.text("Hello world");
+            });
+
+        // end application logic
+
+        let imgui_draw_data = ui.render();
+
+        // TODO: Ideally have two methods:
+        // - run_frame(&mut self, output_size: (u32, u32)) -> AppFrameOutput
+        // - prepare(&self, output: &AppFrameOutput) -> AppDrawData
+        // Need to copy imgui draw data into buffers though
+        let imgui_per_frame_data =
+            self.imgui_renderer
+                .prepare(device, output_size, imgui_draw_data);
+
+        AppDrawData {
+            imgui_per_frame_data,
+        }
+    }
+
+    fn render<'r>(&'r self, render_pass: &mut wgpu::RenderPass<'r>, data: &'r AppDrawData) {
+        self.imgui_renderer
+            .render(render_pass, &data.imgui_per_frame_data);
     }
 }

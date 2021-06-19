@@ -4,3 +4,6 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+bytemuck = { version = "1.7.0", features = ["derive"] }
+imgui = "0.7.0"
+wgpu = { git = "https://github.com/gfx-rs/wgpu" }

@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+wafel_graphics = { path = "../wafel_graphics" }
+bytemuck = { version = "1.7.0", features = ["derive"] }
 env_logger = "0.8.4"
 imgui = "0.7.0"
 log = "0.4.14"
