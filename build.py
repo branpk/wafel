@@ -25,6 +25,17 @@ if sys.argv[1:] == [] or 'dist' in sys.argv[1:]:
   )
   shutil.copyfile('target/release/wafel_core.dll', 'wafel_core.pyd')
 
+if 'lock' in sys.argv[1:]:
+  print('Locking DLLs')
+  for game_version in unlocked_game_versions():
+    name = 'sm64_' + game_version.lower()
+    lock_game_version(
+      game_version,
+      os.path.join('roms', name + '.z64'),
+      os.path.join('libsm64', name + '.dll'),
+      os.path.join('libsm64', name + '.dll.locked'),
+    )
+
 if 'dist' in sys.argv[1:]:
   shutil.rmtree('build/dist', ignore_errors=True)
 
@@ -54,17 +65,6 @@ if 'dist' in sys.argv[1:]:
     ],
     check=True,
   )
-
-  if 'lock' in sys.argv[1:]:
-    print('Locking DLLs')
-    for game_version in unlocked_game_versions():
-      name = 'sm64_' + game_version.lower()
-      lock_game_version(
-        game_version,
-        os.path.join('roms', name + '.z64'),
-        os.path.join('libsm64', name + '.dll'),
-        os.path.join('libsm64', name + '.dll.locked'),
-      )
 
   print('Copying locked DLLs')
   os.makedirs(os.path.join('build', 'dist', 'libsm64'))
