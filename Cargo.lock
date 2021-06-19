@@ -1098,6 +1098,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "imgui-winit-support"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22ae881a42852470216c77fba5835b9701815adac24dfaa8d4ebf3a368376756"
+dependencies = [
+ "imgui",
+ "winit",
+]
+
+[[package]]
 name = "indexmap"
 version = "1.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2429,6 +2439,7 @@ dependencies = [
  "bytemuck",
  "env_logger",
  "imgui",
+ "imgui-winit-support",
  "log",
  "pollster",
  "wafel_graphics",

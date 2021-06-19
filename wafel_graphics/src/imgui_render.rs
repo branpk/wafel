@@ -318,6 +318,7 @@ impl ImguiRenderer {
                     imgui::DrawCmd::Elements { count, cmd_params } => {
                         let [mut clip_x0, mut clip_y0, mut clip_x1, mut clip_y1] =
                             cmd_params.clip_rect;
+
                         clip_x0 = clip_x0.min(data.output_size.0 as f32);
                         clip_y0 = clip_y0.min(data.output_size.1 as f32);
                         clip_x1 = clip_x1.min(data.output_size.0 as f32);

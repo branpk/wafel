@@ -1,9 +1,12 @@
+use std::time::Instant;
+
+use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use log::LevelFilter;
 use wafel_graphics::{ImguiPerFrameData, ImguiRenderer};
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
+    window::{Window, WindowBuilder},
 };
 
 // TODO
@@ -80,13 +83,14 @@ async fn run() {
     };
     let mut swap_chain = Some(device.create_swap_chain(&surface, &swap_chain_desc));
 
-    let mut app = App::new(&device, &queue, swap_chain_format);
+    let mut app = App::new(&window, &device, &queue, swap_chain_format);
 
     let mut first_render = true;
 
     window.set_visible(true);
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
+        app.handle_event(&window, &event);
         match event {
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::Resized(size) => {
@@ -113,8 +117,11 @@ async fn run() {
                         // Draw a black screen as quickly as possible
                         first_render = false;
                     } else {
-                        let draw_data =
-                            app.run_frame(&device, (swap_chain_desc.width, swap_chain_desc.height));
+                        let draw_data = app.run_frame(
+                            &window,
+                            &device,
+                            (swap_chain_desc.width, swap_chain_desc.height),
+                        );
 
                         let mut encoder =
                             device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -149,6 +156,8 @@ async fn run() {
 #[derive(Debug)]
 struct App {
     imgui_context: imgui::Context,
+    imgui_winit_platform: WinitPlatform,
+    prev_frame_time: Instant,
     imgui_renderer: ImguiRenderer,
 }
 
@@ -157,20 +166,45 @@ struct AppDrawData {
 }
 
 impl App {
-    fn new(device: &wgpu::Device, queue: &wgpu::Queue, output_format: wgpu::TextureFormat) -> Self {
+    fn new(
+        window: &Window,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        output_format: wgpu::TextureFormat,
+    ) -> Self {
         let mut imgui_context = imgui::Context::create();
+        let mut imgui_winit_platform = WinitPlatform::init(&mut imgui_context);
+        imgui_winit_platform.attach_window(imgui_context.io_mut(), window, HiDpiMode::Default);
 
         let imgui_renderer = ImguiRenderer::new(&mut imgui_context, device, queue, output_format);
 
         Self {
             imgui_context,
+            imgui_winit_platform,
+            prev_frame_time: Instant::now(),
             imgui_renderer,
         }
     }
 
-    fn run_frame(&mut self, device: &wgpu::Device, output_size: (u32, u32)) -> AppDrawData {
-        self.imgui_context.io_mut().display_size = [output_size.0 as f32, output_size.1 as f32];
+    fn handle_event<T>(&mut self, window: &Window, event: &Event<T>) {
+        self.imgui_winit_platform
+            .handle_event(self.imgui_context.io_mut(), window, event);
+    }
 
+    fn run_frame(
+        &mut self,
+        window: &Window,
+        device: &wgpu::Device,
+        output_size: (u32, u32),
+    ) -> AppDrawData {
+        self.imgui_context
+            .io_mut()
+            .update_delta_time(self.prev_frame_time.elapsed());
+        self.prev_frame_time = Instant::now();
+
+        self.imgui_winit_platform
+            .prepare_frame(self.imgui_context.io_mut(), window)
+            .expect("failed to prepare frame");
         let ui = self.imgui_context.frame();
 
         // application logic
@@ -179,10 +213,17 @@ impl App {
             .size([300.0, 100.0], imgui::Condition::FirstUseEver)
             .build(&ui, || {
                 ui.text("Hello world");
+                ui.input_text_multiline(
+                    imgui::im_str!("text area"),
+                    &mut imgui::ImString::with_capacity(15),
+                    [200.0, 100.0],
+                )
+                .build();
             });
 
         // end application logic
 
+        self.imgui_winit_platform.prepare_render(&ui, window);
         let imgui_draw_data = ui.render();
 
         // TODO: Ideally have two methods:
