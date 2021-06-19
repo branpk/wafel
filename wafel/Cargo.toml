@@ -13,3 +13,4 @@ pollster = "0.2.4"
 wgpu = { git = "https://github.com/gfx-rs/wgpu" }
 winit = "0.25.0"
 imgui-winit-support = { version = "0.7.1", default-features = false, features = ["winit-25"] }
+image = "0.23.14"

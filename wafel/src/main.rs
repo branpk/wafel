@@ -1,21 +1,23 @@
+//! Executable for the Wafel application.
+
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    rust_2018_idioms,
+    unreachable_pub
+)]
+
 use std::time::Instant;
 
+use image::ImageFormat;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use log::LevelFilter;
-use wafel_graphics::{ImguiPerFrameData, ImguiRenderer};
+use wafel_graphics::ImguiRenderer;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
-    window::{Window, WindowBuilder},
+    window::{Icon, WindowBuilder},
 };
-
-// TODO
-// #![warn(
-//     missing_docs,
-//     missing_debug_implementations,
-//     rust_2018_idioms,
-//     unreachable_pub
-// )]
 
 fn main() {
     env_logger::builder()
@@ -30,8 +32,8 @@ async fn run() {
 
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
-        .with_title("Wafel") // TODO
-        .with_window_icon(None) // TODO
+        .with_title("Wafel") // TODO: version number
+        .with_window_icon(Some(load_window_icon()))
         .with_visible(false)
         .build(&event_loop)
         .expect("failed to open window");
@@ -83,14 +85,21 @@ async fn run() {
     };
     let mut swap_chain = Some(device.create_swap_chain(&surface, &swap_chain_desc));
 
-    let mut app = App::new(&window, &device, &queue, swap_chain_format);
+    let mut imgui_context = imgui::Context::create();
+    let mut imgui_winit_platform = WinitPlatform::init(&mut imgui_context);
+    imgui_winit_platform.attach_window(imgui_context.io_mut(), &window, HiDpiMode::Default);
+
+    let imgui_renderer = ImguiRenderer::new(&mut imgui_context, &device, &queue, swap_chain_format);
 
     let mut first_render = true;
+    let mut prev_frame_time = Instant::now();
 
     window.set_visible(true);
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
-        app.handle_event(&window, &event);
+
+        imgui_winit_platform.handle_event(imgui_context.io_mut(), &window, &event);
+
         match event {
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::Resized(size) => {
@@ -117,10 +126,39 @@ async fn run() {
                         // Draw a black screen as quickly as possible
                         first_render = false;
                     } else {
-                        let draw_data = app.run_frame(
-                            &window,
+                        imgui_context
+                            .io_mut()
+                            .update_delta_time(prev_frame_time.elapsed());
+                        prev_frame_time = Instant::now();
+
+                        imgui_winit_platform
+                            .prepare_frame(imgui_context.io_mut(), &window)
+                            .expect("failed to prepare frame");
+                        let ui = imgui_context.frame();
+
+                        // application logic
+
+                        imgui::Window::new(imgui::im_str!("test window"))
+                            .size([300.0, 100.0], imgui::Condition::FirstUseEver)
+                            .build(&ui, || {
+                                ui.text("Hello world");
+                                ui.input_text_multiline(
+                                    imgui::im_str!("text area"),
+                                    &mut imgui::ImString::with_capacity(15),
+                                    [200.0, 100.0],
+                                )
+                                .build();
+                            });
+
+                        // end application logic
+
+                        imgui_winit_platform.prepare_render(&ui, &window);
+                        let imgui_draw_data = ui.render();
+
+                        let imgui_per_frame_data = imgui_renderer.prepare(
                             &device,
                             (swap_chain_desc.width, swap_chain_desc.height),
+                            imgui_draw_data,
                         );
 
                         let mut encoder =
@@ -142,7 +180,7 @@ async fn run() {
                                     depth_stencil_attachment: None,
                                 });
 
-                            app.render(&mut render_pass, &draw_data);
+                            imgui_renderer.render(&mut render_pass, &imgui_per_frame_data)
                         }
                         queue.submit([encoder.finish()]);
                     }
@@ -153,94 +191,12 @@ async fn run() {
     });
 }
 
-#[derive(Debug)]
-struct App {
-    imgui_context: imgui::Context,
-    imgui_winit_platform: WinitPlatform,
-    prev_frame_time: Instant,
-    imgui_renderer: ImguiRenderer,
-}
-
-struct AppDrawData {
-    imgui_per_frame_data: ImguiPerFrameData,
-}
-
-impl App {
-    fn new(
-        window: &Window,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        output_format: wgpu::TextureFormat,
-    ) -> Self {
-        let mut imgui_context = imgui::Context::create();
-        let mut imgui_winit_platform = WinitPlatform::init(&mut imgui_context);
-        imgui_winit_platform.attach_window(imgui_context.io_mut(), window, HiDpiMode::Default);
-
-        let imgui_renderer = ImguiRenderer::new(&mut imgui_context, device, queue, output_format);
-
-        Self {
-            imgui_context,
-            imgui_winit_platform,
-            prev_frame_time: Instant::now(),
-            imgui_renderer,
-        }
-    }
-
-    fn handle_event<T>(&mut self, window: &Window, event: &Event<T>) {
-        self.imgui_winit_platform
-            .handle_event(self.imgui_context.io_mut(), window, event);
-    }
-
-    fn run_frame(
-        &mut self,
-        window: &Window,
-        device: &wgpu::Device,
-        output_size: (u32, u32),
-    ) -> AppDrawData {
-        self.imgui_context
-            .io_mut()
-            .update_delta_time(self.prev_frame_time.elapsed());
-        self.prev_frame_time = Instant::now();
-
-        self.imgui_winit_platform
-            .prepare_frame(self.imgui_context.io_mut(), window)
-            .expect("failed to prepare frame");
-        let ui = self.imgui_context.frame();
-
-        // application logic
-
-        imgui::Window::new(imgui::im_str!("test window"))
-            .size([300.0, 100.0], imgui::Condition::FirstUseEver)
-            .build(&ui, || {
-                ui.text("Hello world");
-                ui.input_text_multiline(
-                    imgui::im_str!("text area"),
-                    &mut imgui::ImString::with_capacity(15),
-                    [200.0, 100.0],
-                )
-                .build();
-            });
-
-        // end application logic
-
-        self.imgui_winit_platform.prepare_render(&ui, window);
-        let imgui_draw_data = ui.render();
-
-        // TODO: Ideally have two methods:
-        // - run_frame(&mut self, output_size: (u32, u32)) -> AppFrameOutput
-        // - prepare(&self, output: &AppFrameOutput) -> AppDrawData
-        // Need to copy imgui draw data into buffers though
-        let imgui_per_frame_data =
-            self.imgui_renderer
-                .prepare(device, output_size, imgui_draw_data);
-
-        AppDrawData {
-            imgui_per_frame_data,
-        }
-    }
-
-    fn render<'r>(&'r self, render_pass: &mut wgpu::RenderPass<'r>, data: &'r AppDrawData) {
-        self.imgui_renderer
-            .render(render_pass, &data.imgui_per_frame_data);
-    }
+fn load_window_icon() -> Icon {
+    let image =
+        image::load_from_memory_with_format(include_bytes!("../wafel.ico"), ImageFormat::Ico)
+            .unwrap()
+            .to_rgba8();
+    let width = image.width();
+    let height = image.height();
+    Icon::from_rgba(image.into_raw(), width, height).unwrap()
 }
