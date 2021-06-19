@@ -29,7 +29,7 @@ fn main() {
 }
 
 async fn run() {
-    let mut app = App::new();
+    let mut app = App::open();
 
     let instance = wgpu::Instance::new(wgpu::BackendBit::all());
 
