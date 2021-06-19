@@ -12,6 +12,7 @@ use std::time::Instant;
 use image::ImageFormat;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use log::LevelFilter;
+use wafel_app::App;
 use wafel_graphics::ImguiRenderer;
 use winit::{
     event::{Event, WindowEvent},
@@ -28,6 +29,8 @@ fn main() {
 }
 
 async fn run() {
+    let mut app = App::new();
+
     let instance = wgpu::Instance::new(wgpu::BackendBit::all());
 
     let event_loop = EventLoop::new();
@@ -86,6 +89,8 @@ async fn run() {
     let mut swap_chain = Some(device.create_swap_chain(&surface, &swap_chain_desc));
 
     let mut imgui_context = imgui::Context::create();
+    imgui_context.set_ini_filename(None);
+
     let mut imgui_winit_platform = WinitPlatform::init(&mut imgui_context);
     imgui_winit_platform.attach_window(imgui_context.io_mut(), &window, HiDpiMode::Default);
 
@@ -136,21 +141,7 @@ async fn run() {
                             .expect("failed to prepare frame");
                         let ui = imgui_context.frame();
 
-                        // application logic
-
-                        imgui::Window::new(imgui::im_str!("test window"))
-                            .size([300.0, 100.0], imgui::Condition::FirstUseEver)
-                            .build(&ui, || {
-                                ui.text("Hello world");
-                                ui.input_text_multiline(
-                                    imgui::im_str!("text area"),
-                                    &mut imgui::ImString::with_capacity(15),
-                                    [200.0, 100.0],
-                                )
-                                .build();
-                            });
-
-                        // end application logic
+                        app.render(&ui);
 
                         imgui_winit_platform.prepare_render(&ui, &window);
                         let imgui_draw_data = ui.render();

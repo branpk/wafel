@@ -2443,6 +2443,7 @@ dependencies = [
  "imgui-winit-support",
  "log",
  "pollster",
+ "wafel_app",
  "wafel_graphics",
  "wgpu",
  "winit",
@@ -2459,6 +2460,13 @@ dependencies = [
  "wafel_layout",
  "wafel_memory",
  "wafel_timeline",
+]
+
+[[package]]
+name = "wafel_app"
+version = "0.1.0"
+dependencies = [
+ "imgui",
 ]
 
 [[package]]
