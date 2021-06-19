@@ -1,10 +1,13 @@
 [workspace]
 members = [
     "libsm64_layout",
+    "wafel",
     "wafel_api",
+    "wafel_app",
     "wafel_core",
     "wafel_data_path",
     "wafel_data_type",
+    "wafel_graphics",
     "wafel_layout",
     "wafel_memory",
     "wafel_python",

@@ -1,0 +1,11 @@
+[package]
+name = "wafel"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+env_logger = "0.8.4"
+imgui = "0.7.0"
+log = "0.4.14"
+wgpu = { git = "https://github.com/gfx-rs/wgpu" }
+winit = "0.25.0"
