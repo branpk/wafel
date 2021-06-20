@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 use imgui::{self as ig, im_str};
-use wafel_api::{load_m64, try_unlock_libsm64, SM64Version};
+use wafel_api::{try_load_m64, try_unlock_libsm64, SM64Version};
 
 use crate::{
     config::{
@@ -157,22 +157,26 @@ impl App {
     }
 
     fn open_m64(&mut self) {
-        if let Some(path) = rfd::FileDialog::new()
-            .add_filter("Mupen64 TAS", &["m64"])
-            .add_filter("All Files", &["*"])
-            .pick_file()
-        {
-            // TODO: Error handling for invalid M64 file and unknown game version
-            let filename = path.as_os_str().to_str().expect("invalid filename");
-            let (metadata, inputs) = load_m64(filename);
-            let game_version = metadata.version().expect("unknown game version");
-
-            self.pending_tas = Some(TasFileInfo {
-                game_version,
-                filename: filename.to_string(),
-                metadata,
-                inputs,
-            });
+        if let Some(filename) = str_or_error(
+            rfd::FileDialog::new()
+                .add_filter("Mupen64 TAS", &["m64"])
+                .add_filter("All Files", &["*"])
+                .pick_file(),
+        ) {
+            match try_load_m64(&filename) {
+                Ok((metadata, inputs)) => match metadata.version() {
+                    Some(game_version) => {
+                        self.pending_tas = Some(TasFileInfo {
+                            game_version,
+                            filename,
+                            metadata,
+                            inputs,
+                        });
+                    }
+                    None => error_box("Unknown game or game version"),
+                },
+                Err(_) => error_box("Invalid TAS file"),
+            }
         }
     }
 
@@ -187,12 +191,13 @@ impl App {
 
     fn save_m64_as(&mut self) {
         let project = self.project.as_mut().expect("no open project");
-        if let Some(path) = rfd::FileDialog::new()
-            .add_filter("Mupen64 TAS", &["m64"])
-            .add_filter("All Files", &["*"])
-            .save_file()
-        {
-            project.set_filename(path.as_os_str().to_str().expect("invalid filename"));
+        if let Some(filename) = str_or_error(
+            rfd::FileDialog::new()
+                .add_filter("Mupen64 TAS", &["m64"])
+                .add_filter("All Files", &["*"])
+                .save_file(),
+        ) {
+            project.set_filename(&filename);
             project.save_m64();
         }
     }
@@ -254,16 +259,17 @@ impl App {
                 ui.same_line(0.0);
 
                 if ui.button(im_str!("Select ROM"), [0.0, 0.0]) {
-                    if let Some(rom_path) = rfd::FileDialog::new()
-                        .add_filter("N64 ROM", &["n64", "z64"])
-                        .add_filter("All Files", &["*"])
-                        .pick_file()
-                    {
+                    if let Some(rom_filename) = str_or_error(
+                        rfd::FileDialog::new()
+                            .add_filter("N64 ROM", &["n64", "z64"])
+                            .add_filter("All Files", &["*"])
+                            .pick_file(),
+                    ) {
                         log::info!("Unlocking game version {}", version);
                         if let Err(error) = try_unlock_libsm64(
                             &libsm64_locked_path(version),
                             &libsm64_path(version),
-                            rom_path.as_os_str().to_str().expect("invalid filename"),
+                            &rom_filename,
                         ) {
                             log::error!("Failed to unlock {}:\n  {}", version, error);
                             let error_message =
@@ -284,4 +290,23 @@ impl App {
         ui.separator();
         ui.dummy([1.0, 5.0]);
     }
+}
+
+fn str_or_error(path: Option<PathBuf>) -> Option<String> {
+    path.and_then(|path| match path.into_os_string().into_string() {
+        Ok(filename) => Some(filename),
+        Err(_) => {
+            error_box("Non-unicode filenames not supported");
+            None
+        }
+    })
+}
+
+fn error_box(message: &str) {
+    rfd::MessageDialog::new()
+        .set_level(rfd::MessageLevel::Error)
+        .set_title("Error")
+        .set_description(message)
+        .set_buttons(rfd::MessageButtons::Ok)
+        .show();
 }
