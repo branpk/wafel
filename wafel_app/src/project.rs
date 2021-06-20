@@ -1,4 +1,4 @@
-use std::u32;
+use std::{iter, u32};
 
 use imgui::{self as ig, im_str};
 use wafel_api::{save_m64, Input, M64Metadata, SM64Version, Timeline};
@@ -9,6 +9,7 @@ use crate::{
     frame_slider::render_frame_slider,
     input_text_with_error::render_input_text_with_error,
     joystick_control::{JoystickControl, JoystickControlShape},
+    object_slots::render_object_slots,
 };
 
 #[derive(Debug)]
@@ -156,5 +157,12 @@ impl Project {
         ) {
             self.stick = stick;
         }
+
+        render_object_slots(
+            ui,
+            "my-objects",
+            &iter::repeat_with(|| None).take(240).collect::<Vec<_>>(),
+            |_| panic!(),
+        );
     }
 }
