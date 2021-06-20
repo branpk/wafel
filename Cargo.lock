@@ -2439,6 +2439,7 @@ dependencies = [
 name = "wafel_app"
 version = "0.1.0"
 dependencies = [
+ "env_logger",
  "imgui",
  "log",
  "rfd",
@@ -2489,7 +2490,6 @@ name = "wafel_graphics"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
- "env_logger",
  "image",
  "imgui",
  "imgui-winit-support",

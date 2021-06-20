@@ -8,6 +8,7 @@
 )]
 
 use app::App;
+use log::LevelFilter;
 use wafel_graphics::run_wafel_app;
 
 mod app;
@@ -15,6 +16,11 @@ mod config;
 mod project;
 
 fn main() {
+    env_logger::builder()
+        .filter_level(LevelFilter::Info)
+        .filter_module("wgpu_core::device", LevelFilter::Warn)
+        .init(); // TODO: Replace with log file
+
     let mut app = App::open();
     run_wafel_app(Box::new(move |ui| app.render(&ui)));
 }

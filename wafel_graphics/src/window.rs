@@ -2,7 +2,6 @@ use std::time::Instant;
 
 use image::ImageFormat;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
-use log::LevelFilter;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -13,11 +12,6 @@ use crate::ImguiRenderer;
 
 /// Open a window and run the main Wafel application.
 pub fn run_wafel_app(render_app: Box<dyn FnMut(&imgui::Ui<'_>)>) {
-    // TODO: Move this to wafel_app
-    env_logger::builder()
-        .filter_level(LevelFilter::Info)
-        .filter_module("wgpu_core::device", LevelFilter::Warn)
-        .init(); // TODO: Replace with log file
     pollster::block_on(run(render_app));
 }
 
