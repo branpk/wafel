@@ -1,8 +1,13 @@
+use std::u32;
+
 use imgui::{self as ig, im_str};
 use wafel_api::{save_m64, Input, M64Metadata, SM64Version, Timeline};
 use wafel_core::{Pipeline, Variable};
 
-use crate::{config::libsm64_path, frame_slider::render_frame_slider};
+use crate::{
+    config::libsm64_path, frame_slider::render_frame_slider,
+    input_text_with_error::render_input_text_with_error,
+};
 
 #[derive(Debug)]
 pub(crate) struct TasFileInfo {
@@ -113,11 +118,23 @@ impl Project {
 
     pub(crate) fn render(&mut self, ui: &ig::Ui<'_>) {
         ui.text(im_str!("project {}", self.game_version));
+
         if let Some(frame) = render_frame_slider(
             ui,
             self.selected_frame,
             self.max_frame,
             &self.pipeline.timeline().dbg_cached_frames(),
+        ) {
+            self.selected_frame = frame;
+        }
+
+        if let Some(frame) = render_input_text_with_error(
+            ui,
+            "my-text-input",
+            &self.selected_frame.to_string(),
+            5,
+            200.0,
+            |s| s.parse::<u32>().ok(),
         ) {
             self.selected_frame = frame;
         }

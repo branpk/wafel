@@ -14,6 +14,7 @@ use wafel_graphics::run_wafel_app;
 mod app;
 mod config;
 mod frame_slider;
+mod input_text_with_error;
 mod project;
 
 fn main() {
