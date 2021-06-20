@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "libsm64_layout",
+    "libsm64_lock",
     "wafel_api",
     "wafel_app",
     "wafel_core",

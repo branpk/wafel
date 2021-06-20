@@ -47,6 +47,7 @@
 pub use data_type::*;
 pub use error::*;
 pub use game::*;
+pub use lock::*;
 pub use m64::*;
 pub use object::*;
 pub use surface::*;
@@ -61,6 +62,7 @@ mod data_type;
 mod error;
 mod frame_log;
 mod game;
+mod lock;
 mod m64;
 mod mario;
 mod object;
