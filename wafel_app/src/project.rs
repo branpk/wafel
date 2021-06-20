@@ -2,7 +2,7 @@ use imgui::{self as ig, im_str};
 use wafel_api::{save_m64, Input, M64Metadata, SM64Version, Timeline};
 use wafel_core::{Pipeline, Variable};
 
-use crate::config::libsm64_path;
+use crate::{config::libsm64_path, frame_slider::render_frame_slider};
 
 #[derive(Debug)]
 pub(crate) struct TasFileInfo {
@@ -19,6 +19,7 @@ pub(crate) struct Project {
     metadata: M64Metadata,
     pipeline: Pipeline,
     max_frame: u32,
+    selected_frame: u32,
 }
 
 impl Project {
@@ -33,6 +34,7 @@ impl Project {
                 .clone(),
             pipeline,
             max_frame: 0,
+            selected_frame: 0,
         }
     }
 
@@ -61,10 +63,6 @@ impl Project {
         project
     }
 
-    pub(crate) fn game_version(&self) -> SM64Version {
-        self.game_version
-    }
-
     pub(crate) fn change_game_version(mut self, game_version: SM64Version) -> Self {
         let edits = self.pipeline.into_edits();
         self.pipeline = unsafe { Pipeline::new(&libsm64_path(game_version)) };
@@ -74,6 +72,10 @@ impl Project {
         self.metadata.set_version(game_version);
 
         self
+    }
+
+    pub(crate) fn game_version(&self) -> SM64Version {
+        self.game_version
     }
 
     pub(crate) fn filename(&self) -> &Option<String> {
@@ -111,5 +113,13 @@ impl Project {
 
     pub(crate) fn render(&mut self, ui: &ig::Ui<'_>) {
         ui.text(im_str!("project {}", self.game_version));
+        if let Some(frame) = render_frame_slider(
+            ui,
+            self.selected_frame,
+            self.max_frame,
+            &self.pipeline.timeline().dbg_cached_frames(),
+        ) {
+            self.selected_frame = frame;
+        }
     }
 }

@@ -13,6 +13,7 @@ use wafel_graphics::run_wafel_app;
 
 mod app;
 mod config;
+mod frame_slider;
 mod project;
 
 fn main() {
