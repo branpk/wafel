@@ -4,7 +4,7 @@ use pwbox::{sodium::Sodium, ErasedPwBox, Eraser, Suite};
 
 use crate::Error;
 
-/// Locks a libsm64 DLL so that it requires a ROM to open.
+/// Lock a libsm64 DLL so that it requires a ROM to open.
 ///
 /// # Panics
 ///
@@ -16,7 +16,7 @@ pub fn lock_libsm64(input_filename: &str, output_filename: &str, rom_filename: &
     }
 }
 
-/// Locks a libsm64 DLL so that it requires a ROM to open.
+/// Lock a libsm64 DLL so that it requires a ROM to open.
 ///
 /// Returns an error if encryption or file IO fails.
 pub fn try_lock_libsm64(
@@ -43,7 +43,7 @@ pub fn try_lock_libsm64(
     Ok(())
 }
 
-/// Unlocks a libsm64 DLL using a ROM.
+/// Unlock a libsm64 DLL using a ROM.
 ///
 /// # Panics
 ///
@@ -55,7 +55,7 @@ pub fn unlock_libsm64(input_filename: &str, output_filename: &str, rom_filename:
     }
 }
 
-/// Unlocks a libsm64 DLL using a ROM.
+/// Unlock a libsm64 DLL using a ROM.
 ///
 /// Returns an error if encryption or file IO fails.
 pub fn try_unlock_libsm64(

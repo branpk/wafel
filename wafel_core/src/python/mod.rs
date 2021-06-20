@@ -2,13 +2,14 @@
 //!
 //! The exposed API is **not** safe because of the assumptions made about DLL loading.
 
-use crate::{graphics::scene, sm64};
+use crate::{error::Error, graphics::scene, sm64};
 pub use imgui_input::*;
 pub use pipeline::*;
 use pyo3::{prelude::*, wrap_pyfunction};
 use sm64::{AdjustedStick, IntendedStick};
 use std::num::Wrapping;
 pub use variable::*;
+use wafel_api::{try_lock_libsm64, try_unlock_libsm64};
 pub use window::*;
 
 mod error;
@@ -24,6 +25,26 @@ mod window;
 #[pymodule]
 fn wafel_core(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     error::init();
+
+    #[pyfn(m, "lock_libsm64")]
+    fn lock_libsm64(
+        input_filename: &str,
+        output_filename: &str,
+        rom_filename: &str,
+    ) -> PyResult<()> {
+        try_lock_libsm64(input_filename, output_filename, rom_filename).map_err(Error::from)?;
+        Ok(())
+    }
+    #[pyfn(m, "unlock_libsm64")]
+    fn unlock_libsm64(
+        input_filename: &str,
+        output_filename: &str,
+        rom_filename: &str,
+    ) -> PyResult<()> {
+        try_unlock_libsm64(input_filename, output_filename, rom_filename).map_err(Error::from)?;
+        Ok(())
+    }
+
     m.add_class::<PyPipeline>()?;
     m.add_class::<PyVariable>()?;
     m.add_class::<PyObjectBehavior>()?;

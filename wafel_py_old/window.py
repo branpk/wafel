@@ -1,7 +1,6 @@
 from typing import *
 
 import glfw
-from OpenGL import GL as gl
 
 import wafel_core as core
 
