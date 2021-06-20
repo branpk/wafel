@@ -5,8 +5,10 @@ use wafel_api::{save_m64, Input, M64Metadata, SM64Version, Timeline};
 use wafel_core::{Pipeline, Variable};
 
 use crate::{
-    config::libsm64_path, frame_slider::render_frame_slider,
+    config::libsm64_path,
+    frame_slider::render_frame_slider,
     input_text_with_error::render_input_text_with_error,
+    joystick_control::{JoystickControl, JoystickControlShape},
 };
 
 #[derive(Debug)]
@@ -25,6 +27,10 @@ pub(crate) struct Project {
     pipeline: Pipeline,
     max_frame: u32,
     selected_frame: u32,
+
+    // TODO: Remove below
+    stick: [f32; 2],
+    joystick_control: JoystickControl,
 }
 
 impl Project {
@@ -40,6 +46,8 @@ impl Project {
             pipeline,
             max_frame: 0,
             selected_frame: 0,
+            stick: [0.0, 0.0],
+            joystick_control: JoystickControl::new(),
         }
     }
 
@@ -121,6 +129,7 @@ impl Project {
 
         if let Some(frame) = render_frame_slider(
             ui,
+            "my-slider",
             self.selected_frame,
             self.max_frame,
             &self.pipeline.timeline().dbg_cached_frames(),
@@ -137,6 +146,15 @@ impl Project {
             |s| s.parse::<u32>().ok(),
         ) {
             self.selected_frame = frame;
+        }
+
+        if let Some(stick) = self.joystick_control.render(
+            ui,
+            "my-joystick",
+            self.stick,
+            JoystickControlShape::Circle,
+        ) {
+            self.stick = stick;
         }
     }
 }

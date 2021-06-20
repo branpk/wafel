@@ -15,6 +15,7 @@ mod app;
 mod config;
 mod frame_slider;
 mod input_text_with_error;
+mod joystick_control;
 mod project;
 
 fn main() {

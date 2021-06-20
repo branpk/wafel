@@ -4,10 +4,13 @@ use imgui::{self as ig, im_str};
 
 pub(crate) fn render_frame_slider(
     ui: &ig::Ui<'_>,
+    id: &str,
     current_frame: u32,
     max_frame: u32,
     loaded_frames: &[u32],
 ) -> Option<u32> {
+    let id_token = ui.push_id(id);
+
     let mut pos = ui.cursor_pos();
     pos[0] += ui.window_pos()[0];
     pos[1] += ui.window_pos()[1] - ui.scroll_y();
@@ -31,5 +34,6 @@ pub(crate) fn render_frame_slider(
         .build();
     }
 
+    id_token.pop(ui);
     changed.then(|| new_frame)
 }

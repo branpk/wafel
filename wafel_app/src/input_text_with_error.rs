@@ -20,8 +20,13 @@ pub(crate) fn render_input_text_with_error<T>(
 
     ui.set_next_item_width(width);
 
+    let mut value = value.to_string();
+    while value.len() > buffer_size {
+        value.pop().unwrap();
+    }
     let mut buffer = ig::ImString::with_capacity(buffer_size);
-    buffer.write_str(&value[..buffer_size]).unwrap();
+    buffer.write_str(&value).unwrap();
+
     let changed = ui.input_text(im_str!("##input"), &mut buffer).build();
 
     let mut result_value = None;
