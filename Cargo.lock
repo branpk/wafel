@@ -2959,6 +2959,7 @@ dependencies = [
  "log",
  "rfd",
  "wafel_api",
+ "wafel_core",
  "wafel_graphics",
 ]
 

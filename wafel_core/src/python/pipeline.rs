@@ -75,7 +75,7 @@ impl PyPipeline {
             pipeline_py.borrow_mut(py).invalidate();
         }
 
-        let pipeline = Pipeline::new(dll_path)?;
+        let pipeline = Pipeline::try_new(dll_path)?;
         let pipeline_py = Py::new(py, PyPipeline::new(pipeline)?)?;
 
         valid_pipelines.push(pipeline_py.clone());
@@ -108,7 +108,7 @@ impl PyPipeline {
             .borrow_mut(py)
             .get_mut()
             .pipeline
-            .set_edits(edits)?;
+            .try_set_edits(edits)?;
 
         Ok(py_pipeline)
     }
@@ -118,7 +118,7 @@ impl PyPipeline {
     /// If the variable is a data variable, the value will be read from memory
     /// on the variable's frame.
     pub fn read(&self, py: Python<'_>, variable: &PyVariable) -> PyResult<PyObject> {
-        let value = self.get().pipeline.read(&variable.variable)?;
+        let value = self.get().pipeline.try_read(&variable.variable)?;
         let py_object = value_to_py_object(py, &value)?;
         Ok(py_object)
     }
@@ -134,7 +134,9 @@ impl PyPipeline {
         value: PyObject,
     ) -> PyResult<()> {
         let value = py_object_to_value(py, &value)?;
-        self.get_mut().pipeline.write(&variable.variable, value)?;
+        self.get_mut()
+            .pipeline
+            .try_write(&variable.variable, value)?;
         Ok(())
     }
 

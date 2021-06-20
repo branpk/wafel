@@ -9,7 +9,7 @@ use std::{
 
 /// A unique identifier for an edit range.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct EditRangeId(pub(crate) usize);
+pub struct EditRangeId(pub usize);
 
 /// A range of contiguous cells in a single column which are edited to the same value.
 #[derive(Debug, Clone)]
@@ -23,7 +23,7 @@ pub struct EditRange<V> {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) enum EditOperation<C, V> {
+pub enum EditOperation<C, V> {
     Write(C, u32, V),
     Reset(C, u32),
     Insert(u32),
@@ -32,7 +32,7 @@ pub(crate) enum EditOperation<C, V> {
 
 /// Manages all of the active edit ranges.
 #[derive(Debug)]
-pub(crate) struct RangeEdits<C, V> {
+pub struct RangeEdits<C, V> {
     ranges: HashMap<C, Ranges<V>>,
     drag_state: Option<DragState<C, V>>,
     next_range_id: usize,
@@ -40,7 +40,7 @@ pub(crate) struct RangeEdits<C, V> {
 
 impl<C: Hash + Eq + Clone, V: Clone> RangeEdits<C, V> {
     /// An empty set of edit ranges.
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             ranges: HashMap::new(),
             drag_state: None,
@@ -49,13 +49,13 @@ impl<C: Hash + Eq + Clone, V: Clone> RangeEdits<C, V> {
     }
 
     /// Return the edit ranges definitions without the interactive drag state.
-    pub(crate) fn without_drag_state(mut self) -> Self {
+    pub fn without_drag_state(mut self) -> Self {
         self.drag_state = None;
         self
     }
 
     /// Return the set of operations needed to initialize the edit ranges.
-    pub(crate) fn initial_ops(&self) -> Vec<EditOperation<C, V>> {
+    pub fn initial_ops(&self) -> Vec<EditOperation<C, V>> {
         let mut ops = Vec::new();
         for (column, ranges) in &self.ranges {
             for range in ranges.ranges.values() {
@@ -76,7 +76,7 @@ impl<C: Hash + Eq + Clone, V: Clone> RangeEdits<C, V> {
     /// If the cell is in an edit range, the entire edit range is given the
     /// value.
     /// Otherwise a new range containing only the cell is created.
-    pub(crate) fn write(&mut self, column: &C, frame: u32, value: V) -> Vec<EditOperation<C, V>> {
+    pub fn write(&mut self, column: &C, frame: u32, value: V) -> Vec<EditOperation<C, V>> {
         let mut ops = self.rollback_drag();
 
         let ranges = self.ranges.entry(column.clone()).or_default();
@@ -93,7 +93,7 @@ impl<C: Hash + Eq + Clone, V: Clone> RangeEdits<C, V> {
     /// Reset the value for a given cell.
     ///
     /// If the cell is in an edit range, the edit range is split into two.
-    pub(crate) fn reset(&mut self, column: &C, frame: u32) -> Vec<EditOperation<C, V>> {
+    pub fn reset(&mut self, column: &C, frame: u32) -> Vec<EditOperation<C, V>> {
         match self.find_range(column, frame) {
             Some(range) => {
                 let range = range.clone();
@@ -118,7 +118,7 @@ impl<C: Hash + Eq + Clone, V: Clone> RangeEdits<C, V> {
     }
 
     /// Insert a frame, shifting all lower rows downward.
-    pub(crate) fn insert_frame(&mut self, frame: u32) -> Vec<EditOperation<C, V>> {
+    pub fn insert_frame(&mut self, frame: u32) -> Vec<EditOperation<C, V>> {
         let mut ops = self.rollback_drag();
         for range in self.ranges.values_mut() {
             range.insert(frame, 1);
@@ -128,7 +128,7 @@ impl<C: Hash + Eq + Clone, V: Clone> RangeEdits<C, V> {
     }
 
     /// Delete a frame, shifting all lower frames upward.
-    pub(crate) fn delete_frame(&mut self, frame: u32) -> Vec<EditOperation<C, V>> {
+    pub fn delete_frame(&mut self, frame: u32) -> Vec<EditOperation<C, V>> {
         let mut ops = self.rollback_drag();
         for range in self.ranges.values_mut() {
             range.remove(frame, 1);
@@ -138,7 +138,7 @@ impl<C: Hash + Eq + Clone, V: Clone> RangeEdits<C, V> {
     }
 
     /// Find the edit range containing a cell.
-    pub(crate) fn find_range(&self, column: &C, frame: u32) -> Option<&EditRange<V>> {
+    pub fn find_range(&self, column: &C, frame: u32) -> Option<&EditRange<V>> {
         let ranges = self.ranges.get(column);
         ranges.and_then(|ranges| {
             if let Some(drag_state) = &self.drag_state {
@@ -151,7 +151,7 @@ impl<C: Hash + Eq + Clone, V: Clone> RangeEdits<C, V> {
     }
 
     /// Begin a drag operation in `column` starting at `source_frame`.
-    pub(crate) fn begin_drag(
+    pub fn begin_drag(
         &mut self,
         column: &C,
         source_frame: u32,
@@ -175,7 +175,7 @@ impl<C: Hash + Eq + Clone, V: Clone> RangeEdits<C, V> {
     ///
     /// The ranges will appear to be updated, but won't be committed until `release_drag` is
     /// called.
-    pub(crate) fn update_drag(&mut self, target_frame: u32) -> Vec<EditOperation<C, V>> {
+    pub fn update_drag(&mut self, target_frame: u32) -> Vec<EditOperation<C, V>> {
         if let Some(DragState { column, preview }) = &mut self.drag_state {
             let column = column.clone();
             let ranges = self.ranges.entry(column.clone()).or_default();
@@ -187,7 +187,7 @@ impl<C: Hash + Eq + Clone, V: Clone> RangeEdits<C, V> {
     }
 
     /// End the drag operation, committing range changes.
-    pub(crate) fn release_drag(&mut self) -> Vec<EditOperation<C, V>> {
+    pub fn release_drag(&mut self) -> Vec<EditOperation<C, V>> {
         if let Some(DragState { column, preview }) = self.drag_state.take() {
             let ranges = self.ranges.entry(column).or_default();
             preview.commit(ranges);

@@ -9,8 +9,10 @@
 #![feature(try_blocks)]
 #![feature(backtrace)]
 
-pub mod error;
-pub mod geo;
-pub mod graphics;
-pub mod python;
-pub mod sm64;
+pub use sm64::*;
+
+mod error;
+mod geo;
+mod graphics;
+mod python;
+mod sm64;

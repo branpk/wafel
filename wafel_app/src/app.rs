@@ -212,8 +212,8 @@ impl App {
                 .selected(loaded_version == Some(version))
                 .build(ui)
             {
-                if let Some(project) = &mut self.project {
-                    project.change_game_version(version);
+                if let Some(project) = self.project.take() {
+                    self.project = Some(project.change_game_version(version));
                 }
             }
         }

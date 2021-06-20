@@ -3,10 +3,6 @@ name = "wafel_core"
 version = "0.1.0"
 edition = "2018"
 
-[lib]
-name = "wafel_core"
-crate-type = ["cdylib"]
-
 [dependencies]
 wafel_api = { path = "../wafel_api" }
 derive_more = "0.99.14"
