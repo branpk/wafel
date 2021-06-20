@@ -226,7 +226,6 @@ impl ImguiRenderer {
                 texture: &texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
             },
             &config.font_texture_data,
             wgpu::ImageDataLayout {
