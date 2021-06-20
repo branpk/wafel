@@ -5,6 +5,6 @@
     unreachable_pub
 )]
 
-mod imgui_render;
-
 pub use imgui_render::*;
+
+mod imgui_render;

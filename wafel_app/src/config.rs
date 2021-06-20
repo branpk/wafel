@@ -16,11 +16,15 @@ pub(crate) fn libsm64_locked_path(version: SM64Version) -> String {
     )
 }
 
+pub(crate) fn is_game_version_unlocked(version: SM64Version) -> bool {
+    Path::new(&libsm64_path(version)).is_file()
+}
+
 pub(crate) fn unlocked_game_versions() -> Vec<SM64Version> {
     SM64Version::all()
         .iter()
         .copied()
-        .filter(|&version| Path::new(&libsm64_path(version)).is_file())
+        .filter(|&version| is_game_version_unlocked(version))
         .collect()
 }
 
@@ -29,8 +33,7 @@ pub(crate) fn locked_game_versions() -> Vec<SM64Version> {
         .iter()
         .copied()
         .filter(|&version| {
-            Path::new(&libsm64_locked_path(version)).is_file()
-                && !Path::new(&libsm64_path(version)).is_file()
+            Path::new(&libsm64_locked_path(version)).is_file() && !is_game_version_unlocked(version)
         })
         .collect()
 }
