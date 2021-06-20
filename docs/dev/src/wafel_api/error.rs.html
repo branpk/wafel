@@ -125,6 +125,29 @@
 <span id="123">123</span>
 <span id="124">124</span>
 <span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
 </pre><pre class="rust">
 <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
 
@@ -166,6 +189,17 @@
     },
     <span class="ident">M64AuthorTooLong</span>,
     <span class="ident">M64DescriptionTooLong</span>,
+    <span class="ident">FileReadError</span> {
+        <span class="ident">filename</span>: <span class="ident">String</span>,
+        <span class="ident">error</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">io::Error</span><span class="op">&gt;</span>,
+    },
+    <span class="ident">FileWriteError</span> {
+        <span class="ident">filename</span>: <span class="ident">String</span>,
+        <span class="ident">error</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">io::Error</span><span class="op">&gt;</span>,
+    },
+    <span class="ident">Libsm64EncryptionError</span>,
+    <span class="ident">Libsm64DecryptionError</span>,
+    <span class="ident">InvalidRom</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">Error</span> {
@@ -204,6 +238,18 @@
             }
             <span class="ident">Error::M64AuthorTooLong</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;author field too long (max 222 bytes)&quot;</span>),
             <span class="ident">Error::M64DescriptionTooLong</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;description field too long (max 256 bytes)&quot;</span>),
+            <span class="ident">Error::FileReadError</span> { <span class="ident">filename</span>, <span class="ident">error</span> } <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;failed to read {}:\n  {}&quot;</span>, <span class="ident">filename</span>, <span class="ident">error</span>)
+            }
+            <span class="ident">Error::FileWriteError</span> { <span class="ident">filename</span>, <span class="ident">error</span> } <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;failed to write {}:\n  {}&quot;</span>, <span class="ident">filename</span>, <span class="ident">error</span>)
+            }
+            <span class="ident">Error::Libsm64EncryptionError</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;failed to encrypt libsm64&quot;</span>),
+            <span class="ident">Error::Libsm64DecryptionError</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(
+                <span class="ident">f</span>,
+                <span class="string">&quot;failed to decrypt libsm64. Are you using a vanilla ROM with the correct SM64 version?&quot;</span>
+            ),
+            <span class="ident">Error::InvalidRom</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;provided file is not a valid SM64 ROM&quot;</span>),
         }
     }
 }
