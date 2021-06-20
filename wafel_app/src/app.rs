@@ -98,8 +98,12 @@ impl App {
             });
 
             ui.menu(im_str!("Settings"), true, || {
-                if ig::MenuItem::new(im_str!("Controller")).build(ui) {}
-                if ig::MenuItem::new(im_str!("Key bindings")).build(ui) {}
+                if ig::MenuItem::new(im_str!("Controller")).build(ui) {
+                    open_popup = Some("Controller##settings-controller");
+                }
+                if ig::MenuItem::new(im_str!("Key bindings")).build(ui) {
+                    open_popup = Some("Key bindings##settings-key-bindings");
+                }
             });
         });
 
