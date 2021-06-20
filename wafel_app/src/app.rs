@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use imgui::{self as ig, im_str};
-use wafel_api::{load_m64, try_unlock_libsm64, unlock_libsm64, SM64Version};
+use wafel_api::{load_m64, try_unlock_libsm64, SM64Version};
 
 use crate::{
     config::{
