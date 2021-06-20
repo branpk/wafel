@@ -2457,6 +2457,7 @@ name = "wafel_app"
 version = "0.1.0"
 dependencies = [
  "imgui",
+ "log",
  "rfd",
  "wafel_api",
 ]
