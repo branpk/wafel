@@ -86,6 +86,8 @@ async fn run(mut render_app: Box<dyn FnMut(&imgui::Ui<'_>)>) {
 
     window.set_visible(true);
     event_loop.run(move |event, _, control_flow| {
+        let _ = (&instance, &adapter);
+
         *control_flow = ControlFlow::Poll;
 
         imgui_winit_platform.handle_event(imgui_context.io_mut(), &window, &event);
