@@ -6,5 +6,7 @@
 )]
 
 pub use imgui_render::*;
+pub use window::*;
 
 mod imgui_render;
+mod window;

@@ -1,36 +1,27 @@
-//! Executable for the Wafel application.
-
-#![warn(
-    missing_docs,
-    missing_debug_implementations,
-    rust_2018_idioms,
-    unreachable_pub
-)]
-
 use std::time::Instant;
 
 use image::ImageFormat;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use log::LevelFilter;
-use wafel_app::App;
-use wafel_graphics::ImguiRenderer;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::{Icon, WindowBuilder},
 };
 
-fn main() {
+use crate::ImguiRenderer;
+
+/// Open a window and run the main Wafel application.
+pub fn run_wafel_app(render_app: Box<dyn FnMut(&imgui::Ui<'_>)>) {
+    // TODO: Move this to wafel_app
     env_logger::builder()
         .filter_level(LevelFilter::Info)
         .filter_module("wgpu_core::device", LevelFilter::Warn)
         .init(); // TODO: Replace with log file
-    pollster::block_on(run());
+    pollster::block_on(run(render_app));
 }
 
-async fn run() {
-    let mut app = App::open();
-
+async fn run(mut render_app: Box<dyn FnMut(&imgui::Ui<'_>)>) {
     let instance = wgpu::Instance::new(wgpu::BackendBit::all());
 
     let event_loop = EventLoop::new();
@@ -141,7 +132,7 @@ async fn run() {
                             .expect("failed to prepare frame");
                         let ui = imgui_context.frame();
 
-                        app.render(&ui);
+                        render_app(&ui);
 
                         imgui_winit_platform.prepare_render(&ui, &window);
                         let imgui_draw_data = ui.render();
@@ -189,7 +180,7 @@ async fn run() {
 
 fn load_window_icon() -> Icon {
     let image =
-        image::load_from_memory_with_format(include_bytes!("../wafel.ico"), ImageFormat::Ico)
+        image::load_from_memory_with_format(include_bytes!("../../wafel.ico"), ImageFormat::Ico)
             .unwrap()
             .to_rgba8();
     let width = image.width();

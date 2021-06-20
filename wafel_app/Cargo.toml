@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 wafel_api = { path = "../wafel_api" }
+wafel_graphics = { path = "../wafel_graphics" }
 imgui = "0.7.0"
 rfd = "0.4.0"
 log = "0.4.14"
