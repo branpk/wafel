@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
 use imgui::{self as ig, im_str};
-use wafel_api::{load_m64, SM64Version};
+use wafel_api::{load_m64, try_unlock_libsm64, unlock_libsm64, SM64Version};
 
 use crate::{
     config::{
         default_unlocked_game_version, is_game_version_unlocked, known_game_versions,
-        locked_game_versions, unlocked_game_versions,
+        libsm64_locked_path, libsm64_path, locked_game_versions, unlocked_game_versions,
     },
     project::{Project, TasFileInfo},
 };
@@ -227,12 +227,8 @@ impl App {
                 "Unlock version {} using a vanilla SM64 ROM to open the selected TAS",
                 pending_tas.game_version
             ));
-        } else if unlocked_game_versions().is_empty() {
-            ui.text(im_str!("Wafel requires a vanilla SM64 ROM to run"));
-        } else if !locked_game_versions().is_empty() {
-            ui.text(im_str!(
-                "Unlock additional game versions using a vanilla SM64 ROM"
-            ));
+        } else {
+            ui.text(im_str!("Unlock game versions using a vanilla SM64 ROM"));
         }
 
         ui.dummy([1.0, 5.0]);
@@ -263,11 +259,17 @@ impl App {
                         .add_filter("All Files", &["*"])
                         .pick_file()
                     {
-                        // TODO: Game version unlocking
-                        // TODO: Log detailed error message to log::error
-                        let error_message =
-                            format!("Error: ROM did not match vanilla {} ROM", version);
-                        self.game_version_errors.insert(version, error_message);
+                        log::info!("Unlocking game version {}", version);
+                        if let Err(error) = try_unlock_libsm64(
+                            &libsm64_locked_path(version),
+                            &libsm64_path(version),
+                            rom_path.as_os_str().to_str().expect("invalid filename"),
+                        ) {
+                            log::error!("Failed to unlock {}:\n  {}", version, error);
+                            let error_message =
+                                format!("Error: ROM did not match vanilla {} ROM", version);
+                            self.game_version_errors.insert(version, error_message);
+                        }
                     }
                 }
             }
