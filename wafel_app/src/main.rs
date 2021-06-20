@@ -1,12 +1,11 @@
 //! Logic and UI for the Wafel application.
 
-// TODO: Enable lints
-// #![warn(
-//     missing_docs,
-//     missing_debug_implementations,
-//     rust_2018_idioms,
-//     unreachable_pub
-// )]
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    rust_2018_idioms,
+    unreachable_pub
+)]
 
 use app::App;
 use wafel_graphics::run_wafel_app;

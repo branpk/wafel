@@ -13,7 +13,7 @@ use crate::{
 
 /// The top level Wafel app state.
 #[derive(Debug)]
-pub struct App {
+pub(crate) struct App {
     pending_tas: Option<TasFileInfo>,
     project: Option<Project>,
     game_version_errors: HashMap<SM64Version, String>,
@@ -21,7 +21,7 @@ pub struct App {
 
 impl App {
     /// Create a new app state.
-    pub fn open() -> Self {
+    pub(crate) fn open() -> Self {
         Self {
             pending_tas: None,
             project: None,
@@ -30,7 +30,7 @@ impl App {
     }
 
     /// Render the app.
-    pub fn render(&mut self, ui: &ig::Ui<'_>) {
+    pub(crate) fn render(&mut self, ui: &ig::Ui<'_>) {
         // Main app UI
         ig::Window::new(im_str!("Main"))
             .position([0.0, 0.0], ig::Condition::Always)

@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::path::Path;
 
 use wafel_api::SM64Version;
 
