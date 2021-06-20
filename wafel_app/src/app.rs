@@ -278,5 +278,8 @@ impl App {
 
             id_token.pop(ui);
         }
+
+        ui.separator();
+        ui.dummy([1.0, 5.0]);
     }
 }
