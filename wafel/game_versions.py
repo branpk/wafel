@@ -2,58 +2,15 @@ from typing import *
 from glob import glob
 import os
 import re
-import base64
-import struct
 import traceback
 
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import wafel_core
 
 import wafel.config as config
 import wafel.imgui as ig
 from wafel.util import *
 from wafel.log import *
 from wafel.local_state import use_state
-
-
-def get_key(version_id: bytes, rom: bytes) -> bytes:
-  kdf = PBKDF2HMAC( # type: ignore
-    algorithm = hashes.SHA256(),
-    length = 32,
-    salt = b'',
-    iterations = 10_000,
-  )
-  key = kdf.derive(version_id + rom)
-  return base64.urlsafe_b64encode(key)
-
-def encrypt(version_id: bytes, rom: bytes, plain_dll: bytes) -> bytes:
-  key = get_key(version_id, rom)
-  return Fernet(key).encrypt(plain_dll)
-
-def decrypt(version_id: bytes, rom: bytes, cipher_dll: bytes) -> bytes:
-  key = get_key(version_id, rom)
-  return Fernet(key).decrypt(cipher_dll)
-
-
-def swap16(b: bytes) -> bytes:
-  length = len(b) // 2
-  ints = struct.unpack('<' + str(length) + 'H', b)
-  return struct.pack('>' + str(length) + 'H', *ints)
-
-def swap32(b: bytes) -> bytes:
-  length = len(b) // 4
-  ints = struct.unpack('<' + str(length) + 'I', b)
-  return struct.pack('>' + str(length) + 'I', *ints)
-
-def rom_to_z64(rom: bytes) -> bytes:
-  head = struct.unpack('>I', rom[:4])[0]
-  swap_fn: Callable[[bytes], bytes] = {
-    0x80371240: lambda b: b,
-    0x37804012: swap16,
-    0x40123780: swap32,
-  }[head]
-  return swap_fn(rom)
 
 
 def unlock_game_version(
@@ -63,17 +20,7 @@ def unlock_game_version(
   unlocked_filename: str,
 ) -> None:
   log.info(f'Unlocking game version {version}')
-
-  version_id = ('wafel-' + config.version_str('.')).encode('utf-8')
-  with open(rom_filename, 'rb') as f:
-    rom = rom_to_z64(f.read())
-  with open(locked_filename, 'rb') as f:
-    cipher_dll = f.read()
-
-  plain_dll = decrypt(version_id, rom, cipher_dll)
-
-  with open(unlocked_filename, 'wb') as f:
-    f.write(plain_dll)
+  wafel_core.unlock_libsm64(locked_filename, unlocked_filename, rom_filename)
 
 
 def lock_game_version(
@@ -83,17 +30,7 @@ def lock_game_version(
   locked_filename: str,
 ) -> None:
   log.info(f'Locking game version {version}')
-
-  version_id = ('wafel-' + config.version_str('.')).encode('utf-8')
-  with open(rom_filename, 'rb') as f:
-    rom = rom_to_z64(f.read())
-  with open(unlocked_filename, 'rb') as f:
-    plain_dll = f.read()
-
-  cipher_dll = encrypt(version_id, rom, plain_dll)
-
-  with open(locked_filename, 'wb') as f:
-    f.write(cipher_dll)
+  wafel_core.lock_libsm64(unlocked_filename, locked_filename, rom_filename)
 
 
 def get_game_version(filename: str) -> str:

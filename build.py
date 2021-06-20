@@ -78,6 +78,7 @@ if 'dist' in sys.argv[1:]:
   print('Copying tools')
   os.makedirs('build/dist/tools')
   shutil.copyfile('target/release/libsm64_layout.exe', 'build/dist/tools/libsm64_layout.exe')
+  shutil.copyfile('target/release/libsm64_lock.exe', 'build/dist/tools/libsm64_lock.exe')
 
   print('Copying bindings')
   os.makedirs('build/dist/bindings')

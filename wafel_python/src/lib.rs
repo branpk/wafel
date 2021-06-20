@@ -44,6 +44,23 @@ pub fn wafel(py: Python<'_>, m: &PyModule) -> PyResult<()> {
         save_m64(filename, metadata, inputs)
     }
 
+    #[pyfn(m, "lock_libsm64")]
+    fn lock_libsm64(
+        input_filename: &str,
+        output_filename: &str,
+        rom_filename: &str,
+    ) -> PyResult<()> {
+        api::try_lock_libsm64(input_filename, output_filename, rom_filename).map_err(err)
+    }
+    #[pyfn(m, "unlock_libsm64")]
+    fn unlock_libsm64(
+        input_filename: &str,
+        output_filename: &str,
+        rom_filename: &str,
+    ) -> PyResult<()> {
+        api::try_unlock_libsm64(input_filename, output_filename, rom_filename).map_err(err)
+    }
+
     Ok(())
 }
 

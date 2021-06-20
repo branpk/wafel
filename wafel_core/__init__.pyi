@@ -3,6 +3,13 @@ from __future__ import annotations
 from typing import *
 
 
+def lock_libsm64(input_filename: str, output_filename: str, rom_filename: str) -> None:
+  pass
+
+def unlock_libsm64(input_filename: str, output_filename: str, rom_filename: str) -> None:
+  pass
+
+
 class Pipeline:
   @staticmethod
   def load(dll_path: str) -> Pipeline: ...

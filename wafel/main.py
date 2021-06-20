@@ -1,5 +1,4 @@
 from typing import *
-import json
 import math
 import sys
 import traceback
@@ -8,10 +7,6 @@ import tkinter.filedialog
 import os
 import time
 import traceback
-import gc
-
-import glfw
-from OpenGL import GL as gl
 
 from wafel_core import Pipeline
 

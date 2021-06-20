@@ -1,0 +1,8 @@
+[package]
+name = "libsm64_lock"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+wafel_api = { path = "../wafel_api" }
+clap = "2.33.3"

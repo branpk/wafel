@@ -12,7 +12,6 @@ setuptools-rust = "*"
 
 [packages]
 imgui = { version = "*", extras = ["cython", "glfw"] }
-cryptography = "*"
 
 [requires]
 python_version = "3.8"

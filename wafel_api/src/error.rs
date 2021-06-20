@@ -38,6 +38,17 @@ pub enum Error {
     },
     M64AuthorTooLong,
     M64DescriptionTooLong,
+    FileReadError {
+        filename: String,
+        error: Arc<io::Error>,
+    },
+    FileWriteError {
+        filename: String,
+        error: Arc<io::Error>,
+    },
+    Libsm64EncryptionError,
+    Libsm64DecryptionError,
+    InvalidRom,
 }
 
 impl fmt::Display for Error {
@@ -76,6 +87,18 @@ impl fmt::Display for Error {
             }
             Error::M64AuthorTooLong => write!(f, "author field too long (max 222 bytes)"),
             Error::M64DescriptionTooLong => write!(f, "description field too long (max 256 bytes)"),
+            Error::FileReadError { filename, error } => {
+                write!(f, "failed to read {}:\n  {}", filename, error)
+            }
+            Error::FileWriteError { filename, error } => {
+                write!(f, "failed to write {}:\n  {}", filename, error)
+            }
+            Error::Libsm64EncryptionError => write!(f, "failed to encrypt libsm64"),
+            Error::Libsm64DecryptionError => write!(
+                f,
+                "failed to decrypt libsm64. Are you using a vanilla ROM with the correct SM64 version?"
+            ),
+            Error::InvalidRom => write!(f, "provided file is not a valid SM64 ROM"),
         }
     }
 }

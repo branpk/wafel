@@ -11,3 +11,7 @@ wafel_memory = { path = "../wafel_memory" }
 wafel_timeline = { path = "../wafel_timeline" }
 deepsize = "0.2.0"
 lru = "0.6.5"
+pwbox = "0.4.0"
+hex = { version = "0.4.3", features = ["alloc"] }  # Fix build of pwbox
+rand = "0.8.4"
+serde_json = "1.0.64"

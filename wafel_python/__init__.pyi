@@ -182,3 +182,9 @@ def load_m64(filename: str) -> Tuple[M64Metadata, List[Input]]:
 
 def save_m64(filename: str, metadata: M64Metadata, inputs: List[Input]) -> None:
     """Save an m64 TAS to a file."""
+
+def lock_libsm64(input_filename: str, output_filename: str, rom_filename: str) -> None:
+    """Lock a libsm64 DLL so that it requires a ROM to open."""
+
+def unlock_libsm64(input_filename: str, output_filename: str, rom_filename: str) -> None:
+    """Unlock a libsm64 DLL using a ROM."""
