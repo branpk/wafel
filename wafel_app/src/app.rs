@@ -78,13 +78,13 @@ impl App {
                 ui.popup_modal(im_str!("Controller##settings-controller"))
                     .opened(&mut true)
                     .resizable(false)
-                    .build(|| {});
+                    .build(|| todo!());
 
                 // Keyboard bindings popup
                 ui.popup_modal(im_str!("Key bindings##settings-key-bindings"))
                     .opened(&mut true)
                     .resizable(false)
-                    .build(|| {});
+                    .build(|| todo!());
 
                 // Game versions popup
                 let mut opened = true;

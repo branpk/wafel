@@ -13,8 +13,9 @@ pub(crate) struct TasFileInfo {
 
 #[derive(Debug)]
 pub(crate) struct Project {
-    filename: Option<String>,
     game_version: SM64Version,
+    filename: Option<String>,
+    metadata: M64Metadata,
     timeline: Timeline,
 }
 
@@ -22,8 +23,12 @@ impl Project {
     pub(crate) fn empty(game_version: SM64Version) -> Self {
         let timeline = unsafe { Timeline::new(&libsm64_path(game_version)) };
         Self {
-            filename: None,
             game_version,
+            filename: None,
+            metadata: M64Metadata::with_version(game_version)
+                .set_author("Unknown author(s)")
+                .set_description("Made using Wafel")
+                .clone(),
             timeline,
         }
     }
