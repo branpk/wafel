@@ -18,6 +18,7 @@ mod input_text_with_error;
 mod joystick_control;
 mod object_slots;
 mod project;
+mod variable_value;
 
 fn main() {
     env_logger::builder()

@@ -517,8 +517,6 @@ class MainView:
     ig.pop_id()
 
 
-DEFAULT_TAS = TasMetadata('us', 'Untitled TAS', 'Unknown author(s)', 'Made using Wafel')
-
 
 def run() -> None:
   model = Model()

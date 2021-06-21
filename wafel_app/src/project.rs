@@ -1,15 +1,16 @@
 use std::{iter, u32};
 
 use imgui::{self as ig, im_str};
-use wafel_api::{save_m64, Input, M64Metadata, SM64Version, Timeline};
+use wafel_api::{save_m64, Input, M64Metadata, SM64Version, Timeline, Value};
 use wafel_core::{Pipeline, Variable};
 
 use crate::{
     config::libsm64_path,
     frame_slider::render_frame_slider,
     input_text_with_error::render_input_text_with_error,
-    joystick_control::{JoystickControl, JoystickControlShape},
+    joystick_control::{JoystickControlShape, JoystickControlUi},
     object_slots::render_object_slots,
+    variable_value::{VariableFormatter, VariableValueUi},
 };
 
 #[derive(Debug)]
@@ -31,7 +32,9 @@ pub(crate) struct Project {
 
     // TODO: Remove below
     stick: [f32; 2],
-    joystick_control: JoystickControl,
+    joystick_control: JoystickControlUi,
+    value: Value,
+    variable_value: VariableValueUi,
 }
 
 impl Project {
@@ -48,7 +51,9 @@ impl Project {
             max_frame: 0,
             selected_frame: 0,
             stick: [0.0, 0.0],
-            joystick_control: JoystickControl::new(),
+            joystick_control: JoystickControlUi::new(),
+            value: Value::Int(0),
+            variable_value: VariableValueUi::new(),
         }
     }
 
@@ -164,5 +169,17 @@ impl Project {
             &iter::repeat_with(|| None).take(240).collect::<Vec<_>>(),
             |_| panic!(),
         );
+
+        let result = self.variable_value.render(
+            ui,
+            "my-var-val",
+            &self.value,
+            VariableFormatter::DecimalInt,
+            [200.0, 10.0],
+            false,
+        );
+        if let Some(changed) = result.changed_value {
+            self.value = changed;
+        }
     }
 }

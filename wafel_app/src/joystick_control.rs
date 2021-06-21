@@ -7,11 +7,11 @@ pub(crate) enum JoystickControlShape {
 }
 
 #[derive(Debug, Clone, Default)]
-pub(crate) struct JoystickControl {
+pub(crate) struct JoystickControlUi {
     start_value: Option<[f32; 2]>,
 }
 
-impl JoystickControl {
+impl JoystickControlUi {
     pub(crate) fn new() -> Self {
         Self::default()
     }
