@@ -2,6 +2,7 @@ use std::{collections::HashMap, ops::Range, sync::Arc};
 
 use imgui::{self as ig, im_str};
 use wafel_api::{FloatValue, IntValue, Value};
+use wafel_core::Variable;
 
 // TODO: Show error message while editing?
 
@@ -64,6 +65,13 @@ impl VariableFormatter {
 }
 
 #[derive(Debug, Clone)]
+pub(crate) struct VariableValueResult {
+    pub(crate) changed_value: Option<Value>,
+    pub(crate) clicked: bool,
+    pub(crate) pressed: bool,
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct VariableCellResult {
     pub(crate) changed_value: Option<Value>,
     pub(crate) clear_edit: bool,
@@ -72,10 +80,9 @@ pub(crate) struct VariableCellResult {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct VariableValueResult {
+pub(crate) struct LabeledVariableResult {
     pub(crate) changed_value: Option<Value>,
-    pub(crate) clicked: bool,
-    pub(crate) pressed: bool,
+    pub(crate) clear_edit: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -87,6 +94,28 @@ pub(crate) struct VariableValueUi {
 impl VariableValueUi {
     pub(crate) fn new() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn render_value(
+        &mut self,
+        ui: &ig::Ui<'_>,
+        id: &str,
+        value: &Value,
+        formatter: VariableFormatter,
+        size: [f32; 2],
+        highlight: bool,
+    ) -> VariableValueResult {
+        let id_token = ui.push_id(id);
+
+        let result = match formatter {
+            VariableFormatter::Checkbox => {
+                self.render_checkbox(ui, value, formatter, size, highlight)
+            }
+            _ => self.render_text(ui, value, formatter, size, highlight),
+        };
+
+        id_token.pop(ui);
+        result
     }
 
     pub(crate) fn render_cell(
@@ -158,26 +187,71 @@ impl VariableValueUi {
         }
     }
 
-    pub(crate) fn render_value(
+    pub(crate) fn render_labeled(
         &mut self,
         ui: &ig::Ui<'_>,
         id: &str,
+        label: &str,
+        variable: &Variable,
         value: &Value,
         formatter: VariableFormatter,
-        size: [f32; 2],
-        highlight: bool,
-    ) -> VariableValueResult {
+        is_edited: bool,
+        label_width: f32,
+        value_width: f32,
+    ) -> LabeledVariableResult {
         let id_token = ui.push_id(id);
 
-        let result = match formatter {
-            VariableFormatter::Checkbox => {
-                self.render_checkbox(ui, value, formatter, size, highlight)
-            }
-            _ => self.render_text(ui, value, formatter, size, highlight),
-        };
+        ig::Selectable::new(&im_str!("{}##label", label))
+            .size([label_width, 0.0])
+            .build(ui);
+
+        // TODO: Implement drag & drop
+        // if ui.begin_drag_drop_source() {
+        //   ui.text(label);
+        //   ui.set_drag_drop_payload("ve-var", variable.to_bytes());
+        //   ui.end_drag_drop_source();
+        // }
+
+        ui.same_line(0.0);
+
+        let cell_size = [
+            value_width,
+            ui.text_line_height() + 2.0 * ui.clone_style().frame_padding[1],
+        ];
+
+        let mut cell_cursor_pos = ui.cursor_pos();
+        cell_cursor_pos[0] += ui.window_pos()[0] - ui.scroll_x();
+        cell_cursor_pos[1] += ui.window_pos()[1] - ui.scroll_y();
+
+        let value_result = self.render_value(ui, "value", value, formatter, cell_size, false);
+
+        let clear_edit =
+            is_edited && ui.is_item_hovered() && ui.is_mouse_down(ig::MouseButton::Middle);
+
+        if is_edited {
+            let dl = ui.get_window_draw_list();
+            let mut spacing = ui.clone_style().item_spacing;
+            spacing = [spacing[0] / 2.0, spacing[1] / 2.0];
+            dl.add_rect(
+                [
+                    cell_cursor_pos[0] - spacing[0],
+                    cell_cursor_pos[1] - spacing[1],
+                ],
+                [
+                    cell_cursor_pos[0] + cell_size[0] + spacing[0] - 1.0,
+                    cell_cursor_pos[1] + cell_size[1] + spacing[1] - 1.0,
+                ],
+                ig::ImColor32::from_rgb_f32s(0.8, 0.6, 0.0),
+            )
+            .build();
+        }
 
         id_token.pop(ui);
-        result
+
+        LabeledVariableResult {
+            changed_value: value_result.changed_value,
+            clear_edit,
+        }
     }
 
     fn render_text(
