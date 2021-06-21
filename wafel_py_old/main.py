@@ -15,16 +15,13 @@ from wafel.model import Model
 from wafel.frame_sheet import FrameSheet
 from wafel.variable import Variable
 from wafel.variable_explorer import VariableExplorer
-from wafel.variable_format import Formatters, EnumFormatter, DataFormatters
-from wafel.format_m64 import load_m64, save_m64
-from wafel.tas_metadata import TasMetadata
+from wafel.variable_format import EnumFormatter, DataFormatters
 from wafel.window import open_window_and_run
 import wafel.ui as ui
 from wafel.local_state import use_state, use_state_with
 from wafel.util import *
 import wafel.config as config
 from wafel.bindings import *
-from wafel.game_versions import *
 
 
 RANGE_COLORS = [
