@@ -170,13 +170,15 @@ impl Project {
             |_| panic!(),
         );
 
-        let result = self.variable_value.render(
+        let result = self.variable_value.render_cell(
             ui,
             "my-var-val",
             &self.value,
             VariableFormatter::DecimalInt,
-            [200.0, 10.0],
+            [200.0, 30.0],
             false,
+            Some(3),
+            Some((3..5, ig::ImColor32::from_rgba_f32s(0.0, 0.5, 0.0, 0.3))),
         );
         if let Some(changed) = result.changed_value {
             self.value = changed;

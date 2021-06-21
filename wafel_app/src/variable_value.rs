@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, ops::Range, sync::Arc};
 
 use imgui::{self as ig, im_str};
 use wafel_api::{FloatValue, IntValue, Value};
@@ -64,6 +64,14 @@ impl VariableFormatter {
 }
 
 #[derive(Debug, Clone)]
+pub(crate) struct VariableCellResult {
+    pub(crate) changed_value: Option<Value>,
+    pub(crate) clear_edit: bool,
+    pub(crate) clicked: bool,
+    pub(crate) pressed: bool,
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct VariableValueResult {
     pub(crate) changed_value: Option<Value>,
     pub(crate) clicked: bool,
@@ -81,7 +89,76 @@ impl VariableValueUi {
         Self::default()
     }
 
-    pub(crate) fn render(
+    pub(crate) fn render_cell(
+        &mut self,
+        ui: &ig::Ui<'_>,
+        id: &str,
+        value: &Value,
+        formatter: VariableFormatter,
+        cell_size: [f32; 2],
+        is_selected: bool,
+        frame: Option<u32>,
+        highlight_range: Option<(Range<u32>, ig::ImColor32)>,
+    ) -> VariableCellResult {
+        let id_token = ui.push_id(id);
+
+        let window_pos = ui.window_pos();
+        let item_spacing = ui.clone_style().item_spacing;
+
+        let mut cell_cursor_pos = ui.cursor_pos();
+        cell_cursor_pos[0] += window_pos[0] - item_spacing[0];
+        cell_cursor_pos[1] += window_pos[1] - ui.scroll_y() - item_spacing[1];
+
+        if let (Some((highlight_frames, highlight_color)), Some(frame)) = (highlight_range, frame) {
+            let margin = 5.0;
+            let offset_top = if frame == highlight_frames.start {
+                margin
+            } else {
+                0.0
+            };
+            let offset_bottom = if frame + 1 == highlight_frames.end {
+                margin
+            } else {
+                0.0
+            };
+            let dl = ui.get_window_draw_list();
+            dl.add_rect(
+                [cell_cursor_pos[0] + margin, cell_cursor_pos[1] + offset_top],
+                [
+                    cell_cursor_pos[0] + cell_size[0] - margin,
+                    cell_cursor_pos[1] + cell_size[1] - offset_bottom,
+                ],
+                highlight_color,
+            )
+            .filled(true)
+            .build();
+        }
+
+        let value_result = self.render_value(
+            ui,
+            "value",
+            value,
+            formatter,
+            [
+                cell_size[0] - 2.0 * item_spacing[0],
+                cell_size[1] - 2.0 * item_spacing[1],
+            ],
+            is_selected,
+        );
+
+        let clear_edit = ui.is_item_hovered() && ui.is_mouse_down(ig::MouseButton::Middle);
+
+        id_token.pop(ui);
+
+        VariableCellResult {
+            changed_value: value_result.changed_value,
+            clear_edit,
+            clicked: value_result.clicked,
+            pressed: value_result.pressed,
+        }
+    }
+
+    pub(crate) fn render_value(
         &mut self,
         ui: &ig::Ui<'_>,
         id: &str,
