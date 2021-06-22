@@ -95,8 +95,12 @@ impl Pipeline {
         Ok(())
     }
 
+    pub fn reset(&mut self, variable: &Variable) {
+        self.try_reset(variable).unwrap();
+    }
+
     /// Reset a variable.
-    pub fn reset(&mut self, variable: &Variable) -> Result<(), Error> {
+    pub fn try_reset(&mut self, variable: &Variable) -> Result<(), Error> {
         let column = variable.without_frame();
         let frame = variable.try_frame()?;
         let ops = self.range_edits.reset(&column, frame);
@@ -104,8 +108,12 @@ impl Pipeline {
         Ok(())
     }
 
+    pub fn begin_drag(&mut self, source_variable: &Variable, source_value: Value) {
+        self.try_begin_drag(source_variable, source_value).unwrap();
+    }
+
     /// Begin a drag operation starting at `source_variable`.
-    pub fn begin_drag(
+    pub fn try_begin_drag(
         &mut self,
         source_variable: &Variable,
         source_value: Value,
@@ -136,8 +144,15 @@ impl Pipeline {
         Ok(())
     }
 
+    pub fn find_edit_range(&self, variable: &Variable) -> Option<&EditRange<Value>> {
+        self.try_find_edit_range(variable).unwrap()
+    }
+
     /// Find the edit range containing a variable, if present.
-    pub fn find_edit_range(&self, variable: &Variable) -> Result<Option<&EditRange<Value>>, Error> {
+    pub fn try_find_edit_range(
+        &self,
+        variable: &Variable,
+    ) -> Result<Option<&EditRange<Value>>, Error> {
         let column = variable.without_frame();
         let frame = variable.try_frame()?;
         let range = self.range_edits.find_range(&column, frame);
@@ -171,5 +186,26 @@ impl Pipeline {
     /// Get the timeline for this pipeline.
     pub fn timeline_mut(&mut self) -> &mut Timeline {
         &mut self.timeline
+    }
+
+    /// Return true if the variable has an integer data type.
+    pub fn is_int(&self, variable: &Variable) -> bool {
+        self.data_variables
+            .data_type(&self.timeline, variable)
+            .unwrap()
+            .is_int()
+    }
+
+    /// Return true if the variable has a float data type.
+    pub fn is_float(&self, variable: &Variable) -> bool {
+        self.data_variables
+            .data_type(&self.timeline, variable)
+            .unwrap()
+            .is_float()
+    }
+
+    /// Return true if the variable is a bit flag.
+    pub fn is_bit_flag(&self, variable: &Variable) -> bool {
+        self.data_variables.flag(variable).unwrap().is_some()
     }
 }

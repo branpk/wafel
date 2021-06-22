@@ -75,7 +75,7 @@ pub(crate) struct VariableValueResult {
 pub(crate) struct VariableCellResult {
     pub(crate) changed_value: Option<Value>,
     pub(crate) clear_edit: bool,
-    pub(crate) clicked: bool,
+    pub(crate) selected: bool,
     pub(crate) pressed: bool,
 }
 
@@ -182,7 +182,7 @@ impl VariableValueUi {
         VariableCellResult {
             changed_value: value_result.changed_value,
             clear_edit,
-            clicked: value_result.clicked,
+            selected: value_result.clicked,
             pressed: value_result.pressed,
         }
     }

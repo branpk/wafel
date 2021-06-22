@@ -142,7 +142,7 @@ impl PyPipeline {
 
     /// Reset a variable.
     pub fn reset(&mut self, variable: &PyVariable) -> PyResult<()> {
-        self.get_mut().pipeline.reset(&variable.variable)?;
+        self.get_mut().pipeline.try_reset(&variable.variable)?;
         Ok(())
     }
 
@@ -193,7 +193,7 @@ impl PyPipeline {
         let source_value = py_object_to_value(py, &source_value)?;
         self.get_mut()
             .pipeline
-            .begin_drag(&source_variable.variable, source_value)?;
+            .try_begin_drag(&source_variable.variable, source_value)?;
         Ok(())
     }
 
@@ -214,7 +214,10 @@ impl PyPipeline {
 
     /// Find the edit range containing a variable, if present.
     pub fn find_edit_range(&self, variable: &PyVariable) -> PyResult<Option<PyEditRange>> {
-        let range = self.get().pipeline.find_edit_range(&variable.variable)?;
+        let range = self
+            .get()
+            .pipeline
+            .try_find_edit_range(&variable.variable)?;
         Ok(range.cloned().map(|range| PyEditRange { range }))
     }
 
