@@ -202,13 +202,13 @@ impl PyPipeline {
     /// The ranges will appear to be updated, but won't be committed until `release_drag` is
     /// called.
     pub fn update_drag(&mut self, target_frame: u32) -> Result<(), PyErr> {
-        self.get_mut().pipeline.update_drag(target_frame)?;
+        self.get_mut().pipeline.try_update_drag(target_frame)?;
         Ok(())
     }
 
     /// End the drag operation, committing range changes.
     pub fn release_drag(&mut self) -> Result<(), PyErr> {
-        self.get_mut().pipeline.release_drag()?;
+        self.get_mut().pipeline.try_release_drag()?;
         Ok(())
     }
 

@@ -127,18 +127,26 @@ impl Pipeline {
         Ok(())
     }
 
+    pub fn update_drag(&mut self, target_frame: u32) {
+        self.try_update_drag(target_frame).unwrap();
+    }
+
     /// Drag from `source_variable` to `target_frame`.
     ///
     /// The ranges will appear to be updated, but won't be committed until `release_drag` is
     /// called.
-    pub fn update_drag(&mut self, target_frame: u32) -> Result<(), Error> {
+    pub fn try_update_drag(&mut self, target_frame: u32) -> Result<(), Error> {
         let ops = self.range_edits.update_drag(target_frame);
         self.apply_edit_ops(ops)?;
         Ok(())
     }
 
+    pub fn release_drag(&mut self) {
+        self.try_release_drag().unwrap();
+    }
+
     /// End the drag operation, committing range changes.
-    pub fn release_drag(&mut self) -> Result<(), Error> {
+    pub fn try_release_drag(&mut self) -> Result<(), Error> {
         let ops = self.range_edits.release_drag();
         self.apply_edit_ops(ops)?;
         Ok(())
@@ -186,6 +194,10 @@ impl Pipeline {
     /// Get the timeline for this pipeline.
     pub fn timeline_mut(&mut self) -> &mut Timeline {
         &mut self.timeline
+    }
+
+    pub fn set_hotspot(&mut self, name: &str, frame: u32) {
+        self.timeline.set_hotspot(name, frame);
     }
 
     /// Return true if the variable has an integer data type.
