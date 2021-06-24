@@ -42,11 +42,11 @@ impl FrameSheet {
         }
         let variable = variable.without_frame();
         if !self.columns.contains(&variable) {
-            self.next_columns.insert(index, variable.clone());
+            self.next_columns.insert(index, variable);
         }
     }
 
-    fn append_variable(&mut self, variable: Variable) {
+    pub(crate) fn append_variable(&mut self, variable: Variable) {
         self.insert_variable(self.columns.len(), variable);
         self.columns.clone_from(&self.next_columns);
     }
@@ -87,7 +87,8 @@ impl FrameSheet {
     }
 
     fn column_header(&self, variable: &Variable) -> String {
-        todo!()
+        // TODO: column header
+        format!("{}", variable)
     }
 
     fn render_headers(&mut self, ui: &ig::Ui<'_>) {
@@ -277,6 +278,7 @@ impl FrameSheet {
                 ui.set_column_width(-1, FRAME_COLUMN_WIDTH);
             }
 
+            // TODO: Width doesn't match header width
             let clicked = ig::Selectable::new(&im_str!("{}##fs-framenum-{}", row, row))
                 .selected(row == *selected_frame)
                 .size([0.0, ROW_HEIGHT - 8.0]) // TODO: Compute padding

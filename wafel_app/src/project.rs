@@ -6,6 +6,7 @@ use wafel_core::{Pipeline, Variable};
 
 use crate::{
     config::libsm64_path,
+    frame_sheet::FrameSheet,
     frame_slider::render_frame_slider,
     input_text_with_error::render_input_text_with_error,
     joystick_control::{JoystickControlShape, JoystickControlUi},
@@ -35,11 +36,24 @@ pub(crate) struct Project {
     joystick_control: JoystickControlUi,
     value: Value,
     variable_value: VariableValueUi,
+    frame_sheet: FrameSheet,
 }
 
 impl Project {
     pub(crate) fn empty(game_version: SM64Version) -> Self {
         let pipeline = unsafe { Pipeline::new(&libsm64_path(game_version)) };
+
+        let mut frame_sheet = FrameSheet::new();
+        for var in [
+            "input-button-a",
+            "input-button-b",
+            "input-button-z",
+            "mario-action",
+            "mario-vel-f",
+        ] {
+            frame_sheet.append_variable(Variable::new(var));
+        }
+
         Self {
             game_version,
             filename: None,
@@ -54,6 +68,7 @@ impl Project {
             joystick_control: JoystickControlUi::new(),
             value: Value::Int(0),
             variable_value: VariableValueUi::new(),
+            frame_sheet,
         }
     }
 
@@ -198,5 +213,13 @@ impl Project {
         if let Some(changed) = result.changed_value {
             self.value = changed;
         }
+
+        self.frame_sheet.render(
+            ui,
+            "my-frame-sheet",
+            &mut self.pipeline,
+            &mut self.max_frame,
+            &mut self.selected_frame,
+        );
     }
 }
