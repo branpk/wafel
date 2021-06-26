@@ -317,7 +317,7 @@ impl FrameSheet {
 
         ui.set_cursor_pos([0.0, (*max_frame + 1) as f32 * ROW_HEIGHT]);
 
-        ui.columns(1, im_str!("end-rows"), true);
+        ui.columns(1, im_str!("end-rows"), false);
 
         // TODO:
         //for operation in timeline_operations:
