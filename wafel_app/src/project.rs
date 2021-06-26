@@ -11,6 +11,7 @@ use crate::{
     input_text_with_error::render_input_text_with_error,
     joystick_control::{JoystickControlShape, JoystickControlUi},
     object_slots::render_object_slots,
+    tabs::{TabInfo, Tabs},
     variable_value::{VariableFormatter, VariableValueUi},
 };
 
@@ -36,6 +37,7 @@ pub(crate) struct Project {
     joystick_control: JoystickControlUi,
     value: Value,
     variable_value: VariableValueUi,
+    tabs: Tabs,
     frame_sheet: FrameSheet,
 }
 
@@ -68,6 +70,7 @@ impl Project {
             joystick_control: JoystickControlUi::new(),
             value: Value::Int(0),
             variable_value: VariableValueUi::new(),
+            tabs: Tabs::new(),
             frame_sheet,
         }
     }
@@ -213,6 +216,39 @@ impl Project {
         if let Some(changed) = result.changed_value {
             self.value = changed;
         }
+
+        self.tabs.render(
+            ui,
+            "my-tabs",
+            &mut [
+                TabInfo {
+                    id: "tab-1".to_string(),
+                    label: "Tab 1".to_string(),
+                    closable: false,
+                    render: Box::new(|id| {
+                        ui.text("Tab 1");
+                    }),
+                },
+                TabInfo {
+                    id: "tab-2".to_string(),
+                    label: "Tab 2".to_string(),
+                    closable: true,
+                    render: Box::new(|id| {
+                        ui.text("Tab 2");
+                    }),
+                },
+                TabInfo {
+                    id: "tab-3".to_string(),
+                    label: "Tab 3".to_string(),
+                    closable: true,
+                    render: Box::new(|id| {
+                        ui.text("Tab 3");
+                    }),
+                },
+            ],
+            None,
+            true,
+        );
 
         self.frame_sheet.render(
             ui,

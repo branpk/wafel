@@ -2,11 +2,11 @@ use std::collections::HashSet;
 
 use imgui::{self as ig, im_str};
 
-pub(crate) struct TabInfo {
+pub(crate) struct TabInfo<'a> {
     pub(crate) id: String,
     pub(crate) label: String,
     pub(crate) closable: bool,
-    pub(crate) render: Box<dyn FnMut(&str)>,
+    pub(crate) render: Box<dyn FnMut(&str) + 'a>,
 }
 
 #[derive(Debug, Clone)]
@@ -32,7 +32,7 @@ impl Tabs {
         &mut self,
         ui: &ig::Ui<'_>,
         id: &str,
-        tabs: &mut [TabInfo],
+        tabs: &mut [TabInfo<'_>],
         open_tab_index: Option<usize>,
         allow_windowing: bool,
     ) -> TabResult {
