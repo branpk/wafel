@@ -2,7 +2,7 @@ use std::{collections::HashMap, ops::Range, sync::Arc};
 
 use imgui::{self as ig, im_str};
 use wafel_api::{FloatValue, IntValue, Value};
-use wafel_core::Variable;
+use wafel_core::{Pipeline, Variable};
 
 // TODO: Show error message while editing?
 
@@ -60,6 +60,21 @@ impl VariableFormatter {
         match self {
             VariableFormatter::Checkbox => Some(Value::Int(input as IntValue)),
             _ => unimplemented!("{:?}", self),
+        }
+    }
+
+    pub(crate) fn for_value(pipeline: &Pipeline, variable: &Variable, value: &Value) -> Self {
+        // TODO: Enums
+        if value.is_none() {
+            VariableFormatter::Empty
+        } else if pipeline.is_bit_flag(&variable) {
+            VariableFormatter::Checkbox
+        } else if pipeline.is_int(&variable) {
+            VariableFormatter::DecimalInt
+        } else if pipeline.is_float(&variable) {
+            VariableFormatter::Float
+        } else {
+            unimplemented!("{}", &variable)
         }
     }
 }

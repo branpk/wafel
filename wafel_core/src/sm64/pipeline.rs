@@ -1,6 +1,6 @@
 use wafel_api::{Timeline, Value};
 
-use crate::error::Error;
+use crate::{error::Error, object_behavior, object_path, ObjectBehavior, ObjectSlot};
 
 use super::{data_variables::DataVariables, EditOperation, EditRange, RangeEdits, Variable};
 
@@ -219,5 +219,44 @@ impl Pipeline {
     /// Return true if the variable is a bit flag.
     pub fn is_bit_flag(&self, variable: &Variable) -> bool {
         self.data_variables.flag(variable).unwrap().is_some()
+    }
+
+    pub fn object_behavior(&self, frame: u32, object: ObjectSlot) -> Option<ObjectBehavior> {
+        self.try_object_behavior(frame, object).unwrap()
+    }
+
+    /// Get the object behavior for an object, or None if the object is not active.
+    pub fn try_object_behavior(
+        &self,
+        frame: u32,
+        object: ObjectSlot,
+    ) -> Result<Option<ObjectBehavior>, Error> {
+        match object_path(&self.timeline, frame, object)? {
+            Some(object_path) => {
+                let behavior = object_behavior(&self.timeline, frame, &object_path)?;
+                Ok(Some(behavior))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// Get a human readable name for the given object behavior, if possible.
+    pub fn object_behavior_name(&self, behavior: &ObjectBehavior) -> String {
+        let address = behavior.0;
+
+        match self.timeline.address_to_symbol(address) {
+            Some(symbol) => symbol.strip_prefix("bhv").unwrap_or(&symbol).to_owned(),
+            None => format!("Object[{}]", address),
+        }
+    }
+
+    /// Get the variables in the given group.
+    pub fn variable_group(&self, group: &str) -> Vec<Variable> {
+        self.data_variables.group(group).collect()
+    }
+
+    /// Return the label for the variable if it has one.
+    pub fn label(&self, variable: &Variable) -> Option<&str> {
+        self.data_variables.label(variable).unwrap()
     }
 }

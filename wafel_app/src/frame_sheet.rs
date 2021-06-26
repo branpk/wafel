@@ -189,17 +189,7 @@ impl FrameSheet {
         let cell_variable = column.with_frame(frame);
 
         let value = pipeline.read(&cell_variable);
-        let formatter = if value.is_none() {
-            VariableFormatter::Empty
-        } else if pipeline.is_bit_flag(&cell_variable) {
-            VariableFormatter::Checkbox
-        } else if pipeline.is_int(&cell_variable) {
-            VariableFormatter::DecimalInt
-        } else if pipeline.is_float(&cell_variable) {
-            VariableFormatter::Float
-        } else {
-            unimplemented!("{}", &cell_variable)
-        };
+        let formatter = VariableFormatter::for_value(pipeline, &cell_variable, &value);
 
         let edit_range = pipeline.find_edit_range(&cell_variable);
         let highlight_range = edit_range.map(|edit_range| {

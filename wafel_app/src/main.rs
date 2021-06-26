@@ -20,6 +20,7 @@ mod joystick_control;
 mod object_slots;
 mod project;
 mod tabs;
+mod variable_explorer;
 mod variable_value;
 
 fn main() {
