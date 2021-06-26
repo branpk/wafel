@@ -38,8 +38,6 @@ impl Tabs {
     ) -> TabResult {
         let id_token = ui.push_id(id);
 
-        //root_id = get_local_state_id_stack()
-
         ui.columns(2, im_str!("tab-columns"), true);
 
         let mut closed_tab_index = None;
@@ -87,7 +85,7 @@ impl Tabs {
             }
         }
 
-        let windowed_tabs = &self.windowed_tabs;
+        let windowed_tabs = &mut self.windowed_tabs;
         ig::ChildWindow::new("tabs").build(ui, || {
             for (i, tab) in tabs.iter().enumerate() {
                 if windowed_tabs.contains(&tab.id) {
@@ -110,13 +108,20 @@ impl Tabs {
                 }
 
                 if allow_windowing || tab.closable {
-                    // TODO: Context menu
-                    //    if ig.begin_popup_context_item(f'##ctx-{tab.id}'):
-                    //      if allow_windowing and ig.selectable('Pop out')[0]:
-                    //        windowed_tabs.add(tab.id)
-                    //      if tab.closable and ig.selectable('Close')[0]:
-                    //        closed_tab = i
-                    //      ig.end_popup_context_item()
+                    unsafe {
+                        if ig::sys::igBeginPopupContextItem(im_str!("##ctx-{}", tab.id).as_ptr(), 1)
+                        {
+                            if allow_windowing && ig::Selectable::new(im_str!("Pop out")).build(ui)
+                            {
+                                windowed_tabs.insert(tab.id.clone());
+                            } else if tab.closable
+                                && ig::Selectable::new(im_str!("Close")).build(ui)
+                            {
+                                closed_tab_index = Some(i);
+                            }
+                            ig::sys::igEndPopup();
+                        }
+                    }
                 }
             }
         });
