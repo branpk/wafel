@@ -401,4 +401,203 @@ impl VariableExplorer {
             pipeline.write(&stick_y_var, new_raw_stick_y.into());
         }
     }
+
+    fn render_input_tab(&self, ui: &ig::Ui<'_>, tab: TabId, pipeline: &mut Pipeline, frame: u32) {
+        let column_sizes = [170.0, 370.0, 200.0];
+
+        ig::ChildWindow::new(im_str!("##input"))
+            .flags(ig::WindowFlags::HORIZONTAL_SCROLLBAR)
+            .content_size([column_sizes.iter().copied().sum(), 0.0])
+            .build(ui, || {
+                ui.columns(3, im_str!("input-columns"), true);
+
+                for (i, &w) in column_sizes.iter().enumerate() {
+                    ui.set_column_width(i as i32, w);
+                }
+
+                let mut render_button = |button: &str| {
+                    self.render_variable(
+                        ui,
+                        pipeline,
+                        tab,
+                        &Variable::new(&format!("input-button-{}", button)),
+                        10.0,
+                        25.0,
+                    )
+                };
+
+                ui.dummy([1.0, 3.0]);
+                {
+                    render_button("a");
+                    ui.same_line(0.0);
+                    render_button("b");
+                    ui.same_line(0.0);
+                    render_button("z");
+                }
+                ui.dummy([1.0, 5.0]);
+                {
+                    render_button("s");
+                    ui.same_line(0.0);
+                    ui.dummy([43.0, 1.0]);
+                    ui.same_line(0.0);
+                    render_button("r");
+                }
+                ui.dummy([1.0, 5.0]);
+                {
+                    ui.dummy([43.0, 1.0]);
+                    ui.same_line(0.0);
+                    render_button("cu");
+                }
+                {
+                    ui.dummy([17.0, 1.0]);
+                    ui.same_line(0.0);
+                    render_button("cl");
+                    ui.same_line(0.0);
+                    render_button("cr");
+                }
+                {
+                    ui.dummy([43.0, 1.0]);
+                    ui.same_line(0.0);
+                    render_button("cd");
+                }
+
+                ui.next_column();
+                self.render_intended_stick_control(ui, "intended", tab, pipeline, frame);
+
+                ui.next_column();
+                self.render_stick_control(ui, "joystick", tab, pipeline, frame);
+
+                ui.columns(1, im_str!("input-columns-end"), true);
+            });
+    }
+
+    fn render_frame_log_tab(&self, ui: &ig::Ui<'_>, tab: TabId, pipeline: &Pipeline, frame: u32) {
+        let mut frame_offset = 1; // TODO: Persist
+        let mut round_numbers = true; // TODO: Persist
+
+        ui.set_next_item_width(210.0);
+        ig::ComboBox::new(im_str!("##frame-offset")).build_simple_string(
+            ui,
+            &mut frame_offset,
+            &[
+                im_str!("previous -> current frame"),
+                im_str!("current -> next frame"),
+            ],
+        );
+
+        ui.checkbox(im_str!("Round##round-numbers"), &mut round_numbers);
+        ui.dummy([1.0, 10.0]);
+
+        let events = pipeline.timeline().frame_log(frame + frame_offset as u32);
+
+        let string = |addr: &Value| {
+            String::from_utf8(pipeline.timeline().read_string_at(frame, addr.as_address()))
+                .expect("invalid string")
+        };
+        let float = |number: &Value| {
+            let value = number.as_f32();
+            if round_numbers {
+                format!("{:.3}", value)
+            } else {
+                format!("{}", value)
+            }
+        };
+        let vec3f = |vector: &Value| {
+            let coords = vector.as_array_with_len(3);
+            format!(
+                "({}, {}, {})",
+                float(&coords[0]),
+                float(&coords[1]),
+                float(&coords[2]),
+            )
+        };
+        let action = |value: &Value| {
+            // TODO: return self.model.action_names[dcast(int, action)]
+            value.to_string()
+        };
+
+        let mut indent = 0;
+        let mut action_indent = 0;
+
+        let show_text = |indent: usize, text: &str| {
+            ui.text(format!("{:indent$}{}", " ", text, indent = indent * 4));
+        };
+
+        for event in &events {
+            match event["type"].as_str() {
+                "FLT_CHANGE_ACTION" => {
+                    show_text(
+                        indent,
+                        &format!(
+                            "change action: {} -> {}",
+                            action(&event["from"]),
+                            action(&event["to"]),
+                        ),
+                    );
+                }
+                "FLT_CHANGE_FORWARD_VEL" => {
+                    show_text(
+                        indent,
+                        &format!(
+                            "change f vel: {} -> {} ({})",
+                            float(&event["from"]),
+                            float(&event["to"]),
+                            string(&event["reason"]),
+                        ),
+                    );
+                }
+                "FLT_WALL_PUSH" => {
+                    show_text(
+                        indent,
+                        &format!(
+                            "wall push: {} -> {} (surface {})",
+                            vec3f(&event["from"]),
+                            vec3f(&event["to"]),
+                            event["surface"],
+                        ),
+                    );
+                }
+                "FLT_BEGIN_MOVEMENT_STEP" => {
+                    let step_type = match event["stepType"].as_int() {
+                        1 => "air",
+                        2 => "ground",
+                        3 => "water",
+                        _ => unimplemented!(),
+                    };
+                    show_text(indent, &format!("{} step {}:", step_type, event["stepNum"]));
+                    indent += 1;
+                }
+                "FLT_END_MOVEMENT_STEP" => {
+                    indent -= 1;
+                }
+                "FLT_EXECUTE_ACTION" => {
+                    indent -= action_indent;
+                    action_indent = 0;
+                    show_text(
+                        indent,
+                        &format!("execute action: {}", action(&event["action"])),
+                    );
+                    indent += 1;
+                    action_indent += 1;
+                }
+                _ => {
+                    let mut items: Vec<(String, Value)> = event.clone().into_iter().collect();
+                    items.sort_by_key(|(k, _)| k.clone());
+                    items.retain(|(k, _)| k != "type");
+                    items.insert(0, ("type".to_string(), event["type"].clone()));
+                    show_text(
+                        indent,
+                        &format!(
+                            "{{ {} }}",
+                            items
+                                .iter()
+                                .map(|(k, v)| format!("{}: {}", k, v))
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        ),
+                    );
+                }
+            }
+        }
+    }
 }
