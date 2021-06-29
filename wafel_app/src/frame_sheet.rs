@@ -7,7 +7,7 @@ use std::{
 use imgui::{self as ig, im_str};
 use wafel_core::{EditRangeId, Pipeline, Variable};
 
-use crate::variable_value::{VariableFormatter, VariableValueUi};
+use crate::variable_value::{render_variable_cell, VariableFormatter};
 
 const DEFAULT_COLUMN_WIDTH: f32 = 100.0;
 const ROW_HEIGHT: f32 = 30.0;
@@ -22,7 +22,6 @@ pub(crate) struct FrameSheet {
     time_started_dragging: Option<Instant>,
     prev_selected_frame: Option<u32>,
     scroll_delta: f32,
-    cell_ui: HashMap<(Variable, u32), VariableValueUi>, // TODO: Remove unused each frame
 }
 
 impl FrameSheet {
@@ -199,8 +198,7 @@ impl FrameSheet {
 
         let cell_size = [self.column_width(column), ROW_HEIGHT];
 
-        let cell_ui = self.cell_ui.entry((column.clone(), frame)).or_default();
-        let cell_result = cell_ui.render_cell(
+        let cell_result = render_variable_cell(
             ui,
             &format!("cell-{}-{}", frame, column_hash),
             &value,

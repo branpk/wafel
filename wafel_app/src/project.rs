@@ -13,7 +13,7 @@ use crate::{
     object_slots::render_object_slots,
     tabs::{TabInfo, Tabs},
     variable_explorer::VariableExplorer,
-    variable_value::{VariableFormatter, VariableValueUi},
+    variable_value::VariableFormatter,
 };
 
 #[derive(Debug)]

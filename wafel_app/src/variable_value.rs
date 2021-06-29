@@ -1,5 +1,4 @@
 use std::{
-    borrow::BorrowMut,
     collections::HashMap,
     ops::Range,
     sync::{Arc, Mutex},
@@ -86,13 +85,6 @@ impl VariableFormatter {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct VariableValueResult {
-    pub(crate) changed_value: Option<Value>,
-    pub(crate) clicked: bool,
-    pub(crate) pressed: bool,
-}
-
-#[derive(Debug, Clone)]
 pub(crate) struct VariableCellResult {
     pub(crate) changed_value: Option<Value>,
     pub(crate) clear_edit: bool,
@@ -100,10 +92,169 @@ pub(crate) struct VariableCellResult {
     pub(crate) pressed: bool,
 }
 
+pub(crate) fn render_variable_cell(
+    ui: &ig::Ui<'_>,
+    id: &str,
+    value: &Value,
+    formatter: VariableFormatter,
+    cell_size: [f32; 2],
+    is_selected: bool,
+    frame: Option<u32>,
+    highlight_range: Option<(Range<u32>, ig::ImColor32)>,
+) -> VariableCellResult {
+    let id_token = ui.push_id(id);
+
+    let window_pos = ui.window_pos();
+    let item_spacing = ui.clone_style().item_spacing;
+
+    let mut cell_cursor_pos = ui.cursor_pos();
+    cell_cursor_pos[0] += window_pos[0] - item_spacing[0];
+    cell_cursor_pos[1] += window_pos[1] - ui.scroll_y() - item_spacing[1];
+
+    if let (Some((highlight_frames, highlight_color)), Some(frame)) = (highlight_range, frame) {
+        let margin = 5.0;
+        let offset_top = if frame == highlight_frames.start {
+            margin
+        } else {
+            0.0
+        };
+        let offset_bottom = if frame + 1 == highlight_frames.end {
+            margin
+        } else {
+            0.0
+        };
+        let dl = ui.get_window_draw_list();
+        dl.add_rect(
+            [cell_cursor_pos[0] + margin, cell_cursor_pos[1] + offset_top],
+            [
+                cell_cursor_pos[0] + cell_size[0] - margin,
+                cell_cursor_pos[1] + cell_size[1] - offset_bottom,
+            ],
+            highlight_color,
+        )
+        .filled(true)
+        .build();
+    }
+
+    let value_result = render_variable_value(
+        ui,
+        "value",
+        value,
+        formatter,
+        [
+            cell_size[0] - 2.0 * item_spacing[0],
+            cell_size[1] - 2.0 * item_spacing[1],
+        ],
+        is_selected,
+    );
+
+    let clear_edit = ui.is_item_hovered() && ui.is_mouse_down(ig::MouseButton::Middle);
+
+    id_token.pop(ui);
+
+    VariableCellResult {
+        changed_value: value_result.changed_value,
+        clear_edit,
+        selected: value_result.clicked,
+        pressed: value_result.pressed,
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct LabeledVariableResult {
     pub(crate) changed_value: Option<Value>,
     pub(crate) clear_edit: bool,
+}
+
+pub(crate) fn render_labeled_variable(
+    ui: &ig::Ui<'_>,
+    id: &str,
+    label: &str,
+    variable: &Variable,
+    value: &Value,
+    formatter: VariableFormatter,
+    is_edited: bool,
+    label_width: f32,
+    value_width: f32,
+) -> LabeledVariableResult {
+    let id_token = ui.push_id(id);
+
+    ig::Selectable::new(&im_str!("{}##label", label))
+        .size([label_width, 0.0])
+        .build(ui);
+
+    // TODO: Implement drag & drop
+    // if ui.begin_drag_drop_source() {
+    //   ui.text(label);
+    //   ui.set_drag_drop_payload("ve-var", variable.to_bytes());
+    //   ui.end_drag_drop_source();
+    // }
+
+    ui.same_line(0.0);
+
+    let cell_size = [
+        value_width,
+        ui.text_line_height() + 2.0 * ui.clone_style().frame_padding[1],
+    ];
+
+    let mut cell_cursor_pos = ui.cursor_pos();
+    cell_cursor_pos[0] += ui.window_pos()[0] - ui.scroll_x();
+    cell_cursor_pos[1] += ui.window_pos()[1] - ui.scroll_y();
+
+    let value_result = render_variable_value(ui, "value", value, formatter, cell_size, false);
+
+    let clear_edit = is_edited && ui.is_item_hovered() && ui.is_mouse_down(ig::MouseButton::Middle);
+
+    if is_edited {
+        let dl = ui.get_window_draw_list();
+        let mut spacing = ui.clone_style().item_spacing;
+        spacing = [spacing[0] / 2.0, spacing[1] / 2.0];
+        dl.add_rect(
+            [
+                cell_cursor_pos[0] - spacing[0],
+                cell_cursor_pos[1] - spacing[1],
+            ],
+            [
+                cell_cursor_pos[0] + cell_size[0] + spacing[0] - 1.0,
+                cell_cursor_pos[1] + cell_size[1] + spacing[1] - 1.0,
+            ],
+            ig::ImColor32::from_rgb_f32s(0.8, 0.6, 0.0),
+        )
+        .build();
+    }
+
+    id_token.pop(ui);
+
+    LabeledVariableResult {
+        changed_value: value_result.changed_value,
+        clear_edit,
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct VariableValueResult {
+    pub(crate) changed_value: Option<Value>,
+    pub(crate) clicked: bool,
+    pub(crate) pressed: bool,
+}
+
+pub(crate) fn render_variable_value(
+    ui: &ig::Ui<'_>,
+    id: &str,
+    value: &Value,
+    formatter: VariableFormatter,
+    size: [f32; 2],
+    highlight: bool,
+) -> VariableValueResult {
+    let id_token = ui.push_id(id);
+
+    let result = match formatter {
+        VariableFormatter::Checkbox => render_checkbox(ui, value, formatter, size, highlight),
+        _ => render_text(ui, value, formatter, size, highlight),
+    };
+
+    id_token.pop(ui);
+    result
 }
 
 #[derive(Debug)]
@@ -117,297 +268,127 @@ fn editing_value() -> &'static Mutex<Option<EditingValue>> {
     INSTANCE.get_or_init(|| Mutex::new(None))
 }
 
-#[derive(Debug, Clone, Default)]
-pub(crate) struct VariableValueUi {}
+fn render_text(
+    ui: &ig::Ui<'_>,
+    value: &Value,
+    formatter: VariableFormatter,
+    size: [f32; 2],
+    highlight: bool,
+) -> VariableValueResult {
+    let this_id = unsafe { ig::sys::igGetIDStr(im_str!("value").as_ptr()) };
+    let mut global_editing_value = editing_value().lock().unwrap();
 
-impl VariableValueUi {
-    pub(crate) fn new() -> Self {
-        Self::default()
-    }
+    match &mut *global_editing_value {
+        Some(editing_value) if editing_value.id == this_id => {
+            let mut cursor_pos = ui.cursor_pos();
+            cursor_pos[0] += ui.window_pos()[0];
+            cursor_pos[1] += ui.window_pos()[1] - ui.scroll_y();
 
-    pub(crate) fn render_value(
-        &mut self,
-        ui: &ig::Ui<'_>,
-        id: &str,
-        value: &Value,
-        formatter: VariableFormatter,
-        size: [f32; 2],
-        highlight: bool,
-    ) -> VariableValueResult {
-        let id_token = ui.push_id(id);
+            let value_text = formatter.text_output(value);
+            let mut buffer = ig::ImString::from(value_text);
+            buffer.reserve(1000); // TODO: Add clipboard length
 
-        let result = match formatter {
-            VariableFormatter::Checkbox => {
-                self.render_checkbox(ui, value, formatter, size, highlight)
+            ui.set_next_item_width(size[0]);
+            ui.input_text(im_str!("##text-edit"), &mut buffer).build();
+
+            let input = buffer.to_string();
+
+            if !editing_value.initial_focus {
+                ui.set_keyboard_focus_here(ig::FocusedWidget::Previous);
+                editing_value.initial_focus = true;
+            } else if !ui.is_item_active() {
+                *global_editing_value = None;
             }
-            _ => self.render_text(ui, value, formatter, size, highlight),
-        };
 
-        id_token.pop(ui);
-        result
-    }
-
-    pub(crate) fn render_cell(
-        &mut self,
-        ui: &ig::Ui<'_>,
-        id: &str,
-        value: &Value,
-        formatter: VariableFormatter,
-        cell_size: [f32; 2],
-        is_selected: bool,
-        frame: Option<u32>,
-        highlight_range: Option<(Range<u32>, ig::ImColor32)>,
-    ) -> VariableCellResult {
-        let id_token = ui.push_id(id);
-
-        let window_pos = ui.window_pos();
-        let item_spacing = ui.clone_style().item_spacing;
-
-        let mut cell_cursor_pos = ui.cursor_pos();
-        cell_cursor_pos[0] += window_pos[0] - item_spacing[0];
-        cell_cursor_pos[1] += window_pos[1] - ui.scroll_y() - item_spacing[1];
-
-        if let (Some((highlight_frames, highlight_color)), Some(frame)) = (highlight_range, frame) {
-            let margin = 5.0;
-            let offset_top = if frame == highlight_frames.start {
-                margin
-            } else {
-                0.0
-            };
-            let offset_bottom = if frame + 1 == highlight_frames.end {
-                margin
-            } else {
-                0.0
-            };
-            let dl = ui.get_window_draw_list();
-            dl.add_rect(
-                [cell_cursor_pos[0] + margin, cell_cursor_pos[1] + offset_top],
-                [
-                    cell_cursor_pos[0] + cell_size[0] - margin,
-                    cell_cursor_pos[1] + cell_size[1] - offset_bottom,
-                ],
-                highlight_color,
-            )
-            .filled(true)
-            .build();
-        }
-
-        let value_result = self.render_value(
-            ui,
-            "value",
-            value,
-            formatter,
-            [
-                cell_size[0] - 2.0 * item_spacing[0],
-                cell_size[1] - 2.0 * item_spacing[1],
-            ],
-            is_selected,
-        );
-
-        let clear_edit = ui.is_item_hovered() && ui.is_mouse_down(ig::MouseButton::Middle);
-
-        id_token.pop(ui);
-
-        VariableCellResult {
-            changed_value: value_result.changed_value,
-            clear_edit,
-            selected: value_result.clicked,
-            pressed: value_result.pressed,
-        }
-    }
-
-    pub(crate) fn render_labeled(
-        &mut self,
-        ui: &ig::Ui<'_>,
-        id: &str,
-        label: &str,
-        variable: &Variable,
-        value: &Value,
-        formatter: VariableFormatter,
-        is_edited: bool,
-        label_width: f32,
-        value_width: f32,
-    ) -> LabeledVariableResult {
-        let id_token = ui.push_id(id);
-
-        ig::Selectable::new(&im_str!("{}##label", label))
-            .size([label_width, 0.0])
-            .build(ui);
-
-        // TODO: Implement drag & drop
-        // if ui.begin_drag_drop_source() {
-        //   ui.text(label);
-        //   ui.set_drag_drop_payload("ve-var", variable.to_bytes());
-        //   ui.end_drag_drop_source();
-        // }
-
-        ui.same_line(0.0);
-
-        let cell_size = [
-            value_width,
-            ui.text_line_height() + 2.0 * ui.clone_style().frame_padding[1],
-        ];
-
-        let mut cell_cursor_pos = ui.cursor_pos();
-        cell_cursor_pos[0] += ui.window_pos()[0] - ui.scroll_x();
-        cell_cursor_pos[1] += ui.window_pos()[1] - ui.scroll_y();
-
-        let value_result = self.render_value(ui, "value", value, formatter, cell_size, false);
-
-        let clear_edit =
-            is_edited && ui.is_item_hovered() && ui.is_mouse_down(ig::MouseButton::Middle);
-
-        if is_edited {
-            let dl = ui.get_window_draw_list();
-            let mut spacing = ui.clone_style().item_spacing;
-            spacing = [spacing[0] / 2.0, spacing[1] / 2.0];
-            dl.add_rect(
-                [
-                    cell_cursor_pos[0] - spacing[0],
-                    cell_cursor_pos[1] - spacing[1],
-                ],
-                [
-                    cell_cursor_pos[0] + cell_size[0] + spacing[0] - 1.0,
-                    cell_cursor_pos[1] + cell_size[1] + spacing[1] - 1.0,
-                ],
-                ig::ImColor32::from_rgb_f32s(0.8, 0.6, 0.0),
-            )
-            .build();
-        }
-
-        id_token.pop(ui);
-
-        LabeledVariableResult {
-            changed_value: value_result.changed_value,
-            clear_edit,
-        }
-    }
-
-    fn render_text(
-        &mut self,
-        ui: &ig::Ui<'_>,
-        value: &Value,
-        formatter: VariableFormatter,
-        size: [f32; 2],
-        highlight: bool,
-    ) -> VariableValueResult {
-        let this_id = unsafe { ig::sys::igGetIDStr(im_str!("value").as_ptr()) };
-        let mut global_editing_value = editing_value().lock().unwrap();
-
-        match &mut *global_editing_value {
-            Some(editing_value) if editing_value.id == this_id => {
-                let mut cursor_pos = ui.cursor_pos();
-                cursor_pos[0] += ui.window_pos()[0];
-                cursor_pos[1] += ui.window_pos()[1] - ui.scroll_y();
-
-                let value_text = formatter.text_output(value);
-                let mut buffer = ig::ImString::from(value_text);
-                buffer.reserve(1000); // TODO: Add clipboard length
-
-                ui.set_next_item_width(size[0]);
-                ui.input_text(im_str!("##text-edit"), &mut buffer).build();
-
-                let input = buffer.to_string();
-
-                if !editing_value.initial_focus {
-                    ui.set_keyboard_focus_here(ig::FocusedWidget::Previous);
-                    editing_value.initial_focus = true;
-                } else if !ui.is_item_active() {
-                    *global_editing_value = None;
-                }
-
-                match formatter.text_input(&input) {
-                    Some(input_value) => {
-                        if input_value != *value {
-                            return VariableValueResult {
-                                changed_value: Some(input_value),
-                                clicked: false,
-                                pressed: false,
-                            };
-                        }
-                    }
-                    None => {
-                        let dl = ui.get_window_draw_list();
-                        dl.add_rect(
-                            [cursor_pos[0], cursor_pos[1]],
-                            [
-                                cursor_pos[0] + size[0],
-                                cursor_pos[1]
-                                    + ui.text_line_height()
-                                    + 2.0 * ui.clone_style().frame_padding[1],
-                            ],
-                            ig::ImColor32::from_rgb_f32s(1.0, 0.0, 0.0),
-                        )
-                        .build();
+            match formatter.text_input(&input) {
+                Some(input_value) => {
+                    if input_value != *value {
+                        return VariableValueResult {
+                            changed_value: Some(input_value),
+                            clicked: false,
+                            pressed: false,
+                        };
                     }
                 }
-
-                VariableValueResult {
-                    changed_value: None,
-                    clicked: false,
-                    pressed: false,
+                None => {
+                    let dl = ui.get_window_draw_list();
+                    dl.add_rect(
+                        [cursor_pos[0], cursor_pos[1]],
+                        [
+                            cursor_pos[0] + size[0],
+                            cursor_pos[1]
+                                + ui.text_line_height()
+                                + 2.0 * ui.clone_style().frame_padding[1],
+                        ],
+                        ig::ImColor32::from_rgb_f32s(1.0, 0.0, 0.0),
+                    )
+                    .build();
                 }
             }
-            _ => {
-                let clicked =
-                    ig::Selectable::new(&im_str!("{}##text", formatter.text_output(value)))
-                        .selected(highlight)
-                        .size(size)
-                        .allow_double_click(true)
-                        .build(ui);
 
-                if clicked && ui.is_mouse_double_clicked(ig::MouseButton::Left) {
-                    *global_editing_value = Some(EditingValue {
-                        id: this_id,
-                        initial_focus: false,
-                    });
-                }
-
-                let pressed = ui.is_item_hovered() && ui.is_mouse_clicked(ig::MouseButton::Left);
-
-                VariableValueResult {
-                    changed_value: None,
-                    clicked,
-                    pressed,
-                }
-            }
-        }
-    }
-
-    fn render_checkbox(
-        &mut self,
-        ui: &ig::Ui<'_>,
-        value: &Value,
-        formatter: VariableFormatter,
-        size: [f32; 2],
-        highlight: bool,
-    ) -> VariableValueResult {
-        let cursor_pos = ui.cursor_pos();
-
-        let mut input = formatter.bool_output(value);
-        ui.checkbox(im_str!("##checkbox"), &mut input);
-
-        ui.set_cursor_pos(cursor_pos);
-        let clicked = ig::Selectable::new(im_str!("##checkbox-background"))
-            .selected(highlight)
-            .size(size)
-            .build(ui);
-
-        let pressed = ui.is_item_hovered() && ui.is_mouse_clicked(ig::MouseButton::Left);
-
-        let input_value = formatter.bool_input(input).expect("invalid formatter");
-        if input_value != *value {
             VariableValueResult {
-                changed_value: Some(input_value),
-                clicked,
-                pressed,
+                changed_value: None,
+                clicked: false,
+                pressed: false,
             }
-        } else {
+        }
+        _ => {
+            let clicked = ig::Selectable::new(&im_str!("{}##text", formatter.text_output(value)))
+                .selected(highlight)
+                .size(size)
+                .allow_double_click(true)
+                .build(ui);
+
+            if clicked && ui.is_mouse_double_clicked(ig::MouseButton::Left) {
+                *global_editing_value = Some(EditingValue {
+                    id: this_id,
+                    initial_focus: false,
+                });
+            }
+
+            let pressed = ui.is_item_hovered() && ui.is_mouse_clicked(ig::MouseButton::Left);
+
             VariableValueResult {
                 changed_value: None,
                 clicked,
                 pressed,
             }
+        }
+    }
+}
+
+fn render_checkbox(
+    ui: &ig::Ui<'_>,
+    value: &Value,
+    formatter: VariableFormatter,
+    size: [f32; 2],
+    highlight: bool,
+) -> VariableValueResult {
+    let cursor_pos = ui.cursor_pos();
+
+    let mut input = formatter.bool_output(value);
+    ui.checkbox(im_str!("##checkbox"), &mut input);
+
+    ui.set_cursor_pos(cursor_pos);
+    let clicked = ig::Selectable::new(im_str!("##checkbox-background"))
+        .selected(highlight)
+        .size(size)
+        .build(ui);
+
+    let pressed = ui.is_item_hovered() && ui.is_mouse_clicked(ig::MouseButton::Left);
+
+    let input_value = formatter.bool_input(input).expect("invalid formatter");
+    if input_value != *value {
+        VariableValueResult {
+            changed_value: Some(input_value),
+            clicked,
+            pressed,
+        }
+    } else {
+        VariableValueResult {
+            changed_value: None,
+            clicked,
+            pressed,
         }
     }
 }

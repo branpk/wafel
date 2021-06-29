@@ -11,7 +11,7 @@ use crate::{
     joystick_control::{JoystickControlShape, JoystickControlUi},
     object_slots::render_object_slots,
     tabs::{TabInfo, Tabs},
-    variable_value::{VariableFormatter, VariableValueUi},
+    variable_value::{render_labeled_variable, render_variable_value, VariableFormatter},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -152,8 +152,7 @@ impl VariableExplorer {
     ) {
         let value = pipeline.read(variable);
 
-        // TODO: Persist state
-        let result = VariableValueUi::default().render_labeled(
+        let result = render_labeled_variable(
             ui,
             &format!("var-{}", variable),
             &pipeline.label(variable).expect("missing variable label"),
@@ -288,8 +287,7 @@ impl VariableExplorer {
                 .size([label_width, 0.0])
                 .build(ui);
             ui.same_line(0.0);
-            // TODO: Persist
-            let result = VariableValueUi::new().render_value(
+            let result = render_variable_value(
                 ui,
                 &format!("value-{}", label),
                 value,
