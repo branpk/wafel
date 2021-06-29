@@ -2,11 +2,10 @@ use std::collections::HashSet;
 
 use imgui::{self as ig, im_str};
 
-pub(crate) struct TabInfo<'a> {
+pub(crate) struct TabInfo {
     pub(crate) id: String,
     pub(crate) label: String,
     pub(crate) closable: bool,
-    pub(crate) render: Box<dyn FnMut(&str) + 'a>,
 }
 
 #[derive(Debug, Clone)]
@@ -32,9 +31,10 @@ impl Tabs {
         &mut self,
         ui: &ig::Ui<'_>,
         id: &str,
-        tabs: &mut [TabInfo<'_>],
+        tabs: &[TabInfo],
         open_tab_index: Option<usize>,
         allow_windowing: bool,
+        mut render: impl FnMut(usize),
     ) -> TabResult {
         let id_token = ui.push_id(id);
 
@@ -131,16 +131,18 @@ impl Tabs {
         ig::ChildWindow::new("content")
             .flags(ig::WindowFlags::HORIZONTAL_SCROLLBAR)
             .build(ui, || {
-                let tab = &mut tabs[*selected_tab_index];
+                let tab = &tabs[*selected_tab_index];
                 if !windowed_tabs.contains(&tab.id) {
-                    (tab.render)(&tab.id);
+                    render(*selected_tab_index);
                 }
             });
 
         ui.columns(1, im_str!("tab-columns-end"), false);
 
         for tab_id in &self.windowed_tabs.clone() {
-            if let Some(tab) = tabs.iter_mut().find(|tab| tab.id == *tab_id) {
+            if let Some(tab_index) = tabs.iter().position(|tab| tab.id == *tab_id) {
+                let tab = &tabs[tab_index];
+
                 let style_token =
                     ui.push_style_color(ig::StyleColor::WindowBg, [0.06, 0.06, 0.06, 0.94]);
 
@@ -151,7 +153,7 @@ impl Tabs {
                     .opened(&mut opened)
                     .flags(ig::WindowFlags::HORIZONTAL_SCROLLBAR)
                     .build(ui, || {
-                        (tab.render)(&tab.id);
+                        render(tab_index);
                     });
 
                 style_token.pop(ui);

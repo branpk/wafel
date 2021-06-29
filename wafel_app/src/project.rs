@@ -217,39 +217,6 @@ impl Project {
             self.value = changed;
         }
 
-        self.tabs.render(
-            ui,
-            "my-tabs",
-            &mut [
-                TabInfo {
-                    id: "tab-1".to_string(),
-                    label: "Tab 1".to_string(),
-                    closable: false,
-                    render: Box::new(|id| {
-                        ui.text("Tab 1");
-                    }),
-                },
-                TabInfo {
-                    id: "tab-2".to_string(),
-                    label: "Tab 2".to_string(),
-                    closable: true,
-                    render: Box::new(|id| {
-                        ui.text("Tab 2");
-                    }),
-                },
-                TabInfo {
-                    id: "tab-3".to_string(),
-                    label: "Tab 3".to_string(),
-                    closable: true,
-                    render: Box::new(|id| {
-                        ui.text("Tab 3");
-                    }),
-                },
-            ],
-            None,
-            true,
-        );
-
         self.frame_sheet.render(
             ui,
             "my-frame-sheet",

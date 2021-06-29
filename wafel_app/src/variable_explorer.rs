@@ -3,13 +3,14 @@ use std::{f32::consts::PI, num::Wrapping};
 use imgui::{self as ig, im_str};
 use wafel_api::Value;
 use wafel_core::{
-    stick_adjusted_to_intended, stick_intended_to_raw_heuristic, stick_raw_to_adjusted, Angle,
+    stick_adjusted_to_intended, stick_intended_to_raw_heuristic, stick_raw_to_adjusted,
     IntendedStick, ObjectBehavior, ObjectSlot, Pipeline, SurfaceSlot, Variable,
 };
 
 use crate::{
     joystick_control::{JoystickControlShape, JoystickControlUi},
     object_slots::render_object_slots,
+    tabs::{TabInfo, Tabs},
     variable_value::{VariableFormatter, VariableValueUi},
 };
 
@@ -25,8 +26,12 @@ enum TabId {
 }
 
 impl TabId {
-    fn id(&self) -> String {
+    fn id(self) -> String {
         format!("tab-{:?}", self)
+    }
+
+    fn closable(self) -> bool {
+        matches!(self, TabId::Object(_) | TabId::Surface(_))
     }
 }
 
@@ -471,7 +476,7 @@ impl VariableExplorer {
             });
     }
 
-    fn render_frame_log_tab(&self, ui: &ig::Ui<'_>, tab: TabId, pipeline: &Pipeline, frame: u32) {
+    fn render_frame_log_tab(&self, ui: &ig::Ui<'_>, pipeline: &Pipeline, frame: u32) {
         let mut frame_offset = 1; // TODO: Persist
         let mut round_numbers = true; // TODO: Persist
 
@@ -599,5 +604,61 @@ impl VariableExplorer {
                 }
             }
         }
+    }
+
+    fn render_variable_tab(
+        &self,
+        ui: &ig::Ui<'_>,
+        tab: TabId,
+        pipeline: &mut Pipeline,
+        frame: u32,
+    ) {
+        let variables = self.variables_for_tab(pipeline, frame, tab);
+        for variable in &variables {
+            self.render_variable(ui, pipeline, tab, &variable.with_frame(frame), 80.0, 80.0);
+        }
+    }
+
+    fn render_tab_contents(
+        &mut self,
+        ui: &ig::Ui<'_>,
+        id: &str,
+        tab: TabId,
+        pipeline: &mut Pipeline,
+        frame: u32,
+    ) {
+        let id_token = ui.push_id(id);
+        match tab {
+            TabId::Input => self.render_input_tab(ui, tab, pipeline, frame),
+            TabId::Subframe => self.render_frame_log_tab(ui, pipeline, frame),
+            TabId::Objects => self.render_objects_tab(ui, pipeline, frame),
+            TabId::Mario | TabId::Misc | TabId::Object(_) | TabId::Surface(_) => {
+                self.render_variable_tab(ui, tab, pipeline, frame)
+            }
+        }
+        id_token.pop(ui);
+    }
+
+    fn render(&mut self, ui: &ig::Ui<'_>, id: &str, pipeline: &mut Pipeline, frame: u32) {
+        let id_token = ui.push_id(id);
+
+        let open_tab_index = self.open_tabs.iter().position(|&id| id == self.current_tab);
+
+        let tab_info: Vec<TabInfo> = self
+            .open_tabs
+            .iter()
+            .map(|&tab| TabInfo {
+                id: tab.id(),
+                label: self.tab_label(tab),
+                closable: tab.closable(),
+            })
+            .collect();
+
+        Tabs::new().render(ui, "tabs", &tab_info, open_tab_index, true, |tab_index| {
+            let tab = self.open_tabs[tab_index];
+            self.render_tab_contents(ui, id, tab, pipeline, frame);
+        });
+
+        id_token.pop(ui);
     }
 }
