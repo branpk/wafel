@@ -211,6 +211,27 @@ impl Value {
         self.try_as_float().map(|r| r as f32)
     }
 
+    /// Convert the value to a string, panicking on failure.
+    #[track_caller]
+    pub fn as_str(&self) -> &str {
+        match self.try_as_str() {
+            Ok(s) => s,
+            Err(error) => panic!("{}", error),
+        }
+    }
+
+    /// Convert the value to a string.
+    pub fn try_as_str(&self) -> Result<&str, ValueTypeError> {
+        if let Value::String(s) = self {
+            Ok(s)
+        } else {
+            Err(ValueTypeError {
+                expected: "string".into(),
+                actual: self.clone(),
+            })
+        }
+    }
+
     /// Convert the value to an address, panicking on failure.
     #[track_caller]
     pub fn as_address(&self) -> Address {
