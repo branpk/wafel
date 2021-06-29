@@ -69,7 +69,7 @@ impl Value {
         matches!(self, Value::None)
     }
 
-    /// Panics if the value is not `Value::None`.
+    /// Panic if the value is not `Value::None`.
     #[track_caller]
     pub fn as_none(&self) {
         if let Err(error) = self.try_as_none() {
@@ -77,7 +77,7 @@ impl Value {
         }
     }
 
-    /// Returns an error if the value is not `Value::None`.
+    /// Return an error if the value is not `Value::None`.
     pub fn try_as_none(&self) -> Result<(), ValueTypeError> {
         if self.is_none() {
             Ok(())
@@ -86,6 +86,15 @@ impl Value {
                 expected: "void".into(),
                 actual: self.clone(),
             })
+        }
+    }
+
+    /// Return None if the value is none, and Some(self) otherwise.
+    pub fn option(&self) -> Option<&Value> {
+        if self.is_none() {
+            None
+        } else {
+            Some(self)
         }
     }
 

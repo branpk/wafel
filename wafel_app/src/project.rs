@@ -1,4 +1,4 @@
-use std::{iter, u32};
+use std::{iter, num::Wrapping, u32};
 
 use imgui::{self as ig, im_str};
 use wafel_api::{save_m64, Input, M64Metadata, SM64Version, Timeline, Value};
@@ -12,6 +12,7 @@ use crate::{
     joystick_control::{JoystickControlShape, JoystickControlUi},
     object_slots::render_object_slots,
     tabs::{TabInfo, Tabs},
+    variable_explorer::VariableExplorer,
     variable_value::{VariableFormatter, VariableValueUi},
 };
 
@@ -33,12 +34,8 @@ pub(crate) struct Project {
     selected_frame: u32,
 
     // TODO: Remove below
-    stick: [f32; 2],
-    joystick_control: JoystickControlUi,
-    value: Value,
-    variable_value: VariableValueUi,
-    tabs: Tabs,
     frame_sheet: FrameSheet,
+    variable_explorer: VariableExplorer,
 }
 
 impl Project {
@@ -66,12 +63,8 @@ impl Project {
             pipeline,
             max_frame: 0,
             selected_frame: 0,
-            stick: [0.0, 0.0],
-            joystick_control: JoystickControlUi::new(),
-            value: Value::Int(0),
-            variable_value: VariableValueUi::new(),
-            tabs: Tabs::new(),
             frame_sheet,
+            variable_explorer: VariableExplorer::new(),
         }
     }
 
@@ -172,50 +165,13 @@ impl Project {
             self.selected_frame = frame;
         }
 
-        if let Some(stick) = self.joystick_control.render(
+        self.variable_explorer.render(
             ui,
-            "my-joystick",
-            self.stick,
-            JoystickControlShape::Circle,
-        ) {
-            self.stick = stick;
-        }
-
-        render_object_slots(
-            ui,
-            "my-objects",
-            &iter::repeat_with(|| None).take(240).collect::<Vec<_>>(),
-            |_| panic!(),
+            "my-var-exp",
+            &mut self.pipeline,
+            self.selected_frame,
+            Wrapping(0),
         );
-
-        // let result = self.variable_value.render_cell(
-        //     ui,
-        //     "my-var-val",
-        //     &self.value,
-        //     VariableFormatter::DecimalInt,
-        //     [200.0, 30.0],
-        //     false,
-        //     Some(3),
-        //     Some((3..5, ig::ImColor32::from_rgba_f32s(0.0, 0.5, 0.0, 0.3))),
-        // );
-        // if let Some(changed) = result.changed_value {
-        //     self.value = changed;
-        // }
-
-        let result = self.variable_value.render_labeled(
-            ui,
-            "my-labeled-var",
-            "Label",
-            &Variable::new("my-var"),
-            &self.value,
-            VariableFormatter::DecimalInt,
-            true,
-            80.0,
-            80.0,
-        );
-        if let Some(changed) = result.changed_value {
-            self.value = changed;
-        }
 
         self.frame_sheet.render(
             ui,

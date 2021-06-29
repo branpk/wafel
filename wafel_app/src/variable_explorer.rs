@@ -3,7 +3,7 @@ use std::{f32::consts::PI, num::Wrapping};
 use imgui::{self as ig, im_str};
 use wafel_api::Value;
 use wafel_core::{
-    stick_adjusted_to_intended, stick_intended_to_raw_heuristic, stick_raw_to_adjusted,
+    stick_adjusted_to_intended, stick_intended_to_raw_heuristic, stick_raw_to_adjusted, Angle,
     IntendedStick, ObjectBehavior, ObjectSlot, Pipeline, SurfaceSlot, Variable,
 };
 
@@ -208,6 +208,7 @@ impl VariableExplorer {
         tab: TabId,
         pipeline: &mut Pipeline,
         frame: u32,
+        rotational_camera_yaw: Angle,
     ) {
         let up_options = ["3d view", "mario yaw", "stick y", "world x"];
         let mut up_option = 0; // TODO: persist
@@ -234,6 +235,8 @@ impl VariableExplorer {
         let camera_yaw = Wrapping(
             pipeline
                 .read(&Variable::new("camera-yaw").with_frame(frame))
+                .option()
+                .unwrap_or(&Value::Int(0))
                 .as_int() as i16,
         );
         let squish_timer = pipeline
@@ -260,7 +263,7 @@ impl VariableExplorer {
             "mario yaw" => active_face_yaw,
             "stick y" => camera_yaw + Wrapping(-0x8000),
             "world x" => Wrapping(0x4000),
-            "3d view" => todo!(), // TODO: self.model.rotational_camera_yaw
+            "3d view" => rotational_camera_yaw,
             _ => unimplemented!(),
         };
         let input_up_yaw = up_angle;
@@ -407,7 +410,14 @@ impl VariableExplorer {
         }
     }
 
-    fn render_input_tab(&self, ui: &ig::Ui<'_>, tab: TabId, pipeline: &mut Pipeline, frame: u32) {
+    fn render_input_tab(
+        &self,
+        ui: &ig::Ui<'_>,
+        tab: TabId,
+        pipeline: &mut Pipeline,
+        frame: u32,
+        rotational_camera_yaw: Angle,
+    ) {
         let column_sizes = [170.0, 370.0, 200.0];
 
         ig::ChildWindow::new(im_str!("##input"))
@@ -425,7 +435,7 @@ impl VariableExplorer {
                         ui,
                         pipeline,
                         tab,
-                        &Variable::new(&format!("input-button-{}", button)),
+                        &Variable::new(&format!("input-button-{}", button)).with_frame(frame),
                         10.0,
                         25.0,
                     )
@@ -467,7 +477,14 @@ impl VariableExplorer {
                 }
 
                 ui.next_column();
-                self.render_intended_stick_control(ui, "intended", tab, pipeline, frame);
+                self.render_intended_stick_control(
+                    ui,
+                    "intended",
+                    tab,
+                    pipeline,
+                    frame,
+                    rotational_camera_yaw,
+                );
 
                 ui.next_column();
                 self.render_stick_control(ui, "joystick", tab, pipeline, frame);
@@ -626,10 +643,11 @@ impl VariableExplorer {
         tab: TabId,
         pipeline: &mut Pipeline,
         frame: u32,
+        rotational_camera_yaw: Angle,
     ) {
         let id_token = ui.push_id(id);
         match tab {
-            TabId::Input => self.render_input_tab(ui, tab, pipeline, frame),
+            TabId::Input => self.render_input_tab(ui, tab, pipeline, frame, rotational_camera_yaw),
             TabId::Subframe => self.render_frame_log_tab(ui, pipeline, frame),
             TabId::Objects => self.render_objects_tab(ui, pipeline, frame),
             TabId::Mario | TabId::Misc | TabId::Object(_) | TabId::Surface(_) => {
@@ -639,7 +657,14 @@ impl VariableExplorer {
         id_token.pop(ui);
     }
 
-    fn render(&mut self, ui: &ig::Ui<'_>, id: &str, pipeline: &mut Pipeline, frame: u32) {
+    pub(crate) fn render(
+        &mut self,
+        ui: &ig::Ui<'_>,
+        id: &str,
+        pipeline: &mut Pipeline,
+        frame: u32,
+        rotational_camera_yaw: Angle,
+    ) {
         let id_token = ui.push_id(id);
 
         let open_tab_index = self.open_tabs.iter().position(|&id| id == self.current_tab);
@@ -654,10 +679,17 @@ impl VariableExplorer {
             })
             .collect();
 
-        Tabs::new().render(ui, "tabs", &tab_info, open_tab_index, true, |tab_index| {
+        let result = Tabs::new().render(ui, "tabs", &tab_info, open_tab_index, true, |tab_index| {
             let tab = self.open_tabs[tab_index];
-            self.render_tab_contents(ui, id, tab, pipeline, frame);
+            self.render_tab_contents(ui, id, tab, pipeline, frame, rotational_camera_yaw);
         });
+
+        if let Some(selected_tab_index) = result.selected_tab_index {
+            self.current_tab = self.open_tabs[selected_tab_index];
+        }
+        if let Some(closed_tab_index) = result.closed_tab_index {
+            self.open_tabs.remove(closed_tab_index);
+        }
 
         id_token.pop(ui);
     }
