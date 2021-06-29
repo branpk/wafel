@@ -1,6 +1,12 @@
-use std::{collections::HashMap, ops::Range, sync::Arc};
+use std::{
+    borrow::BorrowMut,
+    collections::HashMap,
+    ops::Range,
+    sync::{Arc, Mutex},
+};
 
 use imgui::{self as ig, im_str};
+use once_cell::sync::OnceCell;
 use wafel_api::{FloatValue, IntValue, Value};
 use wafel_core::{Pipeline, Variable};
 
@@ -100,11 +106,19 @@ pub(crate) struct LabeledVariableResult {
     pub(crate) clear_edit: bool,
 }
 
-#[derive(Debug, Clone, Default)]
-pub(crate) struct VariableValueUi {
-    editing: bool,
+#[derive(Debug)]
+struct EditingValue {
+    id: ig::sys::ImGuiID,
     initial_focus: bool,
 }
+
+fn editing_value() -> &'static Mutex<Option<EditingValue>> {
+    static INSTANCE: OnceCell<Mutex<Option<EditingValue>>> = OnceCell::new();
+    INSTANCE.get_or_init(|| Mutex::new(None))
+}
+
+#[derive(Debug, Clone, Default)]
+pub(crate) struct VariableValueUi {}
 
 impl VariableValueUi {
     pub(crate) fn new() -> Self {
@@ -277,77 +291,86 @@ impl VariableValueUi {
         size: [f32; 2],
         highlight: bool,
     ) -> VariableValueResult {
-        if !self.editing {
-            let clicked = ig::Selectable::new(&im_str!("{}##text", formatter.text_output(value)))
-                .selected(highlight)
-                .size(size)
-                .allow_double_click(true)
-                .build(ui);
+        let this_id = unsafe { ig::sys::igGetIDStr(im_str!("value").as_ptr()) };
+        let mut global_editing_value = editing_value().lock().unwrap();
 
-            if clicked && ui.is_mouse_double_clicked(ig::MouseButton::Left) {
-                self.editing = true;
-                self.initial_focus = false;
-            }
+        match &mut *global_editing_value {
+            Some(editing_value) if editing_value.id == this_id => {
+                let mut cursor_pos = ui.cursor_pos();
+                cursor_pos[0] += ui.window_pos()[0];
+                cursor_pos[1] += ui.window_pos()[1] - ui.scroll_y();
 
-            let pressed = ui.is_item_hovered() && ui.is_mouse_clicked(ig::MouseButton::Left);
+                let value_text = formatter.text_output(value);
+                let mut buffer = ig::ImString::from(value_text);
+                buffer.reserve(1000); // TODO: Add clipboard length
 
-            return VariableValueResult {
-                changed_value: None,
-                clicked,
-                pressed,
-            };
-        }
+                ui.set_next_item_width(size[0]);
+                ui.input_text(im_str!("##text-edit"), &mut buffer).build();
 
-        let mut cursor_pos = ui.cursor_pos();
-        cursor_pos[0] += ui.window_pos()[0];
-        cursor_pos[1] += ui.window_pos()[1] - ui.scroll_y();
+                let input = buffer.to_string();
 
-        let value_text = formatter.text_output(value);
-        let mut buffer = ig::ImString::from(value_text);
-        buffer.reserve(1000); // TODO: Add clipboard length
+                if !editing_value.initial_focus {
+                    ui.set_keyboard_focus_here(ig::FocusedWidget::Previous);
+                    editing_value.initial_focus = true;
+                } else if !ui.is_item_active() {
+                    *global_editing_value = None;
+                }
 
-        ui.set_next_item_width(size[0]);
-        ui.input_text(im_str!("##text-edit"), &mut buffer).build();
+                match formatter.text_input(&input) {
+                    Some(input_value) => {
+                        if input_value != *value {
+                            return VariableValueResult {
+                                changed_value: Some(input_value),
+                                clicked: false,
+                                pressed: false,
+                            };
+                        }
+                    }
+                    None => {
+                        let dl = ui.get_window_draw_list();
+                        dl.add_rect(
+                            [cursor_pos[0], cursor_pos[1]],
+                            [
+                                cursor_pos[0] + size[0],
+                                cursor_pos[1]
+                                    + ui.text_line_height()
+                                    + 2.0 * ui.clone_style().frame_padding[1],
+                            ],
+                            ig::ImColor32::from_rgb_f32s(1.0, 0.0, 0.0),
+                        )
+                        .build();
+                    }
+                }
 
-        let input = buffer.to_string();
-
-        if !self.initial_focus {
-            ui.set_keyboard_focus_here(ig::FocusedWidget::Previous);
-            self.initial_focus = true;
-        } else if !ui.is_item_active() {
-            self.editing = false;
-        }
-
-        match formatter.text_input(&input) {
-            Some(input_value) => {
-                if input_value != *value {
-                    return VariableValueResult {
-                        changed_value: Some(input_value),
-                        clicked: false,
-                        pressed: false,
-                    };
+                VariableValueResult {
+                    changed_value: None,
+                    clicked: false,
+                    pressed: false,
                 }
             }
-            None => {
-                let dl = ui.get_window_draw_list();
-                dl.add_rect(
-                    [cursor_pos[0], cursor_pos[1]],
-                    [
-                        cursor_pos[0] + size[0],
-                        cursor_pos[1]
-                            + ui.text_line_height()
-                            + 2.0 * ui.clone_style().frame_padding[1],
-                    ],
-                    ig::ImColor32::from_rgb_f32s(1.0, 0.0, 0.0),
-                )
-                .build();
-            }
-        }
+            _ => {
+                let clicked =
+                    ig::Selectable::new(&im_str!("{}##text", formatter.text_output(value)))
+                        .selected(highlight)
+                        .size(size)
+                        .allow_double_click(true)
+                        .build(ui);
 
-        VariableValueResult {
-            changed_value: None,
-            clicked: false,
-            pressed: false,
+                if clicked && ui.is_mouse_double_clicked(ig::MouseButton::Left) {
+                    *global_editing_value = Some(EditingValue {
+                        id: this_id,
+                        initial_focus: false,
+                    });
+                }
+
+                let pressed = ui.is_item_hovered() && ui.is_mouse_clicked(ig::MouseButton::Left);
+
+                VariableValueResult {
+                    changed_value: None,
+                    clicked,
+                    pressed,
+                }
+            }
         }
     }
 
