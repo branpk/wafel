@@ -140,7 +140,6 @@ impl VariableExplorer {
         &self,
         ui: &ig::Ui<'_>,
         pipeline: &mut Pipeline,
-        tab: TabId,
         variable: &Variable,
         label_width: f32,
         value_width: f32,
@@ -150,7 +149,7 @@ impl VariableExplorer {
         // TODO: Persist state
         let result = VariableValueUi::default().render_labeled(
             ui,
-            &format!("var-{}-{}", tab.id(), variable),
+            &format!("var-{}", variable),
             &pipeline.label(variable).expect("missing variable label"),
             variable,
             &value,
@@ -168,19 +167,12 @@ impl VariableExplorer {
         }
     }
 
-    fn render_stick_control(
-        &self,
-        ui: &ig::Ui<'_>,
-        id: &str,
-        tab: TabId,
-        pipeline: &mut Pipeline,
-        frame: u32,
-    ) {
+    fn render_stick_control(&self, ui: &ig::Ui<'_>, id: &str, pipeline: &mut Pipeline, frame: u32) {
         let stick_x_var = Variable::new("input-stick-x").with_frame(frame);
         let stick_y_var = Variable::new("input-stick-y").with_frame(frame);
 
-        self.render_variable(ui, pipeline, tab, &stick_x_var, 60.0, 50.0);
-        self.render_variable(ui, pipeline, tab, &stick_y_var, 60.0, 50.0);
+        self.render_variable(ui, pipeline, &stick_x_var, 60.0, 50.0);
+        self.render_variable(ui, pipeline, &stick_y_var, 60.0, 50.0);
 
         let stick_x = pipeline.read(&stick_x_var).as_int() as i8;
         let stick_y = pipeline.read(&stick_y_var).as_int() as i8;
@@ -205,10 +197,10 @@ impl VariableExplorer {
         &self,
         ui: &ig::Ui<'_>,
         id: &str,
-        tab: TabId,
         pipeline: &mut Pipeline,
         frame: u32,
         rotational_camera_yaw: Angle,
+        input_up_yaw: &mut Angle,
     ) {
         let up_options = ["3d view", "mario yaw", "stick y", "world x"];
         let mut up_option = 0; // TODO: persist
@@ -266,7 +258,7 @@ impl VariableExplorer {
             "3d view" => rotational_camera_yaw,
             _ => unimplemented!(),
         };
-        let input_up_yaw = up_angle;
+        // TODO: self.model.input_up_yaw = up_angle
 
         let raw_stick_x = pipeline.read(&stick_x_var).as_int() as i8;
         let raw_stick_y = pipeline.read(&stick_y_var).as_int() as i8;
@@ -413,10 +405,10 @@ impl VariableExplorer {
     fn render_input_tab(
         &self,
         ui: &ig::Ui<'_>,
-        tab: TabId,
         pipeline: &mut Pipeline,
         frame: u32,
         rotational_camera_yaw: Angle,
+        input_up_yaw: &mut Angle,
     ) {
         let column_sizes = [170.0, 370.0, 200.0];
 
@@ -434,7 +426,6 @@ impl VariableExplorer {
                     self.render_variable(
                         ui,
                         pipeline,
-                        tab,
                         &Variable::new(&format!("input-button-{}", button)).with_frame(frame),
                         10.0,
                         25.0,
@@ -480,14 +471,14 @@ impl VariableExplorer {
                 self.render_intended_stick_control(
                     ui,
                     "intended",
-                    tab,
                     pipeline,
                     frame,
                     rotational_camera_yaw,
+                    input_up_yaw,
                 );
 
                 ui.next_column();
-                self.render_stick_control(ui, "joystick", tab, pipeline, frame);
+                self.render_stick_control(ui, "joystick", pipeline, frame);
 
                 ui.columns(1, im_str!("input-columns-end"), true);
             });
@@ -632,7 +623,7 @@ impl VariableExplorer {
     ) {
         let variables = self.variables_for_tab(pipeline, frame, tab);
         for variable in &variables {
-            self.render_variable(ui, pipeline, tab, &variable.with_frame(frame), 80.0, 80.0);
+            self.render_variable(ui, pipeline, &variable.with_frame(frame), 80.0, 80.0);
         }
     }
 
@@ -644,10 +635,13 @@ impl VariableExplorer {
         pipeline: &mut Pipeline,
         frame: u32,
         rotational_camera_yaw: Angle,
+        input_up_yaw: &mut Angle,
     ) {
         let id_token = ui.push_id(id);
         match tab {
-            TabId::Input => self.render_input_tab(ui, tab, pipeline, frame, rotational_camera_yaw),
+            TabId::Input => {
+                self.render_input_tab(ui, pipeline, frame, rotational_camera_yaw, input_up_yaw)
+            }
             TabId::Subframe => self.render_frame_log_tab(ui, pipeline, frame),
             TabId::Objects => self.render_objects_tab(ui, pipeline, frame),
             TabId::Mario | TabId::Misc | TabId::Object(_) | TabId::Surface(_) => {
@@ -664,6 +658,7 @@ impl VariableExplorer {
         pipeline: &mut Pipeline,
         frame: u32,
         rotational_camera_yaw: Angle,
+        input_up_yaw: &mut Angle,
     ) {
         let id_token = ui.push_id(id);
 
@@ -681,7 +676,15 @@ impl VariableExplorer {
 
         let result = Tabs::new().render(ui, "tabs", &tab_info, open_tab_index, true, |tab_index| {
             let tab = self.open_tabs[tab_index];
-            self.render_tab_contents(ui, id, tab, pipeline, frame, rotational_camera_yaw);
+            self.render_tab_contents(
+                ui,
+                id,
+                tab,
+                pipeline,
+                frame,
+                rotational_camera_yaw,
+                input_up_yaw,
+            );
         });
 
         if let Some(selected_tab_index) = result.selected_tab_index {
