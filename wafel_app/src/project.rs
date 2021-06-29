@@ -171,7 +171,6 @@ impl Project {
             &mut self.pipeline,
             self.selected_frame,
             Wrapping(0),
-            &mut Wrapping(0),
         );
 
         self.frame_sheet.render(
