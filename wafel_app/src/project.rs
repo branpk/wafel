@@ -8,7 +8,6 @@ use crate::{
     config::libsm64_path,
     frame_sheet::FrameSheet,
     frame_slider::render_frame_slider,
-    input_text_with_error::render_input_text_with_error,
     joystick_control::{JoystickControlShape, JoystickControlUi},
     object_slots::render_object_slots,
     tabs::{TabInfo, Tabs},
@@ -150,17 +149,6 @@ impl Project {
             self.selected_frame,
             self.max_frame,
             &self.pipeline.timeline().dbg_cached_frames(),
-        ) {
-            self.selected_frame = frame;
-        }
-
-        if let Some(frame) = render_input_text_with_error(
-            ui,
-            "my-text-input",
-            &self.selected_frame.to_string(),
-            5,
-            200.0,
-            |s| s.parse::<u32>().ok(),
         ) {
             self.selected_frame = frame;
         }
