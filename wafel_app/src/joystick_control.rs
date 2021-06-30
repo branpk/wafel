@@ -1,4 +1,7 @@
+use std::sync::Mutex;
+
 use imgui::{self as ig, im_str};
+use once_cell::sync::OnceCell;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum JoystickControlShape {
@@ -6,85 +9,73 @@ pub(crate) enum JoystickControlShape {
     Circle,
 }
 
-#[derive(Debug, Clone, Default)]
-pub(crate) struct JoystickControlUi {
-    start_value: Option<[f32; 2]>,
+#[derive(Debug)]
+struct ActiveJoystickState {
+    id: ig::sys::ImGuiID,
+    start_value: [f32; 2],
 }
 
-impl JoystickControlUi {
-    pub(crate) fn new() -> Self {
-        Self::default()
+fn active_joystick_state() -> &'static Mutex<Option<ActiveJoystickState>> {
+    static INSTANCE: OnceCell<Mutex<Option<ActiveJoystickState>>> = OnceCell::new();
+    INSTANCE.get_or_init(|| Mutex::new(None))
+}
+
+pub(crate) fn render_joystick_control(
+    ui: &ig::Ui<'_>,
+    id: &str,
+    mut stick: [f32; 2],
+    shape: JoystickControlShape,
+) -> Option<[f32; 2]> {
+    let id_token = ui.push_id(id);
+
+    let state_id = unsafe { ig::sys::igGetIDStr(im_str!("state").as_ptr()) };
+    let mut global_state = active_joystick_state().lock().unwrap();
+
+    let dl = ui.get_window_draw_list();
+
+    let padding = 10.0;
+    let content_region = ui.content_region_avail();
+    let size = (content_region[0] - ui.clone_style().scrollbar_size - 2.0 * padding)
+        .min(content_region[1] - 2.0 * padding)
+        .min(200.0)
+        .max(100.0);
+
+    let initial_cursor_pos = ui.cursor_pos();
+    let top_left = [
+        initial_cursor_pos[0] + ui.window_pos()[0] - ui.scroll_x() + padding,
+        initial_cursor_pos[1] + ui.window_pos()[1] - ui.scroll_y() + padding,
+    ];
+
+    let background_color = ig::ImColor32::from_rgba_f32s(0.0, 0.0, 0.0, 0.3);
+    match shape {
+        JoystickControlShape::Square => dl
+            .add_rect(
+                top_left,
+                [top_left[0] + size, top_left[1] + size],
+                background_color,
+            )
+            .filled(true)
+            .build(),
+        JoystickControlShape::Circle => dl
+            .add_circle(
+                [top_left[0] + size * 0.5, top_left[1] + size * 0.5],
+                size * 0.5,
+                background_color,
+            )
+            .num_segments(32)
+            .filled(true)
+            .build(),
     }
 
-    fn value(&self, drag: [f32; 2]) -> [f32; 2] {
-        let start_value = self.start_value.expect("missing start value");
-        [start_value[0] + drag[0], start_value[1] + drag[1]]
-    }
+    let mut result = None;
 
-    fn is_active(&self) -> bool {
-        self.start_value.is_some()
-    }
-
-    fn set_active(&mut self, value: [f32; 2]) {
-        if self.start_value.is_none() {
-            self.start_value = Some(value);
-        }
-    }
-
-    fn reset(&mut self) {
-        self.start_value = None;
-    }
-
-    pub(crate) fn render(
-        &mut self,
-        ui: &ig::Ui<'_>,
-        id: &str,
-        mut stick: [f32; 2],
-        shape: JoystickControlShape,
-    ) -> Option<[f32; 2]> {
-        let id_token = ui.push_id(id);
-
-        let dl = ui.get_window_draw_list();
-
-        let padding = 10.0;
-        let content_region = ui.content_region_avail();
-        let size = (content_region[0] - ui.clone_style().scrollbar_size - 2.0 * padding)
-            .min(content_region[1] - 2.0 * padding)
-            .min(200.0)
-            .max(100.0);
-
-        let initial_cursor_pos = ui.cursor_pos();
-        let top_left = [
-            initial_cursor_pos[0] + ui.window_pos()[0] - ui.scroll_x() + padding,
-            initial_cursor_pos[1] + ui.window_pos()[1] - ui.scroll_y() + padding,
-        ];
-
-        let background_color = ig::ImColor32::from_rgba_f32s(0.0, 0.0, 0.0, 0.3);
-        match shape {
-            JoystickControlShape::Square => dl
-                .add_rect(
-                    top_left,
-                    [top_left[0] + size, top_left[1] + size],
-                    background_color,
-                )
-                .filled(true)
-                .build(),
-            JoystickControlShape::Circle => dl
-                .add_circle(
-                    [top_left[0] + size * 0.5, top_left[1] + size * 0.5],
-                    size * 0.5,
-                    background_color,
-                )
-                .num_segments(32)
-                .filled(true)
-                .build(),
-        }
-
-        let mut result = None;
-
-        if self.is_active() && ui.is_mouse_down(ig::MouseButton::Left) {
-            let new_offset =
-                self.value(ui.mouse_drag_delta_with_threshold(ig::MouseButton::Left, 0.0));
+    if let Some(state) = global_state.as_ref().filter(|state| state.id == state_id) {
+        if ui.is_mouse_down(ig::MouseButton::Left) {
+            let delta = ui.mouse_drag_delta_with_threshold(ig::MouseButton::Left, 0.0);
+            let new_offset = [
+                state.start_value[0] + delta[0],
+                state.start_value[1] + delta[1],
+            ];
 
             let mut new_stick = [
                 new_offset[0] / size * 2.0 - 1.0,
@@ -111,39 +102,48 @@ impl JoystickControlUi {
                 result = Some(stick);
             }
         }
-
-        let offset = [
-            (stick[0] + 1.0) / 2.0 * size,
-            (1.0 - (stick[1] + 1.0) / 2.0) * size,
-        ];
-
-        dl.add_line(
-            [top_left[0] + size / 2.0, top_left[1] + size / 2.0],
-            [top_left[0] + offset[0], top_left[1] + offset[1]],
-            ig::ImColor32::from_rgba_f32s(1.0, 1.0, 1.0, 0.5),
-        )
-        .build();
-
-        let button_size = 20.0;
-        let button_pos = [
-            padding + initial_cursor_pos[0] + offset[0] - button_size / 2.0,
-            padding + initial_cursor_pos[1] + offset[1] - button_size / 2.0,
-        ];
-        ui.set_cursor_pos(button_pos);
-        ui.button(im_str!("##joystick-button"), [button_size, button_size]);
-
-        ui.set_cursor_pos([
-            initial_cursor_pos[0],
-            initial_cursor_pos[1] + size + 2.0 * padding,
-        ]);
-
-        if ui.is_item_active() {
-            self.set_active(offset)
-        } else {
-            self.reset()
-        }
-
-        id_token.pop(ui);
-        result
     }
+
+    let offset = [
+        (stick[0] + 1.0) / 2.0 * size,
+        (1.0 - (stick[1] + 1.0) / 2.0) * size,
+    ];
+
+    dl.add_line(
+        [top_left[0] + size / 2.0, top_left[1] + size / 2.0],
+        [top_left[0] + offset[0], top_left[1] + offset[1]],
+        ig::ImColor32::from_rgba_f32s(1.0, 1.0, 1.0, 0.5),
+    )
+    .build();
+
+    let button_size = 20.0;
+    let button_pos = [
+        padding + initial_cursor_pos[0] + offset[0] - button_size / 2.0,
+        padding + initial_cursor_pos[1] + offset[1] - button_size / 2.0,
+    ];
+    ui.set_cursor_pos(button_pos);
+    ui.button(im_str!("##joystick-button"), [button_size, button_size]);
+
+    ui.set_cursor_pos([
+        initial_cursor_pos[0],
+        initial_cursor_pos[1] + size + 2.0 * padding,
+    ]);
+
+    let already_active = global_state
+        .as_ref()
+        .filter(|state| state.id == state_id)
+        .is_some();
+    if ui.is_item_active() {
+        if !already_active {
+            *global_state = Some(ActiveJoystickState {
+                id: state_id,
+                start_value: offset,
+            });
+        }
+    } else if already_active {
+        *global_state = None;
+    }
+
+    id_token.pop(ui);
+    result
 }

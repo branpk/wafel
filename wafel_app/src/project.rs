@@ -8,7 +8,7 @@ use crate::{
     config::libsm64_path,
     frame_sheet::FrameSheet,
     frame_slider::render_frame_slider,
-    joystick_control::{JoystickControlShape, JoystickControlUi},
+    joystick_control::JoystickControlShape,
     object_slots::render_object_slots,
     tabs::{TabInfo, Tabs},
     variable_explorer::VariableExplorer,

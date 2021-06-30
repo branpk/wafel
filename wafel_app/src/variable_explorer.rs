@@ -8,7 +8,7 @@ use wafel_core::{
 };
 
 use crate::{
-    joystick_control::{JoystickControlShape, JoystickControlUi},
+    joystick_control::{render_joystick_control, JoystickControlShape},
     object_slots::render_object_slots,
     tabs::{TabInfo, Tabs},
     variable_value::{render_labeled_variable, render_variable_value, VariableFormatter},
@@ -186,8 +186,7 @@ impl VariableExplorer {
             2.0 * ((stick_x as f32 + 128.0) / 255.0) - 1.0,
             2.0 * ((stick_y as f32 + 128.0) / 255.0) - 1.0,
         ];
-        // TODO: Persist joystick state
-        let new_n = JoystickControlUi::new().render(ui, id, n, JoystickControlShape::Square);
+        let new_n = render_joystick_control(ui, id, n, JoystickControlShape::Square);
 
         if let Some(new_n) = new_n {
             let new_stick_x = (0.5 * (new_n[0] + 1.0) * 255.0 - 128.0) as i8;
@@ -381,7 +380,7 @@ impl VariableExplorer {
 
         ui.set_cursor_pos([ui.cursor_pos()[0] + 155.0, 0.0]);
         // TODO: Persist joystick state
-        let new_n = JoystickControlUi::new().render(ui, id, n, JoystickControlShape::Circle);
+        let new_n = render_joystick_control(ui, id, n, JoystickControlShape::Circle);
 
         if let Some(new_n) = new_n {
             let new_n_a = Wrapping((f32::atan2(-new_n[0], new_n[1]) * 0x8000 as f32 / PI) as i16);
