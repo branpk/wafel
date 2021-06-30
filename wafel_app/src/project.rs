@@ -1,18 +1,12 @@
-use std::{iter, num::Wrapping, u32};
+use std::{num::Wrapping, u32};
 
 use imgui::{self as ig, im_str};
-use wafel_api::{save_m64, Input, M64Metadata, SM64Version, Timeline, Value};
+use wafel_api::{save_m64, Input, M64Metadata, SM64Version};
 use wafel_core::{Pipeline, Variable};
 
 use crate::{
-    config::libsm64_path,
-    frame_sheet::FrameSheet,
-    frame_slider::render_frame_slider,
-    joystick_control::JoystickControlShape,
-    object_slots::render_object_slots,
-    tabs::{TabInfo, Tabs},
+    config::libsm64_path, frame_sheet::FrameSheet, frame_slider::render_frame_slider,
     variable_explorer::VariableExplorer,
-    variable_value::VariableFormatter,
 };
 
 #[derive(Debug)]

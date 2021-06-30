@@ -10,7 +10,7 @@ use wafel_core::{
 use crate::{
     joystick_control::{render_joystick_control, JoystickControlShape},
     object_slots::render_object_slots,
-    tabs::{TabInfo, Tabs},
+    tabs::{render_tabs, TabInfo},
     variable_value::{render_labeled_variable, render_variable_value, VariableFormatter},
 };
 
@@ -379,7 +379,6 @@ impl VariableExplorer {
         ];
 
         ui.set_cursor_pos([ui.cursor_pos()[0] + 155.0, 0.0]);
-        // TODO: Persist joystick state
         let new_n = render_joystick_control(ui, id, n, JoystickControlShape::Circle);
 
         if let Some(new_n) = new_n {
@@ -670,7 +669,7 @@ impl VariableExplorer {
             })
             .collect();
 
-        let result = Tabs::new().render(ui, "tabs", &tab_info, open_tab_index, true, |tab_index| {
+        let result = render_tabs(ui, "tabs", &tab_info, open_tab_index, true, |tab_index| {
             let tab = self.open_tabs[tab_index];
             self.render_tab_contents(ui, id, tab, pipeline, frame, rotational_camera_yaw);
         });
