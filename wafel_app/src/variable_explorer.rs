@@ -374,7 +374,7 @@ impl VariableExplorer {
 
         let n_a = intended.yaw - up_angle;
         let n = [
-            intended.mag / 32.0 * (-n_a.0 as f32 * PI / 0x8000 as f32).sin(),
+            intended.mag / 32.0 * ((-n_a).0 as f32 * PI / 0x8000 as f32).sin(),
             intended.mag / 32.0 * (n_a.0 as f32 * PI / 0x8000 as f32).cos(),
         ];
 

@@ -25,8 +25,7 @@ pub(crate) struct Project {
     pipeline: Pipeline,
     max_frame: u32,
     selected_frame: u32,
-
-    // TODO: Remove below
+    show_debug_pane: bool,
     frame_sheet: FrameSheet,
     variable_explorer: VariableExplorer,
 }
@@ -56,6 +55,7 @@ impl Project {
             pipeline,
             max_frame: 0,
             selected_frame: 0,
+            show_debug_pane: false, // TODO
             frame_sheet,
             variable_explorer: VariableExplorer::new(),
         }
@@ -135,32 +135,52 @@ impl Project {
     }
 
     pub(crate) fn render(&mut self, ui: &ig::Ui<'_>) {
-        ui.text(im_str!("project {}", self.game_version));
+        // TODO: push id
 
-        if let Some(frame) = render_frame_slider(
-            ui,
-            "my-slider",
-            self.selected_frame,
-            self.max_frame,
-            &self.pipeline.timeline().dbg_cached_frames(),
-        ) {
-            self.selected_frame = frame;
+        ui.columns(2, im_str!("project-columns"), true);
+        ui.next_column();
+        self.render_right_column(ui);
+
+        ui.columns(1, im_str!("project-columns-end"), false);
+    }
+
+    fn render_right_column(&mut self, ui: &ig::Ui<'_>) {
+        let total_height = ui.window_size()[1];
+
+        if self.show_debug_pane {
+            // TODO
         }
 
-        self.variable_explorer.render(
-            ui,
-            "my-var-exp",
-            &mut self.pipeline,
-            self.selected_frame,
-            Wrapping(0),
-        );
+        ig::ChildWindow::new("Frame Sheet")
+            .size([self.frame_sheet.content_width(), total_height * 0.7])
+            .flags(ig::WindowFlags::HORIZONTAL_SCROLLBAR)
+            .build(ui, || {
+                self.frame_sheet.render(
+                    ui,
+                    "frame-sheet",
+                    &mut self.pipeline,
+                    &mut self.max_frame,
+                    &mut self.selected_frame,
+                );
+            });
 
-        self.frame_sheet.render(
-            ui,
-            "my-frame-sheet",
-            &mut self.pipeline,
-            &mut self.max_frame,
-            &mut self.selected_frame,
-        );
+        // TODO: Drag & drop
+        //     if ig.begin_drag_drop_target():
+        //     payload = ig.accept_drag_drop_payload('ve-var')
+        //     if payload is not None:
+        //       frame_sheet.append_variable(Variable.from_bytes(payload))
+        //     ig.end_drag_drop_target()
+
+        ig::ChildWindow::new("Variable Explorer")
+            .border(true)
+            .build(ui, || {
+                self.variable_explorer.render(
+                    ui,
+                    "variable-explorer",
+                    &mut self.pipeline,
+                    self.selected_frame,
+                    Wrapping(0), // TODO
+                )
+            });
     }
 }

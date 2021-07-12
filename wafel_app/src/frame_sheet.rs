@@ -72,7 +72,7 @@ impl FrameSheet {
             .unwrap_or(DEFAULT_COLUMN_WIDTH)
     }
 
-    fn content_width(&self) -> f32 {
+    pub(crate) fn content_width(&self) -> f32 {
         if self.columns.is_empty() {
             0.0
         } else {
