@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// Internal representation of a global or local data path.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(crate) struct DataPathImpl<R> {
     /// The original source for the data path.
     pub(crate) source: String,
@@ -307,6 +307,20 @@ fn concat_paths<R: Clone>(
             path2: path2.source.to_owned(),
             type2: path2.concrete_type.clone(),
         })
+    }
+}
+
+impl<R> fmt::Debug for DataPathImpl<R>
+where
+    R: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DataPathImpl")
+            .field("source", &self.source)
+            .field("root", &self.root)
+            .field("edges", &self.edges)
+            .field("mask", &self.mask)
+            .finish_non_exhaustive()
     }
 }
 
