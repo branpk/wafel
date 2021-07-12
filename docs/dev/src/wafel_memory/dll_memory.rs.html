@@ -483,6 +483,7 @@
 <span id="483">483</span>
 <span id="484">484</span>
 <span id="485">485</span>
+<span id="486">486</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">mem</span>, <span class="ident">ptr</span>,
@@ -665,10 +666,11 @@
     }
 
     <span class="kw">fn</span> <span class="ident">unchecked_pointer_to_address</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">pointer</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Address</span> {
-        <span class="kw">if</span> <span class="ident">pointer</span>.<span class="ident">is_null</span>() {
+        <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> (<span class="ident">pointer</span> <span class="kw">as</span> <span class="ident">usize</span>).<span class="ident">wrapping_sub</span>(<span class="self">self</span>.<span class="ident">base_pointer</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span>);
+        <span class="kw">if</span> <span class="ident">offset</span> <span class="op">&gt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">base_size</span> {
             <span class="ident">Address</span>(<span class="number">0</span>)
         } <span class="kw">else</span> {
-            <span class="ident">Address</span>((<span class="ident">pointer</span> <span class="kw">as</span> <span class="ident">usize</span>).<span class="ident">wrapping_sub</span>(<span class="self">self</span>.<span class="ident">base_pointer</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span>))
+            <span class="ident">Address</span>(<span class="ident">offset</span>)
         }
     }
 
