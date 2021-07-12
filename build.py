@@ -3,11 +3,6 @@ import sys
 import shutil
 import os
 
-import wafel.config as config
-from wafel.game_versions import lock_game_version, unlocked_game_versions, find_locked_dlls
-
-config.init()
-
 if 'clean' in sys.argv[1:]:
   build_files = ['dist', 'build', 'target', 'wafel_core.pyd']
   for file in build_files:
@@ -24,6 +19,11 @@ if sys.argv[1:] == [] or 'dist' in sys.argv[1:]:
     check=True,
   )
   shutil.copyfile('target/release/wafel_core.dll', 'wafel_core.pyd')
+
+import wafel.config as config
+from wafel.game_versions import lock_game_version, unlocked_game_versions, find_locked_dlls
+
+config.init()
 
 if 'lock' in sys.argv[1:]:
   print('Locking DLLs')

@@ -179,10 +179,11 @@ impl DllGameMemory {
     }
 
     fn unchecked_pointer_to_address<T>(&self, pointer: *const T) -> Address {
-        if pointer.is_null() {
+        let offset = (pointer as usize).wrapping_sub(self.base_pointer.0 as usize);
+        if offset >= self.base_size {
             Address(0)
         } else {
-            Address((pointer as usize).wrapping_sub(self.base_pointer.0 as usize))
+            Address(offset)
         }
     }
 
