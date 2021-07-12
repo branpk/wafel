@@ -158,6 +158,8 @@ class Input:
 
     def __init__(self, buttons: int, stick_x: int, stick_y: int) -> None:
         """Create an Input with the given button flags and stick coordinates."""
+    def copy(self) -> "Input":
+        """Create a copy this object."""
     @property
     def buttons(self) -> int:
         """The standard button bit flags."""

@@ -138,6 +138,10 @@ impl Input {
         }
     }
 
+    pub fn copy(&self) -> Self {
+        Self { inner: self.inner }
+    }
+
     #[getter]
     pub fn buttons(&self) -> u16 {
         self.inner.buttons
