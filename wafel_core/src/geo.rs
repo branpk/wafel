@@ -56,6 +56,12 @@ impl From<Point3f> for StoredPoint3f {
     }
 }
 
+impl From<[f32; 3]> for StoredPoint3f {
+    fn from(v: [f32; 3]) -> Self {
+        Self(v.into())
+    }
+}
+
 impl Deref for StoredPoint3f {
     type Target = Point3f;
 

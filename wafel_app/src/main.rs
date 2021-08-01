@@ -15,6 +15,7 @@ mod app;
 mod config;
 mod frame_sheet;
 mod frame_slider;
+mod game_view;
 mod joystick_control;
 mod object_slots;
 mod project;

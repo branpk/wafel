@@ -9,6 +9,7 @@
 #![feature(try_blocks)]
 #![feature(backtrace)]
 
+pub use graphics::*;
 pub use sm64::*;
 
 mod error;

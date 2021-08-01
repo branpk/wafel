@@ -1,8 +1,15 @@
 use wafel_api::{Timeline, Value};
 
-use crate::{error::Error, object_behavior, object_path, ObjectBehavior, ObjectSlot};
+use crate::{
+    error::Error,
+    geo::{Point3f, Vector3f},
+    object_behavior, object_path, ObjectBehavior, ObjectSlot,
+};
 
-use super::{data_variables::DataVariables, EditOperation, EditRange, RangeEdits, Variable};
+use super::{
+    data_variables::DataVariables, trace_ray_to_surface, EditOperation, EditRange, RangeEdits,
+    Variable,
+};
 
 /// An abstraction for reading and writing variables.
 ///
@@ -258,5 +265,19 @@ impl Pipeline {
     /// Return the label for the variable if it has one.
     pub fn label(&self, variable: &Variable) -> Option<&str> {
         self.data_variables.label(variable).unwrap()
+    }
+
+    /// Trace a ray until it hits a surface, and return the surface's index in the surface pool.
+    pub fn trace_ray_to_surface(&self, frame: u32, ray: ([f32; 3], [f32; 3])) -> Option<usize> {
+        trace_ray_to_surface(
+            &self.timeline,
+            frame,
+            (
+                Point3f::from_slice(&ray.0),
+                Vector3f::from_row_slice(&ray.1),
+            ),
+        )
+        .unwrap()
+        .map(|(index, _)| index)
     }
 }
