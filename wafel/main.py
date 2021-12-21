@@ -7,6 +7,7 @@ import tkinter.filedialog
 import os
 import time
 import traceback
+import json
 
 from wafel_core import Pipeline
 
@@ -84,11 +85,16 @@ class SequenceFile:
     ('All files', '*'),
   ]
 
+  VARIABLE_HACK_FILE_TYPES = [
+    ('Text File', '*.txt'),
+    ('All files', '*'),
+  ]
+
   @staticmethod
   def from_filename(filename: str) -> 'SequenceFile':
     _, ext = os.path.splitext(filename)
-    if ext == '.m64':
-      return SequenceFile(filename, 'm64')
+    if ext == '.m64' or ext == '.txt':
+      return SequenceFile(filename, ext)
     else:
       raise NotImplementedError(ext) # TODO: User message
 
@@ -532,6 +538,7 @@ class View:
     self.dbg_frame_advance = False
 
     self.file: Optional[SequenceFile] = None
+    self.variable_hacks_file: Optional[SequenceFile] = None
     self.reload()
 
   def reload(self) -> None:
@@ -539,7 +546,7 @@ class View:
     if self.file is None:
       metadata = DEFAULT_TAS
       edits = {}
-    elif self.file.type == 'm64':
+    elif self.file.type == '.m64':
       metadata, edits = load_m64(self.file.filename)
     else:
       raise NotImplementedError(self.file.type)
@@ -554,24 +561,47 @@ class View:
 
   def save(self) -> None:
     assert self.file is not None
-    if self.file.type == 'm64':
+    if self.file.type == '.m64':
       save_m64(self.file.filename, self.metadata, self.model.pipeline, self.model.max_frame - 1)
     else:
       raise NotImplementedError(self.file.type)
+
+  def load_variable_hacks(self) -> None:
+    if (self.variable_hacks_file is None):
+      return
+
+    self.model.variable_hacks = json.load(open(self.variable_hacks_file.filename))
+    for variable_hack in self.model.variable_hacks:
+      variable = Variable("").from_string(variable_hack)
+      self.model.set(variable, self.model.variable_hacks[variable_hack])
+
+  def save_variable_hacks(self) -> None:
+    json.dump(self.model.variable_hacks, open(self.variable_hacks_file.filename, 'w'))
 
   def tkinter_lift(self) -> None:
     self.tkinter_root.attributes('-topmost', True)
     self.tkinter_root.lift()
 
-  def ask_save_filename(self) -> bool:
+  def ask_save_filename(self, file_extension = '.m64') -> bool:
     self.tkinter_lift()
     filename = tkinter.filedialog.asksaveasfilename(
-      defaultext='.m64',
+      defaultext=file_extension,
       filetypes=SequenceFile.FILE_TYPES,
     ) or None
     if filename is None:
       return False
     self.file = SequenceFile.from_filename(filename)
+    return True
+
+  def ask_save_variable_hacks_filename(self, file_extension = '.txt') -> bool:
+    self.tkinter_lift()
+    filename = tkinter.filedialog.asksaveasfilename(
+      defaultext=file_extension,
+      filetypes=SequenceFile.VARIABLE_HACK_FILE_TYPES,
+    ) or None
+    if filename is None:
+      return False
+    self.variable_hacks_file = SequenceFile.from_filename(filename)
     return True
 
   def render_menu_bar(self) -> None:
@@ -600,6 +630,17 @@ class View:
         if ig.menu_item('Save as')[0]:
           if self.ask_save_filename():
             self.save()
+
+        if ig.menu_item('Load Variable Hacks')[0]:
+          self.tkinter_lift()
+          filename = tkinter.filedialog.askopenfilename(filetypes=SequenceFile.VARIABLE_HACK_FILE_TYPES) or None
+          if filename is not None:
+            self.variable_hacks_file = SequenceFile.from_filename(filename)
+            self.reload()
+
+        if ig.menu_item('Save Variable Hacks')[0]:
+          if self.ask_save_variable_hacks_filename('.txt'):
+            self.save_variable_hacks()
 
         if ig.begin_menu('Game version'):
           versions = [
@@ -643,10 +684,12 @@ class View:
         self.tas_to_load = None
         self.model.load(game_version, edits)
         self.main_view = MainView(self.model)
+        self.load_variable_hacks()
       elif self.metadata is DEFAULT_TAS and len(unlocked_versions) > 0:
         self.tas_to_load = None
         self.model.load(unlocked_versions[0].lower(), edits)
         self.main_view = MainView(self.model)
+        self.load_variable_hacks()
       else:
         ig.open_popup('Game versions##game-versions')
 

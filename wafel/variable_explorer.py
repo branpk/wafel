@@ -137,6 +137,8 @@ class VariableExplorer:
     )
     if changed_data is not None:
       self.model.set(variable, changed_data.value)
+      variable_string = variable.to_string()
+      self.model.variable_hacks[variable_string] = changed_data.value
     if clear_edit:
       self.model.reset(variable)
 
