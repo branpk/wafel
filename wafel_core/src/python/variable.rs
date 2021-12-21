@@ -4,7 +4,7 @@ use crate::{
     sm64::{EditRange, ObjectBehavior, ObjectSlot, SM64ErrorCause, SurfaceSlot, Variable},
 };
 use derive_more::Display;
-use pyo3::{basic::CompareOp, prelude::*, types::PyBytes, PyObjectProtocol};
+use pyo3::{basic::CompareOp, prelude::*, types::{PyBytes, PyString}, PyObjectProtocol};
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
@@ -41,6 +41,21 @@ impl PyVariable {
         let bytes = serde_json::to_vec(&self.variable)
             .map_err(|error| Error::from(SM64ErrorCause::VariableSerdeError(error)))?;
         Ok(PyBytes::new(py, &bytes))
+    }
+
+    /// Deserialize a variable from a string.
+    #[staticmethod]
+    pub fn from_string(src: &str) -> PyResult<PyVariable> {
+        let variable: Variable = serde_json::from_str(src)
+            .map_err(|error| Error::from(SM64ErrorCause::VariableSerdeError(error)))?;
+        Ok(PyVariable { variable })
+    }
+
+    /// Serialize a variable to a string.
+    pub fn to_string<'p>(&self, py: Python<'p>) -> PyResult<&'p PyString> {
+        let string = serde_json::to_string(&self.variable)
+            .map_err(|error| Error::from(SM64ErrorCause::VariableSerdeError(error)))?;
+        Ok(PyString::new(py, &string))
     }
 
     /// Get the name of the variable.
