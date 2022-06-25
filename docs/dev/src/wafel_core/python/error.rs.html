@@ -179,12 +179,12 @@
         <span class="ident">event</span>.<span class="ident">record</span>(<span class="kw-2">&amp;mut</span> <span class="ident">visitor</span>);
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">span_string</span> <span class="op">=</span> <span class="ident">String::new</span>();
-        <span class="kw">for</span> <span class="ident">span</span> <span class="kw">in</span> <span class="ident">ctx</span>.<span class="ident">scope</span>() {
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">span_string</span>.<span class="ident">is_empty</span>() {
-                <span class="ident">span_string</span>.<span class="ident">push_str</span>(<span class="string">&quot; | &quot;</span>);
-            }
-            <span class="ident">span_string</span>.<span class="ident">push_str</span>(<span class="ident">span</span>.<span class="ident">name</span>());
-        }
+        <span class="comment">// for span in ctx.scope() {</span>
+        <span class="comment">//     if !span_string.is_empty() {</span>
+        <span class="comment">//         span_string.push_str(&quot; | &quot;);</span>
+        <span class="comment">//     }</span>
+        <span class="comment">//     span_string.push_str(span.name());</span>
+        <span class="comment">// }</span>
 
         <span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="ident">event</span>.<span class="ident">metadata</span>();
         <span class="kw">let</span> <span class="ident">module</span> <span class="op">=</span> <span class="ident">metadata</span>.<span class="ident">module_path</span>().<span class="ident">unwrap_or</span>(<span class="string">&quot;no module&quot;</span>);
