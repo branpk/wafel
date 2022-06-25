@@ -1,4 +1,4 @@
-var N = null;var sourcesIndex = {};
+var sourcesIndex = {};
 sourcesIndex["libsm64_layout"] = {"name":"","files":["main.rs"]};
 sourcesIndex["libsm64_lock"] = {"name":"","files":["main.rs"]};
 sourcesIndex["wafel"] = {"name":"","files":["game.rs","lib.rs","m64.rs"]};
