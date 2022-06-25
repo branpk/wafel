@@ -217,7 +217,7 @@
 <span class="kw">fn</span> <span class="ident">wafel_core</span>(<span class="ident">_py</span>: <span class="ident">Python</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>, <span class="ident">m</span>: <span class="kw-2">&amp;</span><span class="ident">PyModule</span>) -&gt; <span class="ident">PyResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="ident">error::init</span>();
 
-    <span class="attribute">#[<span class="ident">pyfn</span>(<span class="ident">m</span>, <span class="string">&quot;lock_libsm64&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">pyfn</span>(<span class="ident">m</span>, <span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;lock_libsm64&quot;</span>)]</span>
     <span class="kw">fn</span> <span class="ident">lock_libsm64</span>(
         <span class="ident">input_filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">output_filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
@@ -226,7 +226,7 @@
         <span class="ident">try_lock_libsm64</span>(<span class="ident">input_filename</span>, <span class="ident">output_filename</span>, <span class="ident">rom_filename</span>).<span class="ident">map_err</span>(<span class="ident">Error::from</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
-    <span class="attribute">#[<span class="ident">pyfn</span>(<span class="ident">m</span>, <span class="string">&quot;unlock_libsm64&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">pyfn</span>(<span class="ident">m</span>, <span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;unlock_libsm64&quot;</span>)]</span>
     <span class="kw">fn</span> <span class="ident">unlock_libsm64</span>(
         <span class="ident">input_filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">output_filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,

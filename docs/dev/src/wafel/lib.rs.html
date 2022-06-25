@@ -294,16 +294,16 @@
 
     <span class="ident">m</span>.<span class="ident">add_class</span>::<span class="op">&lt;</span><span class="ident">M64Metadata</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
     <span class="ident">m</span>.<span class="ident">add_class</span>::<span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
-    <span class="attribute">#[<span class="ident">pyfn</span>(<span class="ident">m</span>, <span class="string">&quot;load_m64&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">pyfn</span>(<span class="ident">m</span>, <span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;load_m64&quot;</span>)]</span>
     <span class="kw">fn</span> <span class="ident">load_m64_py</span>(<span class="ident">filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">PyResult</span><span class="op">&lt;</span>(<span class="ident">M64Metadata</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
         <span class="ident">load_m64</span>(<span class="ident">filename</span>)
     }
-    <span class="attribute">#[<span class="ident">pyfn</span>(<span class="ident">m</span>, <span class="string">&quot;save_m64&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">pyfn</span>(<span class="ident">m</span>, <span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;save_m64&quot;</span>)]</span>
     <span class="kw">fn</span> <span class="ident">save_m64_py</span>(<span class="ident">filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">metadata</span>: <span class="kw-2">&amp;</span><span class="ident">M64Metadata</span>, <span class="ident">inputs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Input</span><span class="op">&gt;</span>) -&gt; <span class="ident">PyResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="ident">save_m64</span>(<span class="ident">filename</span>, <span class="ident">metadata</span>, <span class="ident">inputs</span>)
     }
 
-    <span class="attribute">#[<span class="ident">pyfn</span>(<span class="ident">m</span>, <span class="string">&quot;lock_libsm64&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">pyfn</span>(<span class="ident">m</span>, <span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;lock_libsm64&quot;</span>)]</span>
     <span class="kw">fn</span> <span class="ident">lock_libsm64</span>(
         <span class="ident">input_filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">output_filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
@@ -311,7 +311,7 @@
     ) -&gt; <span class="ident">PyResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="ident">api::try_lock_libsm64</span>(<span class="ident">input_filename</span>, <span class="ident">output_filename</span>, <span class="ident">rom_filename</span>).<span class="ident">map_err</span>(<span class="ident">err</span>)
     }
-    <span class="attribute">#[<span class="ident">pyfn</span>(<span class="ident">m</span>, <span class="string">&quot;unlock_libsm64&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">pyfn</span>(<span class="ident">m</span>, <span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;unlock_libsm64&quot;</span>)]</span>
     <span class="kw">fn</span> <span class="ident">unlock_libsm64</span>(
         <span class="ident">input_filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">output_filename</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
