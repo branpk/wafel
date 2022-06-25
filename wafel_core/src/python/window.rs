@@ -21,7 +21,7 @@ use super::log;
 /// Open a window, call `update_fn` on each frame, and render the UI and scene(s).
 pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()> {
     futures::executor::block_on(async {
-        let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
+        let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
 
         let event_loop = EventLoop::new();
         let window = WindowBuilder::new()
@@ -37,6 +37,7 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
                 compatible_surface: Some(&surface),
+                force_fallback_adapter: false,
             })
             .await
             .expect("no compatible device");
@@ -51,7 +52,8 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
                 &wgpu::DeviceDescriptor {
                     label: None,
                     features: wgpu::Features::empty(),
-                    limits: wgpu::Limits::default(),
+                    limits: wgpu::Limits::downlevel_webgl2_defaults()
+                        .using_resolution(adapter.limits()),
                 },
                 None,
             )
@@ -61,14 +63,16 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
             panic!("wgpu error: {}", error);
         });
 
-        let mut swap_chain_desc = wgpu::SwapChainDescriptor {
-            usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
-            format: wgpu::TextureFormat::Bgra8Unorm,
+        let swapchain_format = wgpu::TextureFormat::Bgra8Unorm; // surface.get_preferred_format(&adapter).unwrap();
+
+        let mut config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: swapchain_format,
             width: window.inner_size().width,
             height: window.inner_size().height,
             present_mode: wgpu::PresentMode::Mailbox,
         };
-        let mut swap_chain = device.create_swap_chain(&surface, &swap_chain_desc);
+        surface.configure(&device, &config);
 
         let gil = Python::acquire_gil();
         let py = gil.python();
@@ -77,9 +81,8 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
         imgui_input.set_key_map(py)?;
 
         let imgui_config = load_imgui_config()?;
-        let imgui_renderer =
-            ImguiRenderer::new(&device, &queue, swap_chain_desc.format, &imgui_config);
-        let mut renderer = Renderer::new(&device, swap_chain_desc.format);
+        let imgui_renderer = ImguiRenderer::new(&device, &queue, config.format, &imgui_config);
+        let mut renderer = Renderer::new(&device, config.format);
 
         window.set_visible(true);
 
@@ -98,9 +101,11 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
                         imgui_input.handle_event(py, &event)?;
                         match event {
                             WindowEvent::Resized(size) => {
-                                swap_chain_desc.width = size.width;
-                                swap_chain_desc.height = size.height;
-                                swap_chain = device.create_swap_chain(&surface, &swap_chain_desc);
+                                if size.width != 0 && size.height != 0 {
+                                    config.width = size.width;
+                                    config.height = size.height;
+                                    surface.configure(&device, &config);
+                                }
                             }
                             WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                             _ => {}
@@ -112,7 +117,7 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
                         last_frame_time = Instant::now();
                         imgui_input.set_delta_time(py, delta_time)?;
 
-                        let output_size = (swap_chain_desc.width, swap_chain_desc.height);
+                        let output_size = (config.width, config.height);
                         imgui_input.set_display_size(py, output_size)?;
 
                         let (py_imgui_draw_data, scenes): (&PyAny, Vec<Scene>) =
@@ -121,24 +126,29 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
                             extract_imgui_draw_data(&imgui_config, py_imgui_draw_data)?;
 
                         if output_size.0 > 0 && output_size.1 > 0 {
-                            let output_view = &swap_chain.get_current_frame().unwrap().output.view;
+                            let frame = surface.get_current_texture().unwrap();
+                            let output_view = frame
+                                .texture
+                                .create_view(&wgpu::TextureViewDescriptor::default());
 
                             renderer.render(
                                 &device,
                                 &queue,
-                                output_view,
+                                &output_view,
                                 output_size,
-                                swap_chain_desc.format,
+                                config.format,
                                 &scenes,
                             );
 
                             imgui_renderer.render(
                                 &device,
                                 &queue,
-                                output_view,
+                                &output_view,
                                 output_size,
                                 &imgui_draw_data,
                             );
+
+                            frame.present();
                         }
                     }
                     _ => {}

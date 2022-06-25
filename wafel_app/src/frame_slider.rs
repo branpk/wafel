@@ -19,9 +19,7 @@ pub(crate) fn render_frame_slider(
     ui.set_next_item_width(width);
 
     let mut new_frame = current_frame;
-    let changed = ig::Slider::new(im_str!("##slider"))
-        .range(0..=max_frame)
-        .build(ui, &mut new_frame);
+    let changed = ig::Slider::new(im_str!("##slider"), 0, max_frame).build(ui, &mut new_frame);
 
     let dl = ui.get_window_draw_list();
     for &frame in loaded_frames {
@@ -34,6 +32,6 @@ pub(crate) fn render_frame_slider(
         .build();
     }
 
-    id_token.pop(ui);
+    id_token.pop();
     changed.then(|| new_frame)
 }

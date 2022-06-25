@@ -7,7 +7,7 @@ edition = "2018"
 wafel_api = { path = "../wafel_api" }
 wafel_core = { path = "../wafel_core" }
 wafel_graphics = { path = "../wafel_graphics" }
-imgui = "0.7.0"
+imgui = "0.8.2"
 rfd = "0.4.0"
 log = "0.4.14"
 env_logger = "0.8.4"

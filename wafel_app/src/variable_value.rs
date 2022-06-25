@@ -150,7 +150,7 @@ pub(crate) fn render_variable_cell(
 
     let clear_edit = ui.is_item_hovered() && ui.is_mouse_down(ig::MouseButton::Middle);
 
-    id_token.pop(ui);
+    id_token.pop();
 
     VariableCellResult {
         changed_value: value_result.changed_value,
@@ -190,7 +190,7 @@ pub(crate) fn render_labeled_variable(
     //   ui.end_drag_drop_source();
     // }
 
-    ui.same_line(0.0);
+    ui.same_line();
 
     let cell_size = [
         value_width,
@@ -223,7 +223,7 @@ pub(crate) fn render_labeled_variable(
         .build();
     }
 
-    id_token.pop(ui);
+    id_token.pop();
 
     LabeledVariableResult {
         changed_value: value_result.changed_value,
@@ -253,7 +253,7 @@ pub(crate) fn render_variable_value(
         _ => render_text(ui, value, formatter, size, highlight),
     };
 
-    id_token.pop(ui);
+    id_token.pop();
     result
 }
 
@@ -275,7 +275,7 @@ fn render_text(
     size: [f32; 2],
     highlight: bool,
 ) -> VariableValueResult {
-    let this_id = unsafe { ig::sys::igGetIDStr(im_str!("value").as_ptr()) };
+    let this_id = unsafe { ig::sys::igGetID_Str(im_str!("value").as_ptr()) };
     let mut global_editing_value = editing_value().lock().unwrap();
 
     match &mut *global_editing_value {
@@ -285,7 +285,7 @@ fn render_text(
             cursor_pos[1] += ui.window_pos()[1] - ui.scroll_y();
 
             let value_text = formatter.text_output(value);
-            let mut buffer = ig::ImString::from(value_text);
+            let mut buffer = value_text.clone();
             buffer.reserve(1000); // TODO: Add clipboard length
 
             ui.set_next_item_width(size[0]);
@@ -294,7 +294,7 @@ fn render_text(
             let input = buffer.to_string();
 
             if !editing_value.initial_focus {
-                ui.set_keyboard_focus_here(ig::FocusedWidget::Previous);
+                ui.set_keyboard_focus_here_with_offset(ig::FocusedWidget::Previous);
                 editing_value.initial_focus = true;
             } else if !ui.is_item_active() {
                 *global_editing_value = None;

@@ -209,14 +209,15 @@ impl VariableExplorer {
         let mut up_option = 0; // TODO: persist
 
         ui.text("up =");
-        ui.same_line(0.0);
+        ui.same_line();
         ui.set_next_item_width(100.0);
-        ig::ComboBox::new(im_str!("##up-option")).build_simple(
-            ui,
-            &mut up_option,
-            &up_options,
-            &|option| im_str!("{}", option).into(),
-        );
+        // TODO: ComboBox
+        // ig::ComboBox::new(im_str!("##up-option")).build_simple(
+        //     ui,
+        //     &mut up_option,
+        //     &up_options,
+        //     &|option| im_str!("{}", option).into(),
+        // );
         ui.dummy([1.0, 10.0]);
 
         let stick_x_var = Variable::new("input-stick-x").with_frame(frame);
@@ -285,7 +286,7 @@ impl VariableExplorer {
             ig::Selectable::new(&im_str!("{}", label))
                 .size([label_width, 0.0])
                 .build(ui);
-            ui.same_line(0.0);
+            ui.same_line();
             let result = render_variable_value(
                 ui,
                 &format!("value-{}", label),
@@ -316,8 +317,8 @@ impl VariableExplorer {
             render_value(ui, "dyaw", &dyaw.0.into(), VariableFormatter::DecimalInt)
                 .map(|v| Wrapping(v.as_int() as i16));
 
-        ui.same_line(0.0);
-        if ui.button(im_str!("?"), [0.0, 0.0]) {
+        ui.same_line();
+        if ui.button(im_str!("?")) {
             ui.open_popup(im_str!("active-yaw-expl"));
         }
         ui.popup(im_str!("active-yaw-expl"), || {
@@ -340,7 +341,7 @@ impl VariableExplorer {
             }
         });
 
-        if !(0..16).contains(&dyaw.0) && ui.button(im_str!("dyaw = 0"), [0.0, 0.0]) {
+        if !(0..16).contains(&dyaw.0) && ui.button(im_str!("dyaw = 0")) {
             target_dyaw = Some(Wrapping(0));
         }
 
@@ -435,35 +436,35 @@ impl VariableExplorer {
                 ui.dummy([1.0, 3.0]);
                 {
                     render_button("a");
-                    ui.same_line(0.0);
+                    ui.same_line();
                     render_button("b");
-                    ui.same_line(0.0);
+                    ui.same_line();
                     render_button("z");
                 }
                 ui.dummy([1.0, 5.0]);
                 {
                     render_button("s");
-                    ui.same_line(0.0);
+                    ui.same_line();
                     ui.dummy([43.0, 1.0]);
-                    ui.same_line(0.0);
+                    ui.same_line();
                     render_button("r");
                 }
                 ui.dummy([1.0, 5.0]);
                 {
                     ui.dummy([43.0, 1.0]);
-                    ui.same_line(0.0);
+                    ui.same_line();
                     render_button("cu");
                 }
                 {
                     ui.dummy([17.0, 1.0]);
-                    ui.same_line(0.0);
+                    ui.same_line();
                     render_button("cl");
-                    ui.same_line(0.0);
+                    ui.same_line();
                     render_button("cr");
                 }
                 {
                     ui.dummy([43.0, 1.0]);
-                    ui.same_line(0.0);
+                    ui.same_line();
                     render_button("cd");
                 }
 
@@ -488,14 +489,15 @@ impl VariableExplorer {
         let mut round_numbers = true; // TODO: Persist
 
         ui.set_next_item_width(210.0);
-        ig::ComboBox::new(im_str!("##frame-offset")).build_simple_string(
-            ui,
-            &mut frame_offset,
-            &[
-                im_str!("previous -> current frame"),
-                im_str!("current -> next frame"),
-            ],
-        );
+        // TODO: ComboBox
+        // ig::ComboBox::new(im_str!("##frame-offset")).build_simple_string(
+        //     ui,
+        //     &mut frame_offset,
+        //     &[
+        //         im_str!("previous -> current frame"),
+        //         im_str!("current -> next frame"),
+        //     ],
+        // );
 
         ui.checkbox(im_str!("Round##round-numbers"), &mut round_numbers);
         ui.dummy([1.0, 10.0]);
@@ -644,7 +646,7 @@ impl VariableExplorer {
                 self.render_variable_tab(ui, tab, pipeline, frame)
             }
         }
-        id_token.pop(ui);
+        id_token.pop();
     }
 
     pub(crate) fn render(
@@ -681,6 +683,6 @@ impl VariableExplorer {
             self.open_tabs.remove(closed_tab_index);
         }
 
-        id_token.pop(ui);
+        id_token.pop();
     }
 }

@@ -156,6 +156,12 @@ where
             None => None,
         };
 
+        if let Some(path) = &unit_name {
+            if path.starts_with("C:/M/mingw-w64-crt-git") {
+                continue;
+            }
+        }
+
         // Extract layout information from each unit and merge into a single DataLayout
         UnitReader::new(dwarf, &unit, relative_address_base)
             .extract_definitions_and_update(&mut layout)

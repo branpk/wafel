@@ -192,12 +192,12 @@ fn disableable_button(ui: &ig::Ui<'_>, label: &ig::ImStr, size: [f32; 2], enable
                 ui.style_color(ig::StyleColor::Button),
             ),
         ]);
-        let result = ui.button(label, size);
+        let result = ui.button_with_size(label, size);
         tok2.pop(ui);
-        tok1.pop(ui);
+        tok1.pop();
         result
     } else {
-        ui.button(label, size)
+        ui.button_with_size(label, size)
     }
 }
 
@@ -340,7 +340,7 @@ impl GameViewRotate {
             self.target_vel = None;
             self.lock_to_in_game = false;
         }
-        ui.same_line(0.0);
+        ui.same_line();
         if disableable_button(ui, im_str!("Lakitu"), [0.0, 0.0], !self.lock_to_in_game) {
             self.lock_to_in_game = true;
         }
@@ -389,7 +389,7 @@ impl GameViewRotate {
             hidden_surfaces,
         );
 
-        id_token.pop(ui);
+        id_token.pop();
         (scene, new_hovered_surface)
     }
 }

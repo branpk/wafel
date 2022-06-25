@@ -41,7 +41,7 @@ pub(crate) fn render_tabs(
 ) -> TabResult {
     let id_token = ui.push_id(id);
 
-    let state_id = unsafe { ig::sys::igGetIDStr(im_str!("state").as_ptr()) };
+    let state_id = unsafe { ig::sys::igGetID_Str(im_str!("state").as_ptr()) };
     let mut global_tabs_state = tabs_state().lock().unwrap();
     let state = global_tabs_state.entry(state_id).or_default();
 
@@ -55,7 +55,7 @@ pub(crate) fn render_tabs(
     }
 
     if tabs.is_empty() {
-        id_token.pop(ui);
+        id_token.pop();
         return TabResult {
             selected_tab_index: None,
             closed_tab_index,
@@ -157,7 +157,7 @@ pub(crate) fn render_tabs(
                     render(tab_index);
                 });
 
-            style_token.pop(ui);
+            style_token.pop();
 
             if !opened {
                 state.windowed_tabs.remove(tab_id);
@@ -167,7 +167,7 @@ pub(crate) fn render_tabs(
         }
     }
 
-    id_token.pop(ui);
+    id_token.pop();
     TabResult {
         selected_tab_index: if open_tab_index == Some(*selected_tab_index) {
             None

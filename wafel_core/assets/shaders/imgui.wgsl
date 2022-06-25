@@ -1,9 +1,8 @@
-[[block]]
 struct Transform {
     matrix: mat4x4<f32>;
 };
 
-[[group(0), binding(0)]] var r_proj: Transform;
+[[group(0), binding(0)]] var<uniform> r_proj: Transform;
 
 [[group(1), binding(0)]] var r_sampler: sampler;
 [[group(1), binding(1)]] var r_texture: texture_2d<f32>;
@@ -15,7 +14,7 @@ struct VertexOutput {
 };
 
 [[stage(vertex)]]
-fn main(
+fn vs_main(
     [[location(0)]] pos: vec2<f32>,
     [[location(1)]] tex_coord: vec2<f32>,
     [[location(2)]] color: vec4<f32>,
@@ -28,6 +27,6 @@ fn main(
 }
 
 [[stage(fragment)]]
-fn main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
+fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
     return in.color * textureSample(r_texture, r_sampler, in.tex_coord);
 }

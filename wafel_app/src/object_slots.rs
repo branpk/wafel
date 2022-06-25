@@ -22,7 +22,7 @@ pub(crate) fn render_object_slots(
         if item_right > window_right {
             prev_item_right = window_left;
         } else if slot_index != 0 {
-            ui.same_line(0.0);
+            ui.same_line();
         }
         prev_item_right = prev_item_right + style.item_spacing[0] + button_size;
 
@@ -31,7 +31,7 @@ pub(crate) fn render_object_slots(
             None => format!("{}", slot_index),
         };
 
-        if ui.button(
+        if ui.button_with_size(
             &im_str!("{}##slot-{}", label, slot_index),
             [button_size, button_size],
         ) {
@@ -39,6 +39,6 @@ pub(crate) fn render_object_slots(
         }
     }
 
-    id_token.pop(ui);
+    id_token.pop();
     result
 }

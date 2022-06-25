@@ -28,7 +28,7 @@ pub(crate) fn render_joystick_control(
 ) -> Option<[f32; 2]> {
     let id_token = ui.push_id(id);
 
-    let state_id = unsafe { ig::sys::igGetIDStr(im_str!("state").as_ptr()) };
+    let state_id = unsafe { ig::sys::igGetID_Str(im_str!("state").as_ptr()) };
     let mut global_state = active_joystick_state().lock().unwrap();
 
     let dl = ui.get_window_draw_list();
@@ -122,7 +122,7 @@ pub(crate) fn render_joystick_control(
         padding + initial_cursor_pos[1] + offset[1] - button_size / 2.0,
     ];
     ui.set_cursor_pos(button_pos);
-    ui.button(im_str!("##joystick-button"), [button_size, button_size]);
+    ui.button_with_size(im_str!("##joystick-button"), [button_size, button_size]);
 
     ui.set_cursor_pos([
         initial_cursor_pos[0],
@@ -144,6 +144,6 @@ pub(crate) fn render_joystick_control(
         *global_state = None;
     }
 
-    id_token.pop(ui);
+    id_token.pop();
     result
 }

@@ -78,13 +78,13 @@ impl App {
                 ui.popup_modal(im_str!("Controller##settings-controller"))
                     .opened(&mut true)
                     .resizable(false)
-                    .build(|| todo!());
+                    .build(ui, || todo!());
 
                 // Keyboard bindings popup
                 ui.popup_modal(im_str!("Key bindings##settings-key-bindings"))
                     .opened(&mut true)
                     .resizable(false)
-                    .build(|| todo!());
+                    .build(ui, || todo!());
 
                 // Game versions popup
                 let mut opened = true;
@@ -92,7 +92,7 @@ impl App {
                     .opened(&mut opened)
                     .resizable(false)
                     .always_auto_resize(true)
-                    .build(|| self.game_versions_popup(ui));
+                    .build(ui, || self.game_versions_popup(ui));
                 if !opened && self.pending_tas.is_some() {
                     self.pending_tas = None;
                 }
@@ -103,7 +103,7 @@ impl App {
         let mut open_popup: Option<&str> = None;
 
         ui.main_menu_bar(|| {
-            ui.menu(im_str!("File"), true, || {
+            ui.menu(im_str!("File"), || {
                 if ig::MenuItem::new(im_str!("New")).build(ui) {
                     self.new_project();
                 }
@@ -122,14 +122,14 @@ impl App {
                 {
                     self.save_m64_as();
                 }
-                ui.menu(im_str!("Game version"), true, || {
+                ui.menu(im_str!("Game version"), || {
                     if let Some(name) = self.game_version_menu(ui) {
                         open_popup = Some(name);
                     }
                 });
             });
 
-            ui.menu(im_str!("Settings"), true, || {
+            ui.menu(im_str!("Settings"), || {
                 if ig::MenuItem::new(im_str!("Controller")).build(ui) {
                     open_popup = Some("Controller##settings-controller");
                 }
@@ -254,11 +254,11 @@ impl App {
             ));
 
             if is_locked {
-                ui.same_line(0.0);
+                ui.same_line();
                 ui.dummy([3.0, 1.0]);
-                ui.same_line(0.0);
+                ui.same_line();
 
-                if ui.button(im_str!("Select ROM"), [0.0, 0.0]) {
+                if ui.button(im_str!("Select ROM")) {
                     if let Some(rom_filename) = str_or_error(
                         rfd::FileDialog::new()
                             .add_filter("N64 ROM", &["n64", "z64"])
@@ -284,7 +284,7 @@ impl App {
                 ui.text(im_str!("{}", error));
             }
 
-            id_token.pop(ui);
+            id_token.pop();
         }
 
         ui.separator();

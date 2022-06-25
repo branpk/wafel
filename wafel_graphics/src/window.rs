@@ -16,7 +16,7 @@ pub fn run_wafel_app(render_app: Box<dyn FnMut(&imgui::Ui<'_>)>) {
 }
 
 async fn run(mut render_app: Box<dyn FnMut(&imgui::Ui<'_>)>) {
-    let instance = wgpu::Instance::new(wgpu::BackendBit::all());
+    let instance = wgpu::Instance::new(wgpu::Backends::all());
 
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
@@ -32,6 +32,7 @@ async fn run(mut render_app: Box<dyn FnMut(&imgui::Ui<'_>)>) {
         .request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
             compatible_surface: Some(&surface),
+            force_fallback_adapter: false,
         })
         .await
         .expect("no compatible device");
@@ -61,17 +62,16 @@ async fn run(mut render_app: Box<dyn FnMut(&imgui::Ui<'_>)>) {
         panic!("aborting due to wgpu error");
     });
 
-    let swap_chain_format = adapter
-        .get_swap_chain_preferred_format(&surface)
-        .expect("incompatible surface");
-    let mut swap_chain_desc = wgpu::SwapChainDescriptor {
-        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
-        format: swap_chain_format,
+    let swapchain_format = wgpu::TextureFormat::Bgra8Unorm; // surface.get_preferred_format(&adapter).unwrap();
+
+    let mut config = wgpu::SurfaceConfiguration {
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        format: swapchain_format,
         width: window.inner_size().width,
         height: window.inner_size().height,
         present_mode: wgpu::PresentMode::Mailbox,
     };
-    let mut swap_chain = Some(device.create_swap_chain(&surface, &swap_chain_desc));
+    surface.configure(&device, &config);
 
     let mut imgui_context = imgui::Context::create();
     imgui_context.set_ini_filename(None);
@@ -79,7 +79,7 @@ async fn run(mut render_app: Box<dyn FnMut(&imgui::Ui<'_>)>) {
     let mut imgui_winit_platform = WinitPlatform::init(&mut imgui_context);
     imgui_winit_platform.attach_window(imgui_context.io_mut(), &window, HiDpiMode::Default);
 
-    let imgui_renderer = ImguiRenderer::new(&mut imgui_context, &device, &queue, swap_chain_format);
+    let imgui_renderer = ImguiRenderer::new(&mut imgui_context, &device, &queue, swapchain_format);
 
     let mut first_render = true;
     let mut prev_frame_time = Instant::now();
@@ -95,24 +95,21 @@ async fn run(mut render_app: Box<dyn FnMut(&imgui::Ui<'_>)>) {
         match event {
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::Resized(size) => {
-                    swap_chain_desc.width = size.width;
-                    swap_chain_desc.height = size.height;
-                    if size.width == 0 || size.height == 0 {
-                        swap_chain = None;
-                    } else {
-                        swap_chain = Some(device.create_swap_chain(&surface, &swap_chain_desc));
+                    if size.width != 0 && size.height != 0 {
+                        config.width = size.width;
+                        config.height = size.height;
+                        surface.configure(&device, &config);
                     }
                 }
                 WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                 _ => {}
             },
             Event::MainEventsCleared => {
-                if let Some(swap_chain) = &swap_chain {
-                    let output_view = &swap_chain
-                        .get_current_frame()
-                        .expect("failed to acquire swap chain texture")
-                        .output
-                        .view;
+                if config.width > 0 && config.height > 0 {
+                    let frame = surface.get_current_texture().unwrap();
+                    let output_view = frame
+                        .texture
+                        .create_view(&wgpu::TextureViewDescriptor::default());
 
                     if first_render {
                         // Draw a black screen as quickly as possible
@@ -135,7 +132,7 @@ async fn run(mut render_app: Box<dyn FnMut(&imgui::Ui<'_>)>) {
 
                         let imgui_per_frame_data = imgui_renderer.prepare(
                             &device,
-                            (swap_chain_desc.width, swap_chain_desc.height),
+                            (config.width, config.height),
                             imgui_draw_data,
                         );
 
@@ -148,7 +145,7 @@ async fn run(mut render_app: Box<dyn FnMut(&imgui::Ui<'_>)>) {
                                 encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                                     label: None,
                                     color_attachments: &[wgpu::RenderPassColorAttachment {
-                                        view: output_view,
+                                        view: &output_view,
                                         resolve_target: None,
                                         ops: wgpu::Operations {
                                             load: wgpu::LoadOp::Clear(wgpu::Color {
@@ -167,6 +164,8 @@ async fn run(mut render_app: Box<dyn FnMut(&imgui::Ui<'_>)>) {
                         }
                         queue.submit([encoder.finish()]);
                     }
+
+                    frame.present();
                 }
             }
             _ => {}

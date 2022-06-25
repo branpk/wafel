@@ -370,6 +370,6 @@ impl FrameSheet {
 
         self.columns = self.next_columns.clone();
 
-        id_token.pop(ui);
+        id_token.pop();
     }
 }
