@@ -19,11 +19,13 @@
 #![feature(generic_associated_types)]
 
 pub use dll_memory::*;
+pub use emu_memory::*;
 pub use error::*;
 pub use traits::*;
 
 mod dll_memory;
 mod dll_slot_impl;
+mod emu_memory;
 mod error;
 mod traits;
 mod unique_dll;
