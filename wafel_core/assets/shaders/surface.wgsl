@@ -1,10 +1,9 @@
-[[block]]
 struct Transform {
     matrix: mat4x4<f32>;
 };
 
-[[group(0), binding(0)]] var r_proj: Transform;
-[[group(0), binding(1)]] var r_view: Transform;
+[[group(0), binding(0)]] var<uniform> r_proj: Transform;
+[[group(0), binding(1)]] var<uniform> r_view: Transform;
 
 struct VertexOutput {
     [[builtin(position)]] position: vec4<f32>;
@@ -13,7 +12,7 @@ struct VertexOutput {
 };
 
 [[stage(vertex)]]
-fn main(
+fn vs_main(
     [[builtin(vertex_index)]] vertex_index: u32,
     [[location(0)]] pos: vec3<f32>,
     [[location(1)]] color: vec4<f32>,
@@ -31,7 +30,7 @@ fn main(
 }
 
 [[stage(fragment)]]
-fn main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
+fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
     var b: f32 = 0.8;
 
     var inner_bary: vec3<f32> = vec3<f32>(

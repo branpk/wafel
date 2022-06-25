@@ -79,7 +79,7 @@ impl Renderer {
                     // u_Proj
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
-                        visibility: wgpu::ShaderStage::VERTEX,
+                        visibility: wgpu::ShaderStages::VERTEX,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
                             has_dynamic_offset: false,
@@ -90,7 +90,7 @@ impl Renderer {
                     // u_View
                     wgpu::BindGroupLayoutEntry {
                         binding: 1,
-                        visibility: wgpu::ShaderStage::VERTEX,
+                        visibility: wgpu::ShaderStages::VERTEX,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
                             has_dynamic_offset: false,
@@ -212,13 +212,13 @@ impl Renderer {
                     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                         label: None,
                         contents: cast_slice(proj_matrix.as_slice()),
-                        usage: wgpu::BufferUsage::UNIFORM,
+                        usage: wgpu::BufferUsages::UNIFORM,
                     });
                 let view_matrix_buffer =
                     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                         label: None,
                         contents: cast_slice(view_matrix.as_slice()),
-                        usage: wgpu::BufferUsage::UNIFORM,
+                        usage: wgpu::BufferUsages::UNIFORM,
                     });
                 let transform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                     label: None,
@@ -420,7 +420,7 @@ fn upload_vertex_buffer<T: Pod>(device: &wgpu::Device, vertices: &[T]) -> (usize
         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: None,
             contents: cast_slice(vertices),
-            usage: wgpu::BufferUsage::VERTEX,
+            usage: wgpu::BufferUsages::VERTEX,
         }),
     )
 }
@@ -441,7 +441,7 @@ fn create_multisample_texture(
         sample_count: NUM_OUTPUT_SAMPLES,
         dimension: wgpu::TextureDimension::D2,
         format: output_format,
-        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
     })
 }
 
@@ -457,7 +457,7 @@ fn create_depth_texture(device: &wgpu::Device, output_size: (u32, u32)) -> wgpu:
         sample_count: NUM_OUTPUT_SAMPLES,
         dimension: wgpu::TextureDimension::D2,
         format: DEPTH_TEXTURE_FORMAT,
-        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
     })
 }
 
@@ -480,10 +480,10 @@ fn create_surface_pipeline(
         ),
         vertex: wgpu::VertexState {
             module: &shader,
-            entry_point: "main",
+            entry_point: "vs_main",
             buffers: &[wgpu::VertexBufferLayout {
                 array_stride: size_of::<Vertex>() as wgpu::BufferAddress,
-                step_mode: wgpu::InputStepMode::Vertex,
+                step_mode: wgpu::VertexStepMode::Vertex,
                 attributes: &[
                     // a_Pos
                     wgpu::VertexAttribute {
@@ -517,7 +517,7 @@ fn create_surface_pipeline(
         },
         fragment: Some(wgpu::FragmentState {
             module: &shader,
-            entry_point: "main",
+            entry_point: "fs_main",
             targets: &[wgpu::ColorTargetState {
                 format: output_format,
                 blend: Some(wgpu::BlendState {
@@ -528,9 +528,10 @@ fn create_surface_pipeline(
                     },
                     alpha: wgpu::BlendComponent::REPLACE,
                 }),
-                write_mask: wgpu::ColorWrite::ALL,
+                write_mask: wgpu::ColorWrites::ALL,
             }],
         }),
+        multiview: None,
     })
 }
 
@@ -555,10 +556,10 @@ fn create_color_pipeline(
         ),
         vertex: wgpu::VertexState {
             module: &shader,
-            entry_point: "main",
+            entry_point: "vs_main",
             buffers: &[wgpu::VertexBufferLayout {
                 array_stride: size_of::<Vertex>() as wgpu::BufferAddress,
-                step_mode: wgpu::InputStepMode::Vertex,
+                step_mode: wgpu::VertexStepMode::Vertex,
                 attributes: &[
                     // a_Pos
                     wgpu::VertexAttribute {
@@ -596,7 +597,7 @@ fn create_color_pipeline(
         },
         fragment: Some(wgpu::FragmentState {
             module: &shader,
-            entry_point: "main",
+            entry_point: "fs_main",
             targets: &[wgpu::ColorTargetState {
                 format: output_format,
                 blend: Some(wgpu::BlendState {
@@ -608,12 +609,13 @@ fn create_color_pipeline(
                     alpha: wgpu::BlendComponent::REPLACE,
                 }),
                 write_mask: if color_write_enabled {
-                    wgpu::ColorWrite::ALL
+                    wgpu::ColorWrites::ALL
                 } else {
-                    wgpu::ColorWrite::empty()
+                    wgpu::ColorWrites::empty()
                 },
             }],
         }),
+        multiview: None,
     })
 }
 
@@ -635,11 +637,11 @@ fn create_screen_dot_pipeline(
         ),
         vertex: wgpu::VertexState {
             module: &shader,
-            entry_point: "main",
+            entry_point: "vs_main",
             buffers: &[
                 wgpu::VertexBufferLayout {
                     array_stride: size_of::<ScreenDotInstance>() as wgpu::BufferAddress,
-                    step_mode: wgpu::InputStepMode::Instance,
+                    step_mode: wgpu::VertexStepMode::Instance,
                     attributes: &[
                         // a_Center
                         wgpu::VertexAttribute {
@@ -663,7 +665,7 @@ fn create_screen_dot_pipeline(
                 },
                 wgpu::VertexBufferLayout {
                     array_stride: size_of::<[f32; 2]>() as wgpu::BufferAddress,
-                    step_mode: wgpu::InputStepMode::Vertex,
+                    step_mode: wgpu::VertexStepMode::Vertex,
                     attributes: &[
                         // a_offset
                         wgpu::VertexAttribute {
@@ -692,7 +694,7 @@ fn create_screen_dot_pipeline(
         },
         fragment: Some(wgpu::FragmentState {
             module: &shader,
-            entry_point: "main",
+            entry_point: "fs_main",
             targets: &[wgpu::ColorTargetState {
                 format: output_format,
                 blend: Some(wgpu::BlendState {
@@ -703,9 +705,10 @@ fn create_screen_dot_pipeline(
                     },
                     alpha: wgpu::BlendComponent::REPLACE,
                 }),
-                write_mask: wgpu::ColorWrite::ALL,
+                write_mask: wgpu::ColorWrites::ALL,
             }],
         }),
+        multiview: None,
     })
 }
 
