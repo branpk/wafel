@@ -172,7 +172,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">error::Error</span>, <span class="ident">geo::Point3f</span>, <span class="ident">geo::Vector3f</span>, <span class="ident">graphics</span>};
 
 <span class="doccomment">/// Get the data path for an object, or None if the object is inactive.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">object_path</span>(
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">object_path</span>(
     <span class="ident">timeline</span>: <span class="kw-2">&amp;</span><span class="ident">Timeline</span>,
     <span class="ident">frame</span>: <span class="ident">u32</span>,
     <span class="ident">object</span>: <span class="ident">ObjectSlot</span>,
@@ -188,7 +188,7 @@
     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;gObjectPool[{}]&quot;</span>, <span class="ident">object</span>.<span class="number">0</span>)))
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">concat_object_path</span>(<span class="ident">object_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">field_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">String</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">concat_object_path</span>(<span class="ident">object_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">field_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">String</span> {
     <span class="kw">let</span> <span class="ident">path_suffix</span> <span class="op">=</span> <span class="ident">field_path</span>
         .<span class="ident">strip_prefix</span>(<span class="string">&quot;struct Object&quot;</span>)
         .<span class="ident">expect</span>(<span class="string">&quot;invalid object field path&quot;</span>);
@@ -196,7 +196,7 @@
 }
 
 <span class="doccomment">/// Get the behavior address for an object.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">object_behavior</span>(
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">object_behavior</span>(
     <span class="ident">timeline</span>: <span class="kw-2">&amp;</span><span class="ident">Timeline</span>,
     <span class="ident">frame</span>: <span class="ident">u32</span>,
     <span class="ident">object_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
@@ -207,7 +207,7 @@
 }
 
 <span class="doccomment">/// Get the data path for a surface, or None if the surface is inactive.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">surface_path</span>(
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">surface_path</span>(
     <span class="ident">timeline</span>: <span class="kw-2">&amp;</span><span class="ident">Timeline</span>,
     <span class="ident">frame</span>: <span class="ident">u32</span>,
     <span class="ident">surface</span>: <span class="ident">SurfaceSlot</span>,
@@ -221,7 +221,7 @@
     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;sSurfacePool[{}]&quot;</span>, <span class="ident">surface</span>)))
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">concat_surface_path</span>(<span class="ident">surface_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">field_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">String</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">concat_surface_path</span>(<span class="ident">surface_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">field_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">String</span> {
     <span class="kw">let</span> <span class="ident">path_suffix</span> <span class="op">=</span> <span class="ident">field_path</span>
         .<span class="ident">strip_prefix</span>(<span class="string">&quot;struct Surface&quot;</span>)
         .<span class="ident">expect</span>(<span class="string">&quot;invalid surface field path&quot;</span>);
@@ -229,7 +229,7 @@
 }
 
 <span class="doccomment">/// Load the SM64 surfaces from the game state and add them to the scene.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">read_surfaces_to_scene</span>(
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_surfaces_to_scene</span>(
     <span class="ident">scene</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Scene</span>,
     <span class="ident">timeline</span>: <span class="kw-2">&amp;</span><span class="ident">Timeline</span>,
     <span class="ident">frame</span>: <span class="ident">u32</span>,
@@ -265,7 +265,7 @@
 }
 
 <span class="doccomment">/// Load the SM64 objects from the game state and add them to the scene.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">read_objects_to_scene</span>(
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_objects_to_scene</span>(
     <span class="ident">scene</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Scene</span>,
     <span class="ident">timeline</span>: <span class="kw-2">&amp;</span><span class="ident">Timeline</span>,
     <span class="ident">frame</span>: <span class="ident">u32</span>,
@@ -282,7 +282,7 @@
 }
 
 <span class="doccomment">/// Trace a ray until it hits a surface, and return the surface&#39;s index in the surface pool.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">trace_ray_to_surface</span>(
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">trace_ray_to_surface</span>(
     <span class="ident">timeline</span>: <span class="kw-2">&amp;</span><span class="ident">Timeline</span>,
     <span class="ident">frame</span>: <span class="ident">u32</span>,
     <span class="ident">ray</span>: (<span class="ident">Point3f</span>, <span class="ident">Vector3f</span>),

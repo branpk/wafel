@@ -436,6 +436,11 @@
 <span id="430">430</span>
 <span id="431">431</span>
 <span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">super</span>::{
     <span class="ident">value</span>::{<span class="ident">py_object_to_value</span>, <span class="ident">value_to_py_object</span>},
     <span class="ident">PyAddress</span>, <span class="ident">PyEditRange</span>, <span class="ident">PyObjectBehavior</span>, <span class="ident">PyVariable</span>,
@@ -513,7 +518,7 @@
             <span class="ident">pipeline_py</span>.<span class="ident">borrow_mut</span>(<span class="ident">py</span>).<span class="ident">invalidate</span>();
         }
 
-        <span class="kw">let</span> <span class="ident">pipeline</span> <span class="op">=</span> <span class="ident">Pipeline::new</span>(<span class="ident">dll_path</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">pipeline</span> <span class="op">=</span> <span class="ident">Pipeline::try_new</span>(<span class="ident">dll_path</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">pipeline_py</span> <span class="op">=</span> <span class="ident">Py::new</span>(<span class="ident">py</span>, <span class="ident">PyPipeline::new</span>(<span class="ident">pipeline</span>)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
 
         <span class="ident">valid_pipelines</span>.<span class="ident">push</span>(<span class="ident">pipeline_py</span>.<span class="ident">clone</span>());
@@ -546,7 +551,7 @@
             .<span class="ident">borrow_mut</span>(<span class="ident">py</span>)
             .<span class="ident">get_mut</span>()
             .<span class="ident">pipeline</span>
-            .<span class="ident">set_edits</span>(<span class="ident">edits</span>)<span class="question-mark">?</span>;
+            .<span class="ident">try_set_edits</span>(<span class="ident">edits</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">py_pipeline</span>)
     }
@@ -556,7 +561,7 @@
     <span class="doccomment">/// If the variable is a data variable, the value will be read from memory</span>
     <span class="doccomment">/// on the variable&#39;s frame.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">py</span>: <span class="ident">Python</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>, <span class="ident">variable</span>: <span class="kw-2">&amp;</span><span class="ident">PyVariable</span>) -&gt; <span class="ident">PyResult</span><span class="op">&lt;</span><span class="ident">PyObject</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get</span>().<span class="ident">pipeline</span>.<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="ident">variable</span>.<span class="ident">variable</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get</span>().<span class="ident">pipeline</span>.<span class="ident">try_read</span>(<span class="kw-2">&amp;</span><span class="ident">variable</span>.<span class="ident">variable</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">py_object</span> <span class="op">=</span> <span class="ident">value_to_py_object</span>(<span class="ident">py</span>, <span class="kw-2">&amp;</span><span class="ident">value</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">py_object</span>)
     }
@@ -572,13 +577,15 @@
         <span class="ident">value</span>: <span class="ident">PyObject</span>,
     ) -&gt; <span class="ident">PyResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">py_object_to_value</span>(<span class="ident">py</span>, <span class="kw-2">&amp;</span><span class="ident">value</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">get_mut</span>().<span class="ident">pipeline</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">variable</span>.<span class="ident">variable</span>, <span class="ident">value</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">get_mut</span>()
+            .<span class="ident">pipeline</span>
+            .<span class="ident">try_write</span>(<span class="kw-2">&amp;</span><span class="ident">variable</span>.<span class="ident">variable</span>, <span class="ident">value</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Reset a variable.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reset</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">variable</span>: <span class="kw-2">&amp;</span><span class="ident">PyVariable</span>) -&gt; <span class="ident">PyResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">get_mut</span>().<span class="ident">pipeline</span>.<span class="ident">reset</span>(<span class="kw-2">&amp;</span><span class="ident">variable</span>.<span class="ident">variable</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">get_mut</span>().<span class="ident">pipeline</span>.<span class="ident">try_reset</span>(<span class="kw-2">&amp;</span><span class="ident">variable</span>.<span class="ident">variable</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -629,7 +636,7 @@
         <span class="kw">let</span> <span class="ident">source_value</span> <span class="op">=</span> <span class="ident">py_object_to_value</span>(<span class="ident">py</span>, <span class="kw-2">&amp;</span><span class="ident">source_value</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">get_mut</span>()
             .<span class="ident">pipeline</span>
-            .<span class="ident">begin_drag</span>(<span class="kw-2">&amp;</span><span class="ident">source_variable</span>.<span class="ident">variable</span>, <span class="ident">source_value</span>)<span class="question-mark">?</span>;
+            .<span class="ident">try_begin_drag</span>(<span class="kw-2">&amp;</span><span class="ident">source_variable</span>.<span class="ident">variable</span>, <span class="ident">source_value</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -638,19 +645,22 @@
     <span class="doccomment">/// The ranges will appear to be updated, but won&#39;t be committed until `release_drag` is</span>
     <span class="doccomment">/// called.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">update_drag</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">target_frame</span>: <span class="ident">u32</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PyErr</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">get_mut</span>().<span class="ident">pipeline</span>.<span class="ident">update_drag</span>(<span class="ident">target_frame</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">get_mut</span>().<span class="ident">pipeline</span>.<span class="ident">try_update_drag</span>(<span class="ident">target_frame</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// End the drag operation, committing range changes.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">release_drag</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PyErr</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">get_mut</span>().<span class="ident">pipeline</span>.<span class="ident">release_drag</span>()<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">get_mut</span>().<span class="ident">pipeline</span>.<span class="ident">try_release_drag</span>()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Find the edit range containing a variable, if present.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">find_edit_range</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">variable</span>: <span class="kw-2">&amp;</span><span class="ident">PyVariable</span>) -&gt; <span class="ident">PyResult</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PyEditRange</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">range</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get</span>().<span class="ident">pipeline</span>.<span class="ident">find_edit_range</span>(<span class="kw-2">&amp;</span><span class="ident">variable</span>.<span class="ident">variable</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">range</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">get</span>()
+            .<span class="ident">pipeline</span>
+            .<span class="ident">try_find_edit_range</span>(<span class="kw-2">&amp;</span><span class="ident">variable</span>.<span class="ident">variable</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">range</span>.<span class="ident">cloned</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">range</span><span class="op">|</span> <span class="ident">PyEditRange</span> { <span class="ident">range</span> }))
     }
 

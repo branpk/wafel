@@ -105,6 +105,12 @@
 <span id="99">99</span>
 <span id="100">100</span>
 <span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Geometric types and functions.</span>
 
 <span class="kw">use</span> <span class="ident">std::ops::Deref</span>;
@@ -160,6 +166,12 @@
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Point3f</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StoredPoint3f</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">point</span>: <span class="ident">Point3f</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span>(<span class="ident">point</span>)
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>[<span class="ident">f32</span>; <span class="number">3</span>]<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StoredPoint3f</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">v</span>: [<span class="ident">f32</span>; <span class="number">3</span>]) -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span>(<span class="ident">v</span>.<span class="ident">into</span>())
     }
 }
 
