@@ -22,7 +22,8 @@ pub enum SM64Version {
 }
 
 impl SM64Version {
-    fn all() -> &'static [SM64Version] {
+    /// Return all game versions.
+    pub fn all() -> &'static [SM64Version] {
         &[Self::JP, Self::US, Self::EU, Self::SH]
     }
 

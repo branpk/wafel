@@ -69,7 +69,7 @@ impl Value {
         matches!(self, Value::None)
     }
 
-    /// Panics if the value is not `Value::None`.
+    /// Panic if the value is not `Value::None`.
     #[track_caller]
     pub fn as_none(&self) {
         if let Err(error) = self.try_as_none() {
@@ -77,7 +77,7 @@ impl Value {
         }
     }
 
-    /// Returns an error if the value is not `Value::None`.
+    /// Return an error if the value is not `Value::None`.
     pub fn try_as_none(&self) -> Result<(), ValueTypeError> {
         if self.is_none() {
             Ok(())
@@ -86,6 +86,15 @@ impl Value {
                 expected: "void".into(),
                 actual: self.clone(),
             })
+        }
+    }
+
+    /// Return None if the value is none, and Some(self) otherwise.
+    pub fn option(&self) -> Option<&Value> {
+        if self.is_none() {
+            None
+        } else {
+            Some(self)
         }
     }
 
@@ -209,6 +218,27 @@ impl Value {
     /// Convert the value to a float and then truncate to an f32.
     pub fn try_as_f32(&self) -> Result<f32, ValueTypeError> {
         self.try_as_float().map(|r| r as f32)
+    }
+
+    /// Convert the value to a string, panicking on failure.
+    #[track_caller]
+    pub fn as_str(&self) -> &str {
+        match self.try_as_str() {
+            Ok(s) => s,
+            Err(error) => panic!("{}", error),
+        }
+    }
+
+    /// Convert the value to a string.
+    pub fn try_as_str(&self) -> Result<&str, ValueTypeError> {
+        if let Value::String(s) = self {
+            Ok(s)
+        } else {
+            Err(ValueTypeError {
+                expected: "string".into(),
+                actual: self.clone(),
+            })
+        }
     }
 
     /// Convert the value to an address, panicking on failure.

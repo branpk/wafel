@@ -75,7 +75,7 @@ impl PyPipeline {
             pipeline_py.borrow_mut(py).invalidate();
         }
 
-        let pipeline = Pipeline::new(dll_path)?;
+        let pipeline = Pipeline::try_new(dll_path)?;
         let pipeline_py = Py::new(py, PyPipeline::new(pipeline)?)?;
 
         valid_pipelines.push(pipeline_py.clone());
@@ -108,7 +108,7 @@ impl PyPipeline {
             .borrow_mut(py)
             .get_mut()
             .pipeline
-            .set_edits(edits)?;
+            .try_set_edits(edits)?;
 
         Ok(py_pipeline)
     }
@@ -118,7 +118,7 @@ impl PyPipeline {
     /// If the variable is a data variable, the value will be read from memory
     /// on the variable's frame.
     pub fn read(&self, py: Python<'_>, variable: &PyVariable) -> PyResult<PyObject> {
-        let value = self.get().pipeline.read(&variable.variable)?;
+        let value = self.get().pipeline.try_read(&variable.variable)?;
         let py_object = value_to_py_object(py, &value)?;
         Ok(py_object)
     }
@@ -134,13 +134,15 @@ impl PyPipeline {
         value: PyObject,
     ) -> PyResult<()> {
         let value = py_object_to_value(py, &value)?;
-        self.get_mut().pipeline.write(&variable.variable, value)?;
+        self.get_mut()
+            .pipeline
+            .try_write(&variable.variable, value)?;
         Ok(())
     }
 
     /// Reset a variable.
     pub fn reset(&mut self, variable: &PyVariable) -> PyResult<()> {
-        self.get_mut().pipeline.reset(&variable.variable)?;
+        self.get_mut().pipeline.try_reset(&variable.variable)?;
         Ok(())
     }
 
@@ -191,7 +193,7 @@ impl PyPipeline {
         let source_value = py_object_to_value(py, &source_value)?;
         self.get_mut()
             .pipeline
-            .begin_drag(&source_variable.variable, source_value)?;
+            .try_begin_drag(&source_variable.variable, source_value)?;
         Ok(())
     }
 
@@ -200,19 +202,22 @@ impl PyPipeline {
     /// The ranges will appear to be updated, but won't be committed until `release_drag` is
     /// called.
     pub fn update_drag(&mut self, target_frame: u32) -> Result<(), PyErr> {
-        self.get_mut().pipeline.update_drag(target_frame)?;
+        self.get_mut().pipeline.try_update_drag(target_frame)?;
         Ok(())
     }
 
     /// End the drag operation, committing range changes.
     pub fn release_drag(&mut self) -> Result<(), PyErr> {
-        self.get_mut().pipeline.release_drag()?;
+        self.get_mut().pipeline.try_release_drag()?;
         Ok(())
     }
 
     /// Find the edit range containing a variable, if present.
     pub fn find_edit_range(&self, variable: &PyVariable) -> PyResult<Option<PyEditRange>> {
-        let range = self.get().pipeline.find_edit_range(&variable.variable)?;
+        let range = self
+            .get()
+            .pipeline
+            .try_find_edit_range(&variable.variable)?;
         Ok(range.cloned().map(|range| PyEditRange { range }))
     }
 
