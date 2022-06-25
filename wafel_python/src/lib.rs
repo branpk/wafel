@@ -35,16 +35,16 @@ pub fn wafel(py: Python<'_>, m: &PyModule) -> PyResult<()> {
 
     m.add_class::<M64Metadata>()?;
     m.add_class::<Input>()?;
-    #[pyfn(m, "load_m64")]
+    #[pyfn(m, name = "load_m64")]
     fn load_m64_py(filename: &str) -> PyResult<(M64Metadata, Vec<Input>)> {
         load_m64(filename)
     }
-    #[pyfn(m, "save_m64")]
+    #[pyfn(m, name = "save_m64")]
     fn save_m64_py(filename: &str, metadata: &M64Metadata, inputs: Vec<Input>) -> PyResult<()> {
         save_m64(filename, metadata, inputs)
     }
 
-    #[pyfn(m, "lock_libsm64")]
+    #[pyfn(m, name = "lock_libsm64")]
     fn lock_libsm64(
         input_filename: &str,
         output_filename: &str,
@@ -52,7 +52,7 @@ pub fn wafel(py: Python<'_>, m: &PyModule) -> PyResult<()> {
     ) -> PyResult<()> {
         api::try_lock_libsm64(input_filename, output_filename, rom_filename).map_err(err)
     }
-    #[pyfn(m, "unlock_libsm64")]
+    #[pyfn(m, name = "unlock_libsm64")]
     fn unlock_libsm64(
         input_filename: &str,
         output_filename: &str,

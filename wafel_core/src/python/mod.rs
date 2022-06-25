@@ -26,7 +26,7 @@ mod window;
 fn wafel_core(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     error::init();
 
-    #[pyfn(m, "lock_libsm64")]
+    #[pyfn(m, name = "lock_libsm64")]
     fn lock_libsm64(
         input_filename: &str,
         output_filename: &str,
@@ -35,7 +35,7 @@ fn wafel_core(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
         try_lock_libsm64(input_filename, output_filename, rom_filename).map_err(Error::from)?;
         Ok(())
     }
-    #[pyfn(m, "unlock_libsm64")]
+    #[pyfn(m, name = "unlock_libsm64")]
     fn unlock_libsm64(
         input_filename: &str,
         output_filename: &str,
