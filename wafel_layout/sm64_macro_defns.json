@@ -8,6 +8,10 @@
       "type": "s64",
       "value": 32
     },
+    "ACTIVATED_BF_PLAT_BP_MASK_TYPE": {
+      "type": "s64",
+      "value": 768
+    },
     "ACTIVATED_BF_PLAT_TYPE_BITFS_ELEVATOR": {
       "type": "s64",
       "value": 2
@@ -1632,6 +1636,18 @@
       "type": "s64",
       "value": 0
     },
+    "BIG_BOO_BP_BALCONY": {
+      "type": "s64",
+      "value": 2
+    },
+    "BIG_BOO_BP_GHOST_HUNT": {
+      "type": "s64",
+      "value": 0
+    },
+    "BIG_BOO_BP_MERRY_GO_ROUND": {
+      "type": "s64",
+      "value": 1
+    },
     "BIRD_ACT_FLY": {
       "type": "s64",
       "value": 1
@@ -1804,6 +1820,18 @@
       "type": "s64",
       "value": -1
     },
+    "BOO_BP_GENERIC": {
+      "type": "s64",
+      "value": 1
+    },
+    "BOO_BP_GHOST_HUNT": {
+      "type": "s64",
+      "value": 0
+    },
+    "BOO_BP_MERRY_GO_ROUND": {
+      "type": "s64",
+      "value": 2
+    },
     "BOO_CAGE_ACT_FALLING": {
       "type": "s64",
       "value": 1
@@ -1844,6 +1872,10 @@
       "type": "s64",
       "value": 0
     },
+    "BOWSER_ACT_BIG_JUMP": {
+      "type": "s64",
+      "value": 13
+    },
     "BOWSER_ACT_BREATH_FIRE": {
       "type": "s64",
       "value": 15
@@ -1876,21 +1908,13 @@
       "type": "s64",
       "value": 6
     },
-    "BOWSER_ACT_JUMP": {
-      "type": "s64",
-      "value": 13
-    },
     "BOWSER_ACT_JUMP_ONTO_STAGE": {
       "type": "s64",
       "value": 2
     },
-    "BOWSER_ACT_JUMP_TOWARDS_MARIO": {
+    "BOWSER_ACT_QUICK_JUMP": {
       "type": "s64",
       "value": 17
-    },
-    "BOWSER_ACT_RIDE_TILTING_PLATFORM": {
-      "type": "s64",
-      "value": 19
     },
     "BOWSER_ACT_SPIT_FIRE_INTO_SKY": {
       "type": "s64",
@@ -1900,17 +1924,29 @@
       "type": "s64",
       "value": 9
     },
+    "BOWSER_ACT_TAIL_DEFAULT": {
+      "type": "s64",
+      "value": 0
+    },
+    "BOWSER_ACT_TAIL_THROWN": {
+      "type": "s64",
+      "value": 1
+    },
+    "BOWSER_ACT_TAIL_TOUCHED_MARIO": {
+      "type": "s64",
+      "value": 2
+    },
     "BOWSER_ACT_TELEPORT": {
       "type": "s64",
       "value": 16
     },
-    "BOWSER_ACT_TEXT_WAIT": {
-      "type": "s64",
-      "value": 5
-    },
-    "BOWSER_ACT_THROWN_DROPPED": {
+    "BOWSER_ACT_THROWN": {
       "type": "s64",
       "value": 1
+    },
+    "BOWSER_ACT_TILT_LAVA_PLATFORM": {
+      "type": "s64",
+      "value": 19
     },
     "BOWSER_ACT_TURN_FROM_EDGE": {
       "type": "s64",
@@ -1920,9 +1956,169 @@
       "type": "s64",
       "value": 18
     },
+    "BOWSER_ACT_WAIT": {
+      "type": "s64",
+      "value": 5
+    },
     "BOWSER_ACT_WALK_TO_MARIO": {
       "type": "s64",
       "value": 14
+    },
+    "BOWSER_ANIM_BREATH": {
+      "type": "s64",
+      "value": 6
+    },
+    "BOWSER_ANIM_BREATH_QUICK": {
+      "type": "s64",
+      "value": 22
+    },
+    "BOWSER_ANIM_BREATH_UP": {
+      "type": "s64",
+      "value": 11
+    },
+    "BOWSER_ANIM_BROKEN": {
+      "type": "s64",
+      "value": 4
+    },
+    "BOWSER_ANIM_DANCE": {
+      "type": "s64",
+      "value": 10
+    },
+    "BOWSER_ANIM_EDGE_MOVE": {
+      "type": "s64",
+      "value": 23
+    },
+    "BOWSER_ANIM_EDGE_STOP": {
+      "type": "s64",
+      "value": 24
+    },
+    "BOWSER_ANIM_FALL_DOWN": {
+      "type": "s64",
+      "value": 5
+    },
+    "BOWSER_ANIM_FLIP": {
+      "type": "s64",
+      "value": 25
+    },
+    "BOWSER_ANIM_FLIP_DOWN": {
+      "type": "s64",
+      "value": 16
+    },
+    "BOWSER_ANIM_GRABBED": {
+      "type": "s64",
+      "value": 3
+    },
+    "BOWSER_ANIM_IDLE": {
+      "type": "s64",
+      "value": 12
+    },
+    "BOWSER_ANIM_JUMP": {
+      "type": "s64",
+      "value": 7
+    },
+    "BOWSER_ANIM_JUMP_START": {
+      "type": "s64",
+      "value": 9
+    },
+    "BOWSER_ANIM_JUMP_STOP": {
+      "type": "s64",
+      "value": 8
+    },
+    "BOWSER_ANIM_LAY_DOWN": {
+      "type": "s64",
+      "value": 17
+    },
+    "BOWSER_ANIM_LOOK_DOWN_STOP_WALK": {
+      "type": "s64",
+      "value": 14
+    },
+    "BOWSER_ANIM_LOOK_UP_START_WALK": {
+      "type": "s64",
+      "value": 15
+    },
+    "BOWSER_ANIM_RUN": {
+      "type": "s64",
+      "value": 19
+    },
+    "BOWSER_ANIM_RUN_SLIP": {
+      "type": "s64",
+      "value": 21
+    },
+    "BOWSER_ANIM_RUN_START": {
+      "type": "s64",
+      "value": 18
+    },
+    "BOWSER_ANIM_RUN_STOP": {
+      "type": "s64",
+      "value": 20
+    },
+    "BOWSER_ANIM_SHAKING": {
+      "type": "s64",
+      "value": 2
+    },
+    "BOWSER_ANIM_SLOW_GAIT": {
+      "type": "s64",
+      "value": 13
+    },
+    "BOWSER_ANIM_STAND_UP": {
+      "type": "s64",
+      "value": 0
+    },
+    "BOWSER_ANIM_STAND_UP_FROM_FLIP": {
+      "type": "s64",
+      "value": 26
+    },
+    "BOWSER_ANIM_STAND_UP_UNUSED": {
+      "type": "s64",
+      "value": 1
+    },
+    "BOWSER_BITS_PLAT_ACT_CHECK": {
+      "type": "s64",
+      "value": 1
+    },
+    "BOWSER_BITS_PLAT_ACT_FALL": {
+      "type": "s64",
+      "value": 2
+    },
+    "BOWSER_BITS_PLAT_ACT_START": {
+      "type": "s64",
+      "value": 0
+    },
+    "BOWSER_BP_BITDW": {
+      "type": "s64",
+      "value": 0
+    },
+    "BOWSER_BP_BITFS": {
+      "type": "s64",
+      "value": 1
+    },
+    "BOWSER_BP_BITS": {
+      "type": "s64",
+      "value": 2
+    },
+    "BOWSER_CAM_ACT_END": {
+      "type": "s64",
+      "value": 2
+    },
+    "BOWSER_CAM_ACT_IDLE": {
+      "type": "s64",
+      "value": 0
+    },
+    "BOWSER_CAM_ACT_WALK": {
+      "type": "s64",
+      "value": 1
+    },
+    "BOWSER_GRAB_STATUS_GRABBED": {
+      "type": "s64",
+      "value": 1
+    },
+    "BOWSER_GRAB_STATUS_HOLDING": {
+      "type": "s64",
+      "value": 2
+    },
+    "BOWSER_GRAB_STATUS_NONE": {
+      "type": "s64",
+      "value": 0
     },
     "BOWSER_PUZZLE_ACT_DONE": {
       "type": "s64",
@@ -1936,9 +2132,145 @@
       "type": "s64",
       "value": 1
     },
+    "BOWSER_STATUS_ANGLE_CENTER": {
+      "type": "s64",
+      "value": 4
+    },
+    "BOWSER_STATUS_ANGLE_MARIO": {
+      "type": "s64",
+      "value": 2
+    },
+    "BOWSER_STATUS_BIG_JUMP": {
+      "type": "s64",
+      "value": 65536
+    },
+    "BOWSER_STATUS_DIST_CENTER": {
+      "type": "s64",
+      "value": 16
+    },
+    "BOWSER_STATUS_DIST_MARIO": {
+      "type": "s64",
+      "value": 8
+    },
+    "BOWSER_STATUS_FIRE_SKY": {
+      "type": "s64",
+      "value": 131072
+    },
+    "BOWSER_SUB_ACT_CHARGE_END": {
+      "type": "s64",
+      "value": 2
+    },
+    "BOWSER_SUB_ACT_CHARGE_RUN": {
+      "type": "s64",
+      "value": 1
+    },
+    "BOWSER_SUB_ACT_CHARGE_SLIP": {
+      "type": "s64",
+      "value": 3
+    },
+    "BOWSER_SUB_ACT_CHARGE_START": {
+      "type": "s64",
+      "value": 0
+    },
+    "BOWSER_SUB_ACT_DEAD_BOUNCE": {
+      "type": "s64",
+      "value": 1
+    },
+    "BOWSER_SUB_ACT_DEAD_DEFAULT_END": {
+      "type": "s64",
+      "value": 3
+    },
+    "BOWSER_SUB_ACT_DEAD_DEFAULT_END_OVER": {
+      "type": "s64",
+      "value": 4
+    },
+    "BOWSER_SUB_ACT_DEAD_FINAL_END": {
+      "type": "s64",
+      "value": 10
+    },
+    "BOWSER_SUB_ACT_DEAD_FINAL_END_OVER": {
+      "type": "s64",
+      "value": 11
+    },
+    "BOWSER_SUB_ACT_DEAD_FLY_BACK": {
+      "type": "s64",
+      "value": 0
+    },
+    "BOWSER_SUB_ACT_DEAD_WAIT": {
+      "type": "s64",
+      "value": 2
+    },
+    "BOWSER_SUB_ACT_HIT_MINE_FALL": {
+      "type": "s64",
+      "value": 1
+    },
+    "BOWSER_SUB_ACT_HIT_MINE_START": {
+      "type": "s64",
+      "value": 0
+    },
+    "BOWSER_SUB_ACT_HIT_MINE_STOP": {
+      "type": "s64",
+      "value": 2
+    },
+    "BOWSER_SUB_ACT_JUMP_ON_STAGE_IDLE": {
+      "type": "s64",
+      "value": 0
+    },
+    "BOWSER_SUB_ACT_JUMP_ON_STAGE_LAND": {
+      "type": "s64",
+      "value": 2
+    },
+    "BOWSER_SUB_ACT_JUMP_ON_STAGE_START": {
+      "type": "s64",
+      "value": 1
+    },
+    "BOWSER_SUB_ACT_JUMP_ON_STAGE_STOP": {
+      "type": "s64",
+      "value": 3
+    },
+    "BOWSER_SUB_ACT_TELEPORT_MOVE": {
+      "type": "s64",
+      "value": 1
+    },
+    "BOWSER_SUB_ACT_TELEPORT_START": {
+      "type": "s64",
+      "value": 0
+    },
+    "BOWSER_SUB_ACT_TELEPORT_STOP": {
+      "type": "s64",
+      "value": 2
+    },
     "BOWTIE_VAL": {
       "type": "s64",
       "value": 0
+    },
+    "BREAKABLE_BOX_BP_3_COINS": {
+      "type": "s64",
+      "value": 1
+    },
+    "BREAKABLE_BOX_BP_5_COINS": {
+      "type": "s64",
+      "value": 2
+    },
+    "BREAKABLE_BOX_BP_GIANT": {
+      "type": "s64",
+      "value": 3
+    },
+    "BREAKABLE_BOX_BP_NO_COINS": {
+      "type": "s64",
+      "value": 0
+    },
+    "BUGFIX_BOWSER_COLLIDE_BITS_DEAD": {
+      "type": "s64",
+      "value": 1
+    },
+    "BUGFIX_BOWSER_FADING_OUT": {
+      "type": "s64",
+      "value": 1
+    },
+    "BUGFIX_BOWSER_FALLEN_OFF_STAGE": {
+      "type": "s64",
+      "value": 1
     },
     "BUGFIX_DIALOG_TIME_STOP": {
       "type": "s64",
@@ -2452,6 +2784,22 @@
       "type": "s64",
       "value": 2
     },
+    "CAP_SWITCH_BP_BLUE": {
+      "type": "s64",
+      "value": 2
+    },
+    "CAP_SWITCH_BP_GREEN": {
+      "type": "s64",
+      "value": 1
+    },
+    "CAP_SWITCH_BP_RED": {
+      "type": "s64",
+      "value": 0
+    },
+    "CAP_SWITCH_BP_YELLOW": {
+      "type": "s64",
+      "value": 3
+    },
     "CELEB_STAR_ACT_FACE_CAMERA": {
       "type": "s64",
       "value": 1
@@ -2560,21 +2908,61 @@
       "type": "s64",
       "value": 0
     },
-    "COIN_FORMATION_FLAG_ARROW": {
+    "COIN_FORMATION_ACT_IDLE": {
       "type": "s64",
-      "value": 4
+      "value": 1
     },
-    "COIN_FORMATION_FLAG_FLYING": {
-      "type": "s64",
-      "value": 16
-    },
-    "COIN_FORMATION_FLAG_RING": {
+    "COIN_FORMATION_ACT_RESPAWN_COINS": {
       "type": "s64",
       "value": 2
     },
-    "COIN_FORMATION_FLAG_VERTICAL": {
+    "COIN_FORMATION_ACT_SPAWN_COINS": {
+      "type": "s64",
+      "value": 0
+    },
+    "COIN_FORMATION_BP_ARROW": {
+      "type": "s64",
+      "value": 4
+    },
+    "COIN_FORMATION_BP_FLAG_ARROW": {
+      "type": "s64",
+      "value": 4
+    },
+    "COIN_FORMATION_BP_FLAG_FLYING": {
+      "type": "s64",
+      "value": 16
+    },
+    "COIN_FORMATION_BP_FLAG_HORIZONTAL": {
+      "type": "s64",
+      "value": 0
+    },
+    "COIN_FORMATION_BP_FLAG_MASK": {
+      "type": "s64",
+      "value": 7
+    },
+    "COIN_FORMATION_BP_FLAG_RING": {
+      "type": "s64",
+      "value": 2
+    },
+    "COIN_FORMATION_BP_FLAG_VERTICAL": {
       "type": "s64",
       "value": 1
+    },
+    "COIN_FORMATION_BP_LINE_HORIZONTAL": {
+      "type": "s64",
+      "value": 0
+    },
+    "COIN_FORMATION_BP_LINE_VERTICAL": {
+      "type": "s64",
+      "value": 1
+    },
+    "COIN_FORMATION_BP_RING_HORIZONTAL": {
+      "type": "s64",
+      "value": 2
+    },
+    "COIN_FORMATION_BP_RING_VERTICAL": {
+      "type": "s64",
+      "value": 3
     },
     "COL_END": {
       "type": "s64",
@@ -3148,6 +3536,90 @@
       "type": "s64",
       "value": 34
     },
+    "EXCLAMATION_BOX_ANIM_STATE_DEFAULT": {
+      "type": "s64",
+      "value": 3
+    },
+    "EXCLAMATION_BOX_ANIM_STATE_METAL_CAP": {
+      "type": "s64",
+      "value": 1
+    },
+    "EXCLAMATION_BOX_ANIM_STATE_VANISH_CAP": {
+      "type": "s64",
+      "value": 2
+    },
+    "EXCLAMATION_BOX_ANIM_STATE_WING_CAP": {
+      "type": "s64",
+      "value": 0
+    },
+    "EXCLAMATION_BOX_BP_1UP_RUNNING_AWAY": {
+      "type": "s64",
+      "value": 9
+    },
+    "EXCLAMATION_BOX_BP_1UP_WALKING": {
+      "type": "s64",
+      "value": 7
+    },
+    "EXCLAMATION_BOX_BP_END": {
+      "type": "s64",
+      "value": 99
+    },
+    "EXCLAMATION_BOX_BP_KOOPA_SHELL": {
+      "type": "s64",
+      "value": 3
+    },
+    "EXCLAMATION_BOX_BP_METAL_CAP": {
+      "type": "s64",
+      "value": 1
+    },
+    "EXCLAMATION_BOX_BP_ONE_COIN": {
+      "type": "s64",
+      "value": 4
+    },
+    "EXCLAMATION_BOX_BP_SPECIAL_CAP_END": {
+      "type": "s64",
+      "value": 2
+    },
+    "EXCLAMATION_BOX_BP_STAR_ACT_1": {
+      "type": "s64",
+      "value": 8
+    },
+    "EXCLAMATION_BOX_BP_STAR_ACT_2": {
+      "type": "s64",
+      "value": 10
+    },
+    "EXCLAMATION_BOX_BP_STAR_ACT_3": {
+      "type": "s64",
+      "value": 11
+    },
+    "EXCLAMATION_BOX_BP_STAR_ACT_4": {
+      "type": "s64",
+      "value": 12
+    },
+    "EXCLAMATION_BOX_BP_STAR_ACT_5": {
+      "type": "s64",
+      "value": 13
+    },
+    "EXCLAMATION_BOX_BP_STAR_ACT_6": {
+      "type": "s64",
+      "value": 14
+    },
+    "EXCLAMATION_BOX_BP_TEN_COINS": {
+      "type": "s64",
+      "value": 6
+    },
+    "EXCLAMATION_BOX_BP_THREE_COINS": {
+      "type": "s64",
+      "value": 5
+    },
+    "EXCLAMATION_BOX_BP_VANISH_CAP": {
+      "type": "s64",
+      "value": 2
+    },
+    "EXCLAMATION_BOX_BP_WING_CAP": {
+      "type": "s64",
+      "value": 0
+    },
     "EYEROK_BOSS_ACT_DIE": {
       "type": "s64",
       "value": 4
@@ -3352,6 +3824,14 @@
       "type": "s64",
       "value": 3
     },
+    "FLY_GUY_BP_FIRE": {
+      "type": "s64",
+      "value": 1
+    },
+    "FLY_GUY_BP_GENERIC": {
+      "type": "s64",
+      "value": 0
+    },
     "FORCE_BL": {
       "type": "s64",
       "value": 16384
@@ -3548,10 +4028,6 @@
       "type": "s64",
       "value": 3
     },
-    "GOOMBA_BP_TRIPLET_FLAG_MASK": {
-      "type": "s64",
-      "value": 252
-    },
     "GOOMBA_SIZE_HUGE": {
       "type": "s64",
       "value": 1
@@ -3571,14 +4047,6 @@
     "GOOMBA_TRIPLET_SPAWNER_ACT_UNLOADED": {
       "type": "s64",
       "value": 0
-    },
-    "GOOMBA_TRIPLET_SPAWNER_BP_EXTRA_GOOMBAS_MASK": {
-      "type": "s64",
-      "value": 252
-    },
-    "GOOMBA_TRIPLET_SPAWNER_BP_SIZE_MASK": {
-      "type": "s64",
-      "value": 3
     },
     "GRAPH_NODE_H": {
       "type": "void",
@@ -3703,6 +4171,26 @@
     "GRAPH_RENDER_Z_BUFFER": {
       "type": "s64",
       "value": 8
+    },
+    "GRINDEL_THWOMP_ACT_IDLE_AT_BOTTOM": {
+      "type": "s64",
+      "value": 4
+    },
+    "GRINDEL_THWOMP_ACT_IDLE_AT_TOP": {
+      "type": "s64",
+      "value": 1
+    },
+    "GRINDEL_THWOMP_ACT_LAND": {
+      "type": "s64",
+      "value": 3
+    },
+    "GRINDEL_THWOMP_ACT_LOWER": {
+      "type": "s64",
+      "value": 2
+    },
+    "GRINDEL_THWOMP_ACT_RAISE": {
+      "type": "s64",
+      "value": 0
     },
     "GROUND_STEP_HIT_WALL": {
       "type": "s64",
@@ -5464,6 +5952,34 @@
       "type": "s64",
       "value": 1
     },
+    "HIDDEN_OBJECT_ACT_ACTIVE": {
+      "type": "s64",
+      "value": 1
+    },
+    "HIDDEN_OBJECT_ACT_BROKEN": {
+      "type": "s64",
+      "value": 2
+    },
+    "HIDDEN_OBJECT_ACT_INACTIVE": {
+      "type": "s64",
+      "value": 0
+    },
+    "HIDDEN_OBJECT_BP_BREAKABLE_BOX": {
+      "type": "s64",
+      "value": 0
+    },
+    "HIDDEN_OBJECT_BP_UNBREAKABLE_BOX_UNUSED_1": {
+      "type": "s64",
+      "value": 1
+    },
+    "HIDDEN_OBJECT_BP_UNBREAKABLE_BOX_UNUSED_2": {
+      "type": "s64",
+      "value": 2
+    },
+    "HIDDEN_OBJECT_BP_WDW_PLATFORM": {
+      "type": "s64",
+      "value": 1
+    },
     "HOMING_AMP_ACT_APPEAR": {
       "type": "s64",
       "value": 1
@@ -5556,7 +6072,7 @@
       "type": "s64",
       "value": 64
     },
-    "INPUT_UNKNOWN_10": {
+    "INPUT_STOMPED": {
       "type": "s64",
       "value": 1024
     },
@@ -6096,6 +6612,14 @@
       "type": "s64",
       "value": 0
     },
+    "MIPS_BP_15_STARS": {
+      "type": "s64",
+      "value": 0
+    },
+    "MIPS_BP_50_STARS": {
+      "type": "s64",
+      "value": 1
+    },
     "MIPS_STAR_STATUS_ALREADY_SPAWNED_STAR": {
       "type": "s64",
       "value": 2
@@ -6380,10 +6904,6 @@
       "type": "s64",
       "value": 100
     },
-    "MODEL_BOWSER2": {
-      "type": "s64",
-      "value": 105
-    },
     "MODEL_BOWSER_2_TILTING_ARENA": {
       "type": "s64",
       "value": 54
@@ -6447,6 +6967,10 @@
     "MODEL_BOWSER_KEY_CUTSCENE": {
       "type": "s64",
       "value": 200
+    },
+    "MODEL_BOWSER_NO_SHADOW": {
+      "type": "s64",
+      "value": 105
     },
     "MODEL_BOWSER_SMOKE": {
       "type": "s64",
@@ -7916,6 +8440,10 @@
       "type": "s64",
       "value": 4
     },
+    "MONTY_MOLE_BP_GENERIC": {
+      "type": "s64",
+      "value": 1
+    },
     "MONTY_MOLE_BP_NO_ROCK": {
       "type": "s64",
       "value": 0
@@ -7984,13 +8512,17 @@
       "type": "s64",
       "value": 4
     },
+    "MR_BLIZZARD_STYPE_CAP": {
+      "type": "s64",
+      "value": 2
+    },
+    "MR_BLIZZARD_STYPE_GENERIC": {
+      "type": "s64",
+      "value": 0
+    },
     "MR_BLIZZARD_STYPE_JUMPING": {
       "type": "s64",
       "value": 1
-    },
-    "MR_BLIZZARD_STYPE_NO_CAP": {
-      "type": "s64",
-      "value": 0
     },
     "M_1_PI": {
       "type": "f64",
@@ -8303,6 +8835,26 @@
     "OBJ_MOVE_UNDERWATER_ON_GROUND": {
       "type": "s64",
       "value": 64
+    },
+    "ONE_UP_BP_BEAT_BITDW_BOWSER": {
+      "type": "s64",
+      "value": 1
+    },
+    "ONE_UP_BP_BEAT_BITFS_BOWSER": {
+      "type": "s64",
+      "value": 2
+    },
+    "ONE_UP_BP_GENERIC": {
+      "type": "s64",
+      "value": 0
+    },
+    "OPENABLE_GRILL_BP_BOB": {
+      "type": "s64",
+      "value": 0
+    },
+    "OPENABLE_GRILL_BP_HMC": {
+      "type": "s64",
+      "value": 1
     },
     "OS_EVENT_AI": {
       "type": "s64",
@@ -8948,6 +9500,10 @@
       "type": "s64",
       "value": 0
     },
+    "PIRANHA_PLANT_SLEEP_MUSIC_PLAYING": {
+      "type": "s64",
+      "value": 0
+    },
     "PLATFORM_INFO_H": {
       "type": "void",
       "value": null
@@ -9028,39 +9584,39 @@
       "type": "s64",
       "value": 1
     },
-    "PURPLE_SWITCH_IDLE": {
+    "PURPLE_SWITCH_ACT_IDLE": {
       "type": "s64",
       "value": 0
     },
-    "PURPLE_SWITCH_PRESSED": {
+    "PURPLE_SWITCH_ACT_PRESSED": {
       "type": "s64",
       "value": 1
     },
-    "PURPLE_SWITCH_TICKING": {
+    "PURPLE_SWITCH_ACT_TICKING": {
       "type": "s64",
       "value": 2
     },
-    "PURPLE_SWITCH_UNPRESSED": {
+    "PURPLE_SWITCH_ACT_UNPRESSED": {
       "type": "s64",
       "value": 3
     },
-    "PURPLE_SWITCH_WAIT_FOR_MARIO_TO_GET_OFF": {
+    "PURPLE_SWITCH_ACT_WAIT_FOR_MARIO_TO_GET_OFF": {
       "type": "s64",
       "value": 4
     },
-    "PYRAMID_ELEVATOR_AT_BOTTOM": {
+    "PYRAMID_ELEVATOR_ACT_AT_BOTTOM": {
       "type": "s64",
       "value": 3
     },
-    "PYRAMID_ELEVATOR_CONSTANT_VELOCITY": {
+    "PYRAMID_ELEVATOR_ACT_CONSTANT_VELOCITY": {
       "type": "s64",
       "value": 2
     },
-    "PYRAMID_ELEVATOR_IDLE": {
+    "PYRAMID_ELEVATOR_ACT_IDLE": {
       "type": "s64",
       "value": 0
     },
-    "PYRAMID_ELEVATOR_START_MOVING": {
+    "PYRAMID_ELEVATOR_ACT_START_MOVING": {
       "type": "s64",
       "value": 1
     },
@@ -9120,6 +9676,14 @@
       "type": "s64",
       "value": 0
     },
+    "RACING_PENGUIN_BP_FAT": {
+      "type": "s64",
+      "value": 1
+    },
+    "RACING_PENGUIN_BP_THIN": {
+      "type": "s64",
+      "value": 0
+    },
     "RCP_IMASK": {
       "type": "s64",
       "value": 4128768
@@ -9153,6 +9717,14 @@
       "value": 1
     },
     "RESPAWN_INFO_TYPE_NULL": {
+      "type": "s64",
+      "value": 0
+    },
+    "ROTATING_PLATFORM_BP_WDW": {
+      "type": "s64",
+      "value": 1
+    },
+    "ROTATING_PLATFORM_BP_WF": {
       "type": "s64",
       "value": 0
     },
@@ -9772,6 +10344,10 @@
       "type": "s64",
       "value": 1074659329
     },
+    "SOUND_ENV_MOVING_BIG_PLATFORM": {
+      "type": "s64",
+      "value": 1091895297
+    },
     "SOUND_ENV_MOVING_SAND_SNOW": {
       "type": "s64",
       "value": 1074135041
@@ -9799,10 +10375,6 @@
     "SOUND_ENV_UNKNOWN2": {
       "type": "s64",
       "value": 1074397185
-    },
-    "SOUND_ENV_UNKNOWN4": {
-      "type": "s64",
-      "value": 1091895297
     },
     "SOUND_ENV_WATER": {
       "type": "s64",
@@ -10023,18 +10595,6 @@
     "SOUND_GENERAL_COIN_DROP": {
       "type": "s64",
       "value": 808861825
-    },
-    "SOUND_GENERAL_COIN_SPURT": {
-      "type": "s64",
-      "value": 808452225
-    },
-    "SOUND_GENERAL_COIN_SPURT_2": {
-      "type": "s64",
-      "value": 942669953
-    },
-    "SOUND_GENERAL_COIN_SPURT_EU": {
-      "type": "s64",
-      "value": 942678145
     },
     "SOUND_GENERAL_COIN_WATER": {
       "type": "s64",
@@ -10264,14 +10824,6 @@
       "type": "s64",
       "value": 809828481
     },
-    "SOUND_GENERAL_UNK46": {
-      "type": "s64",
-      "value": 809926785
-    },
-    "SOUND_GENERAL_UNK46_LOWPRIO": {
-      "type": "s64",
-      "value": 809894017
-    },
     "SOUND_GENERAL_UNKNOWN1": {
       "type": "s64",
       "value": 807731329
@@ -10279,18 +10831,6 @@
     "SOUND_GENERAL_UNKNOWN1_2": {
       "type": "s64",
       "value": 841285761
-    },
-    "SOUND_GENERAL_UNKNOWN3": {
-      "type": "s64",
-      "value": 808943745
-    },
-    "SOUND_GENERAL_UNKNOWN3_2": {
-      "type": "s64",
-      "value": 943161473
-    },
-    "SOUND_GENERAL_UNKNOWN3_LOWPRIO": {
-      "type": "s64",
-      "value": 808910977
     },
     "SOUND_GENERAL_UNKNOWN4": {
       "type": "s64",
@@ -10600,17 +11140,9 @@
       "type": "s64",
       "value": 1880293505
     },
-    "SOUND_MENU_PAUSE": {
-      "type": "s64",
-      "value": 1879240833
-    },
     "SOUND_MENU_PAUSE_2": {
       "type": "s64",
       "value": 1879310209
-    },
-    "SOUND_MENU_PAUSE_HIGHPRIO": {
-      "type": "s64",
-      "value": 1879244673
     },
     "SOUND_MENU_PINCH_MARIO_FACE": {
       "type": "s64",
@@ -11180,7 +11712,7 @@
       "type": "s64",
       "value": 1345224833
     },
-    "SOUND_OBJ_WHOMP_LOWPRIO": {
+    "SOUND_OBJ_WHOMP": {
       "type": "s64",
       "value": 1343643777
     },
@@ -11483,6 +12015,34 @@
     "START_BUTTON": {
       "type": "s64",
       "value": 4096
+    },
+    "STAR_INDEX_100_COINS": {
+      "type": "s64",
+      "value": 6
+    },
+    "STAR_INDEX_ACT_1": {
+      "type": "s64",
+      "value": 0
+    },
+    "STAR_INDEX_ACT_2": {
+      "type": "s64",
+      "value": 1
+    },
+    "STAR_INDEX_ACT_3": {
+      "type": "s64",
+      "value": 2
+    },
+    "STAR_INDEX_ACT_4": {
+      "type": "s64",
+      "value": 3
+    },
+    "STAR_INDEX_ACT_5": {
+      "type": "s64",
+      "value": 4
+    },
+    "STAR_INDEX_ACT_6": {
+      "type": "s64",
+      "value": 5
     },
     "SURFACE_0004": {
       "type": "s64",
@@ -12204,6 +12764,54 @@
       "type": "s64",
       "value": 5
     },
+    "TOX_BOX_ACT_IDLE": {
+      "type": "s64",
+      "value": 2
+    },
+    "TOX_BOX_ACT_INIT": {
+      "type": "s64",
+      "value": 0
+    },
+    "TOX_BOX_ACT_ROLL_BACKWARD": {
+      "type": "s64",
+      "value": 5
+    },
+    "TOX_BOX_ACT_ROLL_FORWARD": {
+      "type": "s64",
+      "value": 4
+    },
+    "TOX_BOX_ACT_ROLL_LAND": {
+      "type": "s64",
+      "value": 1
+    },
+    "TOX_BOX_ACT_ROLL_LEFT": {
+      "type": "s64",
+      "value": 7
+    },
+    "TOX_BOX_ACT_ROLL_RIGHT": {
+      "type": "s64",
+      "value": 6
+    },
+    "TOX_BOX_ACT_TABLE_END": {
+      "type": "s64",
+      "value": -1
+    },
+    "TOX_BOX_ACT_UNUSED_IDLE": {
+      "type": "s64",
+      "value": 3
+    },
+    "TOX_BOX_BP_MOVEMENT_PATTERN_1": {
+      "type": "s64",
+      "value": 0
+    },
+    "TOX_BOX_BP_MOVEMENT_PATTERN_2": {
+      "type": "s64",
+      "value": 1
+    },
+    "TOX_BOX_BP_MOVEMENT_PATTERN_3": {
+      "type": "s64",
+      "value": 2
+    },
     "TRIPLET_BUTTERFLY_ACT_ACTIVATE": {
       "type": "s64",
       "value": 2
@@ -12220,13 +12828,25 @@
       "type": "s64",
       "value": 1
     },
-    "TRIPLET_BUTTERFLY_BP_BUTTERFLY_NUM": {
-      "type": "s64",
-      "value": 3
-    },
     "TRIPLET_BUTTERFLY_BP_NO_BOMBS": {
       "type": "s64",
       "value": 4
+    },
+    "TRIPLET_BUTTERFLY_BP_SPAWN_TYPE_MASK": {
+      "type": "s64",
+      "value": 3
+    },
+    "TRIPLET_BUTTERFLY_BP_SPAWN_TYPE_SPAWNED_1": {
+      "type": "s64",
+      "value": 1
+    },
+    "TRIPLET_BUTTERFLY_BP_SPAWN_TYPE_SPAWNED_2": {
+      "type": "s64",
+      "value": 2
+    },
+    "TRIPLET_BUTTERFLY_BP_SPAWN_TYPE_SPAWNER": {
+      "type": "s64",
+      "value": 0
     },
     "TRIPLET_BUTTERFLY_TYPE_EXPLODES": {
       "type": "s64",
@@ -12315,6 +12935,50 @@
     "TTC_SPEED_STOPPED": {
       "type": "s64",
       "value": 3
+    },
+    "TTC_TREADMILL_BP_FLAG_LARGE": {
+      "type": "s64",
+      "value": 0
+    },
+    "TTC_TREADMILL_BP_FLAG_MASK": {
+      "type": "s64",
+      "value": 1
+    },
+    "TTC_TREADMILL_BP_FLAG_SMALL": {
+      "type": "s64",
+      "value": 1
+    },
+    "TTC_TREADMILL_BP_LARGE_1": {
+      "type": "s64",
+      "value": 0
+    },
+    "TTC_TREADMILL_BP_LARGE_2": {
+      "type": "s64",
+      "value": 2
+    },
+    "TTC_TREADMILL_BP_SMALL_1": {
+      "type": "s64",
+      "value": 1
+    },
+    "TTC_TREADMILL_BP_SMALL_2": {
+      "type": "s64",
+      "value": 3
+    },
+    "TUMBLING_BRIDGE_BP_BBH": {
+      "type": "s64",
+      "value": 1
+    },
+    "TUMBLING_BRIDGE_BP_BITFS": {
+      "type": "s64",
+      "value": 3
+    },
+    "TUMBLING_BRIDGE_BP_LLL": {
+      "type": "s64",
+      "value": 2
+    },
+    "TUMBLING_BRIDGE_BP_WF": {
+      "type": "s64",
+      "value": 0
     },
     "TV_TYPE_MPAL": {
       "type": "s64",
@@ -12472,9 +13136,13 @@
       "type": "s64",
       "value": 1
     },
-    "UKIKI_CAGE": {
+    "UKIKI_BP_CAGE": {
       "type": "s64",
       "value": 0
+    },
+    "UKIKI_BP_CAP": {
+      "type": "s64",
+      "value": 1
     },
     "UKIKI_CAGE_ACT_FALL": {
       "type": "s64",
@@ -12497,10 +13165,6 @@
       "value": 0
     },
     "UKIKI_CAGE_STAR_ACT_SPAWN_STAR": {
-      "type": "s64",
-      "value": 1
-    },
-    "UKIKI_CAP": {
       "type": "s64",
       "value": 1
     },
@@ -12635,6 +13299,38 @@
     "VERSION_US": {
       "type": "s64",
       "value": 1
+    },
+    "VI_STATE_01": {
+      "type": "s64",
+      "value": 1
+    },
+    "VI_STATE_08": {
+      "type": "s64",
+      "value": 8
+    },
+    "VI_STATE_10": {
+      "type": "s64",
+      "value": 16
+    },
+    "VI_STATE_BLACK": {
+      "type": "s64",
+      "value": 32
+    },
+    "VI_STATE_FADE": {
+      "type": "s64",
+      "value": 128
+    },
+    "VI_STATE_REPEATLINE": {
+      "type": "s64",
+      "value": 64
+    },
+    "VI_STATE_XSCALE_UPDATED": {
+      "type": "s64",
+      "value": 2
+    },
+    "VI_STATE_YSCALE_UPDATED": {
+      "type": "s64",
+      "value": 4
     },
     "WARP_TRANSITION_FADE_FROM_BOWSER": {
       "type": "s64",
@@ -12776,6 +13472,14 @@
       "type": "s64",
       "value": 255
     },
+    "WF_ROTATING_WOODEN_PLATFORM_ACT_IDLE": {
+      "type": "s64",
+      "value": 0
+    },
+    "WF_ROTATING_WOODEN_PLATFORM_ACT_ROTATING": {
+      "type": "s64",
+      "value": 1
+    },
     "WF_SLID_BRICK_PTFM_ACT_EXTEND": {
       "type": "s64",
       "value": 1
@@ -12799,6 +13503,14 @@
     "WF_SLID_BRICK_PTFM_BP_MOV_VEL_20": {
       "type": "s64",
       "value": 3
+    },
+    "WHOMP_BP_KING": {
+      "type": "s64",
+      "value": 1
+    },
+    "WHOMP_BP_SMALL": {
+      "type": "s64",
+      "value": 0
     },
     "WIDESCREEN": {
       "type": "s64",
@@ -13476,6 +14188,10 @@
       "type": "s64",
       "value": 1
     },
+    "__DBL_IS_IEC_60559__": {
+      "type": "s64",
+      "value": 2
+    },
     "__DBL_MANT_DIG__": {
       "type": "s64",
       "value": 53
@@ -13576,6 +14292,10 @@
       "type": "s64",
       "value": 1
     },
+    "__FLT128_IS_IEC_60559__": {
+      "type": "s64",
+      "value": 2
+    },
     "__FLT128_MANT_DIG__": {
       "type": "s64",
       "value": 113
@@ -13596,6 +14316,50 @@
       "type": "s64",
       "value": -16381
     },
+    "__FLT16_DECIMAL_DIG__": {
+      "type": "s64",
+      "value": 5
+    },
+    "__FLT16_DIG__": {
+      "type": "s64",
+      "value": 3
+    },
+    "__FLT16_HAS_DENORM__": {
+      "type": "s64",
+      "value": 1
+    },
+    "__FLT16_HAS_INFINITY__": {
+      "type": "s64",
+      "value": 1
+    },
+    "__FLT16_HAS_QUIET_NAN__": {
+      "type": "s64",
+      "value": 1
+    },
+    "__FLT16_IS_IEC_60559__": {
+      "type": "s64",
+      "value": 2
+    },
+    "__FLT16_MANT_DIG__": {
+      "type": "s64",
+      "value": 11
+    },
+    "__FLT16_MAX_10_EXP__": {
+      "type": "s64",
+      "value": 4
+    },
+    "__FLT16_MAX_EXP__": {
+      "type": "s64",
+      "value": 16
+    },
+    "__FLT16_MIN_10_EXP__": {
+      "type": "s64",
+      "value": -4
+    },
+    "__FLT16_MIN_EXP__": {
+      "type": "s64",
+      "value": -13
+    },
     "__FLT32X_DECIMAL_DIG__": {
       "type": "s64",
       "value": 17
@@ -13615,6 +14379,10 @@
     "__FLT32X_HAS_QUIET_NAN__": {
       "type": "s64",
       "value": 1
+    },
+    "__FLT32X_IS_IEC_60559__": {
+      "type": "s64",
+      "value": 2
     },
     "__FLT32X_MANT_DIG__": {
       "type": "s64",
@@ -13656,6 +14424,10 @@
       "type": "s64",
       "value": 1
     },
+    "__FLT32_IS_IEC_60559__": {
+      "type": "s64",
+      "value": 2
+    },
     "__FLT32_MANT_DIG__": {
       "type": "s64",
       "value": 24
@@ -13696,6 +14468,10 @@
       "type": "s64",
       "value": 1
     },
+    "__FLT64X_IS_IEC_60559__": {
+      "type": "s64",
+      "value": 2
+    },
     "__FLT64X_MANT_DIG__": {
       "type": "s64",
       "value": 64
@@ -13735,6 +14511,10 @@
     "__FLT64_HAS_QUIET_NAN__": {
       "type": "s64",
       "value": 1
+    },
+    "__FLT64_IS_IEC_60559__": {
+      "type": "s64",
+      "value": 2
     },
     "__FLT64_MANT_DIG__": {
       "type": "s64",
@@ -13783,6 +14563,10 @@
     "__FLT_HAS_QUIET_NAN__": {
       "type": "s64",
       "value": 1
+    },
+    "__FLT_IS_IEC_60559__": {
+      "type": "s64",
+      "value": 2
     },
     "__FLT_MANT_DIG__": {
       "type": "s64",
@@ -13860,6 +14644,14 @@
       "type": "s64",
       "value": 2
     },
+    "__GCC_CONSTRUCTIVE_SIZE": {
+      "type": "s64",
+      "value": 64
+    },
+    "__GCC_DESTRUCTIVE_SIZE": {
+      "type": "s64",
+      "value": 64
+    },
     "__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1": {
       "type": "s64",
       "value": 1
@@ -13886,7 +14678,7 @@
     },
     "__GNUC_MINOR__": {
       "type": "s64",
-      "value": 3
+      "value": 1
     },
     "__GNUC_PATCHLEVEL__": {
       "type": "s64",
@@ -13902,11 +14694,11 @@
     },
     "__GNUC__": {
       "type": "s64",
-      "value": 10
+      "value": 12
     },
     "__GXX_ABI_VERSION": {
       "type": "s64",
-      "value": 1014
+      "value": 1017
     },
     "__GXX_MERGED_TYPEINFO_NAMES": {
       "type": "s64",
@@ -14024,6 +14816,10 @@
       "type": "s64",
       "value": 1
     },
+    "__LDBL_IS_IEC_60559__": {
+      "type": "s64",
+      "value": 2
+    },
     "__LDBL_MANT_DIG__": {
       "type": "s64",
       "value": 64
@@ -14070,7 +14866,7 @@
     },
     "__MINGW64_VERSION_MAJOR": {
       "type": "s64",
-      "value": 10
+      "value": 11
     },
     "__MINGW64_VERSION_MINOR": {
       "type": "s64",
@@ -14466,12 +15262,6 @@
     }
   },
   "object_fields": {
-    "o1UpHiddenUnkF4": {
-      "array": "asS32",
-      "indices": [
-        27
-      ]
-    },
     "oAction": {
       "array": "asS32",
       "indices": [
@@ -14628,22 +15418,22 @@
         30
       ]
     },
-    "oBehParams": {
+    "oBetaTrampolineMarioOnTrampoline": {
+      "array": "asS32",
+      "indices": [
+        34
+      ]
+    },
+    "oBhvParams": {
       "array": "asS32",
       "indices": [
         64
       ]
     },
-    "oBehParams2ndByte": {
+    "oBhvParams2ndByte": {
       "array": "asS32",
       "indices": [
         47
-      ]
-    },
-    "oBetaTrampolineMarioOnTrampoline": {
-      "array": "asS32",
-      "indices": [
-        34
       ]
     },
     "oBigBooNumMinionBoosKilled": {
@@ -14671,6 +15461,18 @@
       ]
     },
     "oBirdTargetYaw": {
+      "array": "asS32",
+      "indices": [
+        29
+      ]
+    },
+    "oBitFSPlatformTimer": {
+      "array": "asS32",
+      "indices": [
+        27
+      ]
+    },
+    "oBitSPlatformTimer": {
       "array": "asS32",
       "indices": [
         29
@@ -14893,14 +15695,27 @@
         27
       ]
     },
-    "oBowserAngleToCentre": {
+    "oBowserAngleToCenter": {
       "array": "asS16",
       "indices": [
         34,
         1
       ]
     },
-    "oBowserDistToCentre": {
+    "oBowserBitSJustJump": {
+      "array": "asS16",
+      "indices": [
+        31,
+        1
+      ]
+    },
+    "oBowserCamAct": {
+      "array": "asS32",
+      "indices": [
+        0
+      ]
+    },
+    "oBowserDistToCenter": {
       "array": "asF32",
       "indices": [
         29
@@ -14911,6 +15726,20 @@
       "indices": [
         74,
         0
+      ]
+    },
+    "oBowserEyesTimer": {
+      "array": "asS16",
+      "indices": [
+        73,
+        1
+      ]
+    },
+    "oBowserGrabbedStatus": {
+      "array": "asS16",
+      "indices": [
+        33,
+        1
       ]
     },
     "oBowserHeldAnglePitch": {
@@ -14924,6 +15753,13 @@
       "array": "asS16",
       "indices": [
         33,
+        0
+      ]
+    },
+    "oBowserIsReacting": {
+      "array": "asS16",
+      "indices": [
+        34,
         0
       ]
     },
@@ -14963,74 +15799,40 @@
         31
       ]
     },
-    "oBowserShockWaveUnkF4": {
-      "array": "asF32",
-      "indices": [
-        27
-      ]
-    },
-    "oBowserUnk106": {
-      "array": "asS16",
-      "indices": [
-        31,
-        1
-      ]
-    },
-    "oBowserUnk108": {
-      "array": "asS16",
-      "indices": [
-        32,
-        0
-      ]
-    },
-    "oBowserUnk10E": {
-      "array": "asS16",
-      "indices": [
-        33,
-        1
-      ]
-    },
-    "oBowserUnk110": {
-      "array": "asS16",
-      "indices": [
-        34,
-        0
-      ]
-    },
-    "oBowserUnk1AC": {
-      "array": "asS16",
-      "indices": [
-        73,
-        0
-      ]
-    },
-    "oBowserUnk1AE": {
-      "array": "asS16",
-      "indices": [
-        73,
-        1
-      ]
-    },
-    "oBowserUnk1B2": {
+    "oBowserRainbowLight": {
       "array": "asS16",
       "indices": [
         74,
         1
       ]
     },
-    "oBowserUnk88": {
-      "array": "asS32",
+    "oBowserRandSplitFloor": {
+      "array": "asS16",
       "indices": [
+        32,
         0
       ]
     },
-    "oBowserUnkF4": {
+    "oBowserShockWaveScale": {
+      "array": "asF32",
+      "indices": [
+        27
+      ]
+    },
+    "oBowserStatus": {
       "array": "asS32",
       "indices": [
         27
       ]
     },
-    "oBowserUnkF8": {
+    "oBowserTargetOpacity": {
+      "array": "asS16",
+      "indices": [
+        73,
+        0
+      ]
+    },
+    "oBowserTimer": {
       "array": "asS32",
       "indices": [
         28
@@ -15427,25 +16229,25 @@
         30
       ]
     },
-    "oCoinUnk110": {
+    "oCoinBaseVelY": {
       "array": "asF32",
       "indices": [
         34
       ]
     },
-    "oCoinUnk1B0": {
-      "array": "asS32",
-      "indices": [
-        74
-      ]
-    },
-    "oCoinUnkF4": {
+    "oCoinCollectedFlags": {
       "array": "asS32",
       "indices": [
         27
       ]
     },
-    "oCoinUnkF8": {
+    "oCoinNumBounceSoundPlayed": {
+      "array": "asS32",
+      "indices": [
+        74
+      ]
+    },
+    "oCoinOnGround": {
       "array": "asS32",
       "indices": [
         28
@@ -15919,7 +16721,7 @@
         34
       ]
     },
-    "oFlameUnkFC": {
+    "oFlameUnusedRand": {
       "array": "asF32",
       "indices": [
         29
@@ -16113,6 +16915,12 @@
         23
       ]
     },
+    "oGrindelThwompRandomTimer": {
+      "array": "asS32",
+      "indices": [
+        27
+      ]
+    },
     "oHauntedBookshelfShouldOpen": {
       "array": "asS32",
       "indices": [
@@ -16165,6 +16973,12 @@
       "array": "asU32",
       "indices": [
         39
+      ]
+    },
+    "oHidden1UpNumTouchedTriggers": {
+      "array": "asS32",
+      "indices": [
+        27
       ]
     },
     "oHiddenStarTriggerCounter": {
@@ -16347,13 +17161,13 @@
         32
       ]
     },
-    "oJrbSlidingBoxUnkF8": {
+    "oJRBSlidingBoxUnkF8": {
       "array": "asS32",
       "indices": [
         28
       ]
     },
-    "oJrbSlidingBoxUnkFC": {
+    "oJRBSlidingBoxUnkFC": {
       "array": "asF32",
       "indices": [
         29
@@ -16562,16 +17376,16 @@
         29
       ]
     },
+    "oKoopaShellFlameScale": {
+      "array": "asF32",
+      "indices": [
+        28
+      ]
+    },
     "oKoopaShellFlameUnkF4": {
       "array": "asF32",
       "indices": [
         27
-      ]
-    },
-    "oKoopaShellFlameUnkF8": {
-      "array": "asF32",
-      "indices": [
-        28
       ]
     },
     "oKoopaTargetYaw": {
@@ -16606,28 +17420,34 @@
         30
       ]
     },
-    "oLllRotatingHexFlameUnkF4": {
+    "oLLLRotatingHexFlameUnkF4": {
       "array": "asF32",
       "indices": [
         27
       ]
     },
-    "oLllRotatingHexFlameUnkF8": {
+    "oLLLRotatingHexFlameUnkF8": {
       "array": "asF32",
       "indices": [
         28
       ]
     },
-    "oLllRotatingHexFlameUnkFC": {
+    "oLLLRotatingHexFlameUnkFC": {
       "array": "asF32",
       "indices": [
         29
       ]
     },
-    "oLllWoodPieceOscillationTimer": {
+    "oLLLWoodPieceOscillationTimer": {
       "array": "asS32",
       "indices": [
         27
+      ]
+    },
+    "oLeftVel": {
+      "array": "asF32",
+      "indices": [
+        13
       ]
     },
     "oMacroUnk108": {
@@ -16942,7 +17762,7 @@
         30
       ]
     },
-    "oMrISize": {
+    "oMrIScale": {
       "array": "asF32",
       "indices": [
         33
@@ -17174,12 +17994,6 @@
         29
       ]
     },
-    "oPlatformTimer": {
-      "array": "asS32",
-      "indices": [
-        27
-      ]
-    },
     "oPlatformUnk10C": {
       "array": "asF32",
       "indices": [
@@ -17190,12 +18004,6 @@
       "array": "asF32",
       "indices": [
         34
-      ]
-    },
-    "oPlatformUnkFC": {
-      "array": "asS32",
-      "indices": [
-        29
       ]
     },
     "oPokeyAliveBodyPartFlags": {
@@ -17460,17 +18268,17 @@
         27
       ]
     },
+    "oSkeeterTurningAwayFromWall": {
+      "array": "asS32",
+      "indices": [
+        28
+      ]
+    },
     "oSkeeterUnk1AC": {
       "array": "asS16",
       "indices": [
         73,
         0
-      ]
-    },
-    "oSkeeterUnkF8": {
-      "array": "asS32",
-      "indices": [
-        28
       ]
     },
     "oSkeeterUnkFC": {
@@ -17557,16 +18365,16 @@
         27
       ]
     },
+    "oSnowmansBottomScale": {
+      "array": "asF32",
+      "indices": [
+        27
+      ]
+    },
     "oSnowmansBottomUnk1AC": {
       "array": "asS32",
       "indices": [
         73
-      ]
-    },
-    "oSnowmansBottomUnkF4": {
-      "array": "asF32",
-      "indices": [
-        27
       ]
     },
     "oSnowmansBottomUnkF8": {
@@ -17987,12 +18795,6 @@
         31
       ]
     },
-    "oThwompRandomTimer": {
-      "array": "asS32",
-      "indices": [
-        27
-      ]
-    },
     "oTiltingPyramidMarioOnPlatform": {
       "array": "asS32",
       "indices": [
@@ -18023,7 +18825,7 @@
         51
       ]
     },
-    "oToadMessageDialogId": {
+    "oToadMessageDialogID": {
       "array": "asU32",
       "indices": [
         32
@@ -18041,7 +18843,7 @@
         34
       ]
     },
-    "oToxBoxMovementStep": {
+    "oToxBoxActionStep": {
       "array": "asS32",
       "indices": [
         74
@@ -18247,28 +19049,10 @@
         28
       ]
     },
-    "oUnk1A8": {
-      "array": "asU32",
-      "indices": [
-        72
-      ]
-    },
     "oUnk94": {
       "array": "asU32",
       "indices": [
         3
-      ]
-    },
-    "oUnkBC": {
-      "array": "asF32",
-      "indices": [
-        13
-      ]
-    },
-    "oUnkC0": {
-      "array": "asF32",
-      "indices": [
-        14
       ]
     },
     "oUnlockDoorStarState": {
@@ -18287,6 +19071,18 @@
       "array": "asS32",
       "indices": [
         34
+      ]
+    },
+    "oUnusedBhvParams": {
+      "array": "asU32",
+      "indices": [
+        72
+      ]
+    },
+    "oUpVel": {
+      "array": "asF32",
+      "indices": [
+        14
       ]
     },
     "oVelX": {
