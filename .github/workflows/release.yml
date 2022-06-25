@@ -36,6 +36,7 @@ jobs:
           pipenv run python -c "import wafel"
           cd ..
           pipenv --rm
+          cargo clean --target x86_64-pc-windows-msvc
       - run: |
           pipenv install --dev --python 3.8
           pipenv run python setup.py bdist_wheel
@@ -44,6 +45,7 @@ jobs:
           pipenv run python -c "import wafel"
           cd ..
           pipenv --rm
+          cargo clean --target x86_64-pc-windows-msvc
       - run: |
           pipenv install --dev --python 3.9
           pipenv run python setup.py bdist_wheel
