@@ -363,21 +363,27 @@ pub trait GameMemory {
     /// A read-only view of shared static memory.
     ///
     /// Attempting to read a non-static address using this will fail.
-    type StaticView<'a>: MemoryRead;
+    type StaticView<'a>: MemoryRead
+    where
+        Self: 'a;
 
     /// A read-only view of both static and non-static memory, backed by a
     /// particular slot.
     ///
     /// Static addresses are looked up in shared static memory, while non-static
     /// addresses are looked up in the slot's buffer.
-    type SlotView<'a>: MemoryRead;
+    type SlotView<'a>: MemoryRead
+    where
+        Self: 'a;
 
     /// A read-write view of both static and non-static memory, backed by a
     /// particular slot.
     ///
     /// Static addresses are looked up in shared static memory, while non-static
     /// addresses are looked up in the slot's buffer.
-    type SlotViewMut<'a>: MemoryRead + MemoryWrite;
+    type SlotViewMut<'a>: MemoryRead + MemoryWrite
+    where
+        Self: 'a;
 
     /// Return a read-only view of shared static memory.
     ///
@@ -429,11 +435,20 @@ where
 {
     type Slot = M::Slot;
 
-    type StaticView<'a> = M::StaticView<'a>;
+    type StaticView<'a>
+    where
+        R: 'a,
+    = M::StaticView<'a>;
 
-    type SlotView<'a> = M::SlotView<'a>;
+    type SlotView<'a>
+    where
+        R: 'a,
+    = M::SlotView<'a>;
 
-    type SlotViewMut<'a> = M::SlotViewMut<'a>;
+    type SlotViewMut<'a>
+    where
+        R: 'a,
+    = M::SlotViewMut<'a>;
 
     fn static_view(&self) -> Self::StaticView<'_> {
         self.deref().static_view()
