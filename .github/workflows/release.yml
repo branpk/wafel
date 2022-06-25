@@ -32,19 +32,25 @@ jobs:
           pipenv install --dev --python 3.7
           pipenv run python setup.py bdist_wheel
           pipenv run pip install --find-links=dist wafel --upgrade
+          cd wafel_layout
           pipenv run python -c "import wafel"
+          cd ..
           pipenv --rm
       - run: |
           pipenv install --dev --python 3.8
           pipenv run python setup.py bdist_wheel
           pipenv run pip install --find-links=dist wafel --upgrade
+          cd wafel_layout
           pipenv run python -c "import wafel"
+          cd ..
           pipenv --rm
       - run: |
           pipenv install --dev --python 3.9
           pipenv run python setup.py bdist_wheel
           pipenv run pip install --find-links=dist wafel --upgrade
+          cd wafel_layout
           pipenv run python -c "import wafel"
+          cd ..
 
       - run: pipenv run python build.py dist
 
