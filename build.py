@@ -85,4 +85,4 @@ if 'dist' in sys.argv[1:]:
   shutil.copytree('dist', 'build/dist/bindings/python')
 
   print('Copying .pdb')
-  shutil.copyfile('target/release/wafel_core.pdb', 'build/dist/wafel_core.pdb')
+  shutil.copyfile('target/release/wafel_core.pdb', 'build/dist/wafel.pdb')

@@ -101,9 +101,9 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
                         imgui_input.handle_event(py, &event)?;
                         match event {
                             WindowEvent::Resized(size) => {
-                                if size.width != 0 && size.height != 0 {
-                                    config.width = size.width;
-                                    config.height = size.height;
+                                config.width = size.width;
+                                config.height = size.height;
+                                if size.width > 0 && size.height > 0 {
                                     surface.configure(&device, &config);
                                 }
                             }
