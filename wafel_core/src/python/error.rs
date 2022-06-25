@@ -75,12 +75,12 @@ where
         event.record(&mut visitor);
 
         let mut span_string = String::new();
-        for span in ctx.scope() {
-            if !span_string.is_empty() {
-                span_string.push_str(" | ");
-            }
-            span_string.push_str(span.name());
-        }
+        // for span in ctx.scope() {
+        //     if !span_string.is_empty() {
+        //         span_string.push_str(" | ");
+        //     }
+        //     span_string.push_str(span.name());
+        // }
 
         let metadata = event.metadata();
         let module = metadata.module_path().unwrap_or("no module");
