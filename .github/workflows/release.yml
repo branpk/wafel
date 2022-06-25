@@ -17,22 +17,22 @@ jobs:
       - uses: Swatinem/rust-cache@v1
       - run: cargo build --release
 
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.7'
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
+      # - uses: actions/setup-python@v2
+      #   with:
+      #     python-version: '3.7'
+      # - uses: actions/setup-python@v2
+      #   with:
+      #     python-version: '3.8'
       - uses: actions/setup-python@v2
         with:
           python-version: '3.9'
       - run: pip install pipenv
-      - run: |
-          pipenv install --dev --python 3.7
-          pipenv run python setup.py bdist_wheel
-      - run: |
-          pipenv install --dev --python 3.8
-          pipenv run python setup.py bdist_wheel
+      # - run: |
+      #     pipenv install --dev --python 3.7
+      #     pipenv run python setup.py bdist_wheel
+      # - run: |
+      #     pipenv install --dev --python 3.8
+      #     pipenv run python setup.py bdist_wheel
       - run: |
           pipenv install --dev --python 3.9
           pipenv run python setup.py bdist_wheel
