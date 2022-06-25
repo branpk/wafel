@@ -157,7 +157,7 @@ impl fmt::Display for LayoutLookupError {
 impl Error for LayoutLookupError {}
 
 #[derive(Debug, Clone)]
-pub enum SM64ExtrasError {
+pub enum SM64LayoutError {
     LayoutLookupError(LayoutLookupError),
     ObjectStructInUse,
     ObjectStructNotStruct,
@@ -165,31 +165,39 @@ pub enum SM64ExtrasError {
     RawDataNotUnion,
     MissingRawDataArray(String),
     InvalidIndex(String),
+    UnknownVersion(String),
 }
 
-impl fmt::Display for SM64ExtrasError {
+impl fmt::Display for SM64LayoutError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SM64ExtrasError::LayoutLookupError(error) => write!(f, "{}", error),
-            SM64ExtrasError::ObjectStructInUse => write!(f, "Object type already in use"),
-            SM64ExtrasError::ObjectStructNotStruct => write!(f, "Object type is not a struct"),
-            SM64ExtrasError::MissingRawData => write!(f, "missing rawData field in struct Object"),
-            SM64ExtrasError::RawDataNotUnion => {
+            SM64LayoutError::LayoutLookupError(error) => write!(f, "{}", error),
+            SM64LayoutError::ObjectStructInUse => write!(f, "Object type already in use"),
+            SM64LayoutError::ObjectStructNotStruct => write!(f, "Object type is not a struct"),
+            SM64LayoutError::MissingRawData => write!(f, "missing rawData field in struct Object"),
+            SM64LayoutError::RawDataNotUnion => {
                 write!(f, "struct Object rawData field is not a union")
             }
-            SM64ExtrasError::MissingRawDataArray(array) => {
+            SM64LayoutError::MissingRawDataArray(array) => {
                 write!(f, "missing rawData.{} array in struct Object", array)
             }
-            SM64ExtrasError::InvalidIndex(name) => {
+            SM64LayoutError::InvalidIndex(name) => {
                 write!(f, "invalid index in object field {}", name)
+            }
+            SM64LayoutError::UnknownVersion(version) => {
+                write!(
+                    f,
+                    "unknown SM64 version: {} (available: us, jp, eu, sh)",
+                    version
+                )
             }
         }
     }
 }
 
-impl Error for SM64ExtrasError {}
+impl Error for SM64LayoutError {}
 
-impl From<LayoutLookupError> for SM64ExtrasError {
+impl From<LayoutLookupError> for SM64LayoutError {
     fn from(v: LayoutLookupError) -> Self {
         Self::LayoutLookupError(v)
     }

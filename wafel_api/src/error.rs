@@ -4,13 +4,13 @@ use std::{error, fmt, io, sync::Arc};
 
 use wafel_data_path::{DataPathError, GlobalDataPath};
 use wafel_data_type::{IntValue, Value, ValueTypeError};
-use wafel_layout::{DllLayoutError, LayoutLookupError, SM64ExtrasError};
+use wafel_layout::{DllLayoutError, LayoutLookupError, SM64LayoutError};
 use wafel_memory::{DllLoadError, MemoryError};
 
 #[derive(Debug, Clone)]
 pub enum Error {
     DllLayoutError(DllLayoutError),
-    SM64ExtrasError(SM64ExtrasError),
+    SM64ExtrasError(SM64LayoutError),
     DllLoadError(DllLoadError),
     DataPathError(DataPathError),
     MemoryError(MemoryError),
@@ -111,8 +111,8 @@ impl From<DllLayoutError> for Error {
     }
 }
 
-impl From<SM64ExtrasError> for Error {
-    fn from(v: SM64ExtrasError) -> Self {
+impl From<SM64LayoutError> for Error {
+    fn from(v: SM64LayoutError) -> Self {
         Self::SM64ExtrasError(v)
     }
 }

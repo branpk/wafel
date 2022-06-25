@@ -5,7 +5,7 @@ use wafel_data_type::{DataType, DataTypeRef, Field, IntValue, Namespace, TypeNam
 
 use crate::{
     Constant, ConstantSource, DataLayout,
-    SM64ExtrasError::{self, *},
+    SM64LayoutError::{self, *},
 };
 
 impl DataLayout {
@@ -14,7 +14,7 @@ impl DataLayout {
     /// This includes:
     /// - rawData fields in the Object struct
     /// - Integer constants defined by macros
-    pub fn add_sm64_extras(&mut self) -> Result<(), SM64ExtrasError> {
+    pub fn add_sm64_extras(&mut self) -> Result<(), SM64LayoutError> {
         let json: JsonValue = serde_json::from_slice(include_bytes!("../sm64_macro_defns.json"))
             .expect("failed to deserialize sm64 macro defns");
         let fields = as_object(&json);
@@ -27,7 +27,7 @@ impl DataLayout {
 }
 
 /// Load virtual object fields from the given json string.
-fn load_object_fields(layout: &mut DataLayout, json: &JsonValue) -> Result<(), SM64ExtrasError> {
+fn load_object_fields(layout: &mut DataLayout, json: &JsonValue) -> Result<(), SM64LayoutError> {
     let object_struct_ref = layout.data_type_mut(&TypeName {
         namespace: Namespace::Struct,
         name: "Object".to_owned(),
@@ -68,7 +68,7 @@ fn load_constants(layout: &mut DataLayout, json: &JsonValue) {
 fn read_object_fields(
     json: &JsonValue,
     object_struct_fields: &HashMap<String, Field>,
-) -> Result<HashMap<String, Field>, SM64ExtrasError> {
+) -> Result<HashMap<String, Field>, SM64LayoutError> {
     let raw_data_field = match object_struct_fields.get("rawData") {
         Some(field) => field,
         None => return Err(MissingRawData),

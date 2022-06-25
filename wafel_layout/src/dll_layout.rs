@@ -369,6 +369,10 @@ where
                 base: TypeId::U64,
                 length: Some(2),
             },
+            "_Float128" => ShallowDataType::Array {
+                base: TypeId::U64,
+                length: Some(2),
+            },
             _ => return Err(DllLayoutErrorKind::UnknownBaseTypeName { name }),
         };
         self.pre_types.insert(
