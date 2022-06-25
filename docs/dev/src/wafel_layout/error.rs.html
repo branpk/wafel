@@ -200,6 +200,14 @@
 <span id="194">194</span>
 <span id="195">195</span>
 <span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">error::Error</span>, <span class="ident">fmt</span>, <span class="ident">io</span>, <span class="ident">sync::Arc</span>};
@@ -359,7 +367,7 @@
 <span class="kw">impl</span> <span class="ident">Error</span> <span class="kw">for</span> <span class="ident">LayoutLookupError</span> {}
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">SM64ExtrasError</span> {
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">SM64LayoutError</span> {
     <span class="ident">LayoutLookupError</span>(<span class="ident">LayoutLookupError</span>),
     <span class="ident">ObjectStructInUse</span>,
     <span class="ident">ObjectStructNotStruct</span>,
@@ -367,31 +375,39 @@
     <span class="ident">RawDataNotUnion</span>,
     <span class="ident">MissingRawDataArray</span>(<span class="ident">String</span>),
     <span class="ident">InvalidIndex</span>(<span class="ident">String</span>),
+    <span class="ident">UnknownVersion</span>(<span class="ident">String</span>),
 }
 
-<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">SM64ExtrasError</span> {
+<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">SM64LayoutError</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">SM64ExtrasError::LayoutLookupError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
-            <span class="ident">SM64ExtrasError::ObjectStructInUse</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Object type already in use&quot;</span>),
-            <span class="ident">SM64ExtrasError::ObjectStructNotStruct</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Object type is not a struct&quot;</span>),
-            <span class="ident">SM64ExtrasError::MissingRawData</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;missing rawData field in struct Object&quot;</span>),
-            <span class="ident">SM64ExtrasError::RawDataNotUnion</span> =&gt; {
+            <span class="ident">SM64LayoutError::LayoutLookupError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
+            <span class="ident">SM64LayoutError::ObjectStructInUse</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Object type already in use&quot;</span>),
+            <span class="ident">SM64LayoutError::ObjectStructNotStruct</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Object type is not a struct&quot;</span>),
+            <span class="ident">SM64LayoutError::MissingRawData</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;missing rawData field in struct Object&quot;</span>),
+            <span class="ident">SM64LayoutError::RawDataNotUnion</span> =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;struct Object rawData field is not a union&quot;</span>)
             }
-            <span class="ident">SM64ExtrasError::MissingRawDataArray</span>(<span class="ident">array</span>) =&gt; {
+            <span class="ident">SM64LayoutError::MissingRawDataArray</span>(<span class="ident">array</span>) =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;missing rawData.{} array in struct Object&quot;</span>, <span class="ident">array</span>)
             }
-            <span class="ident">SM64ExtrasError::InvalidIndex</span>(<span class="ident">name</span>) =&gt; {
+            <span class="ident">SM64LayoutError::InvalidIndex</span>(<span class="ident">name</span>) =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;invalid index in object field {}&quot;</span>, <span class="ident">name</span>)
+            }
+            <span class="ident">SM64LayoutError::UnknownVersion</span>(<span class="ident">version</span>) =&gt; {
+                <span class="macro">write!</span>(
+                    <span class="ident">f</span>,
+                    <span class="string">&quot;unknown SM64 version: {} (available: us, jp, eu, sh)&quot;</span>,
+                    <span class="ident">version</span>
+                )
             }
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Error</span> <span class="kw">for</span> <span class="ident">SM64ExtrasError</span> {}
+<span class="kw">impl</span> <span class="ident">Error</span> <span class="kw">for</span> <span class="ident">SM64LayoutError</span> {}
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">LayoutLookupError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">SM64ExtrasError</span> {
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">LayoutLookupError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">SM64LayoutError</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">v</span>: <span class="ident">LayoutLookupError</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::LayoutLookupError</span>(<span class="ident">v</span>)
     }

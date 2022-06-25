@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["libsm64_layout","libsm64_lock","wafel","wafel_api","wafel_core","wafel_data_path","wafel_data_type","wafel_layout","wafel_memory","wafel_timeline"];
+window.ALL_CRATES = ["libsm64_layout","libsm64_lock","sm64_layout","wafel","wafel_api","wafel_core","wafel_data_path","wafel_data_type","wafel_layout","wafel_memory","wafel_timeline"];

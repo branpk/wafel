@@ -35,6 +35,9 @@
 <span id="29">29</span>
 <span id="30">30</span>
 <span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Defines a mapping from global variables to types/values.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! A [DataLayout] is a mapping containing:</span>
@@ -44,11 +47,12 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! This layout is used for accessing global data in Wafel. It can be constructed manually</span>
 <span class="doccomment">//! or read automatically from the DWARF debugging info of a DLL using [DllLayout::read].</span>
+<span class="doccomment">//! The layouts for SM64 on the N64 are available using [load_sm64_n64_layout].</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Some SM64 specific data cannot be parsed from DWARF but is useful to have in the layout.</span>
 <span class="doccomment">//! To include these, use [DataLayout::add_sm64_extras].</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! A json representation of this layout can be produced using the libsm64_layout executable.</span>
+<span class="doccomment">//! A json representation of this layout can be produced using the sm64_layout executable.</span>
 
 <span class="attribute">#![<span class="ident">warn</span>(
     <span class="ident">missing_docs</span>,
@@ -60,11 +64,13 @@
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">data_layout</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">dll_layout</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">error</span>::<span class="kw-2">*</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">n64_layout</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">sm64_extra</span>::<span class="kw-2">*</span>;
 
 <span class="kw">mod</span> <span class="ident">data_layout</span>;
 <span class="kw">mod</span> <span class="ident">dll_layout</span>;
 <span class="kw">mod</span> <span class="ident">error</span>;
+<span class="kw">mod</span> <span class="ident">n64_layout</span>;
 <span class="kw">mod</span> <span class="ident">sm64_extra</span>;
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_layout" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (fdca237d5 2022-06-24)" ></div>

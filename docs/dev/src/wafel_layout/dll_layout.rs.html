@@ -894,6 +894,10 @@
 <span id="888">888</span>
 <span id="889">889</span>
 <span id="890">890</span>
+<span id="891">891</span>
+<span id="892">892</span>
+<span id="893">893</span>
+<span id="894">894</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Debugging and structural information extracted from a DLL.</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -1262,6 +1266,10 @@
             <span class="string">&quot;short int&quot;</span> =&gt; <span class="ident">ShallowDataType::Int</span>(<span class="ident">IntType::S16</span>),
             <span class="string">&quot;_Bool&quot;</span> =&gt; <span class="ident">ShallowDataType::Int</span>(<span class="ident">IntType::S32</span>),
             <span class="string">&quot;__int128 unsigned&quot;</span> =&gt; <span class="ident">ShallowDataType::Array</span> {
+                <span class="ident">base</span>: <span class="ident">TypeId::U64</span>,
+                <span class="ident">length</span>: <span class="prelude-val">Some</span>(<span class="number">2</span>),
+            },
+            <span class="string">&quot;_Float128&quot;</span> =&gt; <span class="ident">ShallowDataType::Array</span> {
                 <span class="ident">base</span>: <span class="ident">TypeId::U64</span>,
                 <span class="ident">length</span>: <span class="prelude-val">Some</span>(<span class="number">2</span>),
             },

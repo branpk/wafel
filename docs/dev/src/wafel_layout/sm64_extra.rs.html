@@ -161,7 +161,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">Constant</span>, <span class="ident">ConstantSource</span>, <span class="ident">DataLayout</span>,
-    <span class="ident">SM64ExtrasError</span>::{<span class="self">self</span>, <span class="kw-2">*</span>},
+    <span class="ident">SM64LayoutError</span>::{<span class="self">self</span>, <span class="kw-2">*</span>},
 };
 
 <span class="kw">impl</span> <span class="ident">DataLayout</span> {
@@ -170,7 +170,7 @@
     <span class="doccomment">/// This includes:</span>
     <span class="doccomment">/// - rawData fields in the Object struct</span>
     <span class="doccomment">/// - Integer constants defined by macros</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_sm64_extras</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">SM64ExtrasError</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_sm64_extras</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">SM64LayoutError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">json</span>: <span class="ident">JsonValue</span> <span class="op">=</span> <span class="ident">serde_json::from_slice</span>(<span class="macro">include_bytes!</span>(<span class="string">&quot;../sm64_macro_defns.json&quot;</span>))
             .<span class="ident">expect</span>(<span class="string">&quot;failed to deserialize sm64 macro defns&quot;</span>);
         <span class="kw">let</span> <span class="ident">fields</span> <span class="op">=</span> <span class="ident">as_object</span>(<span class="kw-2">&amp;</span><span class="ident">json</span>);
@@ -183,7 +183,7 @@
 }
 
 <span class="doccomment">/// Load virtual object fields from the given json string.</span>
-<span class="kw">fn</span> <span class="ident">load_object_fields</span>(<span class="ident">layout</span>: <span class="kw-2">&amp;mut</span> <span class="ident">DataLayout</span>, <span class="ident">json</span>: <span class="kw-2">&amp;</span><span class="ident">JsonValue</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">SM64ExtrasError</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">load_object_fields</span>(<span class="ident">layout</span>: <span class="kw-2">&amp;mut</span> <span class="ident">DataLayout</span>, <span class="ident">json</span>: <span class="kw-2">&amp;</span><span class="ident">JsonValue</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">SM64LayoutError</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">object_struct_ref</span> <span class="op">=</span> <span class="ident">layout</span>.<span class="ident">data_type_mut</span>(<span class="kw-2">&amp;</span><span class="ident">TypeName</span> {
         <span class="ident">namespace</span>: <span class="ident">Namespace::Struct</span>,
         <span class="ident">name</span>: <span class="string">&quot;Object&quot;</span>.<span class="ident">to_owned</span>(),
@@ -224,7 +224,7 @@
 <span class="kw">fn</span> <span class="ident">read_object_fields</span>(
     <span class="ident">json</span>: <span class="kw-2">&amp;</span><span class="ident">JsonValue</span>,
     <span class="ident">object_struct_fields</span>: <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span>, <span class="ident">SM64ExtrasError</span><span class="op">&gt;</span> {
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span>, <span class="ident">SM64LayoutError</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">raw_data_field</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">object_struct_fields</span>.<span class="ident">get</span>(<span class="string">&quot;rawData&quot;</span>) {
         <span class="prelude-val">Some</span>(<span class="ident">field</span>) =&gt; <span class="ident">field</span>,
         <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">MissingRawData</span>),
