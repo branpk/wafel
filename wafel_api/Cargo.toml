@@ -10,7 +10,7 @@ wafel_layout = { path = "../wafel_layout" }
 wafel_memory = { path = "../wafel_memory" }
 wafel_timeline = { path = "../wafel_timeline" }
 deepsize = "0.2.0"
-lru = "0.6.5"
+lru = "0.7.1"
 pwbox = "0.4.0"
 hex = { version = "0.4.3", features = ["alloc"] }  # Fix build of pwbox
 rand = "0.8.4"
