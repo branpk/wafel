@@ -9,17 +9,17 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # - uses: actions-rs/toolchain@v1
-      #   with:
-      #     toolchain: nightly
-      #     profile: minimal
-      #     override: true
-      # - uses: Swatinem/rust-cache@v1
-      # - run: cargo build --release
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - run: cargo build --release
 
-      # - uses: actions/setup-python@v2
-      #   with:
-      #     python-version: '3.7'
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
       - uses: actions/setup-python@v2
         with:
           python-version: '3.8'
@@ -27,23 +27,20 @@ jobs:
         with:
           python-version: '3.9'
       - run: pip install pipenv
-      # - run: |
-      #     pipenv install --dev --python 3.7
-      #     pipenv run python setup.py bdist_wheel
+      - run: |
+          pipenv install --dev --python 3.7
+          pipenv run python setup.py bdist_wheel
+          pipenv --rm
       - run: |
           pipenv install --dev --python 3.8
-          pipenv run python --version
-          # pipenv run python setup.py bdist_wheel
-          # ls dist
-      - run: |
+          pipenv run python setup.py bdist_wheel
           pipenv --rm
+      - run: |
           pipenv install --dev --python 3.9
-          pipenv run python --version
-          # pipenv run python setup.py bdist_wheel
-          # ls dist
-      # - run: pipenv run python build.py dist
+          pipenv run python setup.py bdist_wheel
+      - run: pipenv run python build.py dist
 
-      # - uses: actions/upload-artifact@v2
-      #   with:
-      #     name: win_x64
-      #     path: build/dist/*
+      - uses: actions/upload-artifact@v2
+        with:
+          name: win_x64
+          path: build/dist/*
