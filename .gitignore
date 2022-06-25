@@ -13,3 +13,4 @@ __pycache__
 /imgui.ini
 /target
 *.egg-info
+desktop.ini
