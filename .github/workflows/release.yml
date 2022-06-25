@@ -27,17 +27,25 @@ jobs:
         with:
           python-version: '3.9'
       - run: pip install pipenv
+
       - run: |
           pipenv install --dev --python 3.7
           pipenv run python setup.py bdist_wheel
+          pip install --find-links=dist wafel --upgrade
+          python -c "import wafel"
           pipenv --rm
       - run: |
           pipenv install --dev --python 3.8
           pipenv run python setup.py bdist_wheel
+          pip install --find-links=dist wafel --upgrade
+          python -c "import wafel"
           pipenv --rm
       - run: |
           pipenv install --dev --python 3.9
           pipenv run python setup.py bdist_wheel
+          pip install --find-links=dist wafel --upgrade
+          python -c "import wafel"
+
       - run: pipenv run python build.py dist
 
       - uses: actions/upload-artifact@v2
