@@ -474,12 +474,6 @@
 <span id="468">468</span>
 <span id="469">469</span>
 <span id="470">470</span>
-<span id="471">471</span>
-<span id="472">472</span>
-<span id="473">473</span>
-<span id="474">474</span>
-<span id="475">475</span>
-<span id="476">476</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">ops::Deref</span>};
 
 <span class="kw">use</span> <span class="ident">wafel_data_type</span>::{
@@ -918,19 +912,13 @@
     <span class="kw">type</span> <span class="ident">Slot</span> <span class="op">=</span> <span class="ident">M::Slot</span>;
 
     <span class="kw">type</span> <span class="ident">StaticView</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">R</span>: <span class="lifetime">&#39;a</span>,
-    <span class="op">=</span> <span class="ident">M::StaticView</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>;
+    <span class="op">=</span> <span class="ident">M::StaticView</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">where</span> <span class="ident">R</span>:<span class="lifetime">&#39;a</span>;
 
     <span class="kw">type</span> <span class="ident">SlotView</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">R</span>: <span class="lifetime">&#39;a</span>,
-    <span class="op">=</span> <span class="ident">M::SlotView</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>;
+    <span class="op">=</span> <span class="ident">M::SlotView</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">where</span> <span class="ident">R</span>: <span class="lifetime">&#39;a</span>;
 
     <span class="kw">type</span> <span class="ident">SlotViewMut</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">R</span>: <span class="lifetime">&#39;a</span>,
-    <span class="op">=</span> <span class="ident">M::SlotViewMut</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>;
+    <span class="op">=</span> <span class="ident">M::SlotViewMut</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">where</span> <span class="ident">R</span>: <span class="lifetime">&#39;a</span>;
 
     <span class="kw">fn</span> <span class="ident">static_view</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::StaticView</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">deref</span>().<span class="ident">static_view</span>()
