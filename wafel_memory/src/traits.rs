@@ -436,19 +436,13 @@ where
     type Slot = M::Slot;
 
     type StaticView<'a>
-    where
-        R: 'a,
-    = M::StaticView<'a>;
+    = M::StaticView<'a> where R:'a;
 
     type SlotView<'a>
-    where
-        R: 'a,
-    = M::SlotView<'a>;
+    = M::SlotView<'a> where R: 'a;
 
     type SlotViewMut<'a>
-    where
-        R: 'a,
-    = M::SlotViewMut<'a>;
+    = M::SlotViewMut<'a> where R: 'a;
 
     fn static_view(&self) -> Self::StaticView<'_> {
         self.deref().static_view()
