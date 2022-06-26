@@ -351,11 +351,6 @@
 <span id="345">345</span>
 <span id="346">346</span>
 <span id="347">347</span>
-<span id="348">348</span>
-<span id="349">349</span>
-<span id="350">350</span>
-<span id="351">351</span>
-<span id="352">352</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">sync::Arc</span>};
 
 <span class="kw">use</span> <span class="ident">wafel_data_path::DataPath</span>;
@@ -378,9 +373,8 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// let pid = 4232;</span>
 <span class="doccomment">/// let base_address = 0x0050B110;</span>
-<span class="doccomment">/// let memory_size = 0x0040_0000;</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// let mut emu = Emu::attach(pid, base_address, memory_size, SM64Version::US);</span>
+<span class="doccomment">/// let mut emu = Emu::attach(pid, base_address, SM64Version::US);</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// loop {</span>
 <span class="doccomment">///     let holding_l =</span>
@@ -408,13 +402,8 @@
     <span class="doccomment">/// Panics if attachment fails, probably because there is no running process with the given</span>
     <span class="doccomment">/// PID.</span>
     <span class="attribute">#[<span class="ident">track_caller</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">attach</span>(
-        <span class="ident">pid</span>: <span class="ident">u32</span>,
-        <span class="ident">base_address</span>: <span class="ident">usize</span>,
-        <span class="ident">memory_size</span>: <span class="ident">usize</span>,
-        <span class="ident">sm64_version</span>: <span class="ident">SM64Version</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="kw">match</span> <span class="ident"><span class="self">Self</span>::try_attach</span>(<span class="ident">pid</span>, <span class="ident">base_address</span>, <span class="ident">memory_size</span>, <span class="ident">sm64_version</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">attach</span>(<span class="ident">pid</span>: <span class="ident">u32</span>, <span class="ident">base_address</span>: <span class="ident">usize</span>, <span class="ident">sm64_version</span>: <span class="ident">SM64Version</span>) -&gt; <span class="self">Self</span> {
+        <span class="kw">match</span> <span class="ident"><span class="self">Self</span>::try_attach</span>(<span class="ident">pid</span>, <span class="ident">base_address</span>, <span class="ident">sm64_version</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">this</span>) =&gt; <span class="ident">this</span>,
             <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Error:\n  failed to attach to {}:\n  {}\n&quot;</span>, <span class="ident">pid</span>, <span class="ident">error</span>),
         }
@@ -429,13 +418,14 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_attach</span>(
         <span class="ident">pid</span>: <span class="ident">u32</span>,
         <span class="ident">base_address</span>: <span class="ident">usize</span>,
-        <span class="ident">memory_size</span>: <span class="ident">usize</span>,
         <span class="ident">sm64_version</span>: <span class="ident">SM64Version</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">const</span> <span class="ident">SM64_MEMORY_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">0x0040_0000</span>;
+
         <span class="kw">let</span> <span class="ident">layout</span> <span class="op">=</span> <span class="ident">load_sm64_n64_layout</span>(<span class="kw-2">&amp;</span><span class="ident">sm64_version</span>.<span class="ident">to_string</span>().<span class="ident">to_lowercase</span>())<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">layout</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">layout</span>);
 
-        <span class="kw">let</span> <span class="ident">memory</span> <span class="op">=</span> <span class="ident">EmuMemory::attach</span>(<span class="ident">pid</span>, <span class="ident">base_address</span>, <span class="ident">memory_size</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">memory</span> <span class="op">=</span> <span class="ident">EmuMemory::attach</span>(<span class="ident">pid</span>, <span class="ident">base_address</span>, <span class="ident">SM64_MEMORY_SIZE</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">symbols_by_address</span> <span class="op">=</span> <span class="ident">layout</span>
             .<span class="ident">globals</span>
