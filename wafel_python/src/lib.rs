@@ -9,6 +9,7 @@ use std::{
     hash::{Hash, Hasher},
 };
 
+use indexmap::IndexMap;
 use pyo3::{
     basic::CompareOp,
     prelude::*,
@@ -111,7 +112,7 @@ fn py_object_to_value(py: Python<'_>, value: PyObject) -> PyResult<api::Value> {
     } else if let Ok(dict_value) = value.cast_as::<PyDict>(py) {
         match dict_value.extract::<HashMap<String, PyObject>>() {
             Ok(entries) => {
-                let mut fields = HashMap::new();
+                let mut fields = IndexMap::new();
                 for (name, value) in entries {
                     fields.insert(name, py_object_to_value(py, value)?);
                 }

@@ -9,3 +9,4 @@ object = "0.25.3"
 gimli = "0.24.0"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = "1.0.64"
+indexmap = "1.9.1"

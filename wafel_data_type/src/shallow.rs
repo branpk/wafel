@@ -9,6 +9,8 @@ use std::{
     hash::Hash,
 };
 
+use indexmap::IndexMap;
+
 use crate::{DataType, DataTypeRef, Field, FloatType, IntType, TypeName};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -64,8 +66,12 @@ impl<Id: Clone> ShallowDataType<Id> {
                     .ok_or_else(|| BuildDataTypesError::UnsizedArrayElement(base.clone()))?,
             },
             ShallowDataType::Struct { fields } => {
-                let mut resolved_fields = HashMap::new();
-                for (name, field) in fields {
+                let mut resolved_fields = IndexMap::new();
+
+                let mut sorted_fields: Vec<(&String, _)> = fields.iter().collect();
+                sorted_fields.sort_by_key(|(_, f)| f.offset);
+
+                for (name, field) in sorted_fields {
                     resolved_fields.insert(
                         name.clone(),
                         Field {
@@ -79,7 +85,7 @@ impl<Id: Clone> ShallowDataType<Id> {
                 }
             }
             ShallowDataType::Union { fields } => {
-                let mut resolved_fields = HashMap::new();
+                let mut resolved_fields = IndexMap::new();
                 for (name, field) in fields {
                     resolved_fields.insert(
                         name.clone(),

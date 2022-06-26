@@ -2,6 +2,7 @@
 
 use std::{array::IntoIter, collections::HashMap, convert::TryFrom, fmt, ops::Add};
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ValueTypeError;
@@ -48,7 +49,7 @@ pub enum Value {
     ///
     /// If a field's name is present in the original struct definition, it will match the
     /// name used here. Anonymous fields will be given a name, typically `__anon`.
-    Struct(Box<HashMap<String, Value>>),
+    Struct(Box<IndexMap<String, Value>>),
     /// An array value.
     Array(Vec<Value>),
 }
@@ -264,7 +265,7 @@ impl Value {
 
     /// Convert the value to a struct and return its fields, panicking on failure.
     #[track_caller]
-    pub fn as_struct(&self) -> &HashMap<String, Value> {
+    pub fn as_struct(&self) -> &IndexMap<String, Value> {
         match self.try_as_struct() {
             Ok(fields) => fields,
             Err(error) => panic!("{}", error),
@@ -272,7 +273,7 @@ impl Value {
     }
 
     /// Convert the value to a struct and return its fields.
-    pub fn try_as_struct(&self) -> Result<&HashMap<String, Value>, ValueTypeError> {
+    pub fn try_as_struct(&self) -> Result<&IndexMap<String, Value>, ValueTypeError> {
         if let Value::Struct(fields) = self {
             Ok(fields)
         } else {

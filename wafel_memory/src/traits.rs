@@ -1,5 +1,6 @@
-use std::{collections::HashMap, ops::Deref};
+use std::ops::Deref;
 
+use indexmap::IndexMap;
 use wafel_data_type::{
     Address, DataType, DataTypeRef, FloatType, FloatValue, IntType, IntValue, TypeName, Value,
 };
@@ -118,7 +119,7 @@ fn read_value_impl<M: MemoryRead + ?Sized>(
             None => return Err(ReadUnsizedArray),
         },
         DataType::Struct { fields } => {
-            let mut field_values: HashMap<String, Value> = HashMap::new();
+            let mut field_values: IndexMap<String, Value> = IndexMap::new();
             for (name, field) in fields {
                 let field_value = read_value_impl(
                     memory,

@@ -10,3 +10,4 @@ crate-type = ["cdylib"]
 [dependencies]
 wafel_api = { path = "../wafel_api" }
 pyo3 = { version = "0.16.5", features = ["extension-module"] }
+indexmap = "1.9.1"

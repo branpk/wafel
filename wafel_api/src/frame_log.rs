@@ -39,11 +39,13 @@ pub(crate) fn read_frame_log(
                 .ok_or(Error::InvalidFrameLogEventType(event_type_value))?;
 
             let variant_name = frame_log_event_variant_name(event_type);
-            let mut event = data_path_cache
+            let mut event: HashMap<String, Value> = data_path_cache
                 .global(&format!("gFrameLog[{}].__anon.{}", i, variant_name))?
                 .read(memory)?
                 .try_as_struct()?
-                .clone();
+                .clone()
+                .into_iter()
+                .collect();
 
             event.insert("type".to_owned(), Value::String(event_type.clone()));
             Ok(event)

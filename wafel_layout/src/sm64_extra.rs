@@ -1,5 +1,6 @@
-use std::{collections::HashMap, convert::TryFrom};
+use std::convert::TryFrom;
 
+use indexmap::IndexMap;
 use serde_json::{Map, Value as JsonValue};
 use wafel_data_type::{DataType, DataTypeRef, Field, IntValue, Namespace, TypeName};
 
@@ -67,8 +68,8 @@ fn load_constants(layout: &mut DataLayout, json: &JsonValue) {
 
 fn read_object_fields(
     json: &JsonValue,
-    object_struct_fields: &HashMap<String, Field>,
-) -> Result<HashMap<String, Field>, SM64LayoutError> {
+    object_struct_fields: &IndexMap<String, Field>,
+) -> Result<IndexMap<String, Field>, SM64LayoutError> {
     let raw_data_field = match object_struct_fields.get("rawData") {
         Some(field) => field,
         None => return Err(MissingRawData),
@@ -79,7 +80,7 @@ fn read_object_fields(
         return Err(RawDataNotUnion);
     };
 
-    let mut object_fields: HashMap<String, Field> = HashMap::new();
+    let mut object_fields: IndexMap<String, Field> = IndexMap::new();
     for (name, defn) in as_object(json) {
         let defn_fields = as_object(defn);
 

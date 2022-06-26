@@ -955,6 +955,7 @@ checksum = "10a35a97730320ffe8e2d410b5d3b69279b98d2c14bdb8b70ea89ecf7888d41e"
 dependencies = [
  "autocfg",
  "hashbrown 0.12.1",
+ "serde",
 ]
 
 [[package]]
@@ -2304,6 +2305,7 @@ dependencies = [
 name = "wafel_data_type"
 version = "0.1.0"
 dependencies = [
+ "indexmap",
  "serde",
 ]
 
@@ -2312,6 +2314,7 @@ name = "wafel_layout"
 version = "0.1.0"
 dependencies = [
  "gimli",
+ "indexmap",
  "object",
  "serde",
  "serde_json",
@@ -2323,6 +2326,7 @@ name = "wafel_memory"
 version = "0.1.0"
 dependencies = [
  "dlopen",
+ "indexmap",
  "once_cell",
  "process-memory",
  "same-file",
@@ -2336,6 +2340,7 @@ dependencies = [
 name = "wafel_python"
 version = "0.1.0"
 dependencies = [
+ "indexmap",
  "pyo3",
  "wafel_api",
 ]

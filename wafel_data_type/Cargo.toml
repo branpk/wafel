@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+indexmap = { version = "1.9.1", features = ["serde"] }
 serde = { version = "1.0.126", features = ["derive", "rc"] }

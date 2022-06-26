@@ -1,7 +1,8 @@
 //! Types and functions for representing C data types.
 
-use std::{collections::HashMap, fmt, sync::Arc};
+use std::{fmt, sync::Arc};
 
+use indexmap::IndexMap;
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::NotAnArrayOrPointerError;
@@ -42,14 +43,14 @@ pub enum DataType {
         /// The fields contained in the struct.
         ///
         /// Anonymous fields should be given a name on construction, typically `__anon`.
-        fields: HashMap<String, Field>,
+        fields: IndexMap<String, Field>,
     },
     /// A union type.
     Union {
         /// The fields contained in the union.
         ///
         /// Anonymous fields should be given a name on construction, typically `__anon`.
-        fields: HashMap<String, Field>,
+        fields: IndexMap<String, Field>,
     },
     /// A symbolic reference to a type definition, e.g. `struct Foo`.
     Name(TypeName),
@@ -227,11 +228,9 @@ impl fmt::Display for DataType {
     }
 }
 
-fn display_fields(f: &mut fmt::Formatter<'_>, fields: &HashMap<String, Field>) -> fmt::Result {
-    let mut sorted_fields = fields.iter().collect::<Vec<_>>();
-    sorted_fields.sort_by_key(|(_, field)| field.offset);
+fn display_fields(f: &mut fmt::Formatter<'_>, fields: &IndexMap<String, Field>) -> fmt::Result {
     writeln!(f, "{{")?;
-    for (name, field) in sorted_fields {
+    for (name, field) in fields {
         writeln!(
             f,
             "  {}: {}",

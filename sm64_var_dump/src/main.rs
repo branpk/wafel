@@ -137,9 +137,9 @@ fn run(matches: &ArgMatches) -> Result<()> {
 
             print_vars(&mut streams, &vars, |var| game.try_read(var))?;
         }
-    }
 
-    eprintln!("Finished");
+        eprintln!("Finished");
+    }
 
     Ok(())
 }
@@ -193,7 +193,11 @@ fn print_vars(
     let mut values = Vec::new();
     for var in vars {
         let value = read(var)?;
-        values.push(value.to_string());
+        let formatted = match value {
+            Value::None => String::new(),
+            v => v.to_string(),
+        };
+        values.push(formatted);
     }
 
     for f in streams {
