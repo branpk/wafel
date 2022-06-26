@@ -88,6 +88,18 @@ To attach to an emulator: --pid <PID> --base <ADDR> --version <VERSION>
                 .required(true)
                 .multiple(true),
         )
+        .arg(
+            Arg::with_name("min_frame")
+                .long("min_frame")
+                .value_name("FRAME")
+                .help("min value of global timer to record"),
+        )
+        .arg(
+            Arg::with_name("max_frame")
+                .long("max_frame")
+                .value_name("FRAME")
+                .help("max value of global timer to record"),
+        )
         // Output options
         .arg(
             Arg::with_name("output")
@@ -119,6 +131,15 @@ fn run(matches: &ArgMatches) -> Result<()> {
     let mut streams = open_streams(matches)?;
     let vars = get_vars(matches)?;
 
+    let min_global_timer = match matches.value_of("min_frame") {
+        Some(arg) => arg.parse::<u32>()?,
+        None => 0,
+    };
+    let max_global_timer = match matches.value_of("max_frame") {
+        Some(arg) => arg.parse::<u32>()?,
+        None => u32::MAX,
+    };
+
     print_headers(&mut streams, &vars)?;
 
     if let Some(libsm64_path) = matches.value_of("libsm64") {
@@ -130,7 +151,10 @@ fn run(matches: &ArgMatches) -> Result<()> {
 
         eprintln!("Running {} ({} frames)", m64_path, inputs.len());
 
-        print_vars(&mut streams, &vars, |var| game.try_read(var))?;
+        let global_timer = game.try_read("gGlobalTimer")?.as_int() as u32;
+        if (min_global_timer..=max_global_timer).contains(&global_timer) {
+            print_vars(&mut streams, &vars, |var| game.try_read(var))?;
+        }
 
         for input in &inputs {
             game.try_write("gControllerPads[0].button", input.buttons.into())?;
@@ -138,7 +162,12 @@ fn run(matches: &ArgMatches) -> Result<()> {
             game.try_write("gControllerPads[0].stick_y", input.stick_y.into())?;
             game.advance();
 
-            print_vars(&mut streams, &vars, |var| game.try_read(var))?;
+            let global_timer = game.try_read("gGlobalTimer")?.as_int() as u32;
+            if global_timer > max_global_timer {
+                break;
+            } else if global_timer >= min_global_timer {
+                print_vars(&mut streams, &vars, |var| game.try_read(var))?;
+            }
         }
 
         eprintln!("Finished");
@@ -158,16 +187,19 @@ fn run(matches: &ArgMatches) -> Result<()> {
 
         let emu = Emu::attach(pid, base_address, sm64_version);
 
-        let mut prev_global_timer = emu.read("gGlobalTimer");
-        print_vars(&mut streams, &vars, |var| emu.try_read(var))?;
-
-        if !matches.is_present("no-watch") {
+        if matches.is_present("no-watch") {
+            print_vars(&mut streams, &vars, |var| emu.try_read(var))?;
+        } else {
             eprintln!("Watching emulation. Press Ctrl-C to stop");
+            let mut prev_global_timer = None;
             loop {
-                let current_global_timer = emu.read("gGlobalTimer");
-                if current_global_timer != prev_global_timer {
-                    prev_global_timer = current_global_timer;
-                    print_vars(&mut streams, &vars, |var| emu.try_read(var))?;
+                let current_global_timer = emu.try_read("gGlobalTimer")?.as_int() as u32;
+                if Some(current_global_timer) != prev_global_timer {
+                    prev_global_timer = Some(current_global_timer);
+
+                    if (min_global_timer..=max_global_timer).contains(&current_global_timer) {
+                        print_vars(&mut streams, &vars, |var| emu.try_read(var))?;
+                    }
                 }
             }
         }
