@@ -1949,6 +1949,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "sm64_var_dump"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "wafel_api",
+]
+
+[[package]]
 name = "smallvec"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

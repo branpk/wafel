@@ -2,6 +2,7 @@
 members = [
     "libsm64_lock",
     "sm64_layout",
+    "sm64_var_dump",
     "wafel_api",
     "wafel_core",
     "wafel_data_path",
