@@ -152,11 +152,11 @@ impl Address {
 #[pyproto]
 impl PyObjectProtocol for Address {
     fn __str__(&'p self) -> String {
-        format!("{}", self.inner)
+        format!("Address({})", self.inner)
     }
 
     fn __repr__(&'p self) -> String {
-        format!("{}", self.inner)
+        format!("Address({})", self.inner)
     }
 
     fn __hash__(&'p self) -> u64 {

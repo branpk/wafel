@@ -99,8 +99,15 @@ impl GlobalDataPath {
         let mut address: Address = self.0.root;
         for edge in &self.0.edges {
             match edge {
-                DataPathEdge::Offset(offset) => address = address + *offset,
+                DataPathEdge::Offset(offset) => {
+                    if !address.is_null() {
+                        address = address + *offset
+                    }
+                }
                 DataPathEdge::Deref => {
+                    if address.is_null() {
+                        return Err(MemoryError::InvalidAddress);
+                    }
                     address = memory.read_address(address)?;
                 }
                 DataPathEdge::Nullable => {
@@ -123,7 +130,11 @@ impl GlobalDataPath {
     }
 
     fn read_impl(&self, memory: &impl MemoryRead) -> Result<Value, MemoryError> {
-        match self.address_impl(memory)? {
+        let address = self.address_impl(memory)?;
+        if address.map_or(false, |a| a.is_null()) {
+            return Err(MemoryError::InvalidAddress);
+        }
+        match address {
             Some(address) => {
                 let mut value = memory.read_value(address, &self.0.concrete_type, |type_name| {
                     self.0.layout.data_type(type_name).ok().cloned()
@@ -156,7 +167,11 @@ impl GlobalDataPath {
         memory: &mut M,
         value: Value,
     ) -> Result<(), MemoryError> {
-        match self.address_impl(memory)? {
+        let address = self.address_impl(memory)?;
+        if address.map_or(false, |a| a.is_null()) {
+            return Err(MemoryError::InvalidAddress);
+        }
+        match address {
             Some(address) => {
                 match self.0.mask {
                     Some(mask) => {

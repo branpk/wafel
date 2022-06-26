@@ -367,7 +367,11 @@ impl Value {
 
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Address({:#X})", self.0)
+        if self.is_null() {
+            write!(f, "null")
+        } else {
+            write!(f, "@{:#X}", self.0)
+        }
     }
 }
 
