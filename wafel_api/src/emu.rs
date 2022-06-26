@@ -20,9 +20,8 @@ use crate::{
 ///
 /// let pid = 4232;
 /// let base_address = 0x0050B110;
-/// let memory_size = 0x0040_0000;
 ///
-/// let mut emu = Emu::attach(pid, base_address, memory_size, SM64Version::US);
+/// let mut emu = Emu::attach(pid, base_address, SM64Version::US);
 ///
 /// loop {
 ///     let holding_l =
@@ -50,13 +49,8 @@ impl Emu {
     /// Panics if attachment fails, probably because there is no running process with the given
     /// PID.
     #[track_caller]
-    pub fn attach(
-        pid: u32,
-        base_address: usize,
-        memory_size: usize,
-        sm64_version: SM64Version,
-    ) -> Self {
-        match Self::try_attach(pid, base_address, memory_size, sm64_version) {
+    pub fn attach(pid: u32, base_address: usize, sm64_version: SM64Version) -> Self {
+        match Self::try_attach(pid, base_address, sm64_version) {
             Ok(this) => this,
             Err(error) => panic!("Error:\n  failed to attach to {}:\n  {}\n", pid, error),
         }
@@ -71,13 +65,14 @@ impl Emu {
     pub fn try_attach(
         pid: u32,
         base_address: usize,
-        memory_size: usize,
         sm64_version: SM64Version,
     ) -> Result<Self, Error> {
+        const SM64_MEMORY_SIZE: usize = 0x0040_0000;
+
         let layout = load_sm64_n64_layout(&sm64_version.to_string().to_lowercase())?;
         let layout = Arc::new(layout);
 
-        let memory = EmuMemory::attach(pid, base_address, memory_size)?;
+        let memory = EmuMemory::attach(pid, base_address, SM64_MEMORY_SIZE)?;
 
         let symbols_by_address = layout
             .globals
