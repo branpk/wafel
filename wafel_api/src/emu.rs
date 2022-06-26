@@ -36,7 +36,6 @@ use crate::{
 /// ```
 #[derive(Debug)]
 pub struct Emu {
-    id: Arc<()>,
     layout: Arc<DataLayout>,
     memory: EmuMemory,
     symbols_by_address: HashMap<Address, String>,
@@ -93,7 +92,6 @@ impl Emu {
         let data_path_cache = DataPathCache::new(&Arc::new(EmptySymbolLookup), &layout);
 
         Ok(Self {
-            id: Arc::new(()),
             layout,
             memory,
             symbols_by_address,
@@ -352,26 +350,3 @@ impl Emu {
         Ok(hitboxes)
     }
 }
-
-// /// A save state used by [Emu].
-// #[derive(Debug)]
-// pub struct SaveState {
-//     game_id: Arc<()>,
-//     frame: u32,
-//     slot: <DllGameMemory as GameMemory>::Slot,
-// }
-//
-// impl SaveState {
-//     fn new(game_id: Arc<()>, frame: u32, slot: <DllGameMemory as GameMemory>::Slot) -> Self {
-//         Self {
-//             game_id,
-//             frame,
-//             slot,
-//         }
-//     }
-//
-//     /// Return the frame that the save state was taken on.
-//     pub fn frame(&self) -> u32 {
-//         self.frame
-//     }
-// }
