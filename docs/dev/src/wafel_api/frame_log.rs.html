@@ -79,6 +79,8 @@
 <span id="73">73</span>
 <span id="74">74</span>
 <span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
 
 <span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">IntValue</span>, <span class="ident">Value</span>};
@@ -120,11 +122,13 @@
                 .<span class="ident">ok_or</span>(<span class="ident">Error::InvalidFrameLogEventType</span>(<span class="ident">event_type_value</span>))<span class="question-mark">?</span>;
 
             <span class="kw">let</span> <span class="ident">variant_name</span> <span class="op">=</span> <span class="ident">frame_log_event_variant_name</span>(<span class="ident">event_type</span>);
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">event</span> <span class="op">=</span> <span class="ident">data_path_cache</span>
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">event</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Value</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">data_path_cache</span>
                 .<span class="ident">global</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;gFrameLog[{}].__anon.{}&quot;</span>, <span class="ident">i</span>, <span class="ident">variant_name</span>))<span class="question-mark">?</span>
                 .<span class="ident">read</span>(<span class="ident">memory</span>)<span class="question-mark">?</span>
                 .<span class="ident">try_as_struct</span>()<span class="question-mark">?</span>
-                .<span class="ident">clone</span>();
+                .<span class="ident">clone</span>()
+                .<span class="ident">into_iter</span>()
+                .<span class="ident">collect</span>();
 
             <span class="ident">event</span>.<span class="ident">insert</span>(<span class="string">&quot;type&quot;</span>.<span class="ident">to_owned</span>(), <span class="ident">Value::String</span>(<span class="ident">event_type</span>.<span class="ident">clone</span>()));
             <span class="prelude-val">Ok</span>(<span class="ident">event</span>)

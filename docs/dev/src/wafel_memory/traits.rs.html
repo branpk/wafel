@@ -484,8 +484,10 @@
 <span id="478">478</span>
 <span id="479">479</span>
 <span id="480">480</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">ops::Deref</span>};
+<span id="481">481</span>
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::ops::Deref</span>;
 
+<span class="kw">use</span> <span class="ident">indexmap::IndexMap</span>;
 <span class="kw">use</span> <span class="ident">wafel_data_type</span>::{
     <span class="ident">Address</span>, <span class="ident">DataType</span>, <span class="ident">DataTypeRef</span>, <span class="ident">FloatType</span>, <span class="ident">FloatValue</span>, <span class="ident">IntType</span>, <span class="ident">IntValue</span>, <span class="ident">TypeName</span>, <span class="ident">Value</span>,
 };
@@ -604,7 +606,7 @@
             <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ReadUnsizedArray</span>),
         },
         <span class="ident">DataType::Struct</span> { <span class="ident">fields</span> } =&gt; {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">field_values</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Value</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">field_values</span>: <span class="ident">IndexMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Value</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">IndexMap::new</span>();
             <span class="kw">for</span> (<span class="ident">name</span>, <span class="ident">field</span>) <span class="kw">in</span> <span class="ident">fields</span> {
                 <span class="kw">let</span> <span class="ident">field_value</span> <span class="op">=</span> <span class="ident">read_value_impl</span>(
                     <span class="ident">memory</span>,

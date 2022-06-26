@@ -323,11 +323,11 @@
 <span id="317">317</span>
 <span id="318">318</span>
 <span id="319">319</span>
-<span id="320">320</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Types and functions for representing C data types.</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">fmt</span>, <span class="ident">sync::Arc</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fmt</span>, <span class="ident">sync::Arc</span>};
 
+<span class="kw">use</span> <span class="ident">indexmap::IndexMap</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">de::Error</span> <span class="kw">as</span> <span class="kw">_</span>, <span class="ident">Deserialize</span>, <span class="ident">Deserializer</span>, <span class="ident">Serialize</span>, <span class="ident">Serializer</span>};
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::error::NotAnArrayOrPointerError</span>;
@@ -368,14 +368,14 @@
         <span class="doccomment">/// The fields contained in the struct.</span>
         <span class="doccomment">///</span>
         <span class="doccomment">/// Anonymous fields should be given a name on construction, typically `__anon`.</span>
-        <span class="ident">fields</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span>,
+        <span class="ident">fields</span>: <span class="ident">IndexMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span>,
     },
     <span class="doccomment">/// A union type.</span>
     <span class="ident">Union</span> {
         <span class="doccomment">/// The fields contained in the union.</span>
         <span class="doccomment">///</span>
         <span class="doccomment">/// Anonymous fields should be given a name on construction, typically `__anon`.</span>
-        <span class="ident">fields</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span>,
+        <span class="ident">fields</span>: <span class="ident">IndexMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span>,
     },
     <span class="doccomment">/// A symbolic reference to a type definition, e.g. `struct Foo`.</span>
     <span class="ident">Name</span>(<span class="ident">TypeName</span>),
@@ -553,11 +553,9 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">display_fields</span>(<span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>, <span class="ident">fields</span>: <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sorted_fields</span> <span class="op">=</span> <span class="ident">fields</span>.<span class="ident">iter</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-    <span class="ident">sorted_fields</span>.<span class="ident">sort_by_key</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">field</span>)<span class="op">|</span> <span class="ident">field</span>.<span class="ident">offset</span>);
+<span class="kw">fn</span> <span class="ident">display_fields</span>(<span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>, <span class="ident">fields</span>: <span class="kw-2">&amp;</span><span class="ident">IndexMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
     <span class="macro">writeln!</span>(<span class="ident">f</span>, <span class="string">&quot;{{&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">for</span> (<span class="ident">name</span>, <span class="ident">field</span>) <span class="kw">in</span> <span class="ident">sorted_fields</span> {
+    <span class="kw">for</span> (<span class="ident">name</span>, <span class="ident">field</span>) <span class="kw">in</span> <span class="ident">fields</span> {
         <span class="macro">writeln!</span>(
             <span class="ident">f</span>,
             <span class="string">&quot;  {}: {}&quot;</span>,

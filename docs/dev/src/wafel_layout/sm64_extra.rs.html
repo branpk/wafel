@@ -154,8 +154,10 @@
 <span id="148">148</span>
 <span id="149">149</span>
 <span id="150">150</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">convert::TryFrom</span>};
+<span id="151">151</span>
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::convert::TryFrom</span>;
 
+<span class="kw">use</span> <span class="ident">indexmap::IndexMap</span>;
 <span class="kw">use</span> <span class="ident">serde_json</span>::{<span class="ident">Map</span>, <span class="ident">Value</span> <span class="kw">as</span> <span class="ident">JsonValue</span>};
 <span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">DataType</span>, <span class="ident">DataTypeRef</span>, <span class="ident">Field</span>, <span class="ident">IntValue</span>, <span class="ident">Namespace</span>, <span class="ident">TypeName</span>};
 
@@ -223,8 +225,8 @@
 
 <span class="kw">fn</span> <span class="ident">read_object_fields</span>(
     <span class="ident">json</span>: <span class="kw-2">&amp;</span><span class="ident">JsonValue</span>,
-    <span class="ident">object_struct_fields</span>: <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span>, <span class="ident">SM64LayoutError</span><span class="op">&gt;</span> {
+    <span class="ident">object_struct_fields</span>: <span class="kw-2">&amp;</span><span class="ident">IndexMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span>,
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">IndexMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span>, <span class="ident">SM64LayoutError</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">raw_data_field</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">object_struct_fields</span>.<span class="ident">get</span>(<span class="string">&quot;rawData&quot;</span>) {
         <span class="prelude-val">Some</span>(<span class="ident">field</span>) =&gt; <span class="ident">field</span>,
         <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">MissingRawData</span>),
@@ -235,7 +237,7 @@
         <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">RawDataNotUnion</span>);
     };
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">object_fields</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">object_fields</span>: <span class="ident">IndexMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Field</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">IndexMap::new</span>();
     <span class="kw">for</span> (<span class="ident">name</span>, <span class="ident">defn</span>) <span class="kw">in</span> <span class="ident">as_object</span>(<span class="ident">json</span>) {
         <span class="kw">let</span> <span class="ident">defn_fields</span> <span class="op">=</span> <span class="ident">as_object</span>(<span class="ident">defn</span>);
 
