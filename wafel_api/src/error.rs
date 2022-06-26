@@ -5,13 +5,13 @@ use std::{error, fmt, io, sync::Arc};
 use wafel_data_path::{DataPathError, GlobalDataPath};
 use wafel_data_type::{IntValue, Value, ValueTypeError};
 use wafel_layout::{DllLayoutError, LayoutLookupError, SM64LayoutError};
-use wafel_memory::{DllLoadError, MemoryError};
+use wafel_memory::{MemoryError, MemoryInitError};
 
 #[derive(Debug, Clone)]
 pub enum Error {
     DllLayoutError(DllLayoutError),
     SM64ExtrasError(SM64LayoutError),
-    DllLoadError(DllLoadError),
+    MemoryInitError(MemoryInitError),
     DataPathError(DataPathError),
     MemoryError(MemoryError),
     ApplyEditError {
@@ -56,7 +56,7 @@ impl fmt::Display for Error {
         match self {
             Error::DllLayoutError(error) => write!(f, "{}", error),
             Error::SM64ExtrasError(error) => write!(f, "{}", error),
-            Error::DllLoadError(error) => write!(f, "{}", error),
+            Error::MemoryInitError(error) => write!(f, "{}", error),
             Error::DataPathError(error) => write!(f, "{}", error),
             Error::MemoryError(error) => write!(f, "{}", error),
             Error::ApplyEditError { path, value, error } => {
@@ -117,9 +117,9 @@ impl From<SM64LayoutError> for Error {
     }
 }
 
-impl From<DllLoadError> for Error {
-    fn from(v: DllLoadError) -> Self {
-        Self::DllLoadError(v)
+impl From<MemoryInitError> for Error {
+    fn from(v: MemoryInitError) -> Self {
+        Self::MemoryInitError(v)
     }
 }
 

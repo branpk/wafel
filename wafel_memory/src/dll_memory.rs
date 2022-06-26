@@ -14,7 +14,7 @@ use wafel_layout::{read_dll_segments, DllSegment};
 
 use crate::{
     dll_slot_impl::{BasePointer, BaseSlot, BufferSlot, SlotImpl},
-    error::DllLoadError,
+    error::MemoryInitError,
     unique_dll::UniqueLibrary,
     GameMemory,
     MemoryError::{self, *},
@@ -90,7 +90,7 @@ impl DllGameMemory {
         dll_path: &str,
         init_function_name: &str,
         update_function_name: &str,
-    ) -> Result<(Self, DllSlot), DllLoadError> {
+    ) -> Result<(Self, DllSlot), MemoryInitError> {
         let all_segments = read_dll_segments(dll_path)?;
         let data_segments = dll_data_segments(&all_segments)?;
 
@@ -104,10 +104,10 @@ impl DllGameMemory {
 
         let init_function: unsafe extern "C" fn() = library
             .symbol(init_function_name)
-            .map_err(|_| DllLoadError::UndefinedSymbol(init_function_name.to_string()))?;
+            .map_err(|_| MemoryInitError::UndefinedSymbol(init_function_name.to_string()))?;
         let update_function: unsafe extern "C" fn() = library
             .symbol(update_function_name)
-            .map_err(|_| DllLoadError::UndefinedSymbol(update_function_name.to_string()))?;
+            .map_err(|_| MemoryInitError::UndefinedSymbol(update_function_name.to_string()))?;
 
         let base_pointer = dll_base_pointer(init_function as *const ())?;
 
@@ -347,7 +347,7 @@ impl GameMemory for DllGameMemory {
     }
 }
 
-fn dll_data_segments(all_segments: &[DllSegment]) -> Result<Vec<DllSegment>, DllLoadError> {
+fn dll_data_segments(all_segments: &[DllSegment]) -> Result<Vec<DllSegment>, MemoryInitError> {
     // .data and .bss segments are the only ones that need to be copied in backup slots
     let mut data_segments: Vec<DllSegment> = all_segments
         .iter()
@@ -356,7 +356,7 @@ fn dll_data_segments(all_segments: &[DllSegment]) -> Result<Vec<DllSegment>, Dll
         .collect();
 
     if data_segments.is_empty() {
-        return Err(DllLoadError::MissingDataSegments);
+        return Err(MemoryInitError::MissingDataSegments);
     }
 
     // Need to ensure that data segments are disjoint for aliasing restrictions
@@ -414,7 +414,7 @@ impl MemoryReadPrimitive for DllStaticMemoryView<'_> {
     }
 
     fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
-        let pointer = unsafe { self.read_primitive::<*const ()>(address)? };
+        let pointer = unsafe { self.read_primitive::<usize>(address)? as *const () };
         Ok(self.memory.unchecked_pointer_to_address(pointer))
     }
 }
@@ -437,7 +437,7 @@ impl MemoryReadPrimitive for DllSlotMemoryView<'_> {
     }
 
     fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
-        let pointer = unsafe { self.read_primitive::<*const ()>(address)? };
+        let pointer = unsafe { self.read_primitive::<usize>(address)? as *const () };
         Ok(self.memory.unchecked_pointer_to_address(pointer))
     }
 }
@@ -460,7 +460,7 @@ impl MemoryReadPrimitive for DllSlotMemoryViewMut<'_> {
     }
 
     fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
-        let pointer = unsafe { self.read_primitive::<*const ()>(address)? };
+        let pointer = unsafe { self.read_primitive::<usize>(address)? as *const () };
         Ok(self.memory.unchecked_pointer_to_address(pointer))
     }
 }
@@ -479,7 +479,7 @@ impl MemoryWritePrimitive for DllSlotMemoryViewMut<'_> {
     fn write_address(&mut self, address: Address, value: Address) -> Result<(), MemoryError> {
         let value_pointer: *const () = self.memory.unchecked_address_to_pointer(value);
         unsafe {
-            self.write_primitive(address, value_pointer)?;
+            self.write_primitive(address, value_pointer as usize)?;
         }
         Ok(())
     }

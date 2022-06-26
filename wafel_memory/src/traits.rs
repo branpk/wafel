@@ -244,7 +244,7 @@ fn write_value_impl<M: MemoryWrite + ?Sized>(
 }
 
 /// A helper trait for implementing [MemoryRead].
-pub trait MemoryReadPrimitive {
+pub(crate) trait MemoryReadPrimitive {
     /// Read a primitive value from memory.
     ///
     /// # Safety
@@ -257,7 +257,7 @@ pub trait MemoryReadPrimitive {
 }
 
 /// A helper trait for implementing [MemoryWrite].
-pub trait MemoryWritePrimitive {
+pub(crate) trait MemoryWritePrimitive {
     /// Write a primitive value to memory.
     ///
     /// # Safety

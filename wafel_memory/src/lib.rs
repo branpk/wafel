@@ -7,7 +7,7 @@
 //! and non-static memory and provides state saving/loading functionality.
 //!
 //! Finally it provides [DllGameMemory] which implements [GameMemory] using a
-//! game DLL.
+//! game DLL, and [EmuMemory] which attaches to a running emulator.
 
 #![warn(
     missing_docs,

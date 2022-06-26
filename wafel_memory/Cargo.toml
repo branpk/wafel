@@ -11,3 +11,4 @@ dlopen = "0.1.8"
 winapi = { version = "0.3.9", features = ["dbghelp", "processthreadsapi"] }
 tempfile = "3.2.0"
 same-file = "1.0.6"
+process-memory = "0.4.0"

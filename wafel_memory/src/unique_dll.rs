@@ -10,7 +10,7 @@ use once_cell::sync::OnceCell;
 use same_file::is_same_file;
 use tempfile::TempPath;
 
-use crate::DllLoadError;
+use crate::MemoryInitError;
 
 fn loaded_dlls() -> &'static Mutex<Vec<PathBuf>> {
     static LOADED_DLLS: OnceCell<Mutex<Vec<PathBuf>>> = OnceCell::new();
@@ -47,7 +47,7 @@ pub(crate) struct UniqueLibrary {
 }
 
 impl UniqueLibrary {
-    pub(crate) fn open(dll_path: impl AsRef<Path>) -> Result<Self, DllLoadError> {
+    pub(crate) fn open(dll_path: impl AsRef<Path>) -> Result<Self, MemoryInitError> {
         if is_already_loaded(&dll_path) {
             let temp_file = tempfile::NamedTempFile::new()?;
             let dll_content = fs::read(&dll_path)?;

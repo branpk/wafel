@@ -21,6 +21,8 @@ pub enum MemoryError {
     InvalidAddress,
     WriteToStaticAddress,
     NonStaticAddressInStaticView,
+    ProcessReadError(Arc<io::Error>),
+    ProcessWriteError(Arc<io::Error>),
 }
 
 impl fmt::Display for MemoryError {
@@ -51,6 +53,12 @@ impl fmt::Display for MemoryError {
             MemoryError::NonStaticAddressInStaticView => {
                 write!(f, "using a non-static address through a static memory view")
             }
+            MemoryError::ProcessReadError(error) => {
+                write!(f, "failed to read process memory: {}", error)
+            }
+            MemoryError::ProcessWriteError(error) => {
+                write!(f, "failed to write process memory: {}", error)
+            }
         }
     }
 }
@@ -64,41 +72,45 @@ impl From<ValueTypeError> for MemoryError {
 }
 
 #[derive(Debug, Clone)]
-pub enum DllLoadError {
+pub enum MemoryInitError {
     DlOpenError(Arc<dlopen::Error>),
     IoError(Arc<io::Error>),
     DllLayoutError(DllLayoutError),
     MissingDataSegments,
     UndefinedSymbol(String),
+    ProcessAttachError(Arc<io::Error>),
 }
 
-impl fmt::Display for DllLoadError {
+impl fmt::Display for MemoryInitError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DllLoadError::DlOpenError(error) => write!(f, "{}", error),
-            DllLoadError::IoError(error) => write!(f, "{}", error),
-            DllLoadError::DllLayoutError(error) => write!(f, "{}", error),
-            DllLoadError::MissingDataSegments => write!(f, "missing data sections .data/.bss"),
-            DllLoadError::UndefinedSymbol(name) => write!(f, "undefined symbol {}", name),
+            MemoryInitError::DlOpenError(error) => write!(f, "{}", error),
+            MemoryInitError::IoError(error) => write!(f, "{}", error),
+            MemoryInitError::DllLayoutError(error) => write!(f, "{}", error),
+            MemoryInitError::MissingDataSegments => write!(f, "missing data sections .data/.bss"),
+            MemoryInitError::UndefinedSymbol(name) => write!(f, "undefined symbol {}", name),
+            MemoryInitError::ProcessAttachError(error) => {
+                write!(f, "failed to attach to process: {}", error)
+            }
         }
     }
 }
 
-impl Error for DllLoadError {}
+impl Error for MemoryInitError {}
 
-impl From<dlopen::Error> for DllLoadError {
+impl From<dlopen::Error> for MemoryInitError {
     fn from(v: dlopen::Error) -> Self {
         Self::DlOpenError(Arc::new(v))
     }
 }
 
-impl From<io::Error> for DllLoadError {
+impl From<io::Error> for MemoryInitError {
     fn from(v: io::Error) -> Self {
         Self::IoError(Arc::new(v))
     }
 }
 
-impl From<DllLayoutError> for DllLoadError {
+impl From<DllLayoutError> for MemoryInitError {
     fn from(v: DllLayoutError) -> Self {
         Self::DllLayoutError(v)
     }
