@@ -427,11 +427,11 @@
 <span class="attribute">#[<span class="ident">pyproto</span>]</span>
 <span class="kw">impl</span> <span class="ident">PyObjectProtocol</span> <span class="kw">for</span> <span class="ident">Address</span> {
     <span class="kw">fn</span> <span class="ident">__str__</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;p</span> <span class="self">self</span>) -&gt; <span class="ident">String</span> {
-        <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="ident">inner</span>)
+        <span class="macro">format!</span>(<span class="string">&quot;Address({})&quot;</span>, <span class="self">self</span>.<span class="ident">inner</span>)
     }
 
     <span class="kw">fn</span> <span class="ident">__repr__</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;p</span> <span class="self">self</span>) -&gt; <span class="ident">String</span> {
-        <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="ident">inner</span>)
+        <span class="macro">format!</span>(<span class="string">&quot;Address({})&quot;</span>, <span class="self">self</span>.<span class="ident">inner</span>)
     }
 
     <span class="kw">fn</span> <span class="ident">__hash__</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;p</span> <span class="self">self</span>) -&gt; <span class="ident">u64</span> {
