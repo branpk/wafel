@@ -1,6 +1,6 @@
 use wafel_data_type::{FloatType, IntType};
 use wafel_layout::DataLayout;
-use wafel_memory::MemoryRead;
+use wafel_memory::{MemoryRead, SymbolLookup};
 
 use crate::{data_path_cache::DataPathCache, Error};
 
@@ -15,10 +15,10 @@ pub struct ObjectHitbox {
     pub hitbox_radius: f32,
 }
 
-pub(crate) fn read_object_hitboxes(
+pub(crate) fn read_object_hitboxes<S: SymbolLookup>(
     memory: &impl MemoryRead,
     layout: &DataLayout,
-    data_path_cache: &DataPathCache,
+    data_path_cache: &DataPathCache<S>,
 ) -> Result<Vec<ObjectHitbox>, Error> {
     let object_pool_addr = data_path_cache
         .global("gObjectPool")?

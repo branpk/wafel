@@ -6,6 +6,9 @@ use crate::{
     MemoryInitError, MemoryRead, MemoryWrite,
 };
 
+// TODO: Cache hints, e.g. in read_surfaces
+// TODO: Save states
+
 // EmuMemory doesn't implement GameMemory because it isn't able to make any guarantees about
 // how/when the process writes to the base slot.
 // In the future, Wafel could have an embedded emulator that it can control, which
@@ -30,7 +33,12 @@ use crate::{
 // }
 
 /// Memory view for reading/writing to a running emulator.
-#[derive(Debug)]
+///
+/// EmuMemory should be thought of as using interior mutability, since it has no ownership or
+/// unique access to the process's memory.
+/// The [MemoryWrite] trait takes &mut self, but the `EmuMemory` object can be cloned
+/// when needed.
+#[derive(Debug, Clone)]
 pub struct EmuMemory {
     // id: Arc<()>,
     handle: ProcessHandle,
@@ -184,7 +192,7 @@ impl EmuMemory {
     }
 }
 
-impl MemoryRead for &EmuMemory {
+impl MemoryRead for EmuMemory {
     fn read_int(&self, address: Address, int_type: IntType) -> Result<IntValue, MemoryError> {
         Ok(match int_type {
             IntType::U8 => self.read_u8(address)?.into(),
@@ -214,8 +222,7 @@ impl MemoryRead for &EmuMemory {
     }
 }
 
-// Implemented for &EmuMemory since shared reference is enough for writing
-impl MemoryWrite for &EmuMemory {
+impl MemoryWrite for EmuMemory {
     fn write_int(
         &mut self,
         address: Address,

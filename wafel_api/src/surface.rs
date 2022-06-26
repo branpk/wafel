@@ -1,5 +1,5 @@
 use wafel_data_type::{FloatType, IntType};
-use wafel_memory::MemoryRead;
+use wafel_memory::{MemoryRead, SymbolLookup};
 
 use crate::{data_path_cache::DataPathCache, Error};
 
@@ -14,9 +14,9 @@ pub struct Surface {
     pub vertices: [[i16; 3]; 3],
 }
 
-pub(crate) fn read_surfaces(
+pub(crate) fn read_surfaces<S: SymbolLookup>(
     memory: &impl MemoryRead,
-    data_path_cache: &DataPathCache,
+    data_path_cache: &DataPathCache<S>,
 ) -> Result<Vec<Surface>, Error> {
     let surface_pool_addr = data_path_cache.global("sSurfacePool?")?.read(memory)?;
     if surface_pool_addr.is_none() {
