@@ -1,4 +1,4 @@
-use process_memory::{CopyAddress, ProcessHandle, PutAddress, TryIntoProcessHandle};
+use process_memory::{CopyAddress, Pid, ProcessHandle, PutAddress, TryIntoProcessHandle};
 use wafel_data_type::{Address, FloatType, FloatValue, IntType, IntValue};
 
 use crate::{
@@ -34,7 +34,7 @@ impl EmuMemory {
         base_address: usize,
         memory_size: usize,
     ) -> Result<Self, MemoryInitError> {
-        let handle = pid
+        let handle = (pid as Pid)
             .try_into_process_handle()
             .map_err(|error| MemoryInitError::ProcessAttachError(error.into()))?;
         Ok(Self {
