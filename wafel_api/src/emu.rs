@@ -2,18 +2,19 @@ use std::{collections::HashMap, sync::Arc};
 
 use wafel_data_path::DataPath;
 use wafel_data_type::{Address, Value};
-use wafel_layout::{DataLayout, DllLayout};
-use wafel_memory::{DllGameMemory, GameMemory, MemoryRead, SymbolLookup};
+use wafel_layout::{load_sm64_n64_layout, DataLayout, DllLayout};
+use wafel_memory::{
+    DllGameMemory, EmptySymbolLookup, EmuMemory, GameMemory, MemoryRead, SymbolLookup,
+};
 
 use crate::{
     data_path_cache::DataPathCache, frame_log::read_frame_log, mario::mario_action_names,
     read_object_hitboxes, read_surfaces, simplified_data_type, DataType, Error, ObjectHitbox,
-    Surface,
+    SM64Version, Surface,
 };
 
-/// An SM64 API that uses a traditional frame advance / save state model.
-///
-/// See [crate level docs](crate) for more details on which API to use.
+/// An SM64 API that attaches to a running emulator and can read/write to its
+/// memory.
 ///
 /// # Example
 ///
@@ -44,75 +45,70 @@ use crate::{
 /// );
 /// ```
 #[derive(Debug)]
-pub struct Game {
+pub struct Emu {
     id: Arc<()>,
     layout: Arc<DataLayout>,
-    memory: Arc<DllGameMemory>,
+    memory: Arc<EmuMemory>,
     symbols_by_address: HashMap<Address, String>,
-    base_slot_frame: u32,
-    base_slot: <DllGameMemory as GameMemory>::Slot,
-    data_path_cache: DataPathCache,
-    rerecords: u32,
+    data_path_cache: DataPathCache<EmptySymbolLookup>,
 }
 
-impl Game {
-    /// Load a libsm64 DLL.
+impl Emu {
+    /// Attach to a running emulator
     ///
     /// # Panics
     ///
-    /// Panics if the DLL fails to open, probably because the file doesn't exist or the DLL
-    /// isn't a proper libsm64 DLL.
-    ///
-    /// # Safety
-    ///
-    /// This method is inherently unsafe:
-    /// - If the DLL image is modified (either on disk before load or in memory) from anywhere
-    ///   except this [Game], this is UB.
-    /// - The DLL can easily execute arbitrary code.
+    /// Panics if attachment fails, probably because there is no running process with the given
+    /// PID.
     #[track_caller]
-    pub unsafe fn new(dll_path: &str) -> Self {
-        match Self::try_new(dll_path) {
+    pub fn attach(
+        pid: u32,
+        base_address: usize,
+        memory_size: usize,
+        sm64_version: SM64Version,
+    ) -> Self {
+        match Self::try_attach(pid, base_address, memory_size, sm64_version) {
             Ok(this) => this,
-            Err(error) => panic!("Error:\n  failed to open {}:\n  {}\n", dll_path, error),
+            Err(error) => panic!("Error:\n  failed to attach to {}:\n  {}\n", pid, error),
         }
     }
 
-    /// Load a libsm64 DLL.
+    /// Attach to a running emulator
     ///
-    /// Returns an error if the DLL fails to open, probably because the file doesn't exist or
-    /// the DLL isn't a proper libsm64 DLL.
+    /// # Panics
     ///
-    /// # Safety
-    ///
-    /// This method is inherently unsafe:
-    /// - If the DLL image is modified (either on disk before load or in memory) from anywhere
-    ///   except this [Game], this is UB.
-    /// - The DLL can easily execute arbitrary code.
-    pub unsafe fn try_new(dll_path: &str) -> Result<Self, Error> {
-        let mut layout = DllLayout::read(&dll_path)?.data_layout;
-        layout.add_sm64_extras()?;
+    /// Returns an error if attachment fails, probably because there is no running process with
+    /// the given PID.
+    pub fn try_attach(
+        pid: u32,
+        base_address: usize,
+        memory_size: usize,
+        sm64_version: SM64Version,
+    ) -> Result<Self, Error> {
+        let mut layout = load_sm64_n64_layout(&sm64_version.to_string().to_lowercase())?;
         let layout = Arc::new(layout);
 
-        let (memory, base_slot) = DllGameMemory::load(dll_path, "sm64_init", "sm64_update")?;
+        let memory = EmuMemory::attach(pid, base_address, memory_size)?;
         let memory = Arc::new(memory);
 
         let symbols_by_address = layout
             .globals
-            .keys()
-            .filter_map(|name| memory.symbol_address(name).map(|addr| (addr, name.clone())))
+            .iter()
+            .filter_map(|(name, value)| {
+                value
+                    .address
+                    .map(|addr| (Address(addr as usize), name.clone()))
+            })
             .collect();
 
-        let data_path_cache = DataPathCache::new(&memory, &layout);
+        let data_path_cache = DataPathCache::new(&Arc::new(EmptySymbolLookup), &layout);
 
         Ok(Self {
             id: Arc::new(()),
             layout,
             memory,
             symbols_by_address,
-            base_slot_frame: 0,
-            base_slot,
             data_path_cache,
-            rerecords: 0,
         })
     }
 
@@ -138,7 +134,7 @@ impl Game {
     /// Returns an error if the path fails to compile or reading from memory fails.
     pub fn try_read(&self, path: &str) -> Result<Value, Error> {
         let path = self.data_path_cache.global(path)?;
-        let value = path.read(&self.memory.with_slot(&self.base_slot))?;
+        let value = path.read(&*self.memory)?;
         Ok(value)
     }
 
@@ -159,8 +155,7 @@ impl Game {
     ///
     /// Returns an error if reading from memory fails.
     pub fn try_read_string_at(&self, address: Address) -> Result<Vec<u8>, Error> {
-        let memory = self.memory.with_slot(&self.base_slot);
-        let bytes = memory.read_string(address)?;
+        let bytes = self.memory.read_string(address)?;
         Ok(bytes)
     }
 
@@ -192,7 +187,7 @@ impl Game {
     /// Returns an error if the path fails to compile or reading from memory fails.
     pub fn try_address(&self, path: &str) -> Result<Option<Address>, Error> {
         let path = self.data_path_cache.global(path)?;
-        let address = path.address(&self.memory.with_slot(&self.base_slot))?;
+        let address = path.address(&*self.memory)?;
         Ok(address)
     }
 
@@ -226,7 +221,7 @@ impl Game {
     ///
     /// Panics if the path fails to compile or type resolution fails.
     pub fn try_data_type(&self, path: &str) -> Result<DataType, Error> {
-        let path = DataPath::compile(&self.layout, &self.memory, path)?;
+        let path = DataPath::compile(&self.layout, &EmptySymbolLookup, path)?;
         let data_type = path.concrete_type();
         let simplified = simplified_data_type(&self.layout, &data_type)?;
         Ok(simplified)
@@ -254,7 +249,8 @@ impl Game {
     /// Returns an error if the data path fails to compile or the write fails.
     pub fn try_write(&mut self, path: &str, value: Value) -> Result<(), Error> {
         let path = self.data_path_cache.global(path)?;
-        path.write(&mut self.memory.with_slot_mut(&mut self.base_slot), value)?;
+        let mut memory: &EmuMemory = &*self.memory;
+        path.write(&mut memory, value)?;
         Ok(())
     }
 

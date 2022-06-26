@@ -45,6 +45,7 @@
 )]
 
 pub use data_type::*;
+pub use emu::*;
 pub use error::*;
 pub use game::*;
 pub use lock::*;
@@ -59,6 +60,7 @@ pub use wafel_data_type::{
 mod data_cache;
 mod data_path_cache;
 mod data_type;
+mod emu;
 mod error;
 mod frame_log;
 mod game;

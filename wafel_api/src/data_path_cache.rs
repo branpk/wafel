@@ -5,21 +5,21 @@ use std::{
 
 use wafel_data_path::{DataPathError, GlobalDataPath, LocalDataPath};
 use wafel_layout::DataLayout;
-use wafel_memory::DllGameMemory;
+use wafel_memory::{DllGameMemory, SymbolLookup};
 
 /// A cache for data path compilation.
 #[derive(Debug)]
-pub(crate) struct DataPathCache {
-    memory: Arc<DllGameMemory>,
+pub(crate) struct DataPathCache<S = DllGameMemory> {
+    symbol_lookup: Arc<S>,
     layout: Arc<DataLayout>,
     globals: Mutex<HashMap<String, Arc<GlobalDataPath>>>,
     locals: Mutex<HashMap<String, Arc<LocalDataPath>>>,
 }
 
-impl DataPathCache {
-    pub(crate) fn new(memory: &Arc<DllGameMemory>, layout: &Arc<DataLayout>) -> Self {
+impl<S: SymbolLookup> DataPathCache<S> {
+    pub(crate) fn new(symbol_lookup: &Arc<S>, layout: &Arc<DataLayout>) -> Self {
         Self {
-            memory: Arc::clone(memory),
+            symbol_lookup: Arc::clone(symbol_lookup),
             layout: Arc::clone(layout),
             globals: Mutex::new(HashMap::new()),
             locals: Mutex::new(HashMap::new()),
@@ -31,7 +31,11 @@ impl DataPathCache {
         match cache.get(source) {
             Some(path) => Ok(Arc::clone(path)),
             None => {
-                let path = Arc::new(GlobalDataPath::compile(&self.layout, &self.memory, source)?);
+                let path = Arc::new(GlobalDataPath::compile(
+                    &self.layout,
+                    &self.symbol_lookup,
+                    source,
+                )?);
                 cache.insert(source.to_string(), path.clone());
                 Ok(path)
             }
@@ -43,7 +47,11 @@ impl DataPathCache {
         match cache.get(source) {
             Some(path) => Ok(Arc::clone(path)),
             None => {
-                let path = Arc::new(LocalDataPath::compile(&self.layout, &self.memory, source)?);
+                let path = Arc::new(LocalDataPath::compile(
+                    &self.layout,
+                    &self.symbol_lookup,
+                    source,
+                )?);
                 cache.insert(source.to_string(), path.clone());
                 Ok(path)
             }

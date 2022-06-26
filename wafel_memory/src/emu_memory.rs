@@ -83,7 +83,7 @@ impl EmuMemory {
         Ok(())
     }
 
-    fn write_bytes(&mut self, address: Address, buffer: &[u8]) -> Result<(), MemoryError> {
+    fn write_bytes(&self, address: Address, buffer: &[u8]) -> Result<(), MemoryError> {
         let process_address = self.validate_address(address, buffer.len())?;
         self.handle
             .put_address(process_address, buffer)
@@ -116,7 +116,7 @@ impl EmuMemory {
         Ok(u8::from_ne_bytes(bytes))
     }
 
-    fn write_u8(&mut self, address: Address, value: u8) -> Result<(), MemoryError> {
+    fn write_u8(&self, address: Address, value: u8) -> Result<(), MemoryError> {
         self.check_align(address, 1)?;
         let address = self.swap_1(address);
         let bytes = value.to_ne_bytes();
@@ -141,7 +141,7 @@ impl EmuMemory {
         Ok(u16::from_ne_bytes(bytes))
     }
 
-    fn write_u16(&mut self, address: Address, value: u16) -> Result<(), MemoryError> {
+    fn write_u16(&self, address: Address, value: u16) -> Result<(), MemoryError> {
         self.check_align(address, 2)?;
         let address = self.swap_2(address);
         let bytes = value.to_ne_bytes();
@@ -156,7 +156,7 @@ impl EmuMemory {
         Ok(u32::from_ne_bytes(bytes))
     }
 
-    fn write_u32(&mut self, address: Address, value: u32) -> Result<(), MemoryError> {
+    fn write_u32(&self, address: Address, value: u32) -> Result<(), MemoryError> {
         self.check_align(address, 4)?;
         let bytes = value.to_ne_bytes();
         self.write_bytes(address, &bytes)?;
@@ -172,7 +172,7 @@ impl EmuMemory {
         Ok((upper as u64) << 32 | lower as u64)
     }
 
-    fn write_u64(&mut self, address: Address, value: u64) -> Result<(), MemoryError> {
+    fn write_u64(&self, address: Address, value: u64) -> Result<(), MemoryError> {
         self.check_align(address, 4)?;
         let upper = ((value >> 32) as u32).to_ne_bytes();
         let lower = (value as u32).to_ne_bytes();
@@ -184,7 +184,7 @@ impl EmuMemory {
     }
 }
 
-impl MemoryRead for EmuMemory {
+impl MemoryRead for &EmuMemory {
     fn read_int(&self, address: Address, int_type: IntType) -> Result<IntValue, MemoryError> {
         Ok(match int_type {
             IntType::U8 => self.read_u8(address)?.into(),
@@ -214,7 +214,8 @@ impl MemoryRead for EmuMemory {
     }
 }
 
-impl MemoryWrite for EmuMemory {
+// Implemented for &EmuMemory since shared reference is enough for writing
+impl MemoryWrite for &EmuMemory {
     fn write_int(
         &mut self,
         address: Address,

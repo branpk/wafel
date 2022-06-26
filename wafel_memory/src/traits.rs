@@ -26,6 +26,16 @@ where
     }
 }
 
+/// Implementation of [SymbolLookup] that always returns None.
+#[derive(Debug, Clone, Copy)]
+pub struct EmptySymbolLookup;
+
+impl SymbolLookup for EmptySymbolLookup {
+    fn symbol_address(&self, _symbol: &str) -> Option<Address> {
+        None
+    }
+}
+
 /// Trait for a view of memory that allows reading values by address.
 ///
 /// Endianness should be handled by the implementer.
