@@ -8,6 +8,12 @@ use crate::{
 
 // TODO: Cache hints, e.g. in read_surfaces
 
+#[derive(Debug, Clone)]
+struct ProcessHandleWrapper(ProcessHandle);
+
+unsafe impl Sync for ProcessHandleWrapper {}
+unsafe impl Send for ProcessHandleWrapper {}
+
 // EmuMemory doesn't implement GameMemory because it isn't able to make any guarantees about
 // how/when the process writes to the base slot.
 // In the future, Wafel could have an embedded emulator that it can control, which
@@ -21,7 +27,7 @@ use crate::{
 /// when needed.
 #[derive(Debug, Clone)]
 pub struct EmuMemory {
-    handle: ProcessHandle,
+    handle: ProcessHandleWrapper,
     base_address: usize,
     memory_size: usize,
 }
@@ -38,7 +44,7 @@ impl EmuMemory {
             .try_into_process_handle()
             .map_err(|error| MemoryInitError::ProcessAttachError(error.into()))?;
         Ok(Self {
-            handle,
+            handle: ProcessHandleWrapper(handle),
             base_address,
             memory_size,
         })
@@ -56,6 +62,7 @@ impl EmuMemory {
     fn read_bytes(&self, address: Address, buffer: &mut [u8]) -> Result<(), MemoryError> {
         let process_address = self.validate_address(address, buffer.len())?;
         self.handle
+            .0
             .copy_address(process_address, buffer)
             .map_err(|error| ProcessReadError(error.into()))?;
         Ok(())
@@ -64,6 +71,7 @@ impl EmuMemory {
     fn write_bytes(&self, address: Address, buffer: &[u8]) -> Result<(), MemoryError> {
         let process_address = self.validate_address(address, buffer.len())?;
         self.handle
+            .0
             .put_address(process_address, buffer)
             .map_err(|error| ProcessReadError(error.into()))?;
         Ok(())

@@ -86,8 +86,8 @@ pub(crate) fn simplified_data_type(
         Float(float_type) => DataType::Float(*float_type),
         Pointer { .. } => DataType::Pointer,
         Array { .. } => DataType::Array,
-        Struct { .. } => DataType::Union,
-        Union { .. } => DataType::Struct,
+        Struct { .. } => DataType::Struct,
+        Union { .. } => DataType::Union,
         Name(type_name) => simplified_data_type(layout, layout.data_type(type_name)?)?,
     })
 }

@@ -6,7 +6,7 @@ use std::{
 use pyo3::{basic::CompareOp, prelude::*, PyObjectProtocol};
 use wafel_api as api;
 
-use crate::{err, WafelError};
+use crate::{err, str_to_version, WafelError};
 
 #[pyclass]
 #[derive(Debug)]
@@ -94,19 +94,6 @@ impl PyObjectProtocol for M64Metadata {
 
     fn __repr__(&'p self) -> String {
         format!("{}", self.inner)
-    }
-}
-
-fn str_to_version(version: &str) -> PyResult<api::SM64Version> {
-    match version.to_lowercase().as_str() {
-        "jp" | "j" => Ok(api::SM64Version::JP),
-        "us" | "u" => Ok(api::SM64Version::US),
-        "eu" | "pal" => Ok(api::SM64Version::EU),
-        "sh" => Ok(api::SM64Version::SH),
-        _ => Err(PyErr::new::<WafelError, _>(format!(
-            "unknown SM64 version {:?}",
-            version
-        ))),
     }
 }
 

@@ -42,7 +42,7 @@ pub struct Emu {
 }
 
 impl Emu {
-    /// Attach to a running emulator
+    /// Attach to a running emulator.
     ///
     /// # Panics
     ///
@@ -56,7 +56,7 @@ impl Emu {
         }
     }
 
-    /// Attach to a running emulator
+    /// Attach to a running emulator.
     ///
     /// # Panics
     ///
@@ -234,44 +234,6 @@ impl Emu {
         path.write(&mut self.memory, value)?;
         Ok(())
     }
-
-    //     /// Create a save state using the current game state.
-    //     pub fn save_state(&self) -> SaveState {
-    //         let mut slot = self.memory.create_backup_slot();
-    //         self.memory.copy_slot(&mut slot, &self.base_slot);
-    //         SaveState::new(Arc::clone(&self.id), self.base_slot_frame, slot)
-    //     }
-    //
-    //     /// Load a save state.
-    //     ///
-    //     /// # Panics
-    //     ///
-    //     /// Panics if the save state was produced by a different [Emu] instance.
-    //     #[track_caller]
-    //     pub fn load_state(&mut self, state: &SaveState) {
-    //         if let Err(error) = self.try_load_state(state) {
-    //             panic!("{}", error);
-    //         }
-    //     }
-    //
-    //     /// Load a save state.
-    //     ///
-    //     /// Returns an error if the save state was produced by a different [Emu] instance.
-    //     pub fn try_load_state(&mut self, state: &SaveState) -> Result<(), Error> {
-    //         if !Arc::ptr_eq(&self.id, &state.game_id) {
-    //             return Err(Error::SaveStateMismatch);
-    //         }
-    //         self.memory.copy_slot(&mut self.base_slot, &state.slot);
-    //         self.base_slot_frame = state.frame;
-    //         self.rerecords = self.rerecords.saturating_add(1);
-    //         Ok(())
-    //     }
-    //
-    //     /// Return the number of times that a save state has been loaded using this
-    //     /// API.
-    //     pub fn rerecords(&self) -> u32 {
-    //         self.rerecords
-    //     }
 
     /// Return the value of the macro constant or enum variant with the given name.
     ///

@@ -188,5 +188,63 @@ def save_m64(filename: str, metadata: M64Metadata, inputs: List[Input]) -> None:
 def lock_libsm64(input_filename: str, output_filename: str, rom_filename: str) -> None:
     """Lock a libsm64 DLL so that it requires a ROM to open."""
 
-def unlock_libsm64(input_filename: str, output_filename: str, rom_filename: str) -> None:
+def unlock_libsm64(
+    input_filename: str, output_filename: str, rom_filename: str
+) -> None:
     """Unlock a libsm64 DLL using a ROM."""
+
+class Emu:
+    """An SM64 API that attaches to a running emulator and can read/write to its memory."""
+
+    @staticmethod
+    def attach(pid: int, base_address: int, sm64_version: str) -> None:
+        """Attach to a running emulator.
+
+        Version strings: "jp", "us", "eu", "sh"
+        """
+    def read(self, path: str) -> object:
+        """Read a value from memory.
+
+        See the [wafel_api crate documentation](https://branpk.github.io/wafel/docs/dev/wafel_api/)
+        for the path syntax.
+        """
+    def read_string_at(self, address: Address) -> bytes:
+        """Read a null terminated string from memory at the given address.
+
+        See the [wafel_api crate documentation](https://branpk.github.io/wafel/docs/dev/wafel_api/)
+        for the path syntax.
+        """
+    def address(self, path: str) -> Optional[Address]:
+        """Find the address of a path.
+
+        This method returns `None` if `?` is used in the path and the expression before
+        `?` evaluates to a null pointer.
+
+        See the [wafel_api crate documentation](https://branpk.github.io/wafel/docs/dev/wafel_api/)
+        for the path syntax.
+        """
+    def address_to_symbol(self, address: Address) -> Optional[str]:
+        """Return the name of the global variable at the given address.
+
+        Returns None if no global variable is at the address.
+        """
+    def data_type(self, path: str) -> str:
+        """Return a simplified description of the type of the given variable.
+
+        See the [wafel_api crate documentation](https://branpk.github.io/wafel/docs/dev/wafel_api/)
+        for the path syntax.
+        """
+    def write(self, path: str, value: object) -> None:
+        """Write a value to memory.
+
+        See the [wafel_api crate documentation](https://branpk.github.io/wafel/docs/dev/wafel_api/)
+        for the path syntax.
+        """
+    def constant(self, name: str) -> object:
+        """Return the value of the macro constant or enum variant with the given name."""
+    def mario_action_names(self) -> Dict[int, str]:
+        """Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`)."""
+    def surfaces(self) -> List[Surface]:
+        """Read the currently loaded surfaces."""
+    def object_hitboxes(self) -> List[ObjectHitbox]:
+        """Read the hitboxes for active objects."""

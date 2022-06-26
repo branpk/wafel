@@ -17,9 +17,11 @@ use pyo3::{
 };
 use wafel_api as api;
 
+pub use emu::*;
 pub use game::*;
 pub use m64::*;
 
+mod emu;
 mod game;
 mod m64;
 
@@ -32,6 +34,7 @@ pub fn wafel(py: Python<'_>, m: &PyModule) -> PyResult<()> {
 
     m.add_class::<Game>()?;
     m.add_class::<SaveState>()?;
+    m.add_class::<Emu>()?;
 
     m.add_class::<M64Metadata>()?;
     m.add_class::<Input>()?;
@@ -250,4 +253,17 @@ fn convert_frame_log(
         py_events.push(py_event);
     }
     Ok(py_events)
+}
+
+fn str_to_version(version: &str) -> PyResult<api::SM64Version> {
+    match version.to_lowercase().as_str() {
+        "jp" | "j" => Ok(api::SM64Version::JP),
+        "us" | "u" => Ok(api::SM64Version::US),
+        "eu" | "pal" => Ok(api::SM64Version::EU),
+        "sh" => Ok(api::SM64Version::SH),
+        _ => Err(PyErr::new::<WafelError, _>(format!(
+            "unknown SM64 version {:?}",
+            version
+        ))),
+    }
 }
