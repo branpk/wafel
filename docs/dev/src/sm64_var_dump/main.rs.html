@@ -262,6 +262,38 @@
 <span id="256">256</span>
 <span id="257">257</span>
 <span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fs</span>,
     <span class="ident">io</span>::{<span class="ident">stdout</span>, <span class="ident">BufRead</span>, <span class="ident">BufReader</span>, <span class="ident">BufWriter</span>, <span class="ident">Write</span>},
@@ -352,6 +384,18 @@ To attach to an emulator: --pid &lt;PID&gt; --base &lt;ADDR&gt; --version &lt;VE
                 .<span class="ident">required</span>(<span class="bool-val">true</span>)
                 .<span class="ident">multiple</span>(<span class="bool-val">true</span>),
         )
+        .<span class="ident">arg</span>(
+            <span class="ident">Arg::with_name</span>(<span class="string">&quot;min_frame&quot;</span>)
+                .<span class="ident">long</span>(<span class="string">&quot;min_frame&quot;</span>)
+                .<span class="ident">value_name</span>(<span class="string">&quot;FRAME&quot;</span>)
+                .<span class="ident">help</span>(<span class="string">&quot;min value of global timer to record&quot;</span>),
+        )
+        .<span class="ident">arg</span>(
+            <span class="ident">Arg::with_name</span>(<span class="string">&quot;max_frame&quot;</span>)
+                .<span class="ident">long</span>(<span class="string">&quot;max_frame&quot;</span>)
+                .<span class="ident">value_name</span>(<span class="string">&quot;FRAME&quot;</span>)
+                .<span class="ident">help</span>(<span class="string">&quot;max value of global timer to record&quot;</span>),
+        )
         <span class="comment">// Output options</span>
         .<span class="ident">arg</span>(
             <span class="ident">Arg::with_name</span>(<span class="string">&quot;output&quot;</span>)
@@ -383,6 +427,15 @@ To attach to an emulator: --pid &lt;PID&gt; --base &lt;ADDR&gt; --version &lt;VE
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">streams</span> <span class="op">=</span> <span class="ident">open_streams</span>(<span class="ident">matches</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">vars</span> <span class="op">=</span> <span class="ident">get_vars</span>(<span class="ident">matches</span>)<span class="question-mark">?</span>;
 
+    <span class="kw">let</span> <span class="ident">min_global_timer</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">matches</span>.<span class="ident">value_of</span>(<span class="string">&quot;min_frame&quot;</span>) {
+        <span class="prelude-val">Some</span>(<span class="ident">arg</span>) =&gt; <span class="ident">arg</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
+        <span class="prelude-val">None</span> =&gt; <span class="number">0</span>,
+    };
+    <span class="kw">let</span> <span class="ident">max_global_timer</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">matches</span>.<span class="ident">value_of</span>(<span class="string">&quot;max_frame&quot;</span>) {
+        <span class="prelude-val">Some</span>(<span class="ident">arg</span>) =&gt; <span class="ident">arg</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
+        <span class="prelude-val">None</span> =&gt; <span class="ident">u32::MAX</span>,
+    };
+
     <span class="ident">print_headers</span>(<span class="kw-2">&amp;mut</span> <span class="ident">streams</span>, <span class="kw-2">&amp;</span><span class="ident">vars</span>)<span class="question-mark">?</span>;
 
     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">libsm64_path</span>) <span class="op">=</span> <span class="ident">matches</span>.<span class="ident">value_of</span>(<span class="string">&quot;libsm64&quot;</span>) {
@@ -394,7 +447,10 @@ To attach to an emulator: --pid &lt;PID&gt; --base &lt;ADDR&gt; --version &lt;VE
 
         <span class="macro">eprintln!</span>(<span class="string">&quot;Running {} ({} frames)&quot;</span>, <span class="ident">m64_path</span>, <span class="ident">inputs</span>.<span class="ident">len</span>());
 
-        <span class="ident">print_vars</span>(<span class="kw-2">&amp;mut</span> <span class="ident">streams</span>, <span class="kw-2">&amp;</span><span class="ident">vars</span>, <span class="op">|</span><span class="ident">var</span><span class="op">|</span> <span class="ident">game</span>.<span class="ident">try_read</span>(<span class="ident">var</span>))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">global_timer</span> <span class="op">=</span> <span class="ident">game</span>.<span class="ident">try_read</span>(<span class="string">&quot;gGlobalTimer&quot;</span>)<span class="question-mark">?</span>.<span class="ident">as_int</span>() <span class="kw">as</span> <span class="ident">u32</span>;
+        <span class="kw">if</span> (<span class="ident">min_global_timer</span>..<span class="op">=</span><span class="ident">max_global_timer</span>).<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">global_timer</span>) {
+            <span class="ident">print_vars</span>(<span class="kw-2">&amp;mut</span> <span class="ident">streams</span>, <span class="kw-2">&amp;</span><span class="ident">vars</span>, <span class="op">|</span><span class="ident">var</span><span class="op">|</span> <span class="ident">game</span>.<span class="ident">try_read</span>(<span class="ident">var</span>))<span class="question-mark">?</span>;
+        }
 
         <span class="kw">for</span> <span class="ident">input</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">inputs</span> {
             <span class="ident">game</span>.<span class="ident">try_write</span>(<span class="string">&quot;gControllerPads[0].button&quot;</span>, <span class="ident">input</span>.<span class="ident">buttons</span>.<span class="ident">into</span>())<span class="question-mark">?</span>;
@@ -402,7 +458,12 @@ To attach to an emulator: --pid &lt;PID&gt; --base &lt;ADDR&gt; --version &lt;VE
             <span class="ident">game</span>.<span class="ident">try_write</span>(<span class="string">&quot;gControllerPads[0].stick_y&quot;</span>, <span class="ident">input</span>.<span class="ident">stick_y</span>.<span class="ident">into</span>())<span class="question-mark">?</span>;
             <span class="ident">game</span>.<span class="ident">advance</span>();
 
-            <span class="ident">print_vars</span>(<span class="kw-2">&amp;mut</span> <span class="ident">streams</span>, <span class="kw-2">&amp;</span><span class="ident">vars</span>, <span class="op">|</span><span class="ident">var</span><span class="op">|</span> <span class="ident">game</span>.<span class="ident">try_read</span>(<span class="ident">var</span>))<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">global_timer</span> <span class="op">=</span> <span class="ident">game</span>.<span class="ident">try_read</span>(<span class="string">&quot;gGlobalTimer&quot;</span>)<span class="question-mark">?</span>.<span class="ident">as_int</span>() <span class="kw">as</span> <span class="ident">u32</span>;
+            <span class="kw">if</span> <span class="ident">global_timer</span> <span class="op">&gt;</span> <span class="ident">max_global_timer</span> {
+                <span class="kw">break</span>;
+            } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">global_timer</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">min_global_timer</span> {
+                <span class="ident">print_vars</span>(<span class="kw-2">&amp;mut</span> <span class="ident">streams</span>, <span class="kw-2">&amp;</span><span class="ident">vars</span>, <span class="op">|</span><span class="ident">var</span><span class="op">|</span> <span class="ident">game</span>.<span class="ident">try_read</span>(<span class="ident">var</span>))<span class="question-mark">?</span>;
+            }
         }
 
         <span class="macro">eprintln!</span>(<span class="string">&quot;Finished&quot;</span>);
@@ -422,16 +483,19 @@ To attach to an emulator: --pid &lt;PID&gt; --base &lt;ADDR&gt; --version &lt;VE
 
         <span class="kw">let</span> <span class="ident">emu</span> <span class="op">=</span> <span class="ident">Emu::attach</span>(<span class="ident">pid</span>, <span class="ident">base_address</span>, <span class="ident">sm64_version</span>);
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prev_global_timer</span> <span class="op">=</span> <span class="ident">emu</span>.<span class="ident">read</span>(<span class="string">&quot;gGlobalTimer&quot;</span>);
-        <span class="ident">print_vars</span>(<span class="kw-2">&amp;mut</span> <span class="ident">streams</span>, <span class="kw-2">&amp;</span><span class="ident">vars</span>, <span class="op">|</span><span class="ident">var</span><span class="op">|</span> <span class="ident">emu</span>.<span class="ident">try_read</span>(<span class="ident">var</span>))<span class="question-mark">?</span>;
-
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;no-watch&quot;</span>) {
+        <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;no-watch&quot;</span>) {
+            <span class="ident">print_vars</span>(<span class="kw-2">&amp;mut</span> <span class="ident">streams</span>, <span class="kw-2">&amp;</span><span class="ident">vars</span>, <span class="op">|</span><span class="ident">var</span><span class="op">|</span> <span class="ident">emu</span>.<span class="ident">try_read</span>(<span class="ident">var</span>))<span class="question-mark">?</span>;
+        } <span class="kw">else</span> {
             <span class="macro">eprintln!</span>(<span class="string">&quot;Watching emulation. Press Ctrl-C to stop&quot;</span>);
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prev_global_timer</span> <span class="op">=</span> <span class="prelude-val">None</span>;
             <span class="kw">loop</span> {
-                <span class="kw">let</span> <span class="ident">current_global_timer</span> <span class="op">=</span> <span class="ident">emu</span>.<span class="ident">read</span>(<span class="string">&quot;gGlobalTimer&quot;</span>);
-                <span class="kw">if</span> <span class="ident">current_global_timer</span> <span class="op">!</span><span class="op">=</span> <span class="ident">prev_global_timer</span> {
-                    <span class="ident">prev_global_timer</span> <span class="op">=</span> <span class="ident">current_global_timer</span>;
-                    <span class="ident">print_vars</span>(<span class="kw-2">&amp;mut</span> <span class="ident">streams</span>, <span class="kw-2">&amp;</span><span class="ident">vars</span>, <span class="op">|</span><span class="ident">var</span><span class="op">|</span> <span class="ident">emu</span>.<span class="ident">try_read</span>(<span class="ident">var</span>))<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">current_global_timer</span> <span class="op">=</span> <span class="ident">emu</span>.<span class="ident">try_read</span>(<span class="string">&quot;gGlobalTimer&quot;</span>)<span class="question-mark">?</span>.<span class="ident">as_int</span>() <span class="kw">as</span> <span class="ident">u32</span>;
+                <span class="kw">if</span> <span class="prelude-val">Some</span>(<span class="ident">current_global_timer</span>) <span class="op">!</span><span class="op">=</span> <span class="ident">prev_global_timer</span> {
+                    <span class="ident">prev_global_timer</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">current_global_timer</span>);
+
+                    <span class="kw">if</span> (<span class="ident">min_global_timer</span>..<span class="op">=</span><span class="ident">max_global_timer</span>).<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">current_global_timer</span>) {
+                        <span class="ident">print_vars</span>(<span class="kw-2">&amp;mut</span> <span class="ident">streams</span>, <span class="kw-2">&amp;</span><span class="ident">vars</span>, <span class="op">|</span><span class="ident">var</span><span class="op">|</span> <span class="ident">emu</span>.<span class="ident">try_read</span>(<span class="ident">var</span>))<span class="question-mark">?</span>;
+                    }
                 }
             }
         }
