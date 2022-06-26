@@ -5,7 +5,7 @@ use std::{
 };
 
 use clap::{App, Arg, ArgGroup, ArgMatches};
-use wafel_api::{try_load_m64, Game, Value};
+use wafel_api::{try_load_m64, Emu, Game, SM64Version, Value};
 
 type Error = Box<dyn std::error::Error>;
 type Result<T> = std::result::Result<T, Error>;
@@ -34,8 +34,7 @@ To attach to an emulator: --pid <PID> --base <ADDR> --version <VERSION>
             Arg::with_name("m64")
                 .long("m64")
                 .value_name("FILE")
-                .help("path to .m64 TAS to replay (only for --libsm64)")
-                .requires("libsm64"),
+                .help("path to .m64 TAS to replay (only for --libsm64)"),
         )
         .arg(
             Arg::with_name("pid")
@@ -48,8 +47,7 @@ To attach to an emulator: --pid <PID> --base <ADDR> --version <VERSION>
             Arg::with_name("base")
                 .long("base")
                 .value_name("ADDR")
-                .help("base address (in hex) of the emulator process")
-                .requires("pid"),
+                .help("base address (in hex) of the emulator process"),
         )
         .arg(
             Arg::with_name("version")
@@ -139,6 +137,34 @@ fn run(matches: &ArgMatches) -> Result<()> {
         }
 
         eprintln!("Finished");
+    } else {
+        let pid = matches.value_of("pid").unwrap().parse::<u32>()?;
+        let base_address =
+            usize::from_str_radix(&matches.value_of("base").unwrap().replace("0x", ""), 16)?;
+        let version = matches.value_of("version").unwrap();
+
+        let sm64_version = match version.to_lowercase().as_str() {
+            "jp" | "j" => SM64Version::JP,
+            "us" | "u" => SM64Version::US,
+            "eu" | "pal" => SM64Version::EU,
+            "sh" => SM64Version::SH,
+            _ => return Err(format!("invalid SM64 version: {}", version).into()),
+        };
+
+        let emu = Emu::attach(pid, base_address, sm64_version);
+
+        eprintln!("Watching emulation. Press Ctrl-C to stop");
+
+        let mut prev_global_timer = emu.read("gGlobalTimer");
+        print_vars(&mut streams, &vars, |var| emu.try_read(var))?;
+
+        loop {
+            let current_global_timer = emu.read("gGlobalTimer");
+            if current_global_timer != prev_global_timer {
+                prev_global_timer = current_global_timer;
+                print_vars(&mut streams, &vars, |var| emu.try_read(var))?;
+            }
+        }
     }
 
     Ok(())
