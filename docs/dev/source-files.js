@@ -1,7 +1,7 @@
 var sourcesIndex = {};
 sourcesIndex["libsm64_lock"] = {"name":"","files":["main.rs"]};
 sourcesIndex["sm64_layout"] = {"name":"","files":["main.rs"]};
-sourcesIndex["wafel"] = {"name":"","files":["game.rs","lib.rs","m64.rs"]};
+sourcesIndex["wafel"] = {"name":"","files":["emu.rs","game.rs","lib.rs","m64.rs"]};
 sourcesIndex["wafel_api"] = {"name":"","files":["data_cache.rs","data_path_cache.rs","data_type.rs","emu.rs","error.rs","frame_log.rs","game.rs","lib.rs","lock.rs","m64.rs","mario.rs","object.rs","surface.rs","timeline.rs"]};
 sourcesIndex["wafel_core"] = {"name":"","dirs":[{"name":"graphics","files":["imgui.rs","mod.rs","renderer.rs","scene.rs"]},{"name":"python","files":["error.rs","imgui_input.rs","log.rs","mod.rs","pipeline.rs","value.rs","variable.rs","window.rs"]},{"name":"sm64","files":["data_variables.rs","error.rs","input.rs","mod.rs","pipeline.rs","range_edit.rs","util.rs","variable.rs"]}],"files":["error.rs","geo.rs","lib.rs"]};
 sourcesIndex["wafel_data_path"] = {"name":"","files":["compile.rs","data_path_types.rs","error.rs","lib.rs","parse.rs"]};

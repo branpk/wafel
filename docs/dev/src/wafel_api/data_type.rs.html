@@ -185,8 +185,8 @@
         <span class="ident">Float</span>(<span class="ident">float_type</span>) =&gt; <span class="ident">DataType::Float</span>(<span class="kw-2">*</span><span class="ident">float_type</span>),
         <span class="ident">Pointer</span> { .. } =&gt; <span class="ident">DataType::Pointer</span>,
         <span class="ident">Array</span> { .. } =&gt; <span class="ident">DataType::Array</span>,
-        <span class="ident">Struct</span> { .. } =&gt; <span class="ident">DataType::Union</span>,
-        <span class="ident">Union</span> { .. } =&gt; <span class="ident">DataType::Struct</span>,
+        <span class="ident">Struct</span> { .. } =&gt; <span class="ident">DataType::Struct</span>,
+        <span class="ident">Union</span> { .. } =&gt; <span class="ident">DataType::Union</span>,
         <span class="ident">Name</span>(<span class="ident">type_name</span>) =&gt; <span class="ident">simplified_data_type</span>(<span class="ident">layout</span>, <span class="ident">layout</span>.<span class="ident">data_type</span>(<span class="ident">type_name</span>)<span class="question-mark">?</span>)<span class="question-mark">?</span>,
     })
 }

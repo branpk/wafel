@@ -210,19 +210,6 @@
 <span id="204">204</span>
 <span id="205">205</span>
 <span id="206">206</span>
-<span id="207">207</span>
-<span id="208">208</span>
-<span id="209">209</span>
-<span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
-<span id="217">217</span>
-<span id="218">218</span>
-<span id="219">219</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections::hash_map::DefaultHasher</span>,
     <span class="ident">hash</span>::{<span class="ident">Hash</span>, <span class="ident">Hasher</span>},
@@ -231,7 +218,7 @@
 <span class="kw">use</span> <span class="ident">pyo3</span>::{<span class="ident">basic::CompareOp</span>, <span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">PyObjectProtocol</span>};
 <span class="kw">use</span> <span class="ident">wafel_api</span> <span class="kw">as</span> <span class="ident">api</span>;
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">err</span>, <span class="ident">WafelError</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">err</span>, <span class="ident">str_to_version</span>, <span class="ident">WafelError</span>};
 
 <span class="attribute">#[<span class="ident">pyclass</span>]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
@@ -319,19 +306,6 @@
 
     <span class="kw">fn</span> <span class="ident">__repr__</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;p</span> <span class="self">self</span>) -&gt; <span class="ident">String</span> {
         <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="ident">inner</span>)
-    }
-}
-
-<span class="kw">fn</span> <span class="ident">str_to_version</span>(<span class="ident">version</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">PyResult</span><span class="op">&lt;</span><span class="ident">api::SM64Version</span><span class="op">&gt;</span> {
-    <span class="kw">match</span> <span class="ident">version</span>.<span class="ident">to_lowercase</span>().<span class="ident">as_str</span>() {
-        <span class="string">&quot;jp&quot;</span> <span class="op">|</span> <span class="string">&quot;j&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">api::SM64Version::JP</span>),
-        <span class="string">&quot;us&quot;</span> <span class="op">|</span> <span class="string">&quot;u&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">api::SM64Version::US</span>),
-        <span class="string">&quot;eu&quot;</span> <span class="op">|</span> <span class="string">&quot;pal&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">api::SM64Version::EU</span>),
-        <span class="string">&quot;sh&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">api::SM64Version::SH</span>),
-        <span class="kw">_</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">PyErr::new</span>::<span class="op">&lt;</span><span class="ident">WafelError</span>, <span class="kw">_</span><span class="op">&gt;</span>(<span class="macro">format!</span>(
-            <span class="string">&quot;unknown SM64 version {:?}&quot;</span>,
-            <span class="ident">version</span>
-        ))),
     }
 }
 

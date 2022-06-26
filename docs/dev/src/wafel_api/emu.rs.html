@@ -313,44 +313,6 @@
 <span id="307">307</span>
 <span id="308">308</span>
 <span id="309">309</span>
-<span id="310">310</span>
-<span id="311">311</span>
-<span id="312">312</span>
-<span id="313">313</span>
-<span id="314">314</span>
-<span id="315">315</span>
-<span id="316">316</span>
-<span id="317">317</span>
-<span id="318">318</span>
-<span id="319">319</span>
-<span id="320">320</span>
-<span id="321">321</span>
-<span id="322">322</span>
-<span id="323">323</span>
-<span id="324">324</span>
-<span id="325">325</span>
-<span id="326">326</span>
-<span id="327">327</span>
-<span id="328">328</span>
-<span id="329">329</span>
-<span id="330">330</span>
-<span id="331">331</span>
-<span id="332">332</span>
-<span id="333">333</span>
-<span id="334">334</span>
-<span id="335">335</span>
-<span id="336">336</span>
-<span id="337">337</span>
-<span id="338">338</span>
-<span id="339">339</span>
-<span id="340">340</span>
-<span id="341">341</span>
-<span id="342">342</span>
-<span id="343">343</span>
-<span id="344">344</span>
-<span id="345">345</span>
-<span id="346">346</span>
-<span id="347">347</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">sync::Arc</span>};
 
 <span class="kw">use</span> <span class="ident">wafel_data_path::DataPath</span>;
@@ -395,7 +357,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Emu</span> {
-    <span class="doccomment">/// Attach to a running emulator</span>
+    <span class="doccomment">/// Attach to a running emulator.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Panics</span>
     <span class="doccomment">///</span>
@@ -409,7 +371,7 @@
         }
     }
 
-    <span class="doccomment">/// Attach to a running emulator</span>
+    <span class="doccomment">/// Attach to a running emulator.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Panics</span>
     <span class="doccomment">///</span>
@@ -587,44 +549,6 @@
         <span class="ident">path</span>.<span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">memory</span>, <span class="ident">value</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
-
-    <span class="comment">//     /// Create a save state using the current game state.</span>
-    <span class="comment">//     pub fn save_state(&amp;self) -&gt; SaveState {</span>
-    <span class="comment">//         let mut slot = self.memory.create_backup_slot();</span>
-    <span class="comment">//         self.memory.copy_slot(&amp;mut slot, &amp;self.base_slot);</span>
-    <span class="comment">//         SaveState::new(Arc::clone(&amp;self.id), self.base_slot_frame, slot)</span>
-    <span class="comment">//     }</span>
-    <span class="comment">//</span>
-    <span class="comment">//     /// Load a save state.</span>
-    <span class="comment">//     ///</span>
-    <span class="comment">//     /// # Panics</span>
-    <span class="comment">//     ///</span>
-    <span class="comment">//     /// Panics if the save state was produced by a different [Emu] instance.</span>
-    <span class="comment">//     #[track_caller]</span>
-    <span class="comment">//     pub fn load_state(&amp;mut self, state: &amp;SaveState) {</span>
-    <span class="comment">//         if let Err(error) = self.try_load_state(state) {</span>
-    <span class="comment">//             panic!(&quot;{}&quot;, error);</span>
-    <span class="comment">//         }</span>
-    <span class="comment">//     }</span>
-    <span class="comment">//</span>
-    <span class="comment">//     /// Load a save state.</span>
-    <span class="comment">//     ///</span>
-    <span class="comment">//     /// Returns an error if the save state was produced by a different [Emu] instance.</span>
-    <span class="comment">//     pub fn try_load_state(&amp;mut self, state: &amp;SaveState) -&gt; Result&lt;(), Error&gt; {</span>
-    <span class="comment">//         if !Arc::ptr_eq(&amp;self.id, &amp;state.game_id) {</span>
-    <span class="comment">//             return Err(Error::SaveStateMismatch);</span>
-    <span class="comment">//         }</span>
-    <span class="comment">//         self.memory.copy_slot(&amp;mut self.base_slot, &amp;state.slot);</span>
-    <span class="comment">//         self.base_slot_frame = state.frame;</span>
-    <span class="comment">//         self.rerecords = self.rerecords.saturating_add(1);</span>
-    <span class="comment">//         Ok(())</span>
-    <span class="comment">//     }</span>
-    <span class="comment">//</span>
-    <span class="comment">//     /// Return the number of times that a save state has been loaded using this</span>
-    <span class="comment">//     /// API.</span>
-    <span class="comment">//     pub fn rerecords(&amp;self) -&gt; u32 {</span>
-    <span class="comment">//         self.rerecords</span>
-    <span class="comment">//     }</span>
 
     <span class="doccomment">/// Return the value of the macro constant or enum variant with the given name.</span>
     <span class="doccomment">///</span>
