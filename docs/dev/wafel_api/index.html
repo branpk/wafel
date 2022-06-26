@@ -5,15 +5,23 @@
         </a><h2 class="location"><a href="#">Crate wafel_api</a></h2><div class="sidebar-elems"><div class="block"><ul><li class="version">Version 0.1.0</li><li><a id="all-types" href="all.html">All Items</a></li></ul></div><section><div class="block"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#functions">Functions</a></li><li><a href="#types">Type Definitions</a></li></ul></div></section></div></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../wafel_api/index.html"><img class="rust-logo" src="../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><div id="settings-menu" tabindex="-1">
                                 <a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../wheel.svg"></a></div>
                         </div></form></nav></div><section id="main-content" class="content"><div class="main-heading">
-    <h1 class="fqn"><span class="in-band">Crate <a class="mod" href="#">wafel_api</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span></h1><span class="out-of-band"><a class="srclink" href="../src/wafel_api/lib.rs.html#1-70">source</a> · <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></div><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>The main SM64 API for Wafel.</p>
-<p>This crate provides two different APIs: <a href="struct.Game.html" title="Game">Game</a> and <a href="struct.Timeline.html" title="Timeline">Timeline</a>.</p>
+    <h1 class="fqn"><span class="in-band">Crate <a class="mod" href="#">wafel_api</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span></h1><span class="out-of-band"><a class="srclink" href="../src/wafel_api/lib.rs.html#1-75">source</a> · <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></div><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>The main SM64 API for Wafel.</p>
+<p>This crate provides two simulation APIs: <a href="struct.Game.html" title="Game">Game</a> and <a href="struct.Timeline.html" title="Timeline">Timeline</a>.</p>
+<ul>
+<li>
 <p>The <a href="struct.Game.html" title="Game">Game</a> API uses a traditional frame advance / save state model.</p>
+</li>
+<li>
 <p>The <a href="struct.Timeline.html" title="Timeline">Timeline</a> API is higher level and manages save states internally. It allows accessing
 arbitrary frames in any order. This is the API used by the Wafel application for its
 rewind functionality.</p>
-<p>For now, I would recommend using the <a href="struct.Game.html" title="Game">Game</a> API for brute forcing purposes. The <a href="struct.Timeline.html" title="Timeline">Timeline</a>
+</li>
+</ul>
+<p>For now, I recommend using the <a href="struct.Game.html" title="Game">Game</a> API for brute forcing purposes. The <a href="struct.Timeline.html" title="Timeline">Timeline</a>
 API works, but the algorithm is currently optimized for Wafel’s UI, so it may not be as
 fast in a brute forcing setting.</p>
+<p>The <a href="struct.Emu.html" title="Emu">Emu</a> API attaches to a running emulator and allows reading/writing to its process
+memory.</p>
 <h2 id="data-paths"><a href="#data-paths">Data paths</a></h2>
 <p>Many API methods take in a string <code>path</code> parameter. This string uses a C-like syntax to
 denote a location in memory.</p>
@@ -39,6 +47,8 @@ However, the names may be different if Wafel is out of date from decomp.</p>
 syntax.</p>
 </div></details><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2>
 <div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Address.html" title="wafel_api::Address struct">Address</a></div><div class="item-right docblock-short"><p>A raw pointer value that can be stored in memory.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Emu.html" title="wafel_api::Emu struct">Emu</a></div><div class="item-right docblock-short"><p>An SM64 API that attaches to a running emulator and can read/write to its
+memory.</p>
 </div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Game.html" title="wafel_api::Game struct">Game</a></div><div class="item-right docblock-short"><p>An SM64 API that uses a traditional frame advance / save state model.</p>
 </div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Input.html" title="wafel_api::Input struct">Input</a></div><div class="item-right docblock-short"><p>A set of inputs for a given frame.</p>
 </div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.M64Metadata.html" title="wafel_api::M64Metadata struct">M64Metadata</a></div><div class="item-right docblock-short"><p>Metadata for a .m64 TAS.</p>

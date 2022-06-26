@@ -82,7 +82,7 @@
 <span id="76">76</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">FloatType</span>, <span class="ident">IntType</span>};
 <span class="kw">use</span> <span class="ident">wafel_layout::DataLayout</span>;
-<span class="kw">use</span> <span class="ident">wafel_memory::MemoryRead</span>;
+<span class="kw">use</span> <span class="ident">wafel_memory</span>::{<span class="ident">MemoryRead</span>, <span class="ident">SymbolLookup</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">data_path_cache::DataPathCache</span>, <span class="ident">Error</span>};
 
@@ -97,10 +97,10 @@
     <span class="kw">pub</span> <span class="ident">hitbox_radius</span>: <span class="ident">f32</span>,
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">read_object_hitboxes</span>(
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">read_object_hitboxes</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">SymbolLookup</span><span class="op">&gt;</span>(
     <span class="ident">memory</span>: <span class="kw-2">&amp;</span><span class="kw">impl</span> <span class="ident">MemoryRead</span>,
     <span class="ident">layout</span>: <span class="kw-2">&amp;</span><span class="ident">DataLayout</span>,
-    <span class="ident">data_path_cache</span>: <span class="kw-2">&amp;</span><span class="ident">DataPathCache</span>,
+    <span class="ident">data_path_cache</span>: <span class="kw-2">&amp;</span><span class="ident">DataPathCache</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>,
 ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ObjectHitbox</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">object_pool_addr</span> <span class="op">=</span> <span class="ident">data_path_cache</span>
         .<span class="ident">global</span>(<span class="string">&quot;gObjectPool&quot;</span>)<span class="question-mark">?</span>

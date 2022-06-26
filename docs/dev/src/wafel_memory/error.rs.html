@@ -109,6 +109,18 @@
 <span id="103">103</span>
 <span id="104">104</span>
 <span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">error::Error</span>, <span class="ident">fmt</span>, <span class="ident">io</span>, <span class="ident">sync::Arc</span>};
@@ -132,6 +144,8 @@
     <span class="ident">InvalidAddress</span>,
     <span class="ident">WriteToStaticAddress</span>,
     <span class="ident">NonStaticAddressInStaticView</span>,
+    <span class="ident">ProcessReadError</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">io::Error</span><span class="op">&gt;</span>),
+    <span class="ident">ProcessWriteError</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">io::Error</span><span class="op">&gt;</span>),
 }
 
 <span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">MemoryError</span> {
@@ -162,6 +176,12 @@
             <span class="ident">MemoryError::NonStaticAddressInStaticView</span> =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;using a non-static address through a static memory view&quot;</span>)
             }
+            <span class="ident">MemoryError::ProcessReadError</span>(<span class="ident">error</span>) =&gt; {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;failed to read process memory: {}&quot;</span>, <span class="ident">error</span>)
+            }
+            <span class="ident">MemoryError::ProcessWriteError</span>(<span class="ident">error</span>) =&gt; {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;failed to write process memory: {}&quot;</span>, <span class="ident">error</span>)
+            }
         }
     }
 }
@@ -175,41 +195,45 @@
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">DllLoadError</span> {
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">MemoryInitError</span> {
     <span class="ident">DlOpenError</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">dlopen::Error</span><span class="op">&gt;</span>),
     <span class="ident">IoError</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">io::Error</span><span class="op">&gt;</span>),
     <span class="ident">DllLayoutError</span>(<span class="ident">DllLayoutError</span>),
     <span class="ident">MissingDataSegments</span>,
     <span class="ident">UndefinedSymbol</span>(<span class="ident">String</span>),
+    <span class="ident">ProcessAttachError</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">io::Error</span><span class="op">&gt;</span>),
 }
 
-<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">DllLoadError</span> {
+<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">MemoryInitError</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">DllLoadError::DlOpenError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
-            <span class="ident">DllLoadError::IoError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
-            <span class="ident">DllLoadError::DllLayoutError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
-            <span class="ident">DllLoadError::MissingDataSegments</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;missing data sections .data/.bss&quot;</span>),
-            <span class="ident">DllLoadError::UndefinedSymbol</span>(<span class="ident">name</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;undefined symbol {}&quot;</span>, <span class="ident">name</span>),
+            <span class="ident">MemoryInitError::DlOpenError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
+            <span class="ident">MemoryInitError::IoError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
+            <span class="ident">MemoryInitError::DllLayoutError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
+            <span class="ident">MemoryInitError::MissingDataSegments</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;missing data sections .data/.bss&quot;</span>),
+            <span class="ident">MemoryInitError::UndefinedSymbol</span>(<span class="ident">name</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;undefined symbol {}&quot;</span>, <span class="ident">name</span>),
+            <span class="ident">MemoryInitError::ProcessAttachError</span>(<span class="ident">error</span>) =&gt; {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;failed to attach to process: {}&quot;</span>, <span class="ident">error</span>)
+            }
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Error</span> <span class="kw">for</span> <span class="ident">DllLoadError</span> {}
+<span class="kw">impl</span> <span class="ident">Error</span> <span class="kw">for</span> <span class="ident">MemoryInitError</span> {}
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">dlopen::Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">DllLoadError</span> {
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">dlopen::Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MemoryInitError</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">v</span>: <span class="ident">dlopen::Error</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::DlOpenError</span>(<span class="ident">Arc::new</span>(<span class="ident">v</span>))
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">io::Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">DllLoadError</span> {
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">io::Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MemoryInitError</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">v</span>: <span class="ident">io::Error</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::IoError</span>(<span class="ident">Arc::new</span>(<span class="ident">v</span>))
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">DllLayoutError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">DllLoadError</span> {
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">DllLayoutError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MemoryInitError</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">v</span>: <span class="ident">DllLayoutError</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::DllLayoutError</span>(<span class="ident">v</span>)
     }

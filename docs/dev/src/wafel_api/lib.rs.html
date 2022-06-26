@@ -74,19 +74,27 @@
 <span id="68">68</span>
 <span id="69">69</span>
 <span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
 </pre><pre class="rust"><code><span class="doccomment">//! The main SM64 API for Wafel.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! This crate provides two different APIs: [Game] and [Timeline].</span>
+<span class="doccomment">//! This crate provides two simulation APIs: [Game] and [Timeline].</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! The [Game] API uses a traditional frame advance / save state model.</span>
+<span class="doccomment">//! - The [Game] API uses a traditional frame advance / save state model.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! The [Timeline] API is higher level and manages save states internally. It allows accessing</span>
+<span class="doccomment">//! - The [Timeline] API is higher level and manages save states internally. It allows accessing</span>
 <span class="doccomment">//! arbitrary frames in any order. This is the API used by the Wafel application for its</span>
 <span class="doccomment">//! rewind functionality.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! For now, I would recommend using the [Game] API for brute forcing purposes. The [Timeline]</span>
+<span class="doccomment">//! For now, I recommend using the [Game] API for brute forcing purposes. The [Timeline]</span>
 <span class="doccomment">//! API works, but the algorithm is currently optimized for Wafel&#39;s UI, so it may not be as</span>
 <span class="doccomment">//! fast in a brute forcing setting.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! The [Emu] API attaches to a running emulator and allows reading/writing to its process</span>
+<span class="doccomment">//! memory.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Data paths</span>
 <span class="doccomment">//!</span>
@@ -121,6 +129,7 @@
 )]</span>
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">data_type</span>::<span class="kw-2">*</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">emu</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">error</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">game</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">lock</span>::<span class="kw-2">*</span>;
@@ -135,6 +144,7 @@
 <span class="kw">mod</span> <span class="ident">data_cache</span>;
 <span class="kw">mod</span> <span class="ident">data_path_cache</span>;
 <span class="kw">mod</span> <span class="ident">data_type</span>;
+<span class="kw">mod</span> <span class="ident">emu</span>;
 <span class="kw">mod</span> <span class="ident">error</span>;
 <span class="kw">mod</span> <span class="ident">frame_log</span>;
 <span class="kw">mod</span> <span class="ident">game</span>;

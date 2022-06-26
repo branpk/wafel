@@ -33,6 +33,8 @@
 <span id="27">27</span>
 <span id="28">28</span>
 <span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Abstractions for reading and writing values to game memory.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! This crate defines the [MemoryRead] and [MemoryWrite] traits which can be</span>
@@ -42,7 +44,7 @@
 <span class="doccomment">//! and non-static memory and provides state saving/loading functionality.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Finally it provides [DllGameMemory] which implements [GameMemory] using a</span>
-<span class="doccomment">//! game DLL.</span>
+<span class="doccomment">//! game DLL, and [EmuMemory] which attaches to a running emulator.</span>
 
 <span class="attribute">#![<span class="ident">warn</span>(
     <span class="ident">missing_docs</span>,
@@ -54,11 +56,13 @@
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">generic_associated_types</span>)]</span>
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">dll_memory</span>::<span class="kw-2">*</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">emu_memory</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">error</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">traits</span>::<span class="kw-2">*</span>;
 
 <span class="kw">mod</span> <span class="ident">dll_memory</span>;
 <span class="kw">mod</span> <span class="ident">dll_slot_impl</span>;
+<span class="kw">mod</span> <span class="ident">emu_memory</span>;
 <span class="kw">mod</span> <span class="ident">error</span>;
 <span class="kw">mod</span> <span class="ident">traits</span>;
 <span class="kw">mod</span> <span class="ident">unique_dll</span>;

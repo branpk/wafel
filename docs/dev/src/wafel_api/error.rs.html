@@ -159,13 +159,13 @@
 <span class="kw">use</span> <span class="ident">wafel_data_path</span>::{<span class="ident">DataPathError</span>, <span class="ident">GlobalDataPath</span>};
 <span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">IntValue</span>, <span class="ident">Value</span>, <span class="ident">ValueTypeError</span>};
 <span class="kw">use</span> <span class="ident">wafel_layout</span>::{<span class="ident">DllLayoutError</span>, <span class="ident">LayoutLookupError</span>, <span class="ident">SM64LayoutError</span>};
-<span class="kw">use</span> <span class="ident">wafel_memory</span>::{<span class="ident">DllLoadError</span>, <span class="ident">MemoryError</span>};
+<span class="kw">use</span> <span class="ident">wafel_memory</span>::{<span class="ident">MemoryError</span>, <span class="ident">MemoryInitError</span>};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Error</span> {
     <span class="ident">DllLayoutError</span>(<span class="ident">DllLayoutError</span>),
     <span class="ident">SM64ExtrasError</span>(<span class="ident">SM64LayoutError</span>),
-    <span class="ident">DllLoadError</span>(<span class="ident">DllLoadError</span>),
+    <span class="ident">MemoryInitError</span>(<span class="ident">MemoryInitError</span>),
     <span class="ident">DataPathError</span>(<span class="ident">DataPathError</span>),
     <span class="ident">MemoryError</span>(<span class="ident">MemoryError</span>),
     <span class="ident">ApplyEditError</span> {
@@ -210,7 +210,7 @@
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">Error::DllLayoutError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
             <span class="ident">Error::SM64ExtrasError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
-            <span class="ident">Error::DllLoadError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
+            <span class="ident">Error::MemoryInitError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
             <span class="ident">Error::DataPathError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
             <span class="ident">Error::MemoryError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
             <span class="ident">Error::ApplyEditError</span> { <span class="ident">path</span>, <span class="ident">value</span>, <span class="ident">error</span> } =&gt; {
@@ -271,9 +271,9 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">DllLoadError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">v</span>: <span class="ident">DllLoadError</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::DllLoadError</span>(<span class="ident">v</span>)
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">MemoryInitError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">v</span>: <span class="ident">MemoryInitError</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::MemoryInitError</span>(<span class="ident">v</span>)
     }
 }
 
