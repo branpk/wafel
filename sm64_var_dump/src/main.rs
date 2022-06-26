@@ -55,6 +55,11 @@ To attach to an emulator: --pid <PID> --base <ADDR> --version <VERSION>
                 .value_name("VERSION")
                 .help("SM64 version to use (us/jp/eu/sh). Only needed for emulator attachment"),
         )
+        .arg(
+            Arg::with_name("no-watch")
+                .long("no-watch")
+                .help("Print the values once rather than watching emulation"),
+        )
         .group(
             ArgGroup::with_name("game-option")
                 .args(&["libsm64", "pid"])
@@ -153,16 +158,17 @@ fn run(matches: &ArgMatches) -> Result<()> {
 
         let emu = Emu::attach(pid, base_address, sm64_version);
 
-        eprintln!("Watching emulation. Press Ctrl-C to stop");
-
         let mut prev_global_timer = emu.read("gGlobalTimer");
         print_vars(&mut streams, &vars, |var| emu.try_read(var))?;
 
-        loop {
-            let current_global_timer = emu.read("gGlobalTimer");
-            if current_global_timer != prev_global_timer {
-                prev_global_timer = current_global_timer;
-                print_vars(&mut streams, &vars, |var| emu.try_read(var))?;
+        if !matches.is_present("no-watch") {
+            eprintln!("Watching emulation. Press Ctrl-C to stop");
+            loop {
+                let current_global_timer = emu.read("gGlobalTimer");
+                if current_global_timer != prev_global_timer {
+                    prev_global_timer = current_global_timer;
+                    print_vars(&mut streams, &vars, |var| emu.try_read(var))?;
+                }
             }
         }
     }
