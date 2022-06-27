@@ -94,7 +94,9 @@ async fn run() -> Result<(), Box<dyn Error>> {
                 WindowEvent::Resized(size) => {
                     config.width = size.width;
                     config.height = size.height;
-                    surface.configure(&device, &config);
+                    if config.width != 0 && config.height != 0 {
+                        surface.configure(&device, &config);
+                    }
                 }
                 WindowEvent::CloseRequested => {
                     *control_flow = ControlFlow::Exit;
@@ -105,68 +107,73 @@ async fn run() -> Result<(), Box<dyn Error>> {
                 _ => {}
             },
             Event::MainEventsCleared => {
-                let frame = surface
-                    .get_current_texture()
-                    .expect("failed to acquire next swap chain texture");
-                let output_view = frame
-                    .texture
-                    .create_view(&wgpu::TextureViewDescriptor::default());
+                if config.width != 0 && config.height != 0 {
+                    let frame = surface
+                        .get_current_texture()
+                        .expect("failed to acquire next swap chain texture");
+                    let output_view = frame
+                        .texture
+                        .create_view(&wgpu::TextureViewDescriptor::default());
 
-                if first_render {
-                    // Draw a black screen as quickly as possileb
-                    first_render = false;
-                } else {
-                    let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
-                        label: None,
-                        size: wgpu::Extent3d {
-                            width: config.width,
-                            height: config.height,
-                            depth_or_array_layers: 1,
-                        },
-                        mip_level_count: 1,
-                        sample_count: 1,
-                        dimension: wgpu::TextureDimension::D2,
-                        format: wgpu::TextureFormat::Depth24Plus,
-                        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-                    });
-                    let depth_texture_view =
-                        depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-                    if held {
-                        let render_data = sm64_update_and_render(&memory, &mut base_slot, 640, 480)
-                            .expect("failed to render game");
-                        renderer.prepare(&device, &queue, output_format, &render_data);
-                    }
-
-                    let mut encoder = device
-                        .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-
-                    {
-                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    if first_render {
+                        // Draw a black screen as quickly as possileb
+                        first_render = false;
+                    } else {
+                        let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
                             label: None,
-                            color_attachments: &[wgpu::RenderPassColorAttachment {
-                                view: &output_view,
-                                resolve_target: None,
-                                ops: wgpu::Operations::default(),
-                            }],
-                            depth_stencil_attachment: Some(
-                                wgpu::RenderPassDepthStencilAttachment {
-                                    view: &depth_texture_view,
-                                    depth_ops: Some(wgpu::Operations {
-                                        load: wgpu::LoadOp::Clear(1.0),
-                                        store: true,
-                                    }),
-                                    stencil_ops: None,
-                                },
-                            ),
+                            size: wgpu::Extent3d {
+                                width: config.width,
+                                height: config.height,
+                                depth_or_array_layers: 1,
+                            },
+                            mip_level_count: 1,
+                            sample_count: 1,
+                            dimension: wgpu::TextureDimension::D2,
+                            format: wgpu::TextureFormat::Depth24Plus,
+                            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
                         });
-                        renderer.render(&mut rp);
+                        let depth_texture_view =
+                            depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+                        if held {
+                            let render_data =
+                                sm64_update_and_render(&memory, &mut base_slot, 640, 480)
+                                    .expect("failed to render game");
+                            renderer.prepare(&device, &queue, output_format, &render_data);
+                        }
+
+                        let mut encoder =
+                            device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                                label: None,
+                            });
+
+                        {
+                            let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                label: None,
+                                color_attachments: &[wgpu::RenderPassColorAttachment {
+                                    view: &output_view,
+                                    resolve_target: None,
+                                    ops: wgpu::Operations::default(),
+                                }],
+                                depth_stencil_attachment: Some(
+                                    wgpu::RenderPassDepthStencilAttachment {
+                                        view: &depth_texture_view,
+                                        depth_ops: Some(wgpu::Operations {
+                                            load: wgpu::LoadOp::Clear(1.0),
+                                            store: true,
+                                        }),
+                                        stencil_ops: None,
+                                    },
+                                ),
+                            });
+                            renderer.render(&mut rp);
+                        }
+
+                        queue.submit([encoder.finish()]);
                     }
 
-                    queue.submit([encoder.finish()]);
+                    frame.present();
                 }
-
-                frame.present();
             }
             _ => {}
         }

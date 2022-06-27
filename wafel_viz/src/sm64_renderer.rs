@@ -191,21 +191,12 @@ impl SM64Renderer {
                 location += 1;
             }
             for input_index in 0..cc_features.num_inputs {
-                if cc_features.opt_alpha {
-                    writeln!(
-                        s,
-                        "    @location({}) input{}: vec4<f32>,",
-                        location, input_index
-                    )?;
-                    location += 1;
-                } else {
-                    writeln!(
-                        s,
-                        "    @location({}) input{}: vec3<f32>,",
-                        location, input_index
-                    )?;
-                    location += 1;
-                }
+                writeln!(
+                    s,
+                    "    @location({}) input{}: vec4<f32>,",
+                    location, input_index
+                )?;
+                location += 1;
             }
             writeln!(s, "}}")?;
             writeln!(s)?;
@@ -223,7 +214,15 @@ impl SM64Renderer {
                 writeln!(s, "    out.fog = in.fog;")?;
             }
             for input_index in 0..cc_features.num_inputs {
-                writeln!(s, "   out.input{} = in.input{};", input_index, input_index)?
+                if cc_features.opt_alpha {
+                    writeln!(s, "   out.input{} = in.input{};", input_index, input_index)?
+                } else {
+                    writeln!(
+                        s,
+                        "   out.input{} = vec4<f32>(in.input{}, 0.0);",
+                        input_index, input_index
+                    )?
+                }
             }
             writeln!(s, "    return out;")?;
             writeln!(s, "}}")?;
