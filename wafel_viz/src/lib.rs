@@ -11,6 +11,8 @@ use winit::{
     window::WindowBuilder,
 };
 
+use crate::render_api::{decode_shader_id, CCFeatures};
+
 mod render_api;
 mod sm64_render_data;
 mod sm64_renderer;
@@ -114,9 +116,10 @@ async fn run() -> Result<(), Box<dyn Error>> {
                     // Draw a black screen as quickly as possileb
                     first_render = false;
                 } else {
-                    // let render_data = sm64_update_and_render(&memory, &mut base_slot, 640, 480)
-                    //     .expect("failed to render game");
-                    // renderer.prepare(&device, &render_data);
+                    // let render_data = backend
+                    //         .update_and_render(&memory, &mut base_slot, 640, 480)
+                    //         .expect("failed to render game");
+                    //     renderer.prepare(&device, &render_data);
 
                     let mut encoder = device
                         .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });

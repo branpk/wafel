@@ -1,6 +1,10 @@
+use std::mem;
+
 use wafel_memory::{DllGameMemory, DllSlot, MemoryError};
 
-use crate::render_api::{update_and_render_with_backend, RenderBackend, ShaderId, ShaderInfo};
+use crate::render_api::{
+    update_and_render_with_backend, CCFeatures, RenderBackend, ShaderId, ShaderInfo,
+};
 
 #[derive(Debug, Default)]
 pub struct SM64RenderData {
@@ -19,6 +23,8 @@ pub fn sm64_update_and_render(
     width: u32,
     height: u32,
 ) -> Result<SM64RenderData, MemoryError> {
+    // We create a new backend every frame to ensure that gfx_pc isn't relying on rendering
+    // state across frames (o/w frame rewind might break)
     let mut backend = SM64Backend::default();
     update_and_render_with_backend(memory, base_slot, &mut backend, width, height)?;
     Ok(backend.data)
@@ -26,7 +32,14 @@ pub fn sm64_update_and_render(
 
 #[derive(Debug, Default)]
 struct SM64Backend {
+    shader_id: Option<u32>,
     data: SM64RenderData,
+}
+
+#[derive(Debug)]
+struct Shader {
+    id: u32,
+    features: CCFeatures,
 }
 
 impl RenderBackend for SM64Backend {
@@ -36,52 +49,55 @@ impl RenderBackend for SM64Backend {
 
     fn unload_shader(&mut self, old_prg: ShaderId) {
         // eprintln!("unload_shader({:?})", old_prg);
+        self.shader_id = None;
     }
 
     fn load_shader(&mut self, new_prg: ShaderId) {
-        eprintln!("load_shader({:?})", new_prg);
+        let shader_id = new_prg.0 as u32;
+        eprintln!("load_shader({:#010X})", shader_id);
+        self.shader_id = Some(shader_id);
     }
 
     fn create_and_load_new_shader(&mut self, shader_id: u32) -> ShaderId {
-        // eprintln!("create_and_load_new_shader({:#08X})", shader_id);
-        todo!()
+        eprintln!("create_and_load_new_shader({:#010X})", shader_id);
+        self.shader_id = Some(shader_id);
+        ShaderId(shader_id as usize)
     }
 
     fn lookup_shader(&self, shader_id: u32) -> Option<ShaderId> {
-        // eprintln!("lookup_shader({:#08X})", shader_id);
-        let shader: ShaderId = ShaderId(12);
-        // eprintln!("  -> {:?}", shader);
-        Some(shader)
+        // eprintln!("lookup_shader({:#010X})", shader_id);
+        Some(ShaderId(shader_id as usize))
     }
 
     fn shader_get_info(&self, prg: ShaderId) -> ShaderInfo {
-        eprintln!("shader_get_info({:?})", prg);
+        // eprintln!("shader_get_info({:?})", prg);
+        let shader_id = prg.0 as u32;
         let info = ShaderInfo {
             num_inputs: 0,
             used_textures: [false, false],
         };
-        eprintln!("  -> {:?}", info);
+        // eprintln!("  -> {:?}", info);
         info
     }
 
     fn new_texture(&mut self) -> u32 {
-        eprintln!("new_texture()");
+        // eprintln!("new_texture()");
         todo!()
     }
 
     fn select_texture(&mut self, tile: i32, texture_id: u32) {
-        eprintln!("select_texture({}, {})", tile, texture_id);
+        // eprintln!("select_texture({}, {})", tile, texture_id);
     }
 
     fn upload_texture(&mut self, rgba32_buf: &[u8], width: i32, height: i32) {
-        eprintln!("upload_texture({}, {})", width, height);
+        // eprintln!("upload_texture({}, {})", width, height);
     }
 
     fn set_sampler_parameters(&mut self, sampler: i32, linear_filter: bool, cms: u32, cmt: u32) {
-        eprintln!(
-            "set_sampler_parameters({}, {}, {}, {})",
-            sampler, linear_filter, cms, cmt
-        );
+        // eprintln!(
+        //     "set_sampler_parameters({}, {}, {}, {})",
+        //     sampler, linear_filter, cms, cmt
+        // );
     }
 
     fn set_depth_test(&mut self, depth_test: bool) {
@@ -109,16 +125,16 @@ impl RenderBackend for SM64Backend {
     }
 
     fn draw_triangles(&mut self, buf_vbo: &[f32], buf_vbo_num_tris: usize) {
-        let stride = buf_vbo.len() / (3 * buf_vbo_num_tris);
-        if stride != 4 {
-            eprintln!("stride = {}", stride);
-        }
-        // eprintln!(
-        //     "draw_triangles({}, {}, stride={})",
-        //     buf_vbo.len(),
-        //     buf_vbo_num_tris,
-        //     buf_vbo.len() / (3 * buf_vbo_num_tris)
-        // );
+        // let stride = buf_vbo.len() / (3 * buf_vbo_num_tris);
+        // if stride != 4 {
+        //     eprintln!("stride = {}", stride);
+        // }
+        eprintln!(
+            "  draw_triangles({}, {}, stride={})",
+            buf_vbo.len(),
+            buf_vbo_num_tris,
+            buf_vbo.len() / (3 * buf_vbo_num_tris)
+        );
         self.data.vertex_buffers.push(VertexBuffer {
             buffer: buf_vbo.to_vec(),
             num_tris: buf_vbo_num_tris,
