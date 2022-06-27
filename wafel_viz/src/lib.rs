@@ -116,6 +116,22 @@ async fn run() -> Result<(), Box<dyn Error>> {
                     // Draw a black screen as quickly as possileb
                     first_render = false;
                 } else {
+                    let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
+                        label: None,
+                        size: wgpu::Extent3d {
+                            width: config.width,
+                            height: config.height,
+                            depth_or_array_layers: 1,
+                        },
+                        mip_level_count: 1,
+                        sample_count: 1,
+                        dimension: wgpu::TextureDimension::D2,
+                        format: wgpu::TextureFormat::Depth24Plus,
+                        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                    });
+                    let depth_texture_view =
+                        depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
                     if held {
                         let render_data = sm64_update_and_render(&memory, &mut base_slot, 640, 480)
                             .expect("failed to render game");
@@ -133,7 +149,16 @@ async fn run() -> Result<(), Box<dyn Error>> {
                                 resolve_target: None,
                                 ops: wgpu::Operations::default(),
                             }],
-                            depth_stencil_attachment: None,
+                            depth_stencil_attachment: Some(
+                                wgpu::RenderPassDepthStencilAttachment {
+                                    view: &depth_texture_view,
+                                    depth_ops: Some(wgpu::Operations {
+                                        load: wgpu::LoadOp::Clear(1.0),
+                                        store: true,
+                                    }),
+                                    stencil_ops: None,
+                                },
+                            ),
                         });
                         renderer.render(&mut rp);
                     }

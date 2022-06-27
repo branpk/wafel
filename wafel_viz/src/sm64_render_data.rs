@@ -26,8 +26,10 @@ pub struct Command {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct RenderState {
-    pub shader_id: u32,
     pub texture_index: Option<usize>,
+    pub shader_id: u32,
+    pub depth_test: bool,
+    pub depth_mask: bool,
 }
 
 pub fn sm64_update_and_render(
@@ -45,9 +47,12 @@ pub fn sm64_update_and_render(
 
 #[derive(Debug, Default)]
 struct SM64Backend {
+    data: SM64RenderData,
+
     selected_shader_id: Option<u32>,
     selected_texture_index: Option<usize>,
-    data: SM64RenderData,
+    depth_test: bool,
+    depth_mask: bool,
 }
 
 impl RenderBackend for SM64Backend {
@@ -122,10 +127,12 @@ impl RenderBackend for SM64Backend {
 
     fn set_depth_test(&mut self, depth_test: bool) {
         // eprintln!("set_depth_test({})", depth_test);
+        self.depth_test = depth_test;
     }
 
     fn set_depth_mask(&mut self, z_upd: bool) {
         // eprintln!("set_depth_mask({})", z_upd);
+        self.depth_mask = z_upd;
     }
 
     fn set_zmode_decal(&mut self, zmode_decal: bool) {
@@ -157,8 +164,10 @@ impl RenderBackend for SM64Backend {
         // );
         let shader_id = self.selected_shader_id.expect("no selected shader");
         let state = RenderState {
-            shader_id,
             texture_index: self.selected_texture_index,
+            shader_id,
+            depth_test: self.depth_test,
+            depth_mask: self.depth_mask,
         };
         self.data.commands.push(Command {
             state,

@@ -15,8 +15,25 @@ use crate::{
 pub struct SM64Renderer {
     texture_bind_group_layout: wgpu::BindGroupLayout,
     texture_bind_groups: Vec<Option<wgpu::BindGroup>>,
-    shader_id_to_pipeline: HashMap<u32, wgpu::RenderPipeline>,
+    pipelines: HashMap<PipelineKey, wgpu::RenderPipeline>,
     commands: Vec<Command>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct PipelineKey {
+    shader_id: u32,
+    depth_test: bool,
+    depth_mask: bool,
+}
+
+impl From<RenderState> for PipelineKey {
+    fn from(state: RenderState) -> Self {
+        Self {
+            shader_id: state.shader_id,
+            depth_test: state.depth_test,
+            depth_mask: state.depth_mask,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -61,7 +78,7 @@ impl SM64Renderer {
         Self {
             texture_bind_group_layout,
             texture_bind_groups: Vec::new(),
-            shader_id_to_pipeline: HashMap::new(),
+            pipelines: HashMap::new(),
             commands: Vec::new(),
         }
     }
@@ -70,8 +87,9 @@ impl SM64Renderer {
         &self,
         device: &wgpu::Device,
         output_format: wgpu::TextureFormat,
-        shader_id: u32,
+        key: PipelineKey,
     ) -> Result<wgpu::RenderPipeline, fmt::Error> {
+        let shader_id = key.shader_id;
         let cc_features = decode_shader_id(shader_id);
         let use_texturing = cc_features.used_textures.iter().any(|&b| b);
 
@@ -235,7 +253,17 @@ impl SM64Renderer {
                 buffers: &[vertex_buffer_layout],
             },
             primitive: wgpu::PrimitiveState::default(),
-            depth_stencil: None,
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth24Plus,
+                depth_write_enabled: key.depth_mask,
+                depth_compare: if key.depth_test {
+                    wgpu::CompareFunction::LessEqual
+                } else {
+                    wgpu::CompareFunction::Always
+                },
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
             multisample: wgpu::MultisampleState::default(),
             fragment: Some(wgpu::FragmentState {
                 module: &shader_module,
@@ -252,13 +280,11 @@ impl SM64Renderer {
         &mut self,
         device: &wgpu::Device,
         output_format: wgpu::TextureFormat,
-        shader_id: u32,
+        key: PipelineKey,
     ) {
-        if !self.shader_id_to_pipeline.contains_key(&shader_id) {
-            let pipeline = self
-                .create_pipeline(device, output_format, shader_id)
-                .unwrap();
-            self.shader_id_to_pipeline.insert(shader_id, pipeline);
+        if !self.pipelines.contains_key(&key) {
+            let pipeline = self.create_pipeline(device, output_format, key).unwrap();
+            self.pipelines.insert(key, pipeline);
         }
     }
 
@@ -350,8 +376,7 @@ impl SM64Renderer {
 
         self.commands.clear();
         for command in &data.commands {
-            let shader_id = command.state.shader_id;
-            self.prepare_pipeline(device, output_format, shader_id);
+            self.prepare_pipeline(device, output_format, command.state.into());
 
             let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: None,
@@ -368,20 +393,16 @@ impl SM64Renderer {
     }
 
     pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>) {
-        let mut current_shader_id = None;
+        let mut current_key = None;
 
         for command in &self.commands {
             let shader_id = command.state.shader_id;
             let cc_features = decode_shader_id(shader_id);
+            let key: PipelineKey = command.state.into();
 
-            if current_shader_id != Some(shader_id) {
-                current_shader_id = Some(shader_id);
-
-                let pipeline = self
-                    .shader_id_to_pipeline
-                    .get(&shader_id)
-                    .expect("pipeline not prepared");
-
+            if current_key != Some(key) {
+                current_key = Some(key);
+                let pipeline = self.pipelines.get(&key).expect("pipeline not prepared");
                 rp.set_pipeline(pipeline);
             }
 
