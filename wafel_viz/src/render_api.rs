@@ -30,32 +30,14 @@ pub trait RenderBackend {
     fn set_viewport(&mut self, x: i32, y: i32, width: i32, height: i32);
     fn set_scissor(&mut self, x: i32, y: i32, width: i32, height: i32);
     fn set_use_alpha(&mut self, use_alpha: bool);
-    fn draw_triangles(&mut self, buf_vbo: &[f32], buf_vbo_len: usize, buf_vbo_num_tris: usize);
-    fn init(&mut self);
+    fn draw_triangles(&mut self, buf_vbo: &[f32], buf_vbo_num_tris: usize);
     fn on_resize(&mut self);
     fn start_frame(&mut self);
     fn end_frame(&mut self);
     fn finish_render(&mut self);
 }
 
-pub fn init_render_api(
-    memory: &DllGameMemory,
-    base_slot: &mut DllSlot,
-    backend: &mut impl RenderBackend,
-) -> Result<(), MemoryError> {
-    unsafe {
-        using_global_backend(backend, || -> Result<(), MemoryError> {
-            {
-                let init_render_api: unsafe extern "C" fn(*const RenderApi<ShaderProgram>) =
-                    memory.symbol_pointer(base_slot, "init_render_api")?;
-                init_render_api(&RENDER_API);
-            }
-            Ok(())
-        })
-    }
-}
-
-pub fn update_and_render(
+pub fn update_and_render_with_backend(
     memory: &DllGameMemory,
     base_slot: &mut DllSlot,
     backend: &mut impl RenderBackend,
@@ -64,6 +46,11 @@ pub fn update_and_render(
 ) -> Result<(), MemoryError> {
     unsafe {
         using_global_backend(backend, || -> Result<(), MemoryError> {
+            {
+                let set_render_api: unsafe extern "C" fn(*const RenderApi<ShaderProgram>) =
+                    memory.symbol_pointer(base_slot, "sm64_set_render_api")?;
+                set_render_api(&RENDER_API);
+            }
             {
                 let update_and_render: unsafe extern "C" fn(u32, u32) =
                     memory.symbol_pointer(base_slot, "sm64_update_and_render")?;
@@ -230,12 +217,10 @@ extern "C" fn set_use_alpha(use_alpha: bool) {
 extern "C" fn draw_triangles(buf_vbo: *const f32, buf_vbo_len: usize, buf_vbo_num_tris: usize) {
     use_backend(|b| unsafe {
         let buf = slice::from_raw_parts(buf_vbo, buf_vbo_len);
-        b.draw_triangles(buf, buf_vbo_len, buf_vbo_num_tris)
+        b.draw_triangles(buf, buf_vbo_num_tris)
     })
 }
-extern "C" fn init() {
-    use_backend(|b| b.init())
-}
+extern "C" fn init() {}
 extern "C" fn on_resize() {
     use_backend(|b| b.on_resize())
 }

@@ -2361,6 +2361,7 @@ dependencies = [
  "wafel_data_type",
  "wafel_layout",
  "wafel_memory",
+ "wgpu",
 ]
 
 [[package]]
