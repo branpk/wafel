@@ -11,6 +11,7 @@ members = [
     "wafel_memory",
     "wafel_python",
     "wafel_timeline",
+    "wafel_viz",
 ]
 resolver = "2"
 

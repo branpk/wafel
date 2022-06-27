@@ -287,6 +287,25 @@ impl DllGameMemory {
             ClassifiedAddress::Invalid => Err(InvalidAddress),
         }
     }
+
+    /// Looks up a symbol for the underlying DLL.
+    ///
+    /// # Safety
+    ///
+    /// See [dlopen::Library::symbol]. Also, if the symbol is used to modify the base slot's
+    /// memory (e.g. calling a function), base_slot should not be used until this is complete.
+    pub unsafe fn symbol_pointer<T>(
+        &self,
+        base_slot: &mut DllSlot,
+        name: &str,
+    ) -> Result<T, MemoryError> {
+        self.validate_base_slot(base_slot);
+        let pointer: T = self
+            .library
+            .symbol(name)
+            .map_err(|_| UndefinedSymbol(name.to_string()))?;
+        Ok(pointer)
+    }
 }
 
 impl SymbolLookup for DllGameMemory {

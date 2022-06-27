@@ -2354,6 +2354,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "wafel_viz"
+version = "0.1.0"
+dependencies = [
+ "once_cell",
+ "wafel_data_type",
+ "wafel_layout",
+ "wafel_memory",
+]
+
+[[package]]
 name = "wasi"
 version = "0.10.0+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
