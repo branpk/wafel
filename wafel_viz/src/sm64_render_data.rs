@@ -20,6 +20,7 @@ pub struct Texture {
 #[derive(Debug)]
 pub struct Command {
     pub state: RenderState,
+    pub sampler: SamplerState,
     pub texture_index: Option<usize>,
     pub vertex_buffer: Vec<f32>,
     pub num_tris: usize,
@@ -32,6 +33,13 @@ pub struct RenderState {
     pub depth_mask: bool,
     pub zmode_decal: bool,
     pub use_alpha: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct SamplerState {
+    pub linear_filter: bool,
+    pub cms: u32,
+    pub cmt: u32,
 }
 
 pub fn sm64_update_and_render(
@@ -50,6 +58,7 @@ pub fn sm64_update_and_render(
 #[derive(Debug, Default)]
 struct SM64Backend {
     state: RenderState,
+    sampler: SamplerState,
     texture_index: Option<usize>,
     data: SM64RenderData,
 }
@@ -117,11 +126,19 @@ impl RenderBackend for SM64Backend {
         });
     }
 
-    fn set_sampler_parameters(&mut self, sampler: i32, linear_filter: bool, cms: u32, cmt: u32) {
+    fn set_sampler_parameters(&mut self, tile: i32, linear_filter: bool, cms: u32, cmt: u32) {
         // eprintln!(
         //     "set_sampler_parameters({}, {}, {}, {})",
         //     sampler, linear_filter, cms, cmt
         // );
+        if tile != 0 {
+            unimplemented!("tile={}", tile);
+        }
+        self.sampler = SamplerState {
+            linear_filter,
+            cms,
+            cmt,
+        };
     }
 
     fn set_depth_test(&mut self, depth_test: bool) {
@@ -165,6 +182,7 @@ impl RenderBackend for SM64Backend {
         // );
         self.data.commands.push(Command {
             state: self.state,
+            sampler: self.sampler,
             texture_index: self.texture_index,
             vertex_buffer: buf_vbo.to_vec(),
             num_tris: buf_vbo_num_tris,

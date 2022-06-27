@@ -8,13 +8,15 @@ use wgpu::util::DeviceExt;
 
 use crate::{
     render_api::decode_shader_id,
-    sm64_render_data::{RenderState, SM64RenderData},
+    sm64_render_data::{RenderState, SM64RenderData, SamplerState, Texture},
 };
 
 #[derive(Debug)]
 pub struct SM64Renderer {
+    samplers: HashMap<SamplerState, wgpu::Sampler>,
+    textures: HashMap<usize, wgpu::Texture>,
     texture_bind_group_layout: wgpu::BindGroupLayout,
-    texture_bind_groups: Vec<Option<wgpu::BindGroup>>,
+    texture_bind_groups: HashMap<(SamplerState, usize), wgpu::BindGroup>,
     pipelines: HashMap<RenderState, wgpu::RenderPipeline>,
     commands: Vec<Command>,
 }
@@ -22,6 +24,7 @@ pub struct SM64Renderer {
 #[derive(Debug)]
 struct Command {
     state: RenderState,
+    sampler: SamplerState,
     texture_index: Option<usize>,
     buffer: wgpu::Buffer,
     num_vertices: u32,
@@ -60,8 +63,10 @@ impl SM64Renderer {
             });
 
         Self {
+            samplers: HashMap::new(),
+            textures: HashMap::new(),
             texture_bind_group_layout,
-            texture_bind_groups: Vec::new(),
+            texture_bind_groups: HashMap::new(),
             pipelines: HashMap::new(),
             commands: Vec::new(),
         }
@@ -75,7 +80,6 @@ impl SM64Renderer {
     ) -> Result<wgpu::RenderPipeline, fmt::Error> {
         let shader_id = state.shader_id.expect("missing shader id");
         let cc_features = decode_shader_id(shader_id);
-        let use_texturing = cc_features.used_textures.iter().any(|&b| b);
 
         let mut s = String::new();
         writeln!(s, "// Shader {:#010X}", shader_id)?;
@@ -83,7 +87,7 @@ impl SM64Renderer {
 
         let mut bind_group_layouts: Vec<&wgpu::BindGroupLayout> = Vec::new();
         {
-            if use_texturing {
+            if cc_features.uses_textures() {
                 writeln!(s, "@group(0) @binding(0) var r_sampler: sampler;")?;
                 writeln!(s, "@group(0) @binding(1) var r_texture: texture_2d<f32>;")?;
                 writeln!(s)?;
@@ -112,7 +116,7 @@ impl SM64Renderer {
                 current_attribute_offset += 16;
                 current_location += 1;
 
-                if use_texturing {
+                if cc_features.uses_textures() {
                     writeln!(s, "    @location({}) uv: vec2<f32>,", current_location)?;
                     vertex_attributes.push(wgpu::VertexAttribute {
                         format: wgpu::VertexFormat::Float32x2,
@@ -180,7 +184,7 @@ impl SM64Renderer {
             if cc_features.num_inputs > 0 {
                 writeln!(s, "    @location(0) color: vec4<f32>,")?;
             }
-            if use_texturing {
+            if cc_features.uses_textures() {
                 writeln!(s, "    @location(1) uv: vec2<f32>,")?;
             }
             writeln!(s, "}}")?;
@@ -199,7 +203,7 @@ impl SM64Renderer {
                     writeln!(s, "    out.color = vec4<f32>(in.input0, 0.0);")?;
                 }
             }
-            if use_texturing {
+            if cc_features.uses_textures() {
                 writeln!(s, "    out.uv = in.uv;")?;
             }
             writeln!(s, "    return out;")?;
@@ -225,7 +229,7 @@ impl SM64Renderer {
                 writeln!(s, "    out.frag_depth = in.position.z;")?;
             }
             #[rustfmt::skip]
-            if use_texturing {
+            if cc_features.uses_textures() {
                 writeln!(s, "    out.color = textureSample(r_texture, r_sampler, in.uv);")?;
             } else if cc_features.num_inputs > 0 {
                 writeln!(s, "    out.color = in.color;")?;
@@ -290,6 +294,128 @@ impl SM64Renderer {
         }
     }
 
+    fn prepare_sampler(&mut self, device: &wgpu::Device, state: SamplerState) {
+        if !self.samplers.contains_key(&state) {
+            let filter = if state.linear_filter {
+                wgpu::FilterMode::Linear
+            } else {
+                wgpu::FilterMode::Nearest
+            };
+
+            let address_mode = |v| {
+                if v & 0x2 != 0 {
+                    wgpu::AddressMode::ClampToEdge
+                } else if v & 0x1 != 0 {
+                    wgpu::AddressMode::MirrorRepeat
+                } else {
+                    wgpu::AddressMode::Repeat
+                }
+            };
+
+            let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+                label: None,
+                address_mode_u: address_mode(state.cms),
+                address_mode_v: address_mode(state.cmt),
+                address_mode_w: wgpu::AddressMode::ClampToEdge,
+                mag_filter: filter,
+                min_filter: filter,
+                mipmap_filter: wgpu::FilterMode::Nearest,
+                lod_min_clamp: 0.0,
+                lod_max_clamp: f32::MAX,
+                compare: None,
+                anisotropy_clamp: None,
+                border_color: None,
+            });
+            self.samplers.insert(state, sampler);
+        }
+    }
+
+    fn prepare_texture(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        index: usize,
+        data: &Texture,
+    ) {
+        if !self.textures.contains_key(&index) {
+            assert!(data.width * data.height != 0, "texture of zero size");
+
+            let texture = device.create_texture(&wgpu::TextureDescriptor {
+                label: None,
+                size: wgpu::Extent3d {
+                    width: data.width,
+                    height: data.height,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8Unorm,
+                usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
+            });
+            queue.write_texture(
+                wgpu::ImageCopyTexture {
+                    texture: &texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
+                },
+                &data.rgba8,
+                wgpu::ImageDataLayout {
+                    offset: 0,
+                    bytes_per_row: Some((4 * data.width).try_into().unwrap()),
+                    rows_per_image: Some(data.height.try_into().unwrap()),
+                },
+                wgpu::Extent3d {
+                    width: data.width,
+                    height: data.height,
+                    depth_or_array_layers: 1,
+                },
+            );
+
+            self.textures.insert(index, texture);
+        }
+    }
+
+    fn prepare_texture_bind_group(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        sampler_state: SamplerState,
+        texture_index: usize,
+        texture: &Texture,
+    ) {
+        let key = (sampler_state, texture_index);
+        if !self.texture_bind_groups.contains_key(&key) {
+            self.prepare_sampler(device, sampler_state);
+            self.prepare_texture(device, queue, texture_index, texture);
+
+            let sampler = &self.samplers[&sampler_state];
+            let texture = &self.textures[&texture_index];
+
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: None,
+                layout: &self.texture_bind_group_layout,
+                entries: &[
+                    // r_sampler
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Sampler(sampler),
+                    },
+                    // r_texture
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::TextureView(
+                            &texture.create_view(&wgpu::TextureViewDescriptor::default()),
+                        ),
+                    },
+                ],
+            });
+
+            self.texture_bind_groups.insert(key, bind_group);
+        }
+    }
+
     pub fn prepare(
         &mut self,
         device: &wgpu::Device,
@@ -297,88 +423,28 @@ impl SM64Renderer {
         output_format: wgpu::TextureFormat,
         data: &SM64RenderData,
     ) {
+        // Textures may change index across frames
+        self.textures.clear();
         self.texture_bind_groups.clear();
-        for texture_data in &data.textures {
-            let bind_group = texture_data.as_ref().map(|texture_data| {
-                assert!(
-                    texture_data.width * texture_data.height != 0,
-                    "texture of zero size"
-                );
-
-                // TODO: Sampler params + can cache sampler
-                let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-                    label: None,
-                    address_mode_u: wgpu::AddressMode::ClampToEdge,
-                    address_mode_v: wgpu::AddressMode::ClampToEdge,
-                    address_mode_w: wgpu::AddressMode::ClampToEdge,
-                    mag_filter: wgpu::FilterMode::Linear,
-                    min_filter: wgpu::FilterMode::Linear,
-                    mipmap_filter: wgpu::FilterMode::Nearest,
-                    lod_min_clamp: 0.0,
-                    lod_max_clamp: f32::MAX,
-                    compare: None,
-                    anisotropy_clamp: None,
-                    border_color: None,
-                });
-
-                let texture = device.create_texture(&wgpu::TextureDescriptor {
-                    label: None,
-                    size: wgpu::Extent3d {
-                        width: texture_data.width,
-                        height: texture_data.height,
-                        depth_or_array_layers: 1,
-                    },
-                    mip_level_count: 1,
-                    sample_count: 1,
-                    dimension: wgpu::TextureDimension::D2,
-                    format: wgpu::TextureFormat::Rgba8Unorm,
-                    usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
-                });
-                queue.write_texture(
-                    wgpu::ImageCopyTexture {
-                        texture: &texture,
-                        mip_level: 0,
-                        origin: wgpu::Origin3d::ZERO,
-                        aspect: wgpu::TextureAspect::All,
-                    },
-                    &texture_data.rgba8,
-                    wgpu::ImageDataLayout {
-                        offset: 0,
-                        bytes_per_row: Some((4 * texture_data.width).try_into().unwrap()),
-                        rows_per_image: Some(texture_data.height.try_into().unwrap()),
-                    },
-                    wgpu::Extent3d {
-                        width: texture_data.width,
-                        height: texture_data.height,
-                        depth_or_array_layers: 1,
-                    },
-                );
-
-                device.create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.texture_bind_group_layout,
-                    entries: &[
-                        // r_sampler
-                        wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Sampler(&sampler),
-                        },
-                        // r_texture
-                        wgpu::BindGroupEntry {
-                            binding: 1,
-                            resource: wgpu::BindingResource::TextureView(
-                                &texture.create_view(&wgpu::TextureViewDescriptor::default()),
-                            ),
-                        },
-                    ],
-                })
-            });
-            self.texture_bind_groups.push(bind_group);
-        }
 
         self.commands.clear();
         for command in &data.commands {
+            let shader_id = command.state.shader_id.expect("missing shader id");
+            let cc_features = decode_shader_id(shader_id);
+
             self.prepare_pipeline(device, output_format, command.state);
+
+            if cc_features.uses_textures() {
+                let sampler = command.sampler;
+                let texture_index = command.texture_index.expect("missing texture index");
+                let texture = data
+                    .textures
+                    .get(texture_index)
+                    .expect("invalid texture id")
+                    .as_ref()
+                    .expect("texture not uploaded");
+                self.prepare_texture_bind_group(device, queue, sampler, texture_index, texture);
+            }
 
             let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: None,
@@ -388,6 +454,7 @@ impl SM64Renderer {
 
             self.commands.push(Command {
                 state: command.state,
+                sampler: command.sampler,
                 texture_index: command.texture_index,
                 buffer,
                 num_vertices: 3 * command.num_tris as u32,
@@ -411,14 +478,15 @@ impl SM64Renderer {
                 rp.set_pipeline(pipeline);
             }
 
-            if cc_features.used_textures.iter().any(|&b| b) {
+            if cc_features.uses_textures() {
+                let sampler = command.sampler;
                 let texture_index = command.texture_index.expect("missing texture index");
+
                 let bind_group = self
                     .texture_bind_groups
-                    .get(texture_index)
-                    .expect("invalid texture index")
-                    .as_ref()
-                    .expect("texture not uploaded");
+                    .get(&(sampler, texture_index))
+                    .expect("bind group not prepared");
+
                 rp.set_bind_group(0, bind_group, &[]);
             }
 

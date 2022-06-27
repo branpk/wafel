@@ -23,7 +23,7 @@ pub trait RenderBackend {
     fn new_texture(&mut self) -> u32;
     fn select_texture(&mut self, tile: i32, texture_id: u32);
     fn upload_texture(&mut self, rgba32_buf: &[u8], width: i32, height: i32);
-    fn set_sampler_parameters(&mut self, sampler: i32, linear_filter: bool, cms: u32, cmt: u32);
+    fn set_sampler_parameters(&mut self, tile: i32, linear_filter: bool, cms: u32, cmt: u32);
     fn set_depth_test(&mut self, depth_test: bool);
     fn set_depth_mask(&mut self, z_upd: bool);
     fn set_zmode_decal(&mut self, zmode_decal: bool);
@@ -74,6 +74,12 @@ pub struct CCFeatures {
     pub do_multiply: [bool; 2],
     pub do_mix: [bool; 2],
     pub color_alpha_same: bool,
+}
+
+impl CCFeatures {
+    pub fn uses_textures(&self) -> bool {
+        self.used_textures[0] || self.used_textures[1]
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -184,7 +190,7 @@ struct RenderApi<S> {
     new_texture: extern "C" fn() -> u32,
     select_texture: extern "C" fn(tile: i32, texture_id: u32),
     upload_texture: extern "C" fn(rgba32_buf: *const u8, width: i32, height: i32),
-    set_sampler_parameters: extern "C" fn(sampler: i32, linear_filter: bool, cms: u32, cmt: u32),
+    set_sampler_parameters: extern "C" fn(tile: i32, linear_filter: bool, cms: u32, cmt: u32),
     set_depth_test: extern "C" fn(depth_test: bool),
     set_depth_mask: extern "C" fn(z_upd: bool),
     set_zmode_decal: extern "C" fn(zmode_decal: bool),
@@ -296,8 +302,8 @@ extern "C" fn upload_texture(rgba32_buf: *const u8, width: i32, height: i32) {
         b.upload_texture(buf, width, height)
     })
 }
-extern "C" fn set_sampler_parameters(sampler: i32, linear_filter: bool, cms: u32, cmt: u32) {
-    use_backend(|b| b.set_sampler_parameters(sampler, linear_filter, cms, cmt))
+extern "C" fn set_sampler_parameters(tile: i32, linear_filter: bool, cms: u32, cmt: u32) {
+    use_backend(|b| b.set_sampler_parameters(tile, linear_filter, cms, cmt))
 }
 extern "C" fn set_depth_test(depth_test: bool) {
     use_backend(|b| b.set_depth_test(depth_test))
