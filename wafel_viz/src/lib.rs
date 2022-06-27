@@ -77,10 +77,12 @@ async fn run() -> Result<(), Box<dyn Error>> {
     };
     surface.configure(&device, &config);
 
-    let mut renderer = SM64Renderer::new();
+    let mut renderer = SM64Renderer::new(&device);
 
     window.set_visible(true);
     let mut first_render = false;
+
+    let mut held = false;
 
     event_loop.run(move |event, _, control_flow| {
         let _ = (&instance, &adapter, &renderer);
@@ -98,11 +100,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
                     *control_flow = ControlFlow::Exit;
                 }
                 WindowEvent::KeyboardInput { input, .. } => {
-                    if input.state == ElementState::Pressed {
-                        let render_data = sm64_update_and_render(&memory, &mut base_slot, 640, 480)
-                            .expect("failed to render game");
-                        renderer.prepare(&device, output_format, &render_data);
-                    }
+                    held = input.state == ElementState::Pressed;
                 }
                 _ => {}
             },
@@ -118,10 +116,11 @@ async fn run() -> Result<(), Box<dyn Error>> {
                     // Draw a black screen as quickly as possileb
                     first_render = false;
                 } else {
-                    // let render_data = backend
-                    //         .update_and_render(&memory, &mut base_slot, 640, 480)
-                    //         .expect("failed to render game");
-                    //     renderer.prepare(&device, &render_data);
+                    if held {
+                        let render_data = sm64_update_and_render(&memory, &mut base_slot, 640, 480)
+                            .expect("failed to render game");
+                        renderer.prepare(&device, &queue, output_format, &render_data);
+                    }
 
                     let mut encoder = device
                         .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });

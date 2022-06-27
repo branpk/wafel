@@ -7,20 +7,20 @@ use crate::render_api::{
 #[derive(Debug, Default)]
 pub struct SM64RenderData {
     pub textures: Vec<Option<Texture>>,
-    pub vertex_buffers: Vec<VertexBuffer>,
+    pub commands: Vec<Command>,
 }
 
 #[derive(Debug)]
 pub struct Texture {
-    pub rgba32: Vec<u8>,
+    pub rgba8: Vec<u8>,
     pub width: u32,
     pub height: u32,
 }
 
 #[derive(Debug)]
-pub struct VertexBuffer {
+pub struct Command {
     pub state: RenderState,
-    pub buffer: Vec<f32>,
+    pub vertex_buffer: Vec<f32>,
     pub num_tris: usize,
 }
 
@@ -55,38 +55,33 @@ impl RenderBackend for SM64Backend {
         true
     }
 
-    fn unload_shader(&mut self, old_prg: ShaderId) {
-        // eprintln!("unload_shader({:?})", old_prg);
+    fn unload_shader(&mut self, _old_prg: ShaderId) {
         self.selected_shader_id = None;
     }
 
     fn load_shader(&mut self, new_prg: ShaderId) {
         let shader_id = new_prg.0 as u32;
-        eprintln!("load_shader({:#010X})", shader_id);
+        // eprintln!("load_shader({:#010X})", shader_id);
         self.selected_shader_id = Some(shader_id);
     }
 
     fn create_and_load_new_shader(&mut self, shader_id: u32) -> ShaderId {
-        eprintln!("create_and_load_new_shader({:#010X})", shader_id);
+        // eprintln!("create_and_load_new_shader({:#010X})", shader_id);
         self.selected_shader_id = Some(shader_id);
         ShaderId(shader_id as usize)
     }
 
     fn lookup_shader(&self, shader_id: u32) -> Option<ShaderId> {
-        // eprintln!("lookup_shader({:#010X})", shader_id);
         Some(ShaderId(shader_id as usize))
     }
 
     fn shader_get_info(&self, prg: ShaderId) -> ShaderInfo {
-        // eprintln!("shader_get_info({:?})", prg);
         let shader_id = prg.0 as u32;
         let features = decode_shader_id(shader_id);
-        let info = ShaderInfo {
-            num_inputs: (features.num_inputs as u8).max(1),
-            used_textures: [false, false],
-        };
-        // eprintln!("  -> {:?}", info);
-        info
+        ShaderInfo {
+            num_inputs: features.num_inputs as u8,
+            used_textures: features.used_textures,
+        }
     }
 
     fn new_texture(&mut self) -> u32 {
@@ -96,7 +91,7 @@ impl RenderBackend for SM64Backend {
     }
 
     fn select_texture(&mut self, tile: i32, texture_id: u32) {
-        eprintln!("select_texture({}, {})", tile, texture_id);
+        // eprintln!("select_texture({}, {})", tile, texture_id);
         if tile != 0 {
             unimplemented!("tile={}", tile);
         }
@@ -108,11 +103,11 @@ impl RenderBackend for SM64Backend {
     }
 
     fn upload_texture(&mut self, rgba32_buf: &[u8], width: i32, height: i32) {
-        eprintln!("  upload_texture({}, {})", width, height);
+        // eprintln!("  upload_texture({}, {})", width, height);
         assert!(4 * width * height == rgba32_buf.len() as i32);
         let texture_index = self.selected_texture_index.expect("no selected texture");
         self.data.textures[texture_index] = Some(Texture {
-            rgba32: rgba32_buf.to_vec(),
+            rgba8: rgba32_buf.to_vec(),
             width: width as u32,
             height: height as u32,
         });
@@ -154,20 +149,20 @@ impl RenderBackend for SM64Backend {
         // if stride != 4 {
         //     eprintln!("stride = {}", stride);
         // }
-        eprintln!(
-            "  draw_triangles({}, {}, stride={})",
-            buf_vbo.len(),
-            buf_vbo_num_tris,
-            buf_vbo.len() / (3 * buf_vbo_num_tris)
-        );
+        // eprintln!(
+        //     "  draw_triangles({}, {}, stride={})",
+        //     buf_vbo.len(),
+        //     buf_vbo_num_tris,
+        //     buf_vbo.len() / (3 * buf_vbo_num_tris)
+        // );
         let shader_id = self.selected_shader_id.expect("no selected shader");
         let state = RenderState {
             shader_id,
             texture_index: self.selected_texture_index,
         };
-        self.data.vertex_buffers.push(VertexBuffer {
+        self.data.commands.push(Command {
             state,
-            buffer: buf_vbo.to_vec(),
+            vertex_buffer: buf_vbo.to_vec(),
             num_tris: buf_vbo_num_tris,
         });
     }
@@ -177,7 +172,7 @@ impl RenderBackend for SM64Backend {
     }
 
     fn start_frame(&mut self) {
-        eprintln!();
+        // eprintln!();
     }
 
     fn end_frame(&mut self) {

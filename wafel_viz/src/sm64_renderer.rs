@@ -1,20 +1,20 @@
 use std::{
-    borrow::Cow,
-    collections::{hash_map::Entry, HashMap},
+    collections::HashMap,
     fmt::{self, Write},
-    mem::size_of,
 };
 
 use bytemuck::cast_slice;
 use wgpu::util::DeviceExt;
 
 use crate::{
-    render_api::{decode_shader_id, CCFeatures},
+    render_api::decode_shader_id,
     sm64_render_data::{RenderState, SM64RenderData},
 };
 
 #[derive(Debug)]
 pub struct SM64Renderer {
+    texture_bind_group_layout: wgpu::BindGroupLayout,
+    texture_bind_groups: Vec<Option<wgpu::BindGroup>>,
     shader_id_to_pipeline: HashMap<u32, wgpu::RenderPipeline>,
     commands: Vec<Command>,
 }
@@ -32,8 +32,35 @@ fn label(prefix: &str, shader_id: u32) -> &'static str {
 }
 
 impl SM64Renderer {
-    pub fn new() -> Self {
+    pub fn new(device: &wgpu::Device) -> Self {
+        let texture_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: None,
+                entries: &[
+                    // r_sampler
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                    // r_texture
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                ],
+            });
+
         Self {
+            texture_bind_group_layout,
+            texture_bind_groups: Vec::new(),
             shader_id_to_pipeline: HashMap::new(),
             commands: Vec::new(),
         }
@@ -46,24 +73,94 @@ impl SM64Renderer {
         shader_id: u32,
     ) -> Result<wgpu::RenderPipeline, fmt::Error> {
         let cc_features = decode_shader_id(shader_id);
+        let use_texturing = cc_features.used_textures.iter().any(|&b| b);
 
         let mut s = String::new();
         writeln!(s, "// Shader {:#010X}", shader_id)?;
         writeln!(s)?;
 
+        let mut bind_group_layouts: Vec<&wgpu::BindGroupLayout> = Vec::new();
+        {
+            if use_texturing {
+                writeln!(s, "@group(0) @binding(0) var r_sampler: sampler;")?;
+                writeln!(s, "@group(0) @binding(1) var r_texture: texture_2d<f32>;")?;
+                writeln!(s)?;
+                bind_group_layouts.push(&self.texture_bind_group_layout);
+            }
+        }
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: None,
+            bind_group_layouts: &bind_group_layouts,
+            push_constant_ranges: &[],
+        });
+
         let mut vertex_attributes: Vec<wgpu::VertexAttribute> = Vec::new();
         let vertex_buffer_layout = {
             let mut current_attribute_offset = 0;
+            let mut current_location = 0;
 
             writeln!(s, "struct VertexData {{")?;
             {
-                writeln!(s, "    @location(0) pos: vec4<f32>,")?;
+                writeln!(s, "    @location({}) pos: vec4<f32>,", current_location)?;
                 vertex_attributes.push(wgpu::VertexAttribute {
                     format: wgpu::VertexFormat::Float32x4,
                     offset: current_attribute_offset,
-                    shader_location: 0,
+                    shader_location: current_location,
                 });
                 current_attribute_offset += 16;
+                current_location += 1;
+
+                if use_texturing {
+                    writeln!(s, "    @location({}) uv: vec2<f32>,", current_location)?;
+                    vertex_attributes.push(wgpu::VertexAttribute {
+                        format: wgpu::VertexFormat::Float32x2,
+                        offset: current_attribute_offset,
+                        shader_location: current_location,
+                    });
+                    current_attribute_offset += 8;
+                    current_location += 1;
+                }
+
+                if cc_features.opt_fog {
+                    writeln!(s, "    @location({}) fog: vec4<f32>,", current_location)?;
+                    vertex_attributes.push(wgpu::VertexAttribute {
+                        format: wgpu::VertexFormat::Float32x4,
+                        offset: current_attribute_offset,
+                        shader_location: current_location,
+                    });
+                    current_attribute_offset += 16;
+                    current_location += 1;
+                }
+
+                for input_index in 0..cc_features.num_inputs {
+                    if cc_features.opt_alpha {
+                        writeln!(
+                            s,
+                            "    @location({}) input{}: vec4<f32>,",
+                            current_location, input_index
+                        )?;
+                        vertex_attributes.push(wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x4,
+                            offset: current_attribute_offset,
+                            shader_location: current_location,
+                        });
+                        current_attribute_offset += 16;
+                        current_location += 1;
+                    } else {
+                        writeln!(
+                            s,
+                            "    @location({}) input{}: vec3<f32>,",
+                            current_location, input_index
+                        )?;
+                        vertex_attributes.push(wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x3,
+                            offset: current_attribute_offset,
+                            shader_location: current_location,
+                        });
+                        current_attribute_offset += 12;
+                        current_location += 1;
+                    }
+                }
             }
             writeln!(s, "}}")?;
             writeln!(s)?;
@@ -78,16 +175,32 @@ impl SM64Renderer {
         {
             writeln!(s, "struct VertexOutput {{")?;
             writeln!(s, "    @builtin(position) position: vec4<f32>,")?;
+            if cc_features.num_inputs > 0 {
+                writeln!(s, "    @location(0) color: vec4<f32>,")?;
+            }
+            if use_texturing {
+                writeln!(s, "    @location(1) uv: vec2<f32>,")?;
+            }
             writeln!(s, "}}")?;
             writeln!(s)?;
         }
 
         {
             writeln!(s, "@vertex")?;
-            writeln!(s, "fn vs_main(vertex: VertexData) -> VertexOutput {{")?;
-            writeln!(s, "    var output = VertexOutput();")?;
-            writeln!(s, "    output.position = vertex.pos;")?;
-            writeln!(s, "    return output;")?;
+            writeln!(s, "fn vs_main(in: VertexData) -> VertexOutput {{")?;
+            writeln!(s, "    var out = VertexOutput();")?;
+            writeln!(s, "    out.position = in.pos;")?;
+            if cc_features.num_inputs > 0 {
+                if cc_features.opt_alpha {
+                    writeln!(s, "    out.color = in.input0;")?;
+                } else {
+                    writeln!(s, "    out.color = vec4<f32>(in.input0, 0.0);")?;
+                }
+            }
+            if use_texturing {
+                writeln!(s, "    out.uv = in.uv;")?;
+            }
+            writeln!(s, "    return out;")?;
             writeln!(s, "}}")?;
             writeln!(s)?;
         }
@@ -95,8 +208,14 @@ impl SM64Renderer {
         {
             writeln!(s, "@fragment")?;
             #[rustfmt::skip]
-            writeln!(s, "fn fs_main(vertex: VertexOutput) -> @location(0) vec4<f32> {{")?;
-            writeln!(s, "    return vec4<f32>(1.0, 1.0, 1.0, 1.0);")?;
+            writeln!(s, "fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {{")?;
+            if use_texturing {
+                writeln!(s, "    return textureSample(r_texture, r_sampler, in.uv);")?;
+            } else if cc_features.num_inputs > 0 {
+                writeln!(s, "    return in.color;")?;
+            } else {
+                writeln!(s, "    return vec4<f32>(1.0, 1.0, 1.0, 1.0);")?;
+            }
             writeln!(s, "}}")?;
             writeln!(s)?;
         }
@@ -108,17 +227,14 @@ impl SM64Renderer {
 
         // TODO: verify all pipeline fields
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: None,
-            layout: None,
+            label: Some(label("pipeline", shader_id)),
+            layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader_module,
                 entry_point: "vs_main",
                 buffers: &[vertex_buffer_layout],
             },
-            primitive: wgpu::PrimitiveState {
-                polygon_mode: wgpu::PolygonMode::Line,
-                ..wgpu::PrimitiveState::default()
-            },
+            primitive: wgpu::PrimitiveState::default(),
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
             fragment: Some(wgpu::FragmentState {
@@ -149,30 +265,104 @@ impl SM64Renderer {
     pub fn prepare(
         &mut self,
         device: &wgpu::Device,
+        queue: &wgpu::Queue,
         output_format: wgpu::TextureFormat,
         data: &SM64RenderData,
     ) {
-        self.commands.clear();
-        for vertex_buffer in &data.vertex_buffers {
-            self.prepare_pipeline(device, output_format, vertex_buffer.state.shader_id);
+        self.texture_bind_groups.clear();
+        for texture_data in &data.textures {
+            let bind_group = texture_data.as_ref().map(|texture_data| {
+                assert!(
+                    texture_data.width * texture_data.height != 0,
+                    "texture of zero size"
+                );
 
-            let vertex_stride = vertex_buffer.buffer.len() / (3 * vertex_buffer.num_tris);
-            let mut used_buffer: Vec<f32> = Vec::new();
-            for i in 0..3 * vertex_buffer.num_tris {
-                let i0 = i * vertex_stride;
-                used_buffer.extend(&vertex_buffer.buffer[i0..i0 + 4]);
-            }
+                // TODO: Sampler params + can cache sampler
+                let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+                    label: None,
+                    address_mode_u: wgpu::AddressMode::ClampToEdge,
+                    address_mode_v: wgpu::AddressMode::ClampToEdge,
+                    address_mode_w: wgpu::AddressMode::ClampToEdge,
+                    mag_filter: wgpu::FilterMode::Linear,
+                    min_filter: wgpu::FilterMode::Linear,
+                    mipmap_filter: wgpu::FilterMode::Nearest,
+                    lod_min_clamp: 0.0,
+                    lod_max_clamp: f32::MAX,
+                    compare: None,
+                    anisotropy_clamp: None,
+                    border_color: None,
+                });
+
+                let texture = device.create_texture(&wgpu::TextureDescriptor {
+                    label: None,
+                    size: wgpu::Extent3d {
+                        width: texture_data.width,
+                        height: texture_data.height,
+                        depth_or_array_layers: 1,
+                    },
+                    mip_level_count: 1,
+                    sample_count: 1,
+                    dimension: wgpu::TextureDimension::D2,
+                    format: wgpu::TextureFormat::Rgba8Unorm,
+                    usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
+                });
+                queue.write_texture(
+                    wgpu::ImageCopyTexture {
+                        texture: &texture,
+                        mip_level: 0,
+                        origin: wgpu::Origin3d::ZERO,
+                        aspect: wgpu::TextureAspect::All,
+                    },
+                    &texture_data.rgba8,
+                    wgpu::ImageDataLayout {
+                        offset: 0,
+                        bytes_per_row: Some((4 * texture_data.width).try_into().unwrap()),
+                        rows_per_image: Some(texture_data.height.try_into().unwrap()),
+                    },
+                    wgpu::Extent3d {
+                        width: texture_data.width,
+                        height: texture_data.height,
+                        depth_or_array_layers: 1,
+                    },
+                );
+
+                device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.texture_bind_group_layout,
+                    entries: &[
+                        // r_sampler
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: wgpu::BindingResource::Sampler(&sampler),
+                        },
+                        // r_texture
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: wgpu::BindingResource::TextureView(
+                                &texture.create_view(&wgpu::TextureViewDescriptor::default()),
+                            ),
+                        },
+                    ],
+                })
+            });
+            self.texture_bind_groups.push(bind_group);
+        }
+
+        self.commands.clear();
+        for command in &data.commands {
+            let shader_id = command.state.shader_id;
+            self.prepare_pipeline(device, output_format, shader_id);
 
             let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: None,
-                contents: cast_slice(&used_buffer),
+                contents: cast_slice(&command.vertex_buffer),
                 usage: wgpu::BufferUsages::VERTEX,
             });
 
             self.commands.push(Command {
-                state: vertex_buffer.state,
+                state: command.state,
                 buffer,
-                num_vertices: 3 * vertex_buffer.num_tris as u32,
+                num_vertices: 3 * command.num_tris as u32,
             });
         }
     }
@@ -181,15 +371,29 @@ impl SM64Renderer {
         let mut current_shader_id = None;
 
         for command in &self.commands {
-            if current_shader_id != Some(command.state.shader_id) {
-                current_shader_id = Some(command.state.shader_id);
+            let shader_id = command.state.shader_id;
+            let cc_features = decode_shader_id(shader_id);
+
+            if current_shader_id != Some(shader_id) {
+                current_shader_id = Some(shader_id);
 
                 let pipeline = self
                     .shader_id_to_pipeline
-                    .get(&command.state.shader_id)
+                    .get(&shader_id)
                     .expect("pipeline not prepared");
 
                 rp.set_pipeline(pipeline);
+            }
+
+            if cc_features.used_textures.iter().any(|&b| b) {
+                let texture_index = command.state.texture_index.expect("missing texture index");
+                let bind_group = self
+                    .texture_bind_groups
+                    .get(texture_index)
+                    .expect("invalid texture index")
+                    .as_ref()
+                    .expect("texture not uploaded");
+                rp.set_bind_group(0, bind_group, &[]);
             }
 
             rp.set_vertex_buffer(0, command.buffer.slice(..));

@@ -94,6 +94,35 @@ impl Default for ShaderItem {
     }
 }
 
+impl ShaderItem {
+    pub fn from_index(v: u32) -> Self {
+        match v {
+            0 => ShaderItem::Zero,
+            1 => ShaderItem::Input1,
+            2 => ShaderItem::Input2,
+            3 => ShaderItem::Input3,
+            4 => ShaderItem::Input4,
+            5 => ShaderItem::Texel0,
+            6 => ShaderItem::Texel0A,
+            7 => ShaderItem::Texel1,
+            _ => panic!("invalid shader item index: {}", v),
+        }
+    }
+
+    pub fn to_index(self) -> u32 {
+        match self {
+            ShaderItem::Zero => 0,
+            ShaderItem::Input1 => 1,
+            ShaderItem::Input2 => 2,
+            ShaderItem::Input3 => 3,
+            ShaderItem::Input4 => 4,
+            ShaderItem::Texel0 => 5,
+            ShaderItem::Texel0A => 6,
+            ShaderItem::Texel1 => 7,
+        }
+    }
+}
+
 pub fn decode_shader_id(shader_id: u32) -> CCFeatures {
     // Copied from src/pc/gfx/gfx_cc.c (to avoid needing to call it with DllGameMemory)
 
@@ -102,8 +131,8 @@ pub fn decode_shader_id(shader_id: u32) -> CCFeatures {
     let mut cc_features = CCFeatures::default();
 
     for i in 0..4 {
-        cc_features.c[0][i] = decode_item((shader_id >> (i * 3)) & 7);
-        cc_features.c[1][i] = decode_item((shader_id >> (12 + i * 3)) & 7);
+        cc_features.c[0][i] = ShaderItem::from_index((shader_id >> (i * 3)) & 7);
+        cc_features.c[1][i] = ShaderItem::from_index((shader_id >> (12 + i * 3)) & 7);
     }
 
     cc_features.opt_alpha = (shader_id & (1 << 24)) != 0;
@@ -118,9 +147,9 @@ pub fn decode_shader_id(shader_id: u32) -> CCFeatures {
     for i in 0..2 {
         for j in 0..4 {
             if cc_features.c[i][j] >= Input1 && cc_features.c[i][j] <= Input4 {
-                let num_inputs0 = encode_item(cc_features.c[i][j]);
-                if num_inputs0 > cc_features.num_inputs {
-                    cc_features.num_inputs = num_inputs0;
+                let index = cc_features.c[i][j].to_index();
+                if index > cc_features.num_inputs {
+                    cc_features.num_inputs = index;
                 }
             }
             if cc_features.c[i][j] == Texel0 || cc_features.c[i][j] == Texel0A {
@@ -141,33 +170,6 @@ pub fn decode_shader_id(shader_id: u32) -> CCFeatures {
     cc_features.color_alpha_same = (shader_id & 0xfff) == ((shader_id >> 12) & 0xfff);
 
     cc_features
-}
-
-fn decode_item(v: u32) -> ShaderItem {
-    match v {
-        0 => ShaderItem::Zero,
-        1 => ShaderItem::Input1,
-        2 => ShaderItem::Input2,
-        3 => ShaderItem::Input3,
-        4 => ShaderItem::Input4,
-        5 => ShaderItem::Texel0,
-        6 => ShaderItem::Texel0A,
-        7 => ShaderItem::Texel1,
-        _ => unreachable!(),
-    }
-}
-
-fn encode_item(item: ShaderItem) -> u32 {
-    match item {
-        ShaderItem::Zero => 0,
-        ShaderItem::Input1 => 1,
-        ShaderItem::Input2 => 2,
-        ShaderItem::Input3 => 3,
-        ShaderItem::Input4 => 4,
-        ShaderItem::Texel0 => 5,
-        ShaderItem::Texel0A => 6,
-        ShaderItem::Texel1 => 7,
-    }
 }
 
 #[repr(C)]
