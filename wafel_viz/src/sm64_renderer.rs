@@ -181,11 +181,31 @@ impl SM64Renderer {
         {
             writeln!(s, "struct VertexOutput {{")?;
             writeln!(s, "    @builtin(position) position: vec4<f32>,")?;
-            if cc_features.num_inputs > 0 {
-                writeln!(s, "    @location(0) color: vec4<f32>,")?;
-            }
+            let mut location = 0;
             if cc_features.uses_textures() {
-                writeln!(s, "    @location(1) uv: vec2<f32>,")?;
+                writeln!(s, "    @location({}) uv: vec2<f32>,", location)?;
+                location += 1;
+            }
+            if cc_features.opt_fog {
+                writeln!(s, "    @location({}) fog: vec4<f32>,", location)?;
+                location += 1;
+            }
+            for input_index in 0..cc_features.num_inputs {
+                if cc_features.opt_alpha {
+                    writeln!(
+                        s,
+                        "    @location({}) input{}: vec4<f32>,",
+                        location, input_index
+                    )?;
+                    location += 1;
+                } else {
+                    writeln!(
+                        s,
+                        "    @location({}) input{}: vec3<f32>,",
+                        location, input_index
+                    )?;
+                    location += 1;
+                }
             }
             writeln!(s, "}}")?;
             writeln!(s)?;
@@ -196,15 +216,14 @@ impl SM64Renderer {
             writeln!(s, "fn vs_main(in: VertexData) -> VertexOutput {{")?;
             writeln!(s, "    var out = VertexOutput();")?;
             writeln!(s, "    out.position = in.pos;")?;
-            if cc_features.num_inputs > 0 {
-                if cc_features.opt_alpha {
-                    writeln!(s, "    out.color = in.input0;")?;
-                } else {
-                    writeln!(s, "    out.color = vec4<f32>(in.input0, 0.0);")?;
-                }
-            }
             if cc_features.uses_textures() {
                 writeln!(s, "    out.uv = in.uv;")?;
+            }
+            if cc_features.opt_fog {
+                writeln!(s, "    out.fog = in.fog;")?;
+            }
+            for input_index in 0..cc_features.num_inputs {
+                writeln!(s, "   out.input{} = in.input{};", input_index, input_index)?
             }
             writeln!(s, "    return out;")?;
             writeln!(s, "}}")?;
@@ -231,8 +250,6 @@ impl SM64Renderer {
             #[rustfmt::skip]
             if cc_features.uses_textures() {
                 writeln!(s, "    out.color = textureSample(r_texture, r_sampler, in.uv);")?;
-            } else if cc_features.num_inputs > 0 {
-                writeln!(s, "    out.color = in.color;")?;
             } else {
                 writeln!(s, "    out.color = vec4<f32>(1.0, 1.0, 1.0, 1.0);")?;
             }
