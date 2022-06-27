@@ -15,30 +15,14 @@ use crate::{
 pub struct SM64Renderer {
     texture_bind_group_layout: wgpu::BindGroupLayout,
     texture_bind_groups: Vec<Option<wgpu::BindGroup>>,
-    pipelines: HashMap<PipelineKey, wgpu::RenderPipeline>,
+    pipelines: HashMap<RenderState, wgpu::RenderPipeline>,
     commands: Vec<Command>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct PipelineKey {
-    shader_id: u32,
-    depth_test: bool,
-    depth_mask: bool,
-}
-
-impl From<RenderState> for PipelineKey {
-    fn from(state: RenderState) -> Self {
-        Self {
-            shader_id: state.shader_id,
-            depth_test: state.depth_test,
-            depth_mask: state.depth_mask,
-        }
-    }
 }
 
 #[derive(Debug)]
 struct Command {
     state: RenderState,
+    texture_index: Option<usize>,
     buffer: wgpu::Buffer,
     num_vertices: u32,
 }
@@ -87,9 +71,9 @@ impl SM64Renderer {
         &self,
         device: &wgpu::Device,
         output_format: wgpu::TextureFormat,
-        key: PipelineKey,
+        state: RenderState,
     ) -> Result<wgpu::RenderPipeline, fmt::Error> {
-        let shader_id = key.shader_id;
+        let shader_id = state.shader_id.expect("missing shader id");
         let cc_features = decode_shader_id(shader_id);
         let use_texturing = cc_features.used_textures.iter().any(|&b| b);
 
@@ -224,16 +208,31 @@ impl SM64Renderer {
         }
 
         {
+            writeln!(s, "struct FragmentOutput {{")?;
+            writeln!(s, "    @builtin(frag_depth) frag_depth: f32,")?;
+            writeln!(s, "    @location(0) color: vec4<f32>,")?;
+            writeln!(s, "}}")?;
+            writeln!(s)?;
+        }
+
+        {
             writeln!(s, "@fragment")?;
-            #[rustfmt::skip]
-            writeln!(s, "fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {{")?;
-            if use_texturing {
-                writeln!(s, "    return textureSample(r_texture, r_sampler, in.uv);")?;
-            } else if cc_features.num_inputs > 0 {
-                writeln!(s, "    return in.color;")?;
+            writeln!(s, "fn fs_main(in: VertexOutput) -> FragmentOutput {{")?;
+            writeln!(s, "    var out = FragmentOutput();")?;
+            if state.zmode_decal {
+                writeln!(s, "    out.frag_depth = in.position.z - 0.001;")?;
             } else {
-                writeln!(s, "    return vec4<f32>(1.0, 1.0, 1.0, 1.0);")?;
+                writeln!(s, "    out.frag_depth = in.position.z;")?;
             }
+            #[rustfmt::skip]
+            if use_texturing {
+                writeln!(s, "    out.color = textureSample(r_texture, r_sampler, in.uv);")?;
+            } else if cc_features.num_inputs > 0 {
+                writeln!(s, "    out.color = in.color;")?;
+            } else {
+                writeln!(s, "    out.color = vec4<f32>(1.0, 1.0, 1.0, 1.0);")?;
+            }
+            writeln!(s, "    return out;")?;
             writeln!(s, "}}")?;
             writeln!(s)?;
         }
@@ -243,7 +242,6 @@ impl SM64Renderer {
             source: wgpu::ShaderSource::Wgsl(s.into()),
         });
 
-        // TODO: verify all pipeline fields
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some(label("pipeline", shader_id)),
             layout: Some(&pipeline_layout),
@@ -255,8 +253,8 @@ impl SM64Renderer {
             primitive: wgpu::PrimitiveState::default(),
             depth_stencil: Some(wgpu::DepthStencilState {
                 format: wgpu::TextureFormat::Depth24Plus,
-                depth_write_enabled: key.depth_mask,
-                depth_compare: if key.depth_test {
+                depth_write_enabled: state.depth_mask,
+                depth_compare: if state.depth_test {
                     wgpu::CompareFunction::LessEqual
                 } else {
                     wgpu::CompareFunction::Always
@@ -268,7 +266,11 @@ impl SM64Renderer {
             fragment: Some(wgpu::FragmentState {
                 module: &shader_module,
                 entry_point: "fs_main",
-                targets: &[output_format.into()],
+                targets: &[wgpu::ColorTargetState {
+                    format: output_format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING).filter(|_| state.use_alpha),
+                    write_mask: wgpu::ColorWrites::all(),
+                }],
             }),
             multiview: None,
         });
@@ -280,11 +282,11 @@ impl SM64Renderer {
         &mut self,
         device: &wgpu::Device,
         output_format: wgpu::TextureFormat,
-        key: PipelineKey,
+        state: RenderState,
     ) {
-        if !self.pipelines.contains_key(&key) {
-            let pipeline = self.create_pipeline(device, output_format, key).unwrap();
-            self.pipelines.insert(key, pipeline);
+        if !self.pipelines.contains_key(&state) {
+            let pipeline = self.create_pipeline(device, output_format, state).unwrap();
+            self.pipelines.insert(state, pipeline);
         }
     }
 
@@ -376,7 +378,7 @@ impl SM64Renderer {
 
         self.commands.clear();
         for command in &data.commands {
-            self.prepare_pipeline(device, output_format, command.state.into());
+            self.prepare_pipeline(device, output_format, command.state);
 
             let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: None,
@@ -386,6 +388,7 @@ impl SM64Renderer {
 
             self.commands.push(Command {
                 state: command.state,
+                texture_index: command.texture_index,
                 buffer,
                 num_vertices: 3 * command.num_tris as u32,
             });
@@ -393,21 +396,23 @@ impl SM64Renderer {
     }
 
     pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>) {
-        let mut current_key = None;
+        let mut current_state = None;
 
         for command in &self.commands {
-            let shader_id = command.state.shader_id;
+            let shader_id = command.state.shader_id.expect("missing shader id");
             let cc_features = decode_shader_id(shader_id);
-            let key: PipelineKey = command.state.into();
 
-            if current_key != Some(key) {
-                current_key = Some(key);
-                let pipeline = self.pipelines.get(&key).expect("pipeline not prepared");
+            if current_state != Some(command.state) {
+                current_state = Some(command.state);
+                let pipeline = self
+                    .pipelines
+                    .get(&command.state)
+                    .expect("pipeline not prepared");
                 rp.set_pipeline(pipeline);
             }
 
             if cc_features.used_textures.iter().any(|&b| b) {
-                let texture_index = command.state.texture_index.expect("missing texture index");
+                let texture_index = command.texture_index.expect("missing texture index");
                 let bind_group = self
                     .texture_bind_groups
                     .get(texture_index)

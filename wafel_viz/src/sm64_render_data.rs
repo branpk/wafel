@@ -20,16 +20,18 @@ pub struct Texture {
 #[derive(Debug)]
 pub struct Command {
     pub state: RenderState,
+    pub texture_index: Option<usize>,
     pub vertex_buffer: Vec<f32>,
     pub num_tris: usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct RenderState {
-    pub texture_index: Option<usize>,
-    pub shader_id: u32,
+    pub shader_id: Option<u32>,
     pub depth_test: bool,
     pub depth_mask: bool,
+    pub zmode_decal: bool,
+    pub use_alpha: bool,
 }
 
 pub fn sm64_update_and_render(
@@ -47,12 +49,9 @@ pub fn sm64_update_and_render(
 
 #[derive(Debug, Default)]
 struct SM64Backend {
+    state: RenderState,
+    texture_index: Option<usize>,
     data: SM64RenderData,
-
-    selected_shader_id: Option<u32>,
-    selected_texture_index: Option<usize>,
-    depth_test: bool,
-    depth_mask: bool,
 }
 
 impl RenderBackend for SM64Backend {
@@ -61,18 +60,18 @@ impl RenderBackend for SM64Backend {
     }
 
     fn unload_shader(&mut self, _old_prg: ShaderId) {
-        self.selected_shader_id = None;
+        self.state.shader_id = None;
     }
 
     fn load_shader(&mut self, new_prg: ShaderId) {
         let shader_id = new_prg.0 as u32;
         // eprintln!("load_shader({:#010X})", shader_id);
-        self.selected_shader_id = Some(shader_id);
+        self.state.shader_id = Some(shader_id);
     }
 
     fn create_and_load_new_shader(&mut self, shader_id: u32) -> ShaderId {
         // eprintln!("create_and_load_new_shader({:#010X})", shader_id);
-        self.selected_shader_id = Some(shader_id);
+        self.state.shader_id = Some(shader_id);
         ShaderId(shader_id as usize)
     }
 
@@ -104,13 +103,13 @@ impl RenderBackend for SM64Backend {
             (texture_id as usize) < self.data.textures.len(),
             "invalid texture id"
         );
-        self.selected_texture_index = Some(texture_id as usize);
+        self.texture_index = Some(texture_id as usize);
     }
 
     fn upload_texture(&mut self, rgba32_buf: &[u8], width: i32, height: i32) {
         // eprintln!("  upload_texture({}, {})", width, height);
         assert!(4 * width * height == rgba32_buf.len() as i32);
-        let texture_index = self.selected_texture_index.expect("no selected texture");
+        let texture_index = self.texture_index.expect("no selected texture");
         self.data.textures[texture_index] = Some(Texture {
             rgba8: rgba32_buf.to_vec(),
             width: width as u32,
@@ -127,16 +126,17 @@ impl RenderBackend for SM64Backend {
 
     fn set_depth_test(&mut self, depth_test: bool) {
         // eprintln!("set_depth_test({})", depth_test);
-        self.depth_test = depth_test;
+        self.state.depth_test = depth_test;
     }
 
     fn set_depth_mask(&mut self, z_upd: bool) {
         // eprintln!("set_depth_mask({})", z_upd);
-        self.depth_mask = z_upd;
+        self.state.depth_mask = z_upd;
     }
 
     fn set_zmode_decal(&mut self, zmode_decal: bool) {
         // eprintln!("set_zmode_decal({})", zmode_decal)
+        self.state.zmode_decal = zmode_decal;
     }
 
     fn set_viewport(&mut self, x: i32, y: i32, width: i32, height: i32) {
@@ -149,6 +149,7 @@ impl RenderBackend for SM64Backend {
 
     fn set_use_alpha(&mut self, use_alpha: bool) {
         // eprintln!("set_use_alpha({})", use_alpha);
+        self.state.use_alpha = use_alpha;
     }
 
     fn draw_triangles(&mut self, buf_vbo: &[f32], buf_vbo_num_tris: usize) {
@@ -162,15 +163,9 @@ impl RenderBackend for SM64Backend {
         //     buf_vbo_num_tris,
         //     buf_vbo.len() / (3 * buf_vbo_num_tris)
         // );
-        let shader_id = self.selected_shader_id.expect("no selected shader");
-        let state = RenderState {
-            texture_index: self.selected_texture_index,
-            shader_id,
-            depth_test: self.depth_test,
-            depth_mask: self.depth_mask,
-        };
         self.data.commands.push(Command {
-            state,
+            state: self.state,
+            texture_index: self.texture_index,
             vertex_buffer: buf_vbo.to_vec(),
             num_tris: buf_vbo_num_tris,
         });
