@@ -9,7 +9,7 @@ use wgpu::util::DeviceExt;
 
 use crate::{
     render_api::{decode_shader_id, CCFeatures, ShaderItem},
-    sm64_render_data::{RenderState, SM64RenderData, SamplerState, Texture},
+    sm64_render_data::{Rectangle, RenderState, SM64RenderData, SamplerState, Texture},
 };
 
 #[derive(Debug)]
@@ -24,6 +24,8 @@ pub struct SM64Renderer {
 
 #[derive(Debug)]
 struct Command {
+    viewport: Rectangle,
+    scissor: Rectangle,
     state: RenderState,
     sampler: SamplerState,
     texture_index: Option<usize>,
@@ -70,6 +72,11 @@ fn write_fragment_shader_body(s: &mut String, cc_features: CCFeatures) -> Result
         writeln!(s, "    let fog_mixed = mix(out.color.rgb, in.fog.rgb, in.fog.a);")?;
         writeln!(s, "    out.color = vec4<f32>(fog_mixed, out.color.a);")?;
     }
+
+    // TODO: Noise
+    // if (cc_features.opt_alpha && cc_features.opt_noise) {
+    //     append_line(fs_buf, &fs_len, "texel.a *= floor(random(vec3(floor(gl_FragCoord.xy * (240.0 / float(window_height))), float(frame_count))) + 0.5);");
+    // }
 
     Ok(())
 }
@@ -549,6 +556,8 @@ impl SM64Renderer {
             });
 
             self.commands.push(Command {
+                viewport: command.viewport,
+                scissor: command.scissor,
                 state: command.state,
                 sampler: command.sampler,
                 texture_index: command.texture_index,
@@ -564,6 +573,28 @@ impl SM64Renderer {
         for command in &self.commands {
             let shader_id = command.state.shader_id.expect("missing shader id");
             let cc_features = decode_shader_id(shader_id);
+
+            let Rectangle {
+                x,
+                y,
+                width,
+                height,
+            } = command.viewport;
+            if width == 0 || height == 0 {
+                continue;
+            }
+            rp.set_viewport(x as f32, y as f32, width as f32, height as f32, 0.0, 1.0);
+
+            let Rectangle {
+                x,
+                y,
+                width,
+                height,
+            } = command.scissor;
+            if width == 0 || height == 0 {
+                continue;
+            }
+            rp.set_scissor_rect(x as u32, y as u32, width as u32, height as u32);
 
             if current_state != Some(command.state) {
                 current_state = Some(command.state);

@@ -19,11 +19,21 @@ pub struct Texture {
 
 #[derive(Debug)]
 pub struct Command {
+    pub viewport: Rectangle,
+    pub scissor: Rectangle,
     pub state: RenderState,
     pub sampler: SamplerState,
     pub texture_index: Option<usize>,
     pub vertex_buffer: Vec<f32>,
     pub num_tris: usize,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Rectangle {
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -57,6 +67,8 @@ pub fn sm64_update_and_render(
 
 #[derive(Debug, Default)]
 struct SM64Backend {
+    viewport: Rectangle,
+    scissor: Rectangle,
     state: RenderState,
     sampler: SamplerState,
     texture_index: Option<usize>,
@@ -158,10 +170,22 @@ impl RenderBackend for SM64Backend {
 
     fn set_viewport(&mut self, x: i32, y: i32, width: i32, height: i32) {
         // eprintln!("set_viewport({}, {}, {}, {})", x, y, width, height);
+        self.viewport = Rectangle {
+            x,
+            y,
+            width,
+            height,
+        };
     }
 
     fn set_scissor(&mut self, x: i32, y: i32, width: i32, height: i32) {
         // eprintln!("set_scissor({}, {}, {}, {})", x, y, width, height);
+        self.scissor = Rectangle {
+            x,
+            y,
+            width,
+            height,
+        };
     }
 
     fn set_use_alpha(&mut self, use_alpha: bool) {
@@ -181,6 +205,8 @@ impl RenderBackend for SM64Backend {
         //     buf_vbo.len() / (3 * buf_vbo_num_tris)
         // );
         self.data.commands.push(Command {
+            viewport: self.viewport,
+            scissor: self.scissor,
             state: self.state,
             sampler: self.sampler,
             texture_index: self.texture_index,
