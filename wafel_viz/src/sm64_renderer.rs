@@ -1,13 +1,14 @@
 use std::{
     collections::HashMap,
     fmt::{self, Write},
+    fs,
 };
 
 use bytemuck::cast_slice;
 use wgpu::util::DeviceExt;
 
 use crate::{
-    render_api::decode_shader_id,
+    render_api::{decode_shader_id, CCFeatures, ShaderItem},
     sm64_render_data::{RenderState, SM64RenderData, SamplerState, Texture},
 };
 
@@ -33,6 +34,88 @@ struct Command {
 fn label(prefix: &str, shader_id: u32) -> &'static str {
     let label = format!("{}-{:#010X}", prefix, shader_id);
     Box::leak(label.into_boxed_str())
+}
+
+#[rustfmt::skip]
+fn write_fragment_shader_body(s: &mut String, cc_features: CCFeatures) -> Result<(), fmt::Error> {
+    if cc_features.used_textures[0] {
+        writeln!(s, "    let tex0 = textureSample(r_texture, r_sampler, in.uv);")?;
+    }
+    if cc_features.used_textures[1] {
+        unimplemented!();
+    }
+
+    if cc_features.opt_alpha && cc_features.color_alpha_same {
+        writeln!(s, "    out.color = {};", component_expr(cc_features, 0))?;
+    } else {
+        writeln!(s, "    let rgb = ({}).rgb;", component_expr(cc_features, 0))?;
+        if cc_features.opt_alpha {
+            writeln!(s, "    let a = ({}).a;", component_expr(cc_features, 1))?;
+            writeln!(s, "    out.color = vec4<f32>(rgb, a);")?;
+        }
+        else {
+            writeln!(s, "    out.color = vec4<f32>(rgb, 1.0);")?;
+        }
+    }
+
+    if cc_features.opt_texture_edge && cc_features.opt_alpha {
+        writeln!(s, "    if out.color.a > 0.3 {{ out.color.a = 1.0; }} else {{ discard; }}")?;
+    }
+
+    Ok(())
+}
+
+fn component_expr(cc_features: CCFeatures, i: usize) -> String {
+    let items = cc_features.c[i];
+    if cc_features.do_single[i] {
+        single_expr(items)
+    } else if cc_features.do_multiply[i] {
+        multiply_expr(items)
+    } else if cc_features.do_mix[i] {
+        mix_expr(items)
+    } else {
+        linear_expr(items)
+    }
+}
+
+fn single_expr(items: [ShaderItem; 4]) -> String {
+    item_expr(items[3]).to_string()
+}
+
+fn multiply_expr(items: [ShaderItem; 4]) -> String {
+    format!("{} * {}", item_expr(items[0]), item_expr(items[2]))
+}
+
+fn mix_expr(items: [ShaderItem; 4]) -> String {
+    format!(
+        "mix({}, {}, {})",
+        item_expr(items[1]),
+        item_expr(items[0]),
+        item_expr(items[2])
+    )
+}
+
+fn linear_expr(items: [ShaderItem; 4]) -> String {
+    format!(
+        "({} - {}) * {} + {}",
+        item_expr(items[0]),
+        item_expr(items[1]),
+        item_expr(items[2]),
+        item_expr(items[3])
+    )
+}
+
+fn item_expr(item: ShaderItem) -> &'static str {
+    match item {
+        ShaderItem::Zero => "vec4<f32>()",
+        ShaderItem::Input1 => "in.input1",
+        ShaderItem::Input2 => "in.input2",
+        ShaderItem::Input3 => "in.input3",
+        ShaderItem::Input4 => "in.input4",
+        ShaderItem::Texel0 => "tex0",
+        ShaderItem::Texel0A => "vec4<f32>(tex0.a)",
+        ShaderItem::Texel1 => "tex1",
+    }
 }
 
 impl SM64Renderer {
@@ -138,34 +221,20 @@ impl SM64Renderer {
                     current_location += 1;
                 }
 
-                for input_index in 0..cc_features.num_inputs {
-                    if cc_features.opt_alpha {
-                        writeln!(
-                            s,
-                            "    @location({}) input{}: vec4<f32>,",
-                            current_location, input_index
-                        )?;
-                        vertex_attributes.push(wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x4,
-                            offset: current_attribute_offset,
-                            shader_location: current_location,
-                        });
-                        current_attribute_offset += 16;
-                        current_location += 1;
-                    } else {
-                        writeln!(
-                            s,
-                            "    @location({}) input{}: vec3<f32>,",
-                            current_location, input_index
-                        )?;
-                        vertex_attributes.push(wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x3,
-                            offset: current_attribute_offset,
-                            shader_location: current_location,
-                        });
-                        current_attribute_offset += 12;
-                        current_location += 1;
-                    }
+                for input_index in 1..=cc_features.num_inputs {
+                    let length = if cc_features.opt_alpha { 4 } else { 3 };
+                    writeln!(
+                        s,
+                        "    @location({}) input{}: vec{}<f32>,",
+                        current_location, input_index, length,
+                    )?;
+                    vertex_attributes.push(wgpu::VertexAttribute {
+                        format: wgpu::VertexFormat::Float32x4,
+                        offset: current_attribute_offset,
+                        shader_location: current_location,
+                    });
+                    current_attribute_offset += 4 * length;
+                    current_location += 1;
                 }
             }
             writeln!(s, "}}")?;
@@ -190,7 +259,7 @@ impl SM64Renderer {
                 writeln!(s, "    @location({}) fog: vec4<f32>,", location)?;
                 location += 1;
             }
-            for input_index in 0..cc_features.num_inputs {
+            for input_index in 1..=cc_features.num_inputs {
                 writeln!(
                     s,
                     "    @location({}) input{}: vec4<f32>,",
@@ -213,13 +282,13 @@ impl SM64Renderer {
             if cc_features.opt_fog {
                 writeln!(s, "    out.fog = in.fog;")?;
             }
-            for input_index in 0..cc_features.num_inputs {
+            for input_index in 1..=cc_features.num_inputs {
                 if cc_features.opt_alpha {
                     writeln!(s, "   out.input{} = in.input{};", input_index, input_index)?
                 } else {
                     writeln!(
                         s,
-                        "   out.input{} = vec4<f32>(in.input{}, 0.0);",
+                        "    out.input{} = vec4<f32>(in.input{}, 1.0);",
                         input_index, input_index
                     )?
                 }
@@ -246,16 +315,18 @@ impl SM64Renderer {
             } else {
                 writeln!(s, "    out.frag_depth = in.position.z;")?;
             }
-            #[rustfmt::skip]
-            if cc_features.uses_textures() {
-                writeln!(s, "    out.color = textureSample(r_texture, r_sampler, in.uv);")?;
-            } else {
-                writeln!(s, "    out.color = vec4<f32>(1.0, 1.0, 1.0, 1.0);")?;
-            }
+            write_fragment_shader_body(&mut s, cc_features)?;
             writeln!(s, "    return out;")?;
             writeln!(s, "}}")?;
             writeln!(s)?;
         }
+
+        // TODO: Remove
+        fs::write(
+            &format!("wafel_viz/gen_shaders/{:010X}.wgsl", shader_id),
+            &s,
+        )
+        .unwrap();
 
         let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some(label("shader", shader_id)),
