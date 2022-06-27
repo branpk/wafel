@@ -59,7 +59,16 @@ fn write_fragment_shader_body(s: &mut String, cc_features: CCFeatures) -> Result
     }
 
     if cc_features.opt_texture_edge && cc_features.opt_alpha {
-        writeln!(s, "    if out.color.a > 0.3 {{ out.color.a = 1.0; }} else {{ discard; }}")?;
+        writeln!(s, "    if out.color.a > 0.3 {{")?;
+        writeln!(s, "        out.color = vec4<f32>(out.color.rgb, 1.0);")?;
+        writeln!(s, "    }} else {{")?;
+        writeln!(s, "        discard;")?;
+        writeln!(s, "    }}")?;
+    }
+
+    if cc_features.opt_fog {
+        writeln!(s, "    let fog_mixed = mix(out.color.rgb, in.fog.rgb, in.fog.a);")?;
+        writeln!(s, "    out.color = vec4<f32>(fog_mixed, out.color.a);")?;
     }
 
     Ok(())
@@ -300,7 +309,9 @@ impl SM64Renderer {
 
         {
             writeln!(s, "struct FragmentOutput {{")?;
-            writeln!(s, "    @builtin(frag_depth) frag_depth: f32,")?;
+            if state.zmode_decal {
+                writeln!(s, "    @builtin(frag_depth) frag_depth: f32,")?;
+            }
             writeln!(s, "    @location(0) color: vec4<f32>,")?;
             writeln!(s, "}}")?;
             writeln!(s)?;
@@ -312,8 +323,6 @@ impl SM64Renderer {
             writeln!(s, "    var out = FragmentOutput();")?;
             if state.zmode_decal {
                 writeln!(s, "    out.frag_depth = in.position.z - 0.001;")?;
-            } else {
-                writeln!(s, "    out.frag_depth = in.position.z;")?;
             }
             write_fragment_shader_body(&mut s, cc_features)?;
             writeln!(s, "    return out;")?;
