@@ -1,14 +1,12 @@
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 
-use std::{error::Error, mem};
+use std::error::Error;
 
-use render_api::{update_and_render_with_backend, RenderBackend, ShaderId, ShaderInfo};
 use sm64_render_data::sm64_update_and_render;
 use sm64_renderer::SM64Renderer;
 use wafel_memory::DllGameMemory;
 use winit::{
-    dpi::PhysicalSize,
-    event::{Event, WindowEvent},
+    event::{ElementState, Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -95,6 +93,13 @@ async fn run() -> Result<(), Box<dyn Error>> {
                 WindowEvent::CloseRequested => {
                     *control_flow = ControlFlow::Exit;
                 }
+                WindowEvent::KeyboardInput { input, .. } => {
+                    if input.state == ElementState::Pressed {
+                        let render_data = sm64_update_and_render(&memory, &mut base_slot, 640, 480)
+                            .expect("failed to render game");
+                        renderer.prepare(&device, &render_data);
+                    }
+                }
                 _ => {}
             },
             Event::MainEventsCleared => {
@@ -109,9 +114,9 @@ async fn run() -> Result<(), Box<dyn Error>> {
                     // Draw a black screen as quickly as possileb
                     first_render = false;
                 } else {
-                    let render_data = sm64_update_and_render(&memory, &mut base_slot, 640, 480)
-                        .expect("failed to render game");
-                    renderer.prepare(&device, &render_data);
+                    // let render_data = sm64_update_and_render(&memory, &mut base_slot, 640, 480)
+                    //     .expect("failed to render game");
+                    // renderer.prepare(&device, &render_data);
 
                     let mut encoder = device
                         .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });

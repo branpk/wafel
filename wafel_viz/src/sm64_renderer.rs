@@ -17,7 +17,7 @@ impl SM64Renderer {
             device.create_shader_module(wgpu::include_wgsl!("../shaders/test.wgsl"));
 
         let vertex_buffer_layout = wgpu::VertexBufferLayout {
-            array_stride: size_of::<[f32; 4]>() as u64,
+            array_stride: size_of::<[[f32; 4]; 2]>() as u64,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
                 // pos
@@ -25,6 +25,12 @@ impl SM64Renderer {
                     format: wgpu::VertexFormat::Float32x4,
                     offset: 0,
                     shader_location: 0,
+                },
+                // color
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x4,
+                    offset: size_of::<[f32; 4]>() as u64,
+                    shader_location: 1,
                 },
             ],
         };
@@ -65,7 +71,13 @@ impl SM64Renderer {
             let vertex_stride = vertex_buffer.buffer.len() / (3 * vertex_buffer.num_tris);
             let mut used_buffer: Vec<f32> = Vec::new();
             for i in 0..3 * vertex_buffer.num_tris {
-                used_buffer.extend(&vertex_buffer.buffer[i * vertex_stride..i * vertex_stride + 4]);
+                let i0 = i * vertex_stride;
+                used_buffer.extend(&vertex_buffer.buffer[i0..i0 + 4]);
+                if false {
+                    used_buffer.extend(&vertex_buffer.buffer[i0 + 4..i0 + 8]);
+                } else {
+                    used_buffer.extend(&[1.0, 1.0, 1.0, 1.0]);
+                }
             }
 
             let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {

@@ -34,12 +34,12 @@ impl RenderBackend for SM64Backend {
         true
     }
 
-    fn unload_shader(&mut self, old_prod: ShaderId) {
-        // eprintln!("unload_shader({:?})", old_prod);
+    fn unload_shader(&mut self, old_prg: ShaderId) {
+        // eprintln!("unload_shader({:?})", old_prg);
     }
 
     fn load_shader(&mut self, new_prg: ShaderId) {
-        // eprintln!("load_shader({:?})", new_prg);
+        eprintln!("load_shader({:?})", new_prg);
     }
 
     fn create_and_load_new_shader(&mut self, shader_id: u32) -> ShaderId {
@@ -55,33 +55,33 @@ impl RenderBackend for SM64Backend {
     }
 
     fn shader_get_info(&self, prg: ShaderId) -> ShaderInfo {
-        // eprintln!("shader_get_info({:?})", prg);
+        eprintln!("shader_get_info({:?})", prg);
         let info = ShaderInfo {
             num_inputs: 0,
             used_textures: [false, false],
         };
-        // eprintln!("  -> {:?}", info);
+        eprintln!("  -> {:?}", info);
         info
     }
 
     fn new_texture(&mut self) -> u32 {
-        // eprintln!("new_texture()");
+        eprintln!("new_texture()");
         todo!()
     }
 
     fn select_texture(&mut self, tile: i32, texture_id: u32) {
-        // eprintln!("select_texture({}, {})", tile, texture_id);
+        eprintln!("select_texture({}, {})", tile, texture_id);
     }
 
     fn upload_texture(&mut self, rgba32_buf: &[u8], width: i32, height: i32) {
-        // eprintln!("upload_texture({}, {})", width, height);
+        eprintln!("upload_texture({}, {})", width, height);
     }
 
     fn set_sampler_parameters(&mut self, sampler: i32, linear_filter: bool, cms: u32, cmt: u32) {
-        // eprintln!(
-        //     "set_sampler_parameters({}, {}, {}, {})",
-        //     sampler, linear_filter, cms, cmt
-        // );
+        eprintln!(
+            "set_sampler_parameters({}, {}, {}, {})",
+            sampler, linear_filter, cms, cmt
+        );
     }
 
     fn set_depth_test(&mut self, depth_test: bool) {
@@ -109,7 +109,16 @@ impl RenderBackend for SM64Backend {
     }
 
     fn draw_triangles(&mut self, buf_vbo: &[f32], buf_vbo_num_tris: usize) {
-        // eprintln!("draw_triangles({}, {})", buf_vbo_len, buf_vbo_num_tris);
+        let stride = buf_vbo.len() / (3 * buf_vbo_num_tris);
+        if stride != 4 {
+            eprintln!("stride = {}", stride);
+        }
+        // eprintln!(
+        //     "draw_triangles({}, {}, stride={})",
+        //     buf_vbo.len(),
+        //     buf_vbo_num_tris,
+        //     buf_vbo.len() / (3 * buf_vbo_num_tris)
+        // );
         self.data.vertex_buffers.push(VertexBuffer {
             buffer: buf_vbo.to_vec(),
             num_tris: buf_vbo_num_tris,

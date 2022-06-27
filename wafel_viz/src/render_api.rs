@@ -15,7 +15,7 @@ pub struct ShaderInfo {
 
 pub trait RenderBackend {
     fn z_is_from_0_to_1(&self) -> bool;
-    fn unload_shader(&mut self, old_prod: ShaderId);
+    fn unload_shader(&mut self, old_prg: ShaderId);
     fn load_shader(&mut self, new_prg: ShaderId);
     fn create_and_load_new_shader(&mut self, shader_id: u32) -> ShaderId;
     fn lookup_shader(&self, shader_id: u32) -> Option<ShaderId>;
@@ -141,19 +141,16 @@ static RENDER_API: RenderApi<ShaderProgram> = RenderApi {
 extern "C" fn z_is_from_0_to_1() -> bool {
     use_backend(|b| b.z_is_from_0_to_1())
 }
-extern "C" fn unload_shader(old_prod: *const ShaderProgram) {
+extern "C" fn unload_shader(old_prg: *const ShaderProgram) {
     use_backend(|b| {
-        if let Some(shader) = id(old_prod) {
+        if let Some(shader) = id(old_prg) {
             b.unload_shader(shader)
         }
     })
 }
 extern "C" fn load_shader(new_prg: *const ShaderProgram) {
-    use_backend(|b| {
-        if let Some(shader) = id(new_prg) {
-            b.load_shader(shader)
-        }
-    })
+    let shader = id(new_prg).expect("null passed to load_shader");
+    use_backend(|b| b.load_shader(shader))
 }
 extern "C" fn create_and_load_new_shader(shader_id: u32) -> *const ShaderProgram {
     use_backend(|b| b.create_and_load_new_shader(shader_id).into())
@@ -166,14 +163,9 @@ extern "C" fn shader_get_info(
     num_inputs: *mut u8,
     used_textures: *mut bool,
 ) {
+    let shader = id(prg).expect("null passed to shader_get_info");
     use_backend(|b| {
-        let info = match id(prg) {
-            Some(shader) => b.shader_get_info(shader),
-            None => ShaderInfo {
-                num_inputs: 0,
-                used_textures: [false, false],
-            },
-        };
+        let info = b.shader_get_info(shader);
         unsafe {
             *num_inputs = info.num_inputs;
             *used_textures.offset(0) = info.used_textures[0];
