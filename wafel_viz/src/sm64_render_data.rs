@@ -3,7 +3,8 @@ use std::mem;
 use wafel_memory::{DllGameMemory, DllSlot, MemoryError};
 
 use crate::render_api::{
-    update_and_render_with_backend, CCFeatures, RenderBackend, ShaderId, ShaderInfo,
+    decode_shader_id, update_and_render_with_backend, CCFeatures, RenderBackend, ShaderId,
+    ShaderInfo,
 };
 
 #[derive(Debug, Default)]
@@ -16,6 +17,12 @@ pub struct VertexBuffer {
     pub buffer: Vec<f32>,
     pub num_tris: usize,
 }
+
+// #[derive(Debug)]
+// pub struct RenderState {
+//     shader_id: u32,
+//     shader_features: CCFeatures,
+// }
 
 pub fn sm64_update_and_render(
     memory: &DllGameMemory,
@@ -72,8 +79,9 @@ impl RenderBackend for SM64Backend {
     fn shader_get_info(&self, prg: ShaderId) -> ShaderInfo {
         // eprintln!("shader_get_info({:?})", prg);
         let shader_id = prg.0 as u32;
+        let features = decode_shader_id(shader_id);
         let info = ShaderInfo {
-            num_inputs: 0,
+            num_inputs: features.num_inputs as u8,
             used_textures: [false, false],
         };
         // eprintln!("  -> {:?}", info);

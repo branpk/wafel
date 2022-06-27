@@ -73,8 +73,11 @@ impl SM64Renderer {
             for i in 0..3 * vertex_buffer.num_tris {
                 let i0 = i * vertex_stride;
                 used_buffer.extend(&vertex_buffer.buffer[i0..i0 + 4]);
-                if false {
+                if vertex_stride == 8 {
                     used_buffer.extend(&vertex_buffer.buffer[i0 + 4..i0 + 8]);
+                } else if vertex_stride == 7 {
+                    used_buffer.extend(&vertex_buffer.buffer[i0 + 4..i0 + 7]);
+                    used_buffer.push(1.0);
                 } else {
                     used_buffer.extend(&[1.0, 1.0, 1.0, 1.0]);
                 }
