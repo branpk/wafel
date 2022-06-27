@@ -1,4 +1,6 @@
+#![feature(stmt_expr_attributes)]
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
+#![allow(clippy::map_entry)]
 
 use std::error::Error;
 
@@ -75,7 +77,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
     };
     surface.configure(&device, &config);
 
-    let mut renderer = SM64Renderer::new(&device, output_format);
+    let mut renderer = SM64Renderer::new();
 
     window.set_visible(true);
     let mut first_render = false;
@@ -99,7 +101,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
                     if input.state == ElementState::Pressed {
                         let render_data = sm64_update_and_render(&memory, &mut base_slot, 640, 480)
                             .expect("failed to render game");
-                        renderer.prepare(&device, &render_data);
+                        renderer.prepare(&device, output_format, &render_data);
                     }
                 }
                 _ => {}
