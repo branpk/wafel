@@ -90,12 +90,10 @@ impl RenderBackend for SM64Backend {
 
     fn load_shader(&mut self, new_prg: ShaderId) {
         let shader_id = new_prg.0 as u32;
-        // eprintln!("load_shader({:#010X})", shader_id);
         self.state.shader_id = Some(shader_id);
     }
 
     fn create_and_load_new_shader(&mut self, shader_id: u32) -> ShaderId {
-        // eprintln!("create_and_load_new_shader({:#010X})", shader_id);
         self.state.shader_id = Some(shader_id);
         ShaderId(shader_id as usize)
     }
@@ -123,7 +121,6 @@ impl RenderBackend for SM64Backend {
     }
 
     fn select_texture(&mut self, tile: i32, texture_id: u32) {
-        // eprintln!("select_texture({}, {})", tile, texture_id);
         if tile != 0 {
             unimplemented!("tile={}", tile);
         }
@@ -135,7 +132,6 @@ impl RenderBackend for SM64Backend {
     }
 
     fn upload_texture(&mut self, rgba32_buf: &[u8], width: i32, height: i32) {
-        // eprintln!("  upload_texture({}, {})", width, height);
         assert!(4 * width * height == rgba32_buf.len() as i32);
         let texture_index = self.texture_index.expect("no selected texture");
         self.data.textures[texture_index].data = Some(TextureData {
@@ -146,10 +142,6 @@ impl RenderBackend for SM64Backend {
     }
 
     fn set_sampler_parameters(&mut self, tile: i32, linear_filter: bool, cms: u32, cmt: u32) {
-        // eprintln!(
-        //     "set_sampler_parameters({}, {}, {}, {})",
-        //     sampler, linear_filter, cms, cmt
-        // );
         if tile != 0 {
             unimplemented!("tile={}", tile);
         }
@@ -162,22 +154,18 @@ impl RenderBackend for SM64Backend {
     }
 
     fn set_depth_test(&mut self, depth_test: bool) {
-        // eprintln!("set_depth_test({})", depth_test);
         self.state.depth_test = depth_test;
     }
 
     fn set_depth_mask(&mut self, z_upd: bool) {
-        // eprintln!("set_depth_mask({})", z_upd);
         self.state.depth_mask = z_upd;
     }
 
     fn set_zmode_decal(&mut self, zmode_decal: bool) {
-        // eprintln!("set_zmode_decal({})", zmode_decal)
         self.state.zmode_decal = zmode_decal;
     }
 
     fn set_viewport(&mut self, x: i32, y: i32, width: i32, height: i32) {
-        // eprintln!("set_viewport({}, {}, {}, {})", x, y, width, height);
         self.viewport = Rectangle {
             x,
             y,
@@ -187,7 +175,6 @@ impl RenderBackend for SM64Backend {
     }
 
     fn set_scissor(&mut self, x: i32, y: i32, width: i32, height: i32) {
-        // eprintln!("set_scissor({}, {}, {}, {})", x, y, width, height);
         self.scissor = Rectangle {
             x,
             y,
@@ -197,21 +184,10 @@ impl RenderBackend for SM64Backend {
     }
 
     fn set_use_alpha(&mut self, use_alpha: bool) {
-        // eprintln!("set_use_alpha({})", use_alpha);
         self.state.use_alpha = use_alpha;
     }
 
     fn draw_triangles(&mut self, buf_vbo: &[f32], buf_vbo_num_tris: usize) {
-        // let stride = buf_vbo.len() / (3 * buf_vbo_num_tris);
-        // if stride != 4 {
-        //     eprintln!("stride = {}", stride);
-        // }
-        // eprintln!(
-        //     "  draw_triangles({}, {}, stride={})",
-        //     buf_vbo.len(),
-        //     buf_vbo_num_tris,
-        //     buf_vbo.len() / (3 * buf_vbo_num_tris)
-        // );
         self.data.commands.push(Command {
             viewport: self.viewport,
             scissor: self.scissor,
@@ -222,19 +198,11 @@ impl RenderBackend for SM64Backend {
         });
     }
 
-    fn on_resize(&mut self) {
-        // eprintln!("on_resize()");
-    }
+    fn on_resize(&mut self) {}
 
-    fn start_frame(&mut self) {
-        // eprintln!();
-    }
+    fn start_frame(&mut self) {}
 
-    fn end_frame(&mut self) {
-        // eprintln!("end_frame()");
-    }
+    fn end_frame(&mut self) {}
 
-    fn finish_render(&mut self) {
-        // eprintln!("finish_render()");
-    }
+    fn finish_render(&mut self) {}
 }
