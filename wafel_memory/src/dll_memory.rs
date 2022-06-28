@@ -151,7 +151,8 @@ impl DllGameMemory {
     }
 
     fn validate_offset<T>(&self, offset: usize, range_size: usize) -> Result<(), MemoryError> {
-        if offset + mem::size_of::<T>() > range_size || offset % mem::align_of::<T>() != 0 {
+        if offset + mem::size_of::<T>() > range_size {
+            // || offset % mem::align_of::<T>() != 0 {
             Err(InvalidAddress)
         } else {
             Ok(())
