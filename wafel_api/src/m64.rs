@@ -221,9 +221,9 @@ pub struct Input {
     /// The standard button bit flags.
     pub buttons: u16,
     /// The joystick x coordinate.
-    pub stick_x: u8,
+    pub stick_x: i8,
     /// The joystick y coordinate.
-    pub stick_y: u8,
+    pub stick_y: i8,
 }
 
 impl fmt::Display for Input {
@@ -298,8 +298,8 @@ pub fn try_load_m64(filename: &str) -> Result<(M64Metadata, Vec<Input>), Error> 
     for chunk in f[0x400..].chunks_exact(4) {
         inputs.push(Input {
             buttons: u16::from_be_bytes([chunk[0], chunk[1]]),
-            stick_x: chunk[2],
-            stick_y: chunk[3],
+            stick_x: chunk[2] as i8,
+            stick_y: chunk[3] as i8,
         });
     }
 
@@ -376,8 +376,8 @@ fn save_m64_impl(filename: &str, metadata: &M64Metadata, inputs: &[Input]) -> io
 
     for &input in inputs {
         f.write_all(&input.buttons.to_be_bytes())?;
-        f.write_all(&[input.stick_x])?;
-        f.write_all(&[input.stick_y])?;
+        f.write_all(&[input.stick_x as u8])?;
+        f.write_all(&[input.stick_y as u8])?;
     }
 
     Ok(())
