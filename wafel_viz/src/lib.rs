@@ -6,7 +6,7 @@ use std::error::Error;
 
 use sm64_render_data::sm64_update_and_render;
 use sm64_renderer::SM64Renderer;
-use wafel_memory::DllGameMemory;
+use wafel_memory::{DllGameMemory, GameMemory};
 use winit::{
     event::{ElementState, Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -32,6 +32,9 @@ async fn run() -> Result<(), Box<dyn Error>> {
             "sm64_update",
         )?
     };
+    for _ in 0..2500 {
+        memory.advance_base_slot(&mut base_slot);
+    }
 
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
@@ -82,6 +85,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
     window.set_visible(true);
     let mut first_render = false;
 
+    let mut second_render = true;
     let mut held = false;
 
     event_loop.run(move |event, _, control_flow| {
@@ -135,7 +139,8 @@ async fn run() -> Result<(), Box<dyn Error>> {
                         let depth_texture_view =
                             depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-                        if held {
+                        if second_render || held {
+                            second_render = false;
                             let render_data =
                                 sm64_update_and_render(&memory, &mut base_slot, 640, 480)
                                     .expect("failed to render game");

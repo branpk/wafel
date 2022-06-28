@@ -6,15 +6,28 @@ use crate::render_api::{
 
 #[derive(Debug, Default)]
 pub struct SM64RenderData {
-    pub textures: Vec<Option<Texture>>,
+    pub textures: Vec<Texture>,
     pub commands: Vec<Command>,
 }
 
 #[derive(Debug)]
 pub struct Texture {
+    pub data: Option<TextureData>,
+    pub sampler: Option<SamplerState>,
+}
+
+#[derive(Debug)]
+pub struct TextureData {
     pub rgba8: Vec<u8>,
     pub width: u32,
     pub height: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SamplerState {
+    pub linear_filter: bool,
+    pub cms: u32,
+    pub cmt: u32,
 }
 
 #[derive(Debug)]
@@ -22,7 +35,6 @@ pub struct Command {
     pub viewport: Rectangle,
     pub scissor: Rectangle,
     pub state: RenderState,
-    pub sampler: SamplerState,
     pub texture_index: Option<usize>,
     pub vertex_buffer: Vec<f32>,
     pub num_tris: usize,
@@ -45,13 +57,6 @@ pub struct RenderState {
     pub use_alpha: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct SamplerState {
-    pub linear_filter: bool,
-    pub cms: u32,
-    pub cmt: u32,
-}
-
 pub fn sm64_update_and_render(
     memory: &DllGameMemory,
     base_slot: &mut DllSlot,
@@ -70,7 +75,6 @@ struct SM64Backend {
     viewport: Rectangle,
     scissor: Rectangle,
     state: RenderState,
-    sampler: SamplerState,
     texture_index: Option<usize>,
     data: SM64RenderData,
 }
@@ -111,7 +115,10 @@ impl RenderBackend for SM64Backend {
 
     fn new_texture(&mut self) -> u32 {
         let id = self.data.textures.len() as u32;
-        self.data.textures.push(None);
+        self.data.textures.push(Texture {
+            data: None,
+            sampler: None,
+        });
         id
     }
 
@@ -131,7 +138,7 @@ impl RenderBackend for SM64Backend {
         // eprintln!("  upload_texture({}, {})", width, height);
         assert!(4 * width * height == rgba32_buf.len() as i32);
         let texture_index = self.texture_index.expect("no selected texture");
-        self.data.textures[texture_index] = Some(Texture {
+        self.data.textures[texture_index].data = Some(TextureData {
             rgba8: rgba32_buf.to_vec(),
             width: width as u32,
             height: height as u32,
@@ -146,11 +153,12 @@ impl RenderBackend for SM64Backend {
         if tile != 0 {
             unimplemented!("tile={}", tile);
         }
-        self.sampler = SamplerState {
+        let texture_index = self.texture_index.expect("no selected texture");
+        self.data.textures[texture_index].sampler = Some(SamplerState {
             linear_filter,
             cms,
             cmt,
-        };
+        });
     }
 
     fn set_depth_test(&mut self, depth_test: bool) {
@@ -208,7 +216,6 @@ impl RenderBackend for SM64Backend {
             viewport: self.viewport,
             scissor: self.scissor,
             state: self.state,
-            sampler: self.sampler,
             texture_index: self.texture_index,
             vertex_buffer: buf_vbo.to_vec(),
             num_tris: buf_vbo_num_tris,
