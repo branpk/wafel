@@ -115,12 +115,12 @@ pub struct Input {
 #[pymethods]
 impl Input {
     #[new]
-    pub fn new(buttons: u16, stick_x: u8, stick_y: u8) -> Self {
+    pub fn new(buttons: u16, stick_x: i32, stick_y: i32) -> Self {
         Self {
             inner: api::Input {
                 buttons,
-                stick_x,
-                stick_y,
+                stick_x: stick_x as i8,
+                stick_y: stick_y as i8,
             },
         }
     }
@@ -140,23 +140,23 @@ impl Input {
     }
 
     #[getter]
-    pub fn stick_x(&self) -> u8 {
+    pub fn stick_x(&self) -> i8 {
         self.inner.stick_x
     }
 
     #[setter]
-    pub fn set_stick_x(&mut self, stick_x: u8) {
-        self.inner.stick_x = stick_x;
+    pub fn set_stick_x(&mut self, stick_x: i32) {
+        self.inner.stick_x = stick_x as i8;
     }
 
     #[getter]
-    pub fn stick_y(&self) -> u8 {
+    pub fn stick_y(&self) -> i8 {
         self.inner.stick_y
     }
 
     #[setter]
-    pub fn set_stick_y(&mut self, stick_y: u8) {
-        self.inner.stick_y = stick_y;
+    pub fn set_stick_y(&mut self, stick_y: i32) {
+        self.inner.stick_y = stick_y as i8;
     }
 }
 
