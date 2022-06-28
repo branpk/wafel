@@ -9,7 +9,7 @@ use wgpu::util::DeviceExt;
 use crate::{
     render_api::{decode_shader_id, CCFeatures, ShaderItem},
     sm64_render_data::{
-        Rectangle, RenderState, SM64RenderData, SamplerState, Texture, TextureData,
+        RenderState, SM64RenderData, SamplerState, ScreenRectangle, TextureData, TextureState,
     },
 };
 
@@ -23,8 +23,8 @@ pub struct SM64Renderer {
 
 #[derive(Debug)]
 struct Command {
-    viewport: Rectangle,
-    scissor: Rectangle,
+    viewport: ScreenRectangle,
+    scissor: ScreenRectangle,
     state: RenderState,
     texture_index: [Option<usize>; 2],
     buffer: wgpu::Buffer,
@@ -477,7 +477,7 @@ impl SM64Renderer {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         texture_index: usize,
-        texture: &Texture,
+        texture: &TextureState,
     ) {
         if !self.texture_bind_groups.contains_key(&texture_index) {
             let sampler =
@@ -552,7 +552,7 @@ impl SM64Renderer {
             let shader_id = command.state.shader_id.expect("missing shader id");
             let cc_features = decode_shader_id(shader_id);
 
-            let Rectangle {
+            let ScreenRectangle {
                 x,
                 y,
                 width,
@@ -564,7 +564,7 @@ impl SM64Renderer {
             let viewport_height = height;
             rp.set_viewport(x as f32, y as f32, width as f32, height as f32, 0.0, 1.0);
 
-            let Rectangle {
+            let ScreenRectangle {
                 x,
                 y,
                 width,

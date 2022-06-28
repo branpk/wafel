@@ -8,7 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use sm64_render_data::sm64_render_display_list;
+use sm64_render_backend::sm64_render_display_list;
 use sm64_renderer::SM64Renderer;
 use wafel_api::{load_m64, Game};
 use wafel_memory::{DllGameMemory, GameMemory};
@@ -19,8 +19,10 @@ use winit::{
 };
 
 use crate::render_api::{decode_shader_id, CCFeatures};
+pub use sm64_render_data::*;
 
 mod render_api;
+mod sm64_render_backend;
 mod sm64_render_data;
 mod sm64_renderer;
 
@@ -31,7 +33,7 @@ pub fn test() -> Result<(), Box<dyn Error>> {
 
 async fn run() -> Result<(), Box<dyn Error>> {
     let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
-    let (_, inputs) = load_m64("test_files/120_u.m64");
+    let (_, inputs) = load_m64("test_files/lod-test.m64");
 
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
