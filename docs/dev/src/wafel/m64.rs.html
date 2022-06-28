@@ -327,12 +327,12 @@
 <span class="attribute">#[<span class="ident">pymethods</span>]</span>
 <span class="kw">impl</span> <span class="ident">Input</span> {
     <span class="attribute">#[<span class="ident">new</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">buttons</span>: <span class="ident">u16</span>, <span class="ident">stick_x</span>: <span class="ident">u8</span>, <span class="ident">stick_y</span>: <span class="ident">u8</span>) -&gt; <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">buttons</span>: <span class="ident">u16</span>, <span class="ident">stick_x</span>: <span class="ident">i32</span>, <span class="ident">stick_y</span>: <span class="ident">i32</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">inner</span>: <span class="ident">api::Input</span> {
                 <span class="ident">buttons</span>,
-                <span class="ident">stick_x</span>,
-                <span class="ident">stick_y</span>,
+                <span class="ident">stick_x</span>: <span class="ident">stick_x</span> <span class="kw">as</span> <span class="ident">i8</span>,
+                <span class="ident">stick_y</span>: <span class="ident">stick_y</span> <span class="kw">as</span> <span class="ident">i8</span>,
             },
         }
     }
@@ -352,23 +352,23 @@
     }
 
     <span class="attribute">#[<span class="ident">getter</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stick_x</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u8</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stick_x</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">i8</span> {
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">stick_x</span>
     }
 
     <span class="attribute">#[<span class="ident">setter</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_stick_x</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">stick_x</span>: <span class="ident">u8</span>) {
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">stick_x</span> <span class="op">=</span> <span class="ident">stick_x</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_stick_x</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">stick_x</span>: <span class="ident">i32</span>) {
+        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">stick_x</span> <span class="op">=</span> <span class="ident">stick_x</span> <span class="kw">as</span> <span class="ident">i8</span>;
     }
 
     <span class="attribute">#[<span class="ident">getter</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stick_y</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u8</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stick_y</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">i8</span> {
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">stick_y</span>
     }
 
     <span class="attribute">#[<span class="ident">setter</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_stick_y</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">stick_y</span>: <span class="ident">u8</span>) {
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">stick_y</span> <span class="op">=</span> <span class="ident">stick_y</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_stick_y</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">stick_y</span>: <span class="ident">i32</span>) {
+        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">stick_y</span> <span class="op">=</span> <span class="ident">stick_y</span> <span class="kw">as</span> <span class="ident">i8</span>;
     }
 }
 
