@@ -35,7 +35,7 @@ pub struct Command {
     pub viewport: Rectangle,
     pub scissor: Rectangle,
     pub state: RenderState,
-    pub texture_index: Option<usize>,
+    pub texture_index: [Option<usize>; 2],
     pub vertex_buffer: Vec<f32>,
     pub num_tris: usize,
 }
@@ -75,7 +75,8 @@ struct SM64Backend {
     viewport: Rectangle,
     scissor: Rectangle,
     state: RenderState,
-    texture_index: Option<usize>,
+    tile: usize,
+    texture_index: [Option<usize>; 2],
     data: SM64RenderData,
 }
 
@@ -121,19 +122,17 @@ impl RenderBackend for SM64Backend {
     }
 
     fn select_texture(&mut self, tile: i32, texture_id: u32) {
-        if tile != 0 {
-            unimplemented!("tile={}", tile);
-        }
         assert!(
             (texture_id as usize) < self.data.textures.len(),
             "invalid texture id"
         );
-        self.texture_index = Some(texture_id as usize);
+        self.tile = tile as usize;
+        self.texture_index[self.tile] = Some(texture_id as usize);
     }
 
     fn upload_texture(&mut self, rgba32_buf: &[u8], width: i32, height: i32) {
         assert!(4 * width * height == rgba32_buf.len() as i32);
-        let texture_index = self.texture_index.expect("no selected texture");
+        let texture_index = self.texture_index[self.tile].expect("no selected texture");
         self.data.textures[texture_index].data = Some(TextureData {
             rgba8: rgba32_buf.to_vec(),
             width: width as u32,
@@ -142,10 +141,8 @@ impl RenderBackend for SM64Backend {
     }
 
     fn set_sampler_parameters(&mut self, tile: i32, linear_filter: bool, cms: u32, cmt: u32) {
-        if tile != 0 {
-            unimplemented!("tile={}", tile);
-        }
-        let texture_index = self.texture_index.expect("no selected texture");
+        self.tile = tile as usize;
+        let texture_index = self.texture_index[self.tile].expect("no selected texture");
         self.data.textures[texture_index].sampler = Some(SamplerState {
             linear_filter,
             cms,

@@ -26,7 +26,7 @@ struct Command {
     viewport: Rectangle,
     scissor: Rectangle,
     state: RenderState,
-    texture_index: Option<usize>,
+    texture_index: [Option<usize>; 2],
     buffer: wgpu::Buffer,
     num_vertices: u32,
 }
@@ -38,11 +38,10 @@ fn label(prefix: &str, shader_id: u32) -> &'static str {
 
 #[rustfmt::skip]
 fn write_fragment_shader_body(s: &mut String, cc_features: CCFeatures) -> Result<(), fmt::Error> {
-    if cc_features.used_textures[0] {
-        writeln!(s, "    let tex0 = textureSample(r_texture, r_sampler, in.uv);")?;
-    }
-    if cc_features.used_textures[1] {
-        unimplemented!();
+    for i in 0..2 {
+        if cc_features.used_textures[i] {
+            writeln!(s, "    let tex{} = textureSample(r_texture{}, r_sampler{}, in.uv);", i, i, i)?;
+        }
     }
 
     if cc_features.opt_alpha && cc_features.color_alpha_same {
@@ -181,10 +180,11 @@ impl SM64Renderer {
         writeln!(s)?;
 
         let mut bind_group_layouts: Vec<&wgpu::BindGroupLayout> = Vec::new();
-        {
-            if cc_features.uses_textures() {
-                writeln!(s, "@group(0) @binding(0) var r_sampler: sampler;")?;
-                writeln!(s, "@group(0) @binding(1) var r_texture: texture_2d<f32>;")?;
+        #[rustfmt::skip]
+        for i in 0..2 {
+            if cc_features.used_textures[i] {
+                writeln!(s, "@group({}) @binding(0) var r_sampler{}: sampler;", i, i)?;
+                writeln!(s, "@group({}) @binding(1) var r_texture{}: texture_2d<f32>;", i, i)?;
                 writeln!(s)?;
                 bind_group_layouts.push(&self.texture_bind_group_layout);
             }
@@ -561,6 +561,7 @@ impl SM64Renderer {
             if width == 0 || height == 0 {
                 continue;
             }
+            let viewport_height = height;
             rp.set_viewport(x as f32, y as f32, width as f32, height as f32, 0.0, 1.0);
 
             let Rectangle {
@@ -572,7 +573,12 @@ impl SM64Renderer {
             if width == 0 || height == 0 {
                 continue;
             }
-            rp.set_scissor_rect(x as u32, y as u32, width as u32, height as u32);
+            rp.set_scissor_rect(
+                x as u32,
+                (viewport_height - y - height) as u32,
+                width as u32,
+                height as u32,
+            );
 
             if current_state != Some(command.state) {
                 current_state = Some(command.state);
@@ -583,15 +589,17 @@ impl SM64Renderer {
                 rp.set_pipeline(pipeline);
             }
 
-            if cc_features.uses_textures() {
-                let texture_index = command.texture_index.expect("missing texture index");
+            for i in 0..2 {
+                if cc_features.used_textures[i] {
+                    let texture_index = command.texture_index[i].expect("missing texture index");
 
-                let bind_group = self
-                    .texture_bind_groups
-                    .get(&texture_index)
-                    .expect("texture bind group not prepared");
+                    let bind_group = self
+                        .texture_bind_groups
+                        .get(&texture_index)
+                        .expect("texture bind group not prepared");
 
-                rp.set_bind_group(0, bind_group, &[]);
+                    rp.set_bind_group(i as u32, bind_group, &[]);
+                }
             }
 
             rp.set_vertex_buffer(0, command.buffer.slice(..));
