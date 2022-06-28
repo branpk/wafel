@@ -109,7 +109,7 @@ fn version_to_str(version: api::SM64Version) -> String {
 #[pyclass]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Input {
-    inner: api::Input,
+    pub(crate) inner: api::Input,
 }
 
 #[pymethods]

@@ -4,7 +4,8 @@ use pyo3::{prelude::*, PyObjectProtocol};
 use wafel_api as api;
 
 use crate::{
-    convert_frame_log, err, py_object_to_value, value_to_py_object, Address, ObjectHitbox, Surface,
+    convert_frame_log, err, py_object_to_value, value_to_py_object, Address, Input, ObjectHitbox,
+    Surface,
 };
 
 #[pyclass]
@@ -54,6 +55,10 @@ impl Game {
         self.inner
             .try_write(path, py_object_to_value(py, value)?)
             .map_err(err)
+    }
+
+    pub fn set_input(&mut self, input: Input) -> PyResult<()> {
+        self.inner.try_set_input(input.inner).map_err(err)
     }
 
     pub fn frame(&self) -> u32 {

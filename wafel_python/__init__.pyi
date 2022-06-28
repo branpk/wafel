@@ -80,6 +80,8 @@ class Game:
         See the [wafel_api crate documentation](https://branpk.github.io/wafel/docs/dev/wafel_api/)
         for the path syntax.
         """
+    def set_input(self, input: Input) -> None:
+        """Set the game's controller input for the current frame using Input."""
     def frame(self) -> int:
         """Get the frame of the current game state."""
     def advance(self) -> None:

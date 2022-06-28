@@ -13,7 +13,7 @@ use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
 use crate::{
     data_cache::DataCache, data_path_cache::DataPathCache, frame_log::read_frame_log,
     mario::mario_action_names, read_object_hitboxes, read_surfaces, simplified_data_type, DataType,
-    Error, ObjectHitbox, Surface,
+    Error, Input, ObjectHitbox, Surface,
 };
 
 /// An SM64 API that allows reads and writes to arbitrary frames without frame advance or
@@ -338,6 +338,29 @@ impl Timeline {
     pub fn try_write(&mut self, frame: u32, path: &str, value: Value) -> Result<(), Error> {
         let path = self.data_path_cache.global(path)?;
         self.with_controller_mut(|controller| controller.write(frame, &path, value));
+        Ok(())
+    }
+
+    /// Set the game's controller input for the given frame using [Input].
+    ///
+    /// # Panics
+    ///
+    /// Panics if path compilation fails.
+    #[track_caller]
+    pub fn set_input(&mut self, frame: u32, input: Input) {
+        match self.try_set_input(frame, input) {
+            Ok(()) => {}
+            Err(error) => panic!("Error:\n  failed to set input:\n  {}\n", error),
+        }
+    }
+
+    /// Set the game's controller input for the given frame using [Input].
+    ///
+    /// Returns an error if path compilation fails.
+    pub fn try_set_input(&mut self, frame: u32, input: Input) -> Result<(), Error> {
+        self.try_write(frame, "gControllerPads[0].button", input.buttons.into())?;
+        self.try_write(frame, "gControllerPads[0].stick_x", input.stick_x.into())?;
+        self.try_write(frame, "gControllerPads[0].stick_y", input.stick_y.into())?;
         Ok(())
     }
 

@@ -7,8 +7,8 @@ use wafel_memory::{DllGameMemory, GameMemory, MemoryRead, SymbolLookup};
 
 use crate::{
     data_path_cache::DataPathCache, frame_log::read_frame_log, mario::mario_action_names,
-    read_object_hitboxes, read_surfaces, simplified_data_type, DataType, Error, ObjectHitbox,
-    Surface,
+    read_object_hitboxes, read_surfaces, simplified_data_type, DataType, Error, Input,
+    ObjectHitbox, Surface,
 };
 
 /// An SM64 API that uses a traditional frame advance / save state model.
@@ -255,6 +255,29 @@ impl Game {
     pub fn try_write(&mut self, path: &str, value: Value) -> Result<(), Error> {
         let path = self.data_path_cache.global(path)?;
         path.write(&mut self.memory.with_slot_mut(&mut self.base_slot), value)?;
+        Ok(())
+    }
+
+    /// Set the game's controller input for the current frame using [Input].
+    ///
+    /// # Panics
+    ///
+    /// Panics if the write fails.
+    #[track_caller]
+    pub fn set_input(&mut self, input: Input) {
+        match self.try_set_input(input) {
+            Ok(()) => {}
+            Err(error) => panic!("Error:\n  failed to set input:\n  {}\n", error),
+        }
+    }
+
+    /// Set the game's controller input for the current frame using [Input].
+    ///
+    /// Returns an error if the write fails.
+    pub fn try_set_input(&mut self, input: Input) -> Result<(), Error> {
+        self.try_write("gControllerPads[0].button", input.buttons.into())?;
+        self.try_write("gControllerPads[0].stick_x", input.stick_x.into())?;
+        self.try_write("gControllerPads[0].stick_y", input.stick_y.into())?;
         Ok(())
     }
 
