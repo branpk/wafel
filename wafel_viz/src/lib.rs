@@ -2,13 +2,18 @@
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 #![allow(clippy::map_entry)]
 
-use std::error::Error;
+use std::{
+    collections::HashSet,
+    error::Error,
+    time::{Duration, Instant},
+};
 
 use sm64_render_data::sm64_render_display_list;
 use sm64_renderer::SM64Renderer;
+use wafel_api::{load_m64, Game};
 use wafel_memory::{DllGameMemory, GameMemory};
 use winit::{
-    event::{ElementState, Event, WindowEvent},
+    event::{ElementState, Event, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -25,16 +30,8 @@ pub fn test() -> Result<(), Box<dyn Error>> {
 }
 
 async fn run() -> Result<(), Box<dyn Error>> {
-    let (memory, mut base_slot) = unsafe {
-        DllGameMemory::load(
-            "../libsm64-build/build/us_lib/sm64_us.dll",
-            "sm64_init",
-            "sm64_update",
-        )?
-    };
-    for _ in 0..2500 {
-        memory.advance_base_slot(&mut base_slot);
-    }
+    let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
+    let (_, inputs) = load_m64("test_files/120_u.m64");
 
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
@@ -85,7 +82,8 @@ async fn run() -> Result<(), Box<dyn Error>> {
     window.set_visible(true);
     let mut first_render = false;
 
-    let mut held = false;
+    let mut held = HashSet::new();
+    let mut last_update = Instant::now();
 
     event_loop.run(move |event, _, control_flow| {
         let _ = (&instance, &adapter, &renderer);
@@ -105,7 +103,16 @@ async fn run() -> Result<(), Box<dyn Error>> {
                     *control_flow = ControlFlow::Exit;
                 }
                 WindowEvent::KeyboardInput { input, .. } => {
-                    held = input.state == ElementState::Pressed;
+                    if let Some(key) = input.virtual_keycode {
+                        match input.state {
+                            ElementState::Pressed => {
+                                held.insert(key);
+                            }
+                            ElementState::Released => {
+                                held.remove(&key);
+                            }
+                        }
+                    }
                 }
                 _ => {}
             },
@@ -138,13 +145,31 @@ async fn run() -> Result<(), Box<dyn Error>> {
                         let depth_texture_view =
                             depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-                        if held {
-                            memory.advance_base_slot(&mut base_slot);
+                        if last_update.elapsed() >= Duration::from_secs_f32(1.0 / 30.0) {
+                            last_update = Instant::now();
+
+                            let num_frames = if held.contains(&VirtualKeyCode::Right) {
+                                1
+                            } else if held.contains(&VirtualKeyCode::PageDown) {
+                                10
+                            } else if held.contains(&VirtualKeyCode::PageUp) {
+                                100
+                            } else {
+                                0
+                            };
+                            for _ in 0..num_frames {
+                                if let Some(input) = inputs.get(game.frame() as usize) {
+                                    game.write("gControllerPads[0].button", input.buttons.into());
+                                    game.write("gControllerPads[0].stick_x", input.stick_x.into());
+                                    game.write("gControllerPads[0].stick_y", input.stick_y.into());
+                                }
+                                game.advance();
+                            }
                         }
 
                         let render_data = sm64_render_display_list(
-                            &memory,
-                            &mut base_slot,
+                            &game.memory,
+                            &mut game.base_slot,
                             config.width,
                             config.height,
                         )

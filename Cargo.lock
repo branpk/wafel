@@ -2470,6 +2470,7 @@ dependencies = [
  "env_logger",
  "futures",
  "once_cell",
+ "wafel_api",
  "wafel_data_type",
  "wafel_layout",
  "wafel_memory",
