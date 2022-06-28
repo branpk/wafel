@@ -1,7 +1,6 @@
 use std::{
     collections::HashMap,
     fmt::{self, Write},
-    fs,
 };
 
 use bytemuck::cast_slice;
@@ -297,7 +296,7 @@ impl SM64Renderer {
             }
             for input_index in 1..=cc_features.num_inputs {
                 if cc_features.opt_alpha {
-                    writeln!(s, "   out.input{} = in.input{};", input_index, input_index)?
+                    writeln!(s, "    out.input{} = in.input{};", input_index, input_index)?
                 } else {
                     writeln!(
                         s,
@@ -321,6 +320,15 @@ impl SM64Renderer {
             writeln!(s)?;
         }
 
+        #[rustfmt::skip]
+        if cc_features.opt_noise {
+            writeln!(s, "fn random(v: vec3<f32>) -> f32 {{")?;
+            writeln!(s, "    let r = dot(sin(v), vec3<f32>(12.9898, 78.233, 37.719));")?;
+            writeln!(s, "    return fract(sin(r) * 143758.5453);")?;
+            writeln!(s, "}}")?;
+            writeln!(s)?;
+        }
+
         {
             writeln!(s, "@fragment")?;
             writeln!(s, "fn fs_main(in: VertexOutput) -> FragmentOutput {{")?;
@@ -333,13 +341,6 @@ impl SM64Renderer {
             writeln!(s, "}}")?;
             writeln!(s)?;
         }
-
-        // TODO: Remove
-        fs::write(
-            &format!("wafel_viz/gen_shaders/{:010X}.wgsl", shader_id),
-            &s,
-        )
-        .unwrap();
 
         let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some(label("shader", shader_id)),
@@ -411,7 +412,7 @@ impl SM64Renderer {
             }
         };
 
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+        device.create_sampler(&wgpu::SamplerDescriptor {
             label: None,
             address_mode_u: address_mode(state.cms),
             address_mode_v: address_mode(state.cmt),
@@ -424,9 +425,7 @@ impl SM64Renderer {
             compare: None,
             anisotropy_clamp: None,
             border_color: None,
-        });
-
-        sampler
+        })
     }
 
     fn create_texture(
@@ -527,9 +526,6 @@ impl SM64Renderer {
 
         self.commands.clear();
         for command in &data.commands {
-            let shader_id = command.state.shader_id.expect("missing shader id");
-            let cc_features = decode_shader_id(shader_id);
-
             self.prepare_pipeline(device, output_format, command.state);
 
             let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
