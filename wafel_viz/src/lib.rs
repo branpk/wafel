@@ -26,14 +26,21 @@ mod n64_render_data;
 mod n64_renderer;
 mod render_api;
 
-pub fn test() -> Result<(), Box<dyn Error>> {
+pub fn test(frame0: u32) -> Result<(), Box<dyn Error>> {
     env_logger::init();
-    futures::executor::block_on(run())
+    futures::executor::block_on(run(frame0))
 }
 
-async fn run() -> Result<(), Box<dyn Error>> {
+async fn run(frame0: u32) -> Result<(), Box<dyn Error>> {
     let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
-    let (_, inputs) = load_m64("test_files/lod-test.m64");
+    let (_, inputs) = load_m64("../sm64-bot/bad_bot.m64");
+
+    while game.frame() < frame0 {
+        if let Some(&input) = inputs.get(game.frame() as usize) {
+            game.set_input(input);
+        }
+        game.advance();
+    }
 
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
@@ -108,6 +115,9 @@ async fn run() -> Result<(), Box<dyn Error>> {
                     if let Some(key) = input.virtual_keycode {
                         match input.state {
                             ElementState::Pressed => {
+                                if key == VirtualKeyCode::Return {
+                                    eprintln!("frame = {}", game.frame());
+                                }
                                 held.insert(key);
                             }
                             ElementState::Released => {
