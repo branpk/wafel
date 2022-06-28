@@ -490,6 +490,7 @@
 <span id="484">484</span>
 <span id="485">485</span>
 <span id="486">486</span>
+<span id="487">487</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">mem</span>, <span class="ident">ptr</span>,
     <span class="ident">sync</span>::{
@@ -643,7 +644,8 @@
     }
 
     <span class="kw">fn</span> <span class="ident">validate_offset</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">offset</span>: <span class="ident">usize</span>, <span class="ident">range_size</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">MemoryError</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="ident">offset</span> <span class="op">+</span> <span class="ident">mem::size_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() <span class="op">&gt;</span> <span class="ident">range_size</span> <span class="op">|</span><span class="op">|</span> <span class="ident">offset</span> <span class="op">%</span> <span class="ident">mem::align_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
+        <span class="kw">if</span> <span class="ident">offset</span> <span class="op">+</span> <span class="ident">mem::size_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() <span class="op">&gt;</span> <span class="ident">range_size</span> {
+            <span class="comment">// || offset % mem::align_of::&lt;T&gt;() != 0 {</span>
             <span class="prelude-val">Err</span>(<span class="ident">InvalidAddress</span>)
         } <span class="kw">else</span> {
             <span class="prelude-val">Ok</span>(())
