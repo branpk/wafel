@@ -4,7 +4,7 @@
 
 use std::error::Error;
 
-use sm64_render_data::sm64_update_and_render;
+use sm64_render_data::sm64_render_display_list;
 use sm64_renderer::SM64Renderer;
 use wafel_memory::{DllGameMemory, GameMemory};
 use winit::{
@@ -85,7 +85,6 @@ async fn run() -> Result<(), Box<dyn Error>> {
     window.set_visible(true);
     let mut first_render = false;
 
-    let mut second_render = true;
     let mut held = false;
 
     event_loop.run(move |event, _, control_flow| {
@@ -139,13 +138,18 @@ async fn run() -> Result<(), Box<dyn Error>> {
                         let depth_texture_view =
                             depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-                        if second_render || held {
-                            second_render = false;
-                            let render_data =
-                                sm64_update_and_render(&memory, &mut base_slot, 640, 480)
-                                    .expect("failed to render game");
-                            renderer.prepare(&device, &queue, output_format, &render_data);
+                        if held {
+                            memory.advance_base_slot(&mut base_slot);
                         }
+
+                        let render_data = sm64_render_display_list(
+                            &memory,
+                            &mut base_slot,
+                            config.width,
+                            config.height,
+                        )
+                        .expect("failed to render game");
+                        renderer.prepare(&device, &queue, output_format, &render_data);
 
                         let mut encoder =
                             device.create_command_encoder(&wgpu::CommandEncoderDescriptor {

@@ -37,7 +37,7 @@ pub trait RenderBackend {
     fn finish_render(&mut self);
 }
 
-pub fn update_and_render_with_backend(
+pub fn render_display_list_with_backend(
     memory: &DllGameMemory,
     base_slot: &mut DllSlot,
     backend: &mut impl RenderBackend,
@@ -53,7 +53,7 @@ pub fn update_and_render_with_backend(
             }
             {
                 let update_and_render: unsafe extern "C" fn(u32, u32) =
-                    memory.symbol_pointer(base_slot, "sm64_update_and_render")?;
+                    memory.symbol_pointer(base_slot, "sm64_render_display_list")?;
                 update_and_render(width, height);
             }
             Ok(())

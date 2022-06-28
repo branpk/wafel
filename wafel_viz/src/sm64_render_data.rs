@@ -1,7 +1,7 @@
 use wafel_memory::{DllGameMemory, DllSlot, MemoryError};
 
 use crate::render_api::{
-    decode_shader_id, update_and_render_with_backend, RenderBackend, ShaderId, ShaderInfo,
+    decode_shader_id, render_display_list_with_backend, RenderBackend, ShaderId, ShaderInfo,
 };
 
 #[derive(Debug, Default)]
@@ -57,7 +57,7 @@ pub struct RenderState {
     pub use_alpha: bool,
 }
 
-pub fn sm64_update_and_render(
+pub fn sm64_render_display_list(
     memory: &DllGameMemory,
     base_slot: &mut DllSlot,
     width: u32,
@@ -66,7 +66,7 @@ pub fn sm64_update_and_render(
     // We create a new backend every frame to ensure that gfx_pc isn't relying on rendering
     // state across frames (o/w frame rewind might break)
     let mut backend = SM64Backend::default();
-    update_and_render_with_backend(memory, base_slot, &mut backend, width, height)?;
+    render_display_list_with_backend(memory, base_slot, &mut backend, width, height)?;
     Ok(backend.data)
 }
 
