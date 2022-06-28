@@ -8,8 +8,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-use sm64_render_backend::sm64_render_display_list;
-use sm64_renderer::SM64Renderer;
+use n64_render_backend::process_display_list;
+use n64_renderer::N64Renderer;
 use wafel_api::{load_m64, Game};
 use wafel_memory::{DllGameMemory, GameMemory};
 use winit::{
@@ -19,12 +19,12 @@ use winit::{
 };
 
 use crate::render_api::{decode_shader_id, CCFeatures};
-pub use sm64_render_data::*;
+pub use n64_render_data::*;
 
+mod n64_render_backend;
+mod n64_render_data;
+mod n64_renderer;
 mod render_api;
-mod sm64_render_backend;
-mod sm64_render_data;
-mod sm64_renderer;
 
 pub fn test() -> Result<(), Box<dyn Error>> {
     env_logger::init();
@@ -79,7 +79,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
     };
     surface.configure(&device, &config);
 
-    let mut renderer = SM64Renderer::new(&device);
+    let mut renderer = N64Renderer::new(&device);
 
     window.set_visible(true);
     let mut first_render = false;
@@ -169,7 +169,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
                             }
                         }
 
-                        let render_data = sm64_render_display_list(
+                        let render_data = process_display_list(
                             &game.memory,
                             &mut game.base_slot,
                             config.width,

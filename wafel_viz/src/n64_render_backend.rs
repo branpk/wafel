@@ -1,39 +1,39 @@
 use wafel_memory::{DllGameMemory, DllSlot, MemoryError};
 
 use crate::{
-    render_api::{
-        decode_shader_id, render_display_list_with_backend, RenderBackend, ShaderId, ShaderInfo,
-    },
-    sm64_render_data::{
-        DrawCommand, RenderState, SM64RenderData, SamplerState, ScreenRectangle, TextureData,
+    n64_render_data::{
+        DrawCommand, N64RenderData, RenderState, SamplerState, ScreenRectangle, TextureData,
         TextureState,
+    },
+    render_api::{
+        decode_shader_id, process_display_list_with_backend, RenderBackend, ShaderId, ShaderInfo,
     },
 };
 
-pub fn sm64_render_display_list(
+pub fn process_display_list(
     memory: &DllGameMemory,
     base_slot: &mut DllSlot,
     width: u32,
     height: u32,
-) -> Result<SM64RenderData, MemoryError> {
+) -> Result<N64RenderData, MemoryError> {
     // We create a new backend every frame to ensure that gfx_pc isn't relying on rendering
     // state across frames (o/w frame rewind might break)
-    let mut backend = SM64Backend::default();
-    render_display_list_with_backend(memory, base_slot, &mut backend, width, height)?;
+    let mut backend = N64RenderBackend::default();
+    process_display_list_with_backend(memory, base_slot, &mut backend, width, height)?;
     Ok(backend.data)
 }
 
 #[derive(Debug, Default)]
-struct SM64Backend {
+struct N64RenderBackend {
     viewport: ScreenRectangle,
     scissor: ScreenRectangle,
     state: RenderState,
     tile: usize,
     texture_index: [Option<usize>; 2],
-    data: SM64RenderData,
+    data: N64RenderData,
 }
 
-impl RenderBackend for SM64Backend {
+impl RenderBackend for N64RenderBackend {
     fn z_is_from_0_to_1(&self) -> bool {
         true
     }

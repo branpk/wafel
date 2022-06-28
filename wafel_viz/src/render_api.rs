@@ -37,7 +37,7 @@ pub trait RenderBackend {
     fn finish_render(&mut self);
 }
 
-pub fn render_display_list_with_backend(
+pub fn process_display_list_with_backend(
     memory: &DllGameMemory,
     base_slot: &mut DllSlot,
     backend: &mut impl RenderBackend,

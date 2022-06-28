@@ -6,7 +6,7 @@
 /// This object is self-contained, so all vertex and texture data is stored in the object.
 /// Its size is usually around 100-300 KB during normal gameplay.
 #[derive(Debug, Clone, Default)]
-pub struct SM64RenderData {
+pub struct N64RenderData {
     pub(crate) textures: Vec<TextureState>,
     pub(crate) commands: Vec<DrawCommand>,
 }

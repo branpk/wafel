@@ -7,14 +7,14 @@ use bytemuck::cast_slice;
 use wgpu::util::DeviceExt;
 
 use crate::{
-    render_api::{decode_shader_id, CCFeatures, ShaderItem},
-    sm64_render_data::{
-        RenderState, SM64RenderData, SamplerState, ScreenRectangle, TextureData, TextureState,
+    n64_render_data::{
+        N64RenderData, RenderState, SamplerState, ScreenRectangle, TextureData, TextureState,
     },
+    render_api::{decode_shader_id, CCFeatures, ShaderItem},
 };
 
 #[derive(Debug)]
-pub struct SM64Renderer {
+pub struct N64Renderer {
     texture_bind_group_layout: wgpu::BindGroupLayout,
     texture_bind_groups: HashMap<usize, wgpu::BindGroup>,
     pipelines: HashMap<RenderState, wgpu::RenderPipeline>,
@@ -131,7 +131,7 @@ fn item_expr(item: ShaderItem) -> &'static str {
     }
 }
 
-impl SM64Renderer {
+impl N64Renderer {
     pub fn new(device: &wgpu::Device) -> Self {
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -516,7 +516,7 @@ impl SM64Renderer {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         output_format: wgpu::TextureFormat,
-        data: &SM64RenderData,
+        data: &N64RenderData,
     ) {
         // Textures may change index across frames
         self.texture_bind_groups.clear();
