@@ -2,7 +2,7 @@
         </a><h2 class="location"></h2>
     </nav>
     <nav class="sidebar"><a class="sidebar-logo" href="../../wafel_api/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../wafel_api/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><div id="settings-menu" tabindex="-1">
+        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../wafel_api/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
                                 <a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div>
                         </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
@@ -438,6 +438,29 @@
 <span id="432">432</span>
 <span id="433">433</span>
 <span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">sync::Arc</span>};
 
 <span class="kw">use</span> <span class="ident">wafel_data_path::DataPath</span>;
@@ -447,8 +470,8 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">data_path_cache::DataPathCache</span>, <span class="ident">frame_log::read_frame_log</span>, <span class="ident">mario::mario_action_names</span>,
-    <span class="ident">read_object_hitboxes</span>, <span class="ident">read_surfaces</span>, <span class="ident">simplified_data_type</span>, <span class="ident">DataType</span>, <span class="ident">Error</span>, <span class="ident">ObjectHitbox</span>,
-    <span class="ident">Surface</span>,
+    <span class="ident">read_object_hitboxes</span>, <span class="ident">read_surfaces</span>, <span class="ident">simplified_data_type</span>, <span class="ident">DataType</span>, <span class="ident">Error</span>, <span class="ident">Input</span>,
+    <span class="ident">ObjectHitbox</span>, <span class="ident">Surface</span>,
 };
 
 <span class="doccomment">/// An SM64 API that uses a traditional frame advance / save state model.</span>
@@ -698,6 +721,29 @@
         <span class="prelude-val">Ok</span>(())
     }
 
+    <span class="doccomment">/// Set the game&#39;s controller input for the current frame using [Input].</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// # Panics</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Panics if the write fails.</span>
+    <span class="attribute">#[<span class="ident">track_caller</span>]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_input</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">input</span>: <span class="ident">Input</span>) {
+        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_set_input</span>(<span class="ident">input</span>) {
+            <span class="prelude-val">Ok</span>(()) =&gt; {}
+            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Error:\n  failed to set input:\n  {}\n&quot;</span>, <span class="ident">error</span>),
+        }
+    }
+
+    <span class="doccomment">/// Set the game&#39;s controller input for the current frame using [Input].</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Returns an error if the write fails.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_set_input</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">input</span>: <span class="ident">Input</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">try_write</span>(<span class="string">&quot;gControllerPads[0].button&quot;</span>, <span class="ident">input</span>.<span class="ident">buttons</span>.<span class="ident">into</span>())<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">try_write</span>(<span class="string">&quot;gControllerPads[0].stick_x&quot;</span>, <span class="ident">input</span>.<span class="ident">stick_x</span>.<span class="ident">into</span>())<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">try_write</span>(<span class="string">&quot;gControllerPads[0].stick_y&quot;</span>, <span class="ident">input</span>.<span class="ident">stick_y</span>.<span class="ident">into</span>())<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    }
+
     <span class="doccomment">/// Get the frame of the current game state.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">frame</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u32</span> {
         <span class="self">self</span>.<span class="ident">base_slot_frame</span>
@@ -873,5 +919,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_api" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (20a6f3a8a 2022-06-25)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_api" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (2f3ddd9f5 2022-06-27)" ></div>
 </body></html>

@@ -2,7 +2,7 @@
         </a><h2 class="location"></h2>
     </nav>
     <nav class="sidebar"><a class="sidebar-logo" href="../../wafel_api/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../wafel_api/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><div id="settings-menu" tabindex="-1">
+        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../wafel_api/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
                                 <a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div>
                         </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
@@ -600,6 +600,29 @@
 <span id="594">594</span>
 <span id="595">595</span>
 <span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections::HashMap</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>},
@@ -615,7 +638,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">data_cache::DataCache</span>, <span class="ident">data_path_cache::DataPathCache</span>, <span class="ident">frame_log::read_frame_log</span>,
     <span class="ident">mario::mario_action_names</span>, <span class="ident">read_object_hitboxes</span>, <span class="ident">read_surfaces</span>, <span class="ident">simplified_data_type</span>, <span class="ident">DataType</span>,
-    <span class="ident">Error</span>, <span class="ident">ObjectHitbox</span>, <span class="ident">Surface</span>,
+    <span class="ident">Error</span>, <span class="ident">Input</span>, <span class="ident">ObjectHitbox</span>, <span class="ident">Surface</span>,
 };
 
 <span class="doccomment">/// An SM64 API that allows reads and writes to arbitrary frames without frame advance or</span>
@@ -943,6 +966,29 @@
         <span class="prelude-val">Ok</span>(())
     }
 
+    <span class="doccomment">/// Set the game&#39;s controller input for the given frame using [Input].</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// # Panics</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Panics if path compilation fails.</span>
+    <span class="attribute">#[<span class="ident">track_caller</span>]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_input</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">frame</span>: <span class="ident">u32</span>, <span class="ident">input</span>: <span class="ident">Input</span>) {
+        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_set_input</span>(<span class="ident">frame</span>, <span class="ident">input</span>) {
+            <span class="prelude-val">Ok</span>(()) =&gt; {}
+            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Error:\n  failed to set input:\n  {}\n&quot;</span>, <span class="ident">error</span>),
+        }
+    }
+
+    <span class="doccomment">/// Set the game&#39;s controller input for the given frame using [Input].</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Returns an error if path compilation fails.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_set_input</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">frame</span>: <span class="ident">u32</span>, <span class="ident">input</span>: <span class="ident">Input</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">try_write</span>(<span class="ident">frame</span>, <span class="string">&quot;gControllerPads[0].button&quot;</span>, <span class="ident">input</span>.<span class="ident">buttons</span>.<span class="ident">into</span>())<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">try_write</span>(<span class="ident">frame</span>, <span class="string">&quot;gControllerPads[0].stick_x&quot;</span>, <span class="ident">input</span>.<span class="ident">stick_x</span>.<span class="ident">into</span>())<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">try_write</span>(<span class="ident">frame</span>, <span class="string">&quot;gControllerPads[0].stick_y&quot;</span>, <span class="ident">input</span>.<span class="ident">stick_y</span>.<span class="ident">into</span>())<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    }
+
     <span class="doccomment">/// Clear all previous calls to [write](Self::write) with the given `frame` and `path`.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// The `path` string must match the one passed to `write` exactly. If it is different,</span>
@@ -1197,5 +1243,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_api" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (20a6f3a8a 2022-06-25)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_api" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (2f3ddd9f5 2022-06-27)" ></div>
 </body></html>
