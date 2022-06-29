@@ -2470,6 +2470,7 @@ dependencies = [
  "bytemuck",
  "env_logger",
  "futures",
+ "num_enum",
  "once_cell",
  "wafel_api",
  "wafel_data_type",

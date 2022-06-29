@@ -8,6 +8,7 @@ bitflags = "1.3.2"
 bytemuck = "1.9.1"
 env_logger = "0.9.0"
 futures = "0.3.21"
+num_enum = "0.5.7"
 once_cell = "1.12.0"
 wafel_api = { path = "../wafel_api" }
 wafel_data_type = { path = "../wafel_data_type" }
