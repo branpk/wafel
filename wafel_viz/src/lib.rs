@@ -8,10 +8,11 @@ use std::{
     time::{Duration, Instant},
 };
 
+use n64_display_list::parse_display_list;
 use n64_render_backend::process_display_list;
 use n64_renderer::N64Renderer;
-use wafel_api::{load_m64, Game};
-use wafel_memory::{DllGameMemory, GameMemory};
+use wafel_api::{load_m64, Emu, Game, IntType};
+use wafel_memory::{DllGameMemory, GameMemory, MemoryRead};
 use winit::{
     event::{ElementState, Event, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -21,10 +22,52 @@ use winit::{
 use crate::render_api::{decode_shader_id, CCFeatures};
 pub use n64_render_data::*;
 
+mod n64_display_list;
 mod n64_render_backend;
 mod n64_render_data;
 mod n64_renderer;
 mod render_api;
+
+pub fn test_dl() -> Result<(), Box<dyn Error>> {
+    let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
+    let (_, inputs) = load_m64("test_files/120_u.m64");
+    while game.read("gGlobalTimer").as_int() < 927 {
+        game.set_input(inputs[game.frame() as usize]);
+        game.advance();
+    }
+    // let dl_addr = game.read("sDisplayListTask->task.t.data_ptr").as_address();
+    let global_timer = game.read("gGlobalTimer");
+    let dl_buffer_index = (global_timer.as_int() + 1) % 2;
+    let dl_addr = game
+        .address(&format!("gGfxPools[{}].buffer", dl_buffer_index))
+        .unwrap();
+
+    let view = game.memory.with_slot(&game.base_slot);
+    let raw_dl = (0..).map(|i| {
+        let i0 = 2 * i;
+        let i1 = 2 * i + 1;
+        let w0 = view.read_int(dl_addr + 8 * i0, IntType::U64).unwrap() as u64;
+        let w1 = view.read_int(dl_addr + 8 * i1, IntType::U64).unwrap() as u64;
+        [w0, w1]
+    });
+
+    let dl = parse_display_list(raw_dl);
+
+    eprintln!("Display list:");
+    for cmd in dl {
+        eprintln!("  {:?}", cmd);
+    }
+
+    // eprintln!();
+    // let emu = Emu::attach(14768, 0x0050B110, wafel_api::SM64Version::US);
+    // let global_timer = emu.read("gGlobalTimer");
+    // let dl_buffer_index = (global_timer.as_int() + 1) % 2;
+    // let dl_addr = emu
+    //     .address(&format!("gGfxPools[{}].buffer", dl_buffer_index))
+    //     .unwrap();
+
+    Ok(())
+}
 
 pub fn test(frame0: u32) -> Result<(), Box<dyn Error>> {
     env_logger::init();
