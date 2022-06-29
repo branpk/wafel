@@ -10,6 +10,7 @@ env_logger = "0.9.0"
 futures = "0.3.21"
 num_enum = "0.5.7"
 once_cell = "1.12.0"
+ordered-float = "3.0.0"
 wafel_api = { path = "../wafel_api" }
 wafel_data_type = { path = "../wafel_data_type" }
 wafel_layout = { path = "../wafel_layout" }

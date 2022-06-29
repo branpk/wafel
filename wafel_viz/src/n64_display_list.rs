@@ -2,6 +2,7 @@
 
 use bitflags::bitflags;
 use num_enum::TryFromPrimitive;
+use ordered_float::NotNan;
 
 pub trait RawDLCommand: Copy {
     type Ptr: Copy;
@@ -17,11 +18,9 @@ impl RawDLCommand for [u32; 2] {
     fn w0(self) -> u32 {
         self[0]
     }
-
     fn w1(self) -> u32 {
         self[1]
     }
-
     fn w1p(self) -> Self::Ptr {
         self[1]
     }
@@ -33,17 +32,15 @@ impl RawDLCommand for [usize; 2] {
     fn w0(self) -> u32 {
         self[0] as u32
     }
-
     fn w1(self) -> u32 {
         self[1] as u32
     }
-
     fn w1p(self) -> Self::Ptr {
         self[1]
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DLCommand<Ptr> {
     NoOp,
     Rsp(SPCommand<Ptr>),
@@ -51,7 +48,7 @@ pub enum DLCommand<Ptr> {
     Unknown { w0: u32, w1: u32 },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SPCommand<Ptr> {
     Matrix {
         matrix: Ptr,
@@ -130,7 +127,7 @@ bitflags! {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DPCommand<Ptr> {
     SetAlphaCompare(AlphaCompare),
     SetDepthSource(DepthSource),
@@ -146,7 +143,7 @@ pub enum DPCommand<Ptr> {
     SetTile(TileParams),
     LoadBlock(u32, TextureBlock),
     SetTileSize(u32, TileSize),
-    SetScissor(ScissorMode, Rectangle<f32>),
+    SetScissor(ScissorMode, Rectangle<NotNan<f32>>),
     FullSync,
     TileSync,
     PipeSync,
@@ -447,8 +444,9 @@ where
         let cmd = w0 >> 24;
 
         Some(match cmd {
-            // DMA commands
             0x00 => NoOp,
+
+            // DMA commands
             0x01 => {
                 let p = ((w0 >> 16) & 0xFF) as u8;
                 Rsp(Matrix {
@@ -754,10 +752,10 @@ where
             0xED => Rdp(SetScissor(
                 (((w1 >> 24) & 0xFF) as u8).try_into().unwrap(),
                 Rectangle {
-                    ulx: (((w0 >> 12) & 0xFFF) / 4) as f32,
-                    uly: ((w0 & 0xFFF) / 4) as f32,
-                    lrx: (((w1 >> 12) & 0xFFF) / 4) as f32,
-                    lry: ((w1 & 0xFFF) / 4) as f32,
+                    ulx: ((((w0 >> 12) & 0xFFF) / 4) as f32).try_into().unwrap(),
+                    uly: (((w0 & 0xFFF) / 4) as f32).try_into().unwrap(),
+                    lrx: ((((w1 >> 12) & 0xFFF) / 4) as f32).try_into().unwrap(),
+                    lry: (((w1 & 0xFFF) / 4) as f32).try_into().unwrap(),
                 },
             )),
             // TODO: G_SETCONVERT
