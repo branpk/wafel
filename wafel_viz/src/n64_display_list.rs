@@ -130,6 +130,9 @@ bitflags! {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DPCommand<Ptr> {
+    SetAlphaCompare(AlphaCompare),
+    SetDepthSource(DepthSource),
+    SetRenderMode(RenderMode),
     SetColorImage {
         fmt: ImageFormat,
         size: ComponentSize,
@@ -214,11 +217,6 @@ pub enum DPCommand<Ptr> {
     },
 
     // TODO:
-    SetAlphaCompare(AlphaCompare),
-    SetDepthSource(DepthSource),
-    SetRenderMode {
-        // TODO
-    },
     SetColorDither(ColorDither),
     SetCombineKey(bool),
     SetTextureConvert(TextureConvert),
@@ -234,17 +232,136 @@ pub enum DPCommand<Ptr> {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
 pub enum AlphaCompare {
-    None,
-    Threshold,
-    Dither,
+    None = 0,
+    Threshold = 1,
+    Dither = 3,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum DepthSource {
+    Pixel = 0,
+    Prim = 1,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum DepthSource {
-    Pixel,
-    Prim,
+pub struct RenderMode {
+    pub flags: RenderModeFlags,
+    pub cvg_dst: CvgDst,
+    pub z_mode: ZMode,
+    pub blend_cycle1: BlendMode,
+    pub blend_cycle2: BlendMode,
+}
+
+bitflags! {
+    pub struct RenderModeFlags: u16 {
+        const AA_EN         = 0x0008;
+        const Z_CMP         = 0x0010;
+        const Z_UPD         = 0x0020;
+        const IM_RD         = 0x0040;
+        const CLR_ON_CVG    = 0x0080;
+        const CVG_X_ALPHA   = 0x1000;
+        const ALPHA_CVG_SEL = 0x2000;
+        const FORCE_BL      = 0x4000;
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum CvgDst {
+    Clamp = 0,
+    Wrap = 1,
+    Full = 2,
+    Save = 3,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum ZMode {
+    Opaque = 0,
+    Interpenetrating = 1,
+    Translucent = 2,
+    Decal = 3,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct BlendMode {
+    pub color1: BlendColor,
+    pub alpha1: BlendAlpha1,
+    pub color2: BlendColor,
+    pub alpha2: BlendAlpha2,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum BlendColor {
+    Input = 0,
+    Memory = 1,
+    Blend = 2,
+    Fog = 3,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum BlendAlpha1 {
+    Input = 0,
+    Fog = 1,
+    Shade = 2,
+    Zero = 3,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum BlendAlpha2 {
+    OneMa = 0,
+    Memory = 1,
+    One = 2,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum ImageFormat {
+    Rgba = 0,
+    Yuv = 1,
+    Ci = 2,
+    Ia = 3,
+    I = 4,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum ComponentSize {
+    Bits4 = 0,
+    Bits8 = 1,
+    Bits16 = 2,
+    Bits32 = 3,
+    DD = 5,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Rgba8 {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct WrapMode {
+    pub mirror: bool,
+    pub clamp: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+#[allow(clippy::enum_variant_names)]
+pub enum ScissorMode {
+    NonInterlace = 0,
+    OddInterlace = 3,
+    EvenInterlace = 2,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
@@ -302,49 +419,6 @@ pub enum CycleType {
 pub enum PipelineMode {
     OnePrimitive = 1,
     NPrimitive = 0,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-#[allow(clippy::enum_variant_names)]
-pub enum ScissorMode {
-    NonInterlace = 0,
-    OddInterlace = 3,
-    EvenInterlace = 2,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum ImageFormat {
-    Rgba = 0,
-    Yuv = 1,
-    Ci = 2,
-    Ia = 3,
-    I = 4,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum ComponentSize {
-    Bits4 = 0,
-    Bits8 = 1,
-    Bits16 = 2,
-    Bits32 = 3,
-    DD = 5,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct WrapMode {
-    pub mirror: bool,
-    pub clamp: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Rgba8 {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
 }
 
 pub fn parse_display_list<C: RawDLCommand>(
@@ -445,6 +519,29 @@ where
             }),
             // TODO: SetOtherMode_H
             0xBA => {
+                // #define	gDPPipelineMode(pkt, mode)	\
+                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_PIPELINE, 1, mode)
+                // #define	gDPSetCycleType(pkt, type)	\
+                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_CYCLETYPE, 2, type)
+                // #define	gDPSetTexturePersp(pkt, type)	\
+                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_TEXTPERSP, 1, type)
+                // #define	gDPSetTextureDetail(pkt, type)	\
+                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_TEXTDETAIL, 2, type)
+                // #define	gDPSetTextureLOD(pkt, type)	\
+                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_TEXTLOD, 1, type)
+                // #define	gDPSetTextureLUT(pkt, type)	\
+                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_TEXTLUT, 2, type)
+                // #define	gDPSetTextureFilter(pkt, type)	\
+                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_TEXTFILT, 2, type)
+                // #define	gDPSetTextureConvert(pkt, type)	\
+                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_TEXTCONV, 3, type)
+                // #define	gDPSetCombineKey(pkt, type)	\
+                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_COMBKEY, 1, type)
+                // #define	gDPSetColorDither(pkt, mode)	\
+                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_RGBDITHER, 2, mode)
+                // #define	gDPSetAlphaDither(pkt, mode)	\
+                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_ALPHADITHER, 2, mode)
+
                 let shift = (w0 >> 8) & 0xFF;
                 let data = (w1 >> shift) as u8;
                 if w0 == 0xBA000602 {
@@ -471,50 +568,31 @@ where
                     Unknown { w0, w1 }
                 }
             }
-            // TODO: SetOtherMode_L
-            //   0xB9 => {
-            // 	   let    shift = (w0 >> 8) & 0xFF;
-            // 	   let    data = w1 >> shift;
-            //
-            //     if w0 == 0xB9000002 {
-            //       Rdp(SetAlphaCompare {  {0: "none", 1: "threshold", 3: "dither"}[data] })
-            //
-            //     } else if w0 == 0xB9000201 {
-            //       Rdp(SetDepthSource {  {0: "pixel", 1: "prim"}[data] })
-            //
-            //     } else if w0 == 0xB900031D {
-            //       # TODO: All render mode flags;
-            //
-            // 	   let      shared = {}
-            //       shared["aa"] = (w1 & 0x8) != 0;
-            //       shared["z_cmp"] = (w1 & 0x10) != 0;
-            //       shared["z_upd"] = (w1 & 0x20) != 0;
-            //       shared["im_rd"] = (w1 & 0x40) != 0;
-            //       shared["clr_on_cvg"] = (w1 & 0x80) != 0;
-            //       if w1 & 0x100 {
-            //         shared["cvg_dst"] = "wrap";
-            //       } else if w1 & 0x200 {
-            //         shared["cvg_dst"] = "full";
-            //       } else if w1 & 0x300 {
-            //         shared["cvg_dst"] = "save";
-            //       } else {
-            //         shared["cvg_dst"] = "clamp";
-            //       if w1 & 0x400 {
-            //         shared["zmode"] = "inter";
-            //       } else if w1 & 0x800 {
-            //         shared["zmode"] = "xlu";
-            //       } else if w1 & 0xC00 {
-            //         shared["zmode"] = "dec";
-            //       } else {
-            //         shared["zmode"] = "opa";
-            //       shared["cvg_x_alpha"] = (w1 & 0x1000) != 0;
-            //       shared["alpha_cvg_sel"] = (w1 & 0x2000) != 0;
-            //       shared["force_bl"] = (w1 & 0x4000) != 0;
-            //       shared["_tex_edge"] = (w1 & 0x8000) != 0;
-            //
-            //       # 0x005041C8, 0x00552048, 0x0F0A4000, ...;
-            //       Rdp(SetRenderMode {  shared, "<unimplemented>", "<unimplemented>" })
-            //  }
+            0xB9 => {
+                let shift = (w0 >> 8) & 0xFF;
+                match shift {
+                    0 => Rdp(SetAlphaCompare(((w1 >> shift) as u8).try_into().unwrap())),
+                    2 => Rdp(SetDepthSource(((w1 >> shift) as u8).try_into().unwrap())),
+                    3 => Rdp(SetRenderMode(RenderMode {
+                        flags: RenderModeFlags::from_bits_truncate(w1 as u16),
+                        cvg_dst: (((w1 >> 8) & 0x3) as u8).try_into().unwrap(),
+                        z_mode: (((w1 >> 10) & 0x3) as u8).try_into().unwrap(),
+                        blend_cycle1: BlendMode {
+                            color1: (((w1 >> 30) & 0x3) as u8).try_into().unwrap(),
+                            alpha1: (((w1 >> 26) & 0x3) as u8).try_into().unwrap(),
+                            color2: (((w1 >> 22) & 0x3) as u8).try_into().unwrap(),
+                            alpha2: (((w1 >> 18) & 0x3) as u8).try_into().unwrap(),
+                        },
+                        blend_cycle2: BlendMode {
+                            color1: (((w1 >> 28) & 0x3) as u8).try_into().unwrap(),
+                            alpha1: (((w1 >> 24) & 0x3) as u8).try_into().unwrap(),
+                            color2: (((w1 >> 20) & 0x3) as u8).try_into().unwrap(),
+                            alpha2: (((w1 >> 16) & 0x3) as u8).try_into().unwrap(),
+                        },
+                    })),
+                    _ => Unknown { w0, w1 },
+                }
+            }
             0xB8 => Rsp(EndDisplayList),
             0xB7 => Rsp(SetGeometryMode(GeometryModes::from_bits_truncate(w1))),
             0xB6 => Rsp(ClearGeometryMode(GeometryModes::from_bits_truncate(w1))),
