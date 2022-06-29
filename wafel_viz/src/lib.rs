@@ -32,18 +32,14 @@ mod n64_renderer;
 mod render_api;
 
 pub fn test_dl() -> Result<(), Box<dyn Error>> {
+    // ~~~ libsm64 ~~~
     let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
     let (_, inputs) = load_m64("test_files/120_u.m64");
     while game.read("gGlobalTimer").as_int() < 927 {
         game.set_input(inputs[game.frame() as usize]);
         game.advance();
     }
-    // let dl_addr = game.read("sDisplayListTask->task.t.data_ptr").as_address();
-    let global_timer = game.read("gGlobalTimer");
-    let dl_buffer_index = (global_timer.as_int() + 1) % 2;
-    let dl_addr = game
-        .address(&format!("gGfxPools[{}].buffer", dl_buffer_index))
-        .unwrap();
+    let dl_addr = game.read("sDisplayListTask->task.t.data_ptr").as_address();
 
     let view = game.memory.with_slot(&game.base_slot);
     let raw_dl = (0..).map(|i| {
@@ -54,23 +50,36 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
         [w0, w1]
     });
 
+    // ~~~ emu ~~~
+    //     let emu = Emu::attach(20644, 0x0050B110, wafel_api::SM64Version::US);
+    //     let global_timer = emu.read("gGlobalTimer");
+    //     let dl_buffer_index = (global_timer.as_int() + 1) % 2;
+    //     let dl_addr = emu
+    //         .address(&format!("gGfxPools[{}].buffer", dl_buffer_index))
+    //         .unwrap();
+    //
+    //     let raw_dl = (0..).map(|i| {
+    //         let i0 = 2 * i;
+    //         let i1 = 2 * i + 1;
+    //         let w0 = emu.memory.read_int(dl_addr + 4 * i0, IntType::U32).unwrap() as u32;
+    //         let w1 = emu.memory.read_int(dl_addr + 4 * i1, IntType::U32).unwrap() as u32;
+    //         [w0, w1]
+    //     });
+
+    // ~~~ shared ~~~
     let dl = parse_display_list(raw_dl);
 
     eprintln!("Display list:");
     for cmd in dl {
-        eprintln!("  {:?}", cmd);
+        if let DLCommand::Unknown { w0, w1 } = cmd {
+            eprintln!("  Unknown: {:08X} {:08X}", w0, w1);
+        } else {
+            eprintln!("  {:?}", cmd);
+        }
         if cmd == DLCommand::Rsp(SPCommand::EndDisplayList) {
             break;
         }
     }
-
-    // eprintln!();
-    // let emu = Emu::attach(14768, 0x0050B110, wafel_api::SM64Version::US);
-    // let global_timer = emu.read("gGlobalTimer");
-    // let dl_buffer_index = (global_timer.as_int() + 1) % 2;
-    // let dl_addr = emu
-    //     .address(&format!("gGfxPools[{}].buffer", dl_buffer_index))
-    //     .unwrap();
 
     Ok(())
 }

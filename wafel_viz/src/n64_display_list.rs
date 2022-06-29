@@ -518,7 +518,6 @@ where
             0xB8 => Rsp(EndDisplayList),
             0xB7 => Rsp(SetGeometryMode(GeometryModes::from_bits_truncate(w1))),
             0xB6 => Rsp(ClearGeometryMode(GeometryModes::from_bits_truncate(w1))),
-
             // TODO: RDP_HALF_N
 
             // RDP commands
@@ -535,7 +534,6 @@ where
                 width: (w0 & 0xFFF) + 1,
                 img: w1p,
             }),
-
             //   0xFC => {
             // 	   let    cc1 = ((w0 >> 20) & 0xF, (w1 >> 28) & 0xF, (w0 >> 15) & 0x1F, (w1 >> 15) & 0x7);
             // 	   let    ac1 = ((w0 >> 12) & 0x7, (w1 >> 12) & 0x7, (w0 >> 9) & 0x7, (w1 >> 9) & 0x7);
@@ -617,14 +615,12 @@ where
                 b: (w1 >> 8) as u8,
                 a: w1 as u8,
             })),
-
             //   0xF7 => {
             // 	   let    c = w1 & 0xFFFF;
             // 	   let    rgba = ((c >> 8) & 0xF8, (c >> 3) & 0xF8, (c << 2) & 0xF8, (c >> 0) & 0x1);
             // 	   let    zdz = (c >> 2, c & 0x3);
             //     Rdp(SetFillColor {  rgba, zdz })
             //  }
-
             //   0xF6 => {
             // 	   let    lrx = (w0 >> 14) & 0x3FF;
             // 	   let    lry = (w0 >> 2) & 0x3FF;
@@ -632,7 +628,6 @@ where
             // 	   let    uly = (w1 >> 2) & 0x3FF;
             //     Rdp(FillRectangle {  ulx, uly, lrx, lry })
             //  }
-
             //   0xF5 => {
             // 	   let    fmt = {
             //       0: "rgba",
@@ -660,7 +655,6 @@ where
             // 	   let    shifts = w1 & 0xF;
             //     Rdp(SetTile {  fmt, size, line, tmem, tile, palette, cmt, maskt, shiftt, cms, masks, shifts })
             //  }
-
             // TODO: G_LOADTILE
             0xF3 => Rdp(LoadBlock {
                 tile: (w1 >> 24) & 0x7,
@@ -669,7 +663,6 @@ where
                 lrs: (w1 >> 12) & 0xFFF,
                 dxt: w1 & 0xFFF,
             }),
-
             0xF2 => Rdp(SetTileSize {
                 tile: (w1 >> 24) & 0x7,
                 uls: (w0 >> 12) & 0xFFF,
@@ -677,7 +670,6 @@ where
                 lrs: (w1 >> 12) & 0xFFF,
                 lrt: w1 & 0xFFF,
             }),
-
             // TODO: G_LOADTLUT
             // TODO: G_RDPSETOTHERMODE
             // TODO: G_SETPRIMDEPTH
