@@ -133,88 +133,22 @@ pub enum DPCommand<Ptr> {
     SetAlphaCompare(AlphaCompare),
     SetDepthSource(DepthSource),
     SetRenderMode(RenderMode),
-    SetColorImage {
-        fmt: ImageFormat,
-        size: ComponentSize,
-        width: u32,
-        img: Ptr,
-    },
+    SetColorImage(Image<Ptr>),
     SetDepthImage(Ptr),
-    SetTextureImage {
-        fmt: ImageFormat,
-        size: ComponentSize,
-        width: u32,
-        img: Ptr,
-    },
+    SetTextureImage(Image<Ptr>),
     SetEnvColor(Rgba8),
     SetBlendColor(Rgba8),
     SetFogColor(Rgba8),
-    SetFillColor {
-        /// rgba is 5551 bits
-        r: u8,
-        g: u8,
-        b: u8,
-        a: u8,
-        // zdz is 14, 2 bits
-        z: u8,
-        dz: u8,
-    },
-    FillRectangle {
-        ulx: u32,
-        uly: u32,
-        lrx: u32,
-        lry: u32,
-    },
-    SetTile {
-        fmt: ImageFormat,
-        size: ComponentSize,
-        line: u32,
-        tmem: u32,
-        tile: u32,
-        palette: u32,
-        cmt: WrapMode,
-        maskt: u32,
-        shiftt: u32,
-        cms: WrapMode,
-        masks: u32,
-        shifts: u32,
-    },
-    LoadBlock {
-        tile: u32,
-        uls: u32,
-        ult: u32,
-        lrs: u32,
-        dxt: u32,
-    },
-    SetTileSize {
-        tile: u32,
-        uls: u32,
-        ult: u32,
-        lrs: u32,
-        lrt: u32,
-    },
-    SetScissor {
-        mode: ScissorMode,
-        ulx: f32,
-        uly: f32,
-        lrx: f32,
-        lry: f32,
-    },
+    SetFillColor(FillColor),
+    FillRectangle(Rectangle<u32>),
+    SetTile(TileParams),
+    LoadBlock(u32, TextureBlock),
+    SetTileSize(u32, TileSize),
+    SetScissor(ScissorMode, Rectangle<f32>),
     FullSync,
     TileSync,
     PipeSync,
     LoadSync,
-    TextureRectangle {
-        ulx: u32,
-        uly: u32,
-        lrx: u32,
-        lry: u32,
-        tile: u32,
-        s: u32,
-        t: u32,
-        dsdx: u32,
-        dtdy: u32,
-    },
 
     // TODO:
     SetColorDither(ColorDither),
@@ -321,6 +255,14 @@ pub enum BlendAlpha2 {
     One = 2,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Image<Ptr> {
+    pub fmt: ImageFormat,
+    pub size: ComponentSize,
+    pub width: u32,
+    pub img: Ptr,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
 #[repr(u8)]
 pub enum ImageFormat {
@@ -350,9 +292,61 @@ pub struct Rgba8 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FillColor {
+    /// rgba is 5551 bits
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
+    // zdz is 14, 2 bits
+    pub z: u8,
+    pub dz: u8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Rectangle<T> {
+    pub ulx: T,
+    pub uly: T,
+    pub lrx: T,
+    pub lry: T,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TileParams {
+    pub fmt: ImageFormat,
+    pub size: ComponentSize,
+    pub line: u32,
+    pub tmem: u32,
+    pub tile: u32,
+    pub palette: u32,
+    pub cmt: WrapMode,
+    pub maskt: u32,
+    pub shiftt: u32,
+    pub cms: WrapMode,
+    pub masks: u32,
+    pub shifts: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct WrapMode {
     pub mirror: bool,
     pub clamp: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TextureBlock {
+    pub uls: u32,
+    pub ult: u32,
+    pub lrs: u32,
+    pub dxt: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TileSize {
+    pub uls: u32,
+    pub ult: u32,
+    pub lrs: u32,
+    pub lrt: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
@@ -599,19 +593,19 @@ where
             // TODO: RDP_HALF_N
 
             // RDP commands
-            0xFF => Rdp(SetColorImage {
+            0xFF => Rdp(SetColorImage(Image {
                 fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
                 size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
                 width: (w0 & 0xFFF) + 1,
                 img: w1p,
-            }),
+            })),
             0xFE => Rdp(SetDepthImage(w1p)),
-            0xFD => Rdp(SetTextureImage {
+            0xFD => Rdp(SetTextureImage(Image {
                 fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
                 size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
                 width: (w0 & 0xFFF) + 1,
                 img: w1p,
-            }),
+            })),
             //   0xFC => {
             // 	   let    cc1 = ((w0 >> 20) & 0xF, (w1 >> 28) & 0xF, (w0 >> 15) & 0x1F, (w1 >> 15) & 0x7);
             // 	   let    ac1 = ((w0 >> 12) & 0x7, (w1 >> 12) & 0x7, (w0 >> 9) & 0x7, (w1 >> 9) & 0x7);
@@ -734,30 +728,36 @@ where
             //     Rdp(SetTile {  fmt, size, line, tmem, tile, palette, cmt, maskt, shiftt, cms, masks, shifts })
             //  }
             // TODO: G_LOADTILE
-            0xF3 => Rdp(LoadBlock {
-                tile: (w1 >> 24) & 0x7,
-                uls: (w0 >> 12) & 0xFFF,
-                ult: w0 & 0xFFF,
-                lrs: (w1 >> 12) & 0xFFF,
-                dxt: w1 & 0xFFF,
-            }),
-            0xF2 => Rdp(SetTileSize {
-                tile: (w1 >> 24) & 0x7,
-                uls: (w0 >> 12) & 0xFFF,
-                ult: w0 & 0xFFF,
-                lrs: (w1 >> 12) & 0xFFF,
-                lrt: w1 & 0xFFF,
-            }),
+            0xF3 => Rdp(LoadBlock(
+                (w1 >> 24) & 0x7,
+                TextureBlock {
+                    uls: (w0 >> 12) & 0xFFF,
+                    ult: w0 & 0xFFF,
+                    lrs: (w1 >> 12) & 0xFFF,
+                    dxt: w1 & 0xFFF,
+                },
+            )),
+            0xF2 => Rdp(SetTileSize(
+                (w1 >> 24) & 0x7,
+                TileSize {
+                    uls: (w0 >> 12) & 0xFFF,
+                    ult: w0 & 0xFFF,
+                    lrs: (w1 >> 12) & 0xFFF,
+                    lrt: w1 & 0xFFF,
+                },
+            )),
             // TODO: G_LOADTLUT
             // TODO: G_RDPSETOTHERMODE
             // TODO: G_SETPRIMDEPTH
-            0xED => Rdp(SetScissor {
-                mode: (((w1 >> 24) & 0xFF) as u8).try_into().unwrap(),
-                ulx: (((w0 >> 12) & 0xFFF) / 4) as f32,
-                uly: ((w0 & 0xFFF) / 4) as f32,
-                lrx: (((w1 >> 12) & 0xFFF) / 4) as f32,
-                lry: ((w1 & 0xFFF) / 4) as f32,
-            }),
+            0xED => Rdp(SetScissor(
+                (((w1 >> 24) & 0xFF) as u8).try_into().unwrap(),
+                Rectangle {
+                    ulx: (((w0 >> 12) & 0xFFF) / 4) as f32,
+                    uly: ((w0 & 0xFFF) / 4) as f32,
+                    lrx: (((w1 >> 12) & 0xFFF) / 4) as f32,
+                    lry: ((w1 & 0xFFF) / 4) as f32,
+                },
+            )),
             // TODO: G_SETCONVERT
             // TODO: G_SETKEYR
             // TODO: G_SETKEYGB
