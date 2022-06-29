@@ -43,6 +43,7 @@ impl RawDLCommand for [u64; 2] {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DLCommand<Ptr> {
+    NoOp,
     Rsp(SPCommand<Ptr>),
     Rdp(DPCommand<Ptr>),
     Unknown { w0: u32, w1: u32 },
@@ -68,16 +69,13 @@ pub enum SPCommand<Ptr> {
     },
     DisplayList(Ptr),
     BranchList(Ptr),
-    ClearGeometryMode(GeometryModes),
-    SetGeometryMode(GeometryModes),
-    EndDisplayList,
-    Texture {
-        sc: u32,
-        tc: u32,
-        level: u32,
-        tile: u32,
-        on: bool,
+    OneTriangle {
+        v0: u32,
+        v1: u32,
+        v2: u32,
+        flag: u32,
     },
+    PopMatrix(MatrixMode),
     NumLights(u32),
     Segment {
         seg: u32,
@@ -87,24 +85,16 @@ pub enum SPCommand<Ptr> {
         mul: u32,
         offset: u32,
     },
-    PopMatrix(MatrixMode),
-    OneTriangle {
-        v0: u32,
-        v1: u32,
-        v2: u32,
-        flag: u32,
-    },
-    TextureRectangle {
-        ulx: u32,
-        uly: u32,
-        lrx: u32,
-        lry: u32,
+    Texture {
+        sc: u32,
+        tc: u32,
+        level: u32,
         tile: u32,
-        s: u32,
-        t: u32,
-        dsdx: u32,
-        dtdy: u32,
+        on: bool,
     },
+    EndDisplayList,
+    SetGeometryMode(GeometryModes),
+    ClearGeometryMode(GeometryModes),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
@@ -140,45 +130,37 @@ bitflags! {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DPCommand<Ptr> {
-    SetAlphaCompare(AlphaCompare),
-    SetDepthSource(DepthSource),
-    SetRenderMode {
-        // TODO
+    SetColorImage {
+        fmt: ImageFormat,
+        size: ComponentSize,
+        width: u32,
+        img: Ptr,
     },
-    SetColorDither(ColorDither),
-    SetCombineKey(bool),
-    SetTextureConvert(TextureConvert),
-    SetTextureFilter(TextureFilter),
-    SetTextureLUT(TextureLUT),
-    SetTextureLOD(bool),
-    SetTextureDetail(TextureDetail),
-    SetTexturePersp(bool),
-    SetCycleType(CycleType),
-    PipelineMode(PipelineMode),
-    LoadSync,
-    PipeSync,
-    TileSync,
-    FullSync,
-    SetScissor {
-        mode: ScissorMode,
-        ulx: f32,
-        uly: f32,
-        lrx: f32,
-        lry: f32,
+    SetDepthImage(Ptr),
+    SetTextureImage {
+        fmt: ImageFormat,
+        size: ComponentSize,
+        width: u32,
+        img: Ptr,
     },
-    SetTileSize {
-        tile: u32,
-        uls: u32,
-        ult: u32,
-        lrs: u32,
-        lrt: u32,
+    SetEnvColor(Rgba8),
+    SetBlendColor(Rgba8),
+    SetFogColor(Rgba8),
+    SetFillColor {
+        /// rgba is 5551 bits
+        r: u8,
+        g: u8,
+        b: u8,
+        a: u8,
+        // zdz is 14, 2 bits
+        z: u8,
+        dz: u8,
     },
-    LoadBlock {
-        tile: u32,
-        uls: u32,
-        ult: u32,
-        lrs: u32,
-        dxt: u32,
+    FillRectangle {
+        ulx: u32,
+        uly: u32,
+        lrx: u32,
+        lry: u32,
     },
     SetTile {
         fmt: ImageFormat,
@@ -194,40 +176,61 @@ pub enum DPCommand<Ptr> {
         masks: u32,
         shifts: u32,
     },
-    FillRectangle {
+    LoadBlock {
+        tile: u32,
+        uls: u32,
+        ult: u32,
+        lrs: u32,
+        dxt: u32,
+    },
+    SetTileSize {
+        tile: u32,
+        uls: u32,
+        ult: u32,
+        lrs: u32,
+        lrt: u32,
+    },
+    SetScissor {
+        mode: ScissorMode,
+        ulx: f32,
+        uly: f32,
+        lrx: f32,
+        lry: f32,
+    },
+    FullSync,
+    TileSync,
+    PipeSync,
+    LoadSync,
+    TextureRectangle {
         ulx: u32,
         uly: u32,
         lrx: u32,
         lry: u32,
+        tile: u32,
+        s: u32,
+        t: u32,
+        dsdx: u32,
+        dtdy: u32,
     },
-    SetFillColor {
-        /// rgba is 5551 bits
-        r: u8,
-        g: u8,
-        b: u8,
-        a: u8,
-        // zdz is 14, 2 bits
-        z: u8,
-        dz: u8,
-    },
-    SetFogColor(Rgba8),
-    SetBlendColor(Rgba8),
-    SetEnvColor(Rgba8),
-    SetCombineMode {
+
+    // TODO:
+    SetAlphaCompare(AlphaCompare),
+    SetDepthSource(DepthSource),
+    SetRenderMode {
         // TODO
     },
-    SetTextureImage {
-        fmt: ImageFormat,
-        size: ComponentSize,
-        width: u32,
-        img: Ptr,
-    },
-    SetDepthImage(Ptr),
-    SetColorImage {
-        fmt: ImageFormat,
-        size: ComponentSize,
-        width: u32,
-        img: Ptr,
+    SetColorDither(ColorDither),
+    SetCombineKey(bool),
+    SetTextureConvert(TextureConvert),
+    SetTextureFilter(TextureFilter),
+    SetTextureLUT(TextureLUT),
+    SetTextureLOD(bool),
+    SetTextureDetail(TextureDetail),
+    SetTexturePersp(bool),
+    SetCycleType(CycleType),
+    PipelineMode(PipelineMode),
+    SetCombineMode {
+        // TODO
     },
 }
 
@@ -375,7 +378,7 @@ where
 
         Some(match cmd {
             // DMA commands
-            0x00 => return self.next(),
+            0x00 => NoOp,
             0x01 => {
                 let p = ((w0 >> 16) & 0xFF) as u8;
                 Rsp(Matrix {
@@ -519,43 +522,19 @@ where
             // TODO: RDP_HALF_N
 
             // RDP commands
-            //   0xFF => {
-            // 	   let    fmt = {
-            //       0: "rgba",
-            //       1: "yuv",
-            //       2: "ci",
-            //       3: "ia",
-            //       4: "i",
-            // 	   let    size = {
-            //       0: "4b",
-            //       1: "8b",
-            //       2: "16b",
-            //       3: "32b",
-            //       5: "dd",
-            // 	   let    width = ((w0 >> 0) & 0xFFF) + 1;
-            //     Rdp(SetColorImage {  fmt, size, width, w1 })
-            // }
-
-            //   0xFE => {
-            //     Rdp(SetDepthImage {  w1 })
-            //  }
-
-            //   0xFD => {
-            // 	   let    fmt = {
-            //       0: "rgba",
-            //       1: "yuv",
-            //       2: "ci",
-            //       3: "ia",
-            //       4: "i",
-            // 	   let    size = {
-            //       0: "4b",
-            //       1: "8b",
-            //       2: "16b",
-            //       3: "32b",
-            //       5: "dd",
-            // 	   let    width = (w0 & 0xFFF) + 1;
-            //     Rdp(SetTextureImage {  fmt, size, width, w1 })
-            //  }
+            0xFF => Rdp(SetColorImage {
+                fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
+                size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
+                width: (w0 & 0xFFF) + 1,
+                img: w1p,
+            }),
+            0xFE => Rdp(SetDepthImage(w1p)),
+            0xFD => Rdp(SetTextureImage {
+                fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
+                size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
+                width: (w0 & 0xFFF) + 1,
+                img: w1p,
+            }),
 
             //   0xFC => {
             // 	   let    cc1 = ((w0 >> 20) & 0xF, (w1 >> 28) & 0xF, (w0 >> 15) & 0x1F, (w1 >> 15) & 0x7);
@@ -619,20 +598,25 @@ where
             //       tuple(map(get_ccmux, enumerate(cc2))),
             //       tuple(map(get_acmux, enumerate(ac2))));
             //  }
-
-            //   0xFB => {
-            //     Rdp(SetEnvColor {  (w1 >> 24) & 0xFF, (w1 >> 16) & 0xFF, (w1 >> 8) & 0xFF, w1 & 0xFF })
-            //  }
-
+            0xFB => Rdp(SetEnvColor(Rgba8 {
+                r: (w1 >> 24) as u8,
+                g: (w1 >> 16) as u8,
+                b: (w1 >> 8) as u8,
+                a: w1 as u8,
+            })),
             // TODO: G_SETPRIMCOLOR
-
-            //   0xF9 => {
-            //     Rdp(SetBlendColor {  (w1 >> 24) & 0xFF, (w1 >> 16) & 0xFF, (w1 >> 8) & 0xFF, w1 & 0xFF })
-            //  }
-
-            //   0xF8 => {
-            //     Rdp(SetFogColor {  (w1 >> 24) & 0xFF, (w1 >> 16) & 0xFF, (w1 >> 8) & 0xFF, w1 & 0xFF })
-            //  }
+            0xF9 => Rdp(SetBlendColor(Rgba8 {
+                r: (w1 >> 24) as u8,
+                g: (w1 >> 16) as u8,
+                b: (w1 >> 8) as u8,
+                a: w1 as u8,
+            })),
+            0xF8 => Rdp(SetFogColor(Rgba8 {
+                r: (w1 >> 24) as u8,
+                g: (w1 >> 16) as u8,
+                b: (w1 >> 8) as u8,
+                a: w1 as u8,
+            })),
 
             //   0xF7 => {
             // 	   let    c = w1 & 0xFFFF;
