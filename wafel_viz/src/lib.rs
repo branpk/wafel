@@ -19,7 +19,10 @@ use winit::{
     window::WindowBuilder,
 };
 
-use crate::render_api::{decode_shader_id, CCFeatures};
+use crate::{
+    n64_display_list::{DLCommand, SPCommand},
+    render_api::{decode_shader_id, CCFeatures},
+};
 pub use n64_render_data::*;
 
 mod n64_display_list;
@@ -56,6 +59,9 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
     eprintln!("Display list:");
     for cmd in dl {
         eprintln!("  {:?}", cmd);
+        if cmd == DLCommand::Rsp(SPCommand::EndDisplayList) {
+            break;
+        }
     }
 
     // eprintln!();
