@@ -1,5 +1,7 @@
+#![allow(missing_docs)]
+
 use bitflags::bitflags;
-use num_enum::{FromPrimitive, TryFromPrimitive};
+use num_enum::TryFromPrimitive;
 
 pub trait RawDLCommand: Copy {
     type Ptr: Copy;
@@ -25,8 +27,8 @@ impl RawDLCommand for [u32; 2] {
     }
 }
 
-impl RawDLCommand for [u64; 2] {
-    type Ptr = u64;
+impl RawDLCommand for [usize; 2] {
+    type Ptr = usize;
 
     fn w0(self) -> u32 {
         self[0] as u32

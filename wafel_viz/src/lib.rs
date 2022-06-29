@@ -25,7 +25,7 @@ use crate::{
 };
 pub use n64_render_data::*;
 
-mod n64_display_list;
+pub mod n64_display_list;
 mod n64_render_backend;
 mod n64_render_data;
 mod n64_renderer;
@@ -40,13 +40,15 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
         game.advance();
     }
     let dl_addr = game.read("sDisplayListTask->task.t.data_ptr").as_address();
+    let w_type = IntType::u_ptr_native();
+    let w_size = w_type.size();
 
     let view = game.memory.with_slot(&game.base_slot);
     let raw_dl = (0..).map(|i| {
         let i0 = 2 * i;
         let i1 = 2 * i + 1;
-        let w0 = view.read_int(dl_addr + 8 * i0, IntType::U64).unwrap() as u64;
-        let w1 = view.read_int(dl_addr + 8 * i1, IntType::U64).unwrap() as u64;
+        let w0 = view.read_int(dl_addr + w_size * i0, w_type).unwrap() as usize;
+        let w1 = view.read_int(dl_addr + w_size * i1, w_type).unwrap() as usize;
         [w0, w1]
     });
 
