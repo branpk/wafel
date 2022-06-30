@@ -457,7 +457,372 @@ pub enum ScissorMode {
     EvenInterlace = 2,
 }
 
-pub fn parse_display_list<C: RawF3DCommand>(
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DecodeResult<Ptr> {
+    Complete(F3DCommand<Ptr>),
+}
+
+impl<Ptr> DecodeResult<Ptr> {
+    pub fn is_complete(self) -> bool {
+        matches!(self, Self::Complete(_))
+    }
+
+    #[track_caller]
+    pub fn unwrap(self) -> F3DCommand<Ptr> {
+        match self {
+            Self::Complete(command) => command,
+            _ => panic!("unwrap() called on partial result"),
+        }
+    }
+
+    #[track_caller]
+    pub fn next(self, cmd_cont: impl RawF3DCommand<Ptr = Ptr>) -> Self {
+        match self {
+            Self::Complete(_) => panic!("next() called on complete result"),
+        }
+    }
+}
+
+pub fn decode_f3d_command<Ptr>(raw_command: impl RawF3DCommand<Ptr = Ptr>) -> DecodeResult<Ptr> {
+    use DPCommand::*;
+    use F3DCommand::*;
+    use SPCommand::*;
+
+    let w0 = raw_command.w0();
+    let w1 = raw_command.w1();
+    let w1p = raw_command.w1p();
+    let cmd = w0 >> 24;
+
+    DecodeResult::Complete(match cmd {
+        0x00 => NoOp,
+
+        // DMA commands
+        0x01 => {
+            let p = ((w0 >> 16) & 0xFF) as u8;
+            Rsp(Matrix {
+                matrix: w1p,
+                mode: (p & 0x01).try_into().unwrap(),
+                op: (p & 0x02).try_into().unwrap(),
+                push: p & 0x04 != 0,
+            })
+        }
+        0x03 => {
+            let p = (w0 >> 16) & 0xFF;
+            match p {
+                0x80 => Rsp(Viewport(w1p)),
+                0x86..=0x94 => Rsp(Light {
+                    light: w1p,
+                    n: (p - 0x86) / 2 + 1,
+                }),
+                _ => Unknown { w0, w1 },
+            }
+        }
+        0x04 => Rsp(Vertex {
+            v: w1p,
+            n: ((w0 >> 20) & 0xF) + 1,
+            v0: (w0 >> 16) & 0xF,
+        }),
+        0x06 => {
+            let p = (w0 >> 16) & 0xFF;
+            match p {
+                0 => Rsp(DisplayList(w1p)),
+                1 => Rsp(BranchList(w1p)),
+                _ => Unknown { w0, w1 },
+            }
+        }
+
+        // IMMEDIATE commands
+        0xBF => Rsp(OneTriangle {
+            v0: ((w1 >> 16) & 0xFF) / 10,
+            v1: ((w1 >> 8) & 0xFF) / 10,
+            v2: (w1 & 0xFF) / 10,
+            flag: w1 >> 24,
+        }),
+        0xBD => Rsp(PopMatrix(((w1 & 0x01) as u8).try_into().unwrap())),
+        0xBC => {
+            let index = w0 & 0xFF;
+            match index {
+                2 => Rsp(NumLights((w1 - 0x80000000) / 0x20 - 1)),
+                6 => Rsp(Segment {
+                    seg: ((w0 >> 8) & 0xFFFF) / 4,
+                    base: w1p,
+                }),
+                8 => Rsp(FogFactor {
+                    mul: ((w1 >> 16) & 0xFFFF),
+                    offset: (w1 & 0xFFFF),
+                }),
+                _ => Unknown { w0, w1 },
+            }
+        }
+        0xBB => Rsp(Texture {
+            sc: (w1 >> 16) & 0xFFFF,
+            tc: w1 & 0xFFFF,
+            level: (w0 >> 11) & 0x7,
+            tile: (w0 >> 8) & 0x7,
+            on: (w0 & 0xFF) != 0,
+        }),
+        0xBA => {
+            let shift = (w0 >> 8) & 0xFF;
+            let data = (w1 >> shift) as u8;
+            match shift {
+                4 => Rdp(SetAlphaDither(data.try_into().unwrap())),
+                6 => Rdp(SetColorDither(data.try_into().unwrap())),
+                8 => Rdp(SetCombineKey(data != 0)),
+                9 => Rdp(SetTextureConvert(data.try_into().unwrap())),
+                12 => Rdp(SetTextureFilter(data.try_into().unwrap())),
+                14 => Rdp(SetTextureLUT(data.try_into().unwrap())),
+                16 => Rdp(SetTextureLOD(data != 0)),
+                17 => Rdp(SetTextureDetail(data.try_into().unwrap())),
+                19 => Rdp(SetTexturePersp(data != 0)),
+                20 => Rdp(SetCycleType(data.try_into().unwrap())),
+                23 => Rdp(PipelineMode(data.try_into().unwrap())),
+                _ => Unknown { w0, w1 },
+            }
+        }
+        0xB9 => {
+            let shift = (w0 >> 8) & 0xFF;
+            match shift {
+                0 => Rdp(SetAlphaCompare(((w1 >> shift) as u8).try_into().unwrap())),
+                2 => Rdp(SetDepthSource(((w1 >> shift) as u8).try_into().unwrap())),
+                3 => Rdp(SetRenderMode(RenderMode {
+                    flags: RenderModeFlags::from_bits_truncate(w1 as u16),
+                    cvg_dst: (((w1 >> 8) & 0x3) as u8).try_into().unwrap(),
+                    z_mode: (((w1 >> 10) & 0x3) as u8).try_into().unwrap(),
+                    blend_cycle1: BlendMode {
+                        color1: (((w1 >> 30) & 0x3) as u8).try_into().unwrap(),
+                        alpha1: (((w1 >> 26) & 0x3) as u8).try_into().unwrap(),
+                        color2: (((w1 >> 22) & 0x3) as u8).try_into().unwrap(),
+                        alpha2: (((w1 >> 18) & 0x3) as u8).try_into().unwrap(),
+                    },
+                    blend_cycle2: BlendMode {
+                        color1: (((w1 >> 28) & 0x3) as u8).try_into().unwrap(),
+                        alpha1: (((w1 >> 24) & 0x3) as u8).try_into().unwrap(),
+                        color2: (((w1 >> 20) & 0x3) as u8).try_into().unwrap(),
+                        alpha2: (((w1 >> 16) & 0x3) as u8).try_into().unwrap(),
+                    },
+                })),
+                _ => Unknown { w0, w1 },
+            }
+        }
+        0xB8 => Rsp(EndDisplayList),
+        0xB7 => Rsp(SetGeometryMode(GeometryModes::from_bits_truncate(w1))),
+        0xB6 => Rsp(ClearGeometryMode(GeometryModes::from_bits_truncate(w1))),
+        // RDPHALF_1, not expected here
+        0xB4 => Unknown { w0, w1 },
+        // RDPHALF_2, not expected here
+        0xB2 => Unknown { w0, w1 },
+        // RDPHALF_CONT, not expected here
+        0xB1 => Unknown { w0, w1 },
+
+        // RDP commands
+        0xFF => Rdp(SetColorImage(Image {
+            fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
+            size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
+            width: (w0 & 0xFFF) + 1,
+            img: w1p,
+        })),
+        0xFE => Rdp(SetDepthImage(w1p)),
+        0xFD => Rdp(SetTextureImage(Image {
+            fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
+            size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
+            width: (w0 & 0xFFF) + 1,
+            img: w1p,
+        })),
+        0xFC => Rdp(SetCombineMode(Unimplemented { w0, w1 })),
+        //   0xFC => {
+        // 	   let    cc1 = ((w0 >> 20) & 0xF, (w1 >> 28) & 0xF, (w0 >> 15) & 0x1F, (w1 >> 15) & 0x7);
+        // 	   let    ac1 = ((w0 >> 12) & 0x7, (w1 >> 12) & 0x7, (w0 >> 9) & 0x7, (w1 >> 9) & 0x7);
+        // 	   let    cc2 = ((w0 >> 5) & 0xF, (w1 >> 24) & 0xF, (w0 >> 0) & 0x1F, (w1 >> 6) & 0x7);
+        // 	   let    ac2 = ((w1 >> 21) & 0x7, (w1 >> 3) & 0x7, (w1 >> 18) & 0x7, (w1 >> 0) & 0x7);
+        //
+        //     def get_ccmux(p):
+        //       i, m = p;
+        // 	   let      ccmux = {
+        //         0: "combined",
+        //         1: "texel0",
+        //         2: "texel1",
+        //         3: "primitive",
+        //         4: "shade",
+        //         5: "environment",
+        //       }
+        //       if i == 0 {
+        //         ccmux[6] = "1";
+        //         ccmux[7] = "noise";
+        //       } else if i == 1 {
+        //         ccmux[6] = "center";
+        //         ccmux[7] = "k4";
+        //       } else if i == 2 {
+        //         ccmux.update({
+        //             6: "scale",
+        //             7: "combined_alpha",
+        //             8: "texel0_alpha",
+        //             9: "texel1_alpha",
+        //             10: "primitive_alpha",
+        //             11: "shade_alpha",
+        //             12: "environment_alpha",
+        //             13: "lod_fraction",
+        //             14: "prim_lod_frac",
+        //             15: "k5",
+        //           });
+        //       } else if i == 3 {
+        //         ccmux[6] = "1";
+        //       return ccmux.get(m) or "0";
+        //
+        //     def get_acmux(p):
+        //       i, m = p;
+        // 	   let      acmux = {
+        //         0: "combined_alpha",
+        //         1: "texel0_alpha",
+        //         2: "texel1_alpha",
+        //         3: "primitive_alpha",
+        //         4: "shade_alpha",
+        //         5: "environment_alpha",
+        //         6: "1",
+        //         7: "0",
+        //       }
+        //       if i == 2 {
+        //         acmux[0] = "lod_fraction";
+        //         acmux[6] = "prim_lod_frac";
+        //       return acmux[m];
+        //
+        //     return ("gDPSetCombineMode",
+        //       tuple(map(get_ccmux, enumerate(cc1))),
+        //       tuple(map(get_acmux, enumerate(ac1))),
+        //       tuple(map(get_ccmux, enumerate(cc2))),
+        //       tuple(map(get_acmux, enumerate(ac2))));
+        //  }
+        0xFB => Rdp(SetEnvColor(Rgba8 {
+            r: (w1 >> 24) as u8,
+            g: (w1 >> 16) as u8,
+            b: (w1 >> 8) as u8,
+            a: w1 as u8,
+        })),
+        0xFA => Rdp(SetPrimColor(Rgba8 {
+            r: (w1 >> 24) as u8,
+            g: (w1 >> 16) as u8,
+            b: (w1 >> 8) as u8,
+            a: w1 as u8,
+        })),
+        0xF9 => Rdp(SetBlendColor(Rgba8 {
+            r: (w1 >> 24) as u8,
+            g: (w1 >> 16) as u8,
+            b: (w1 >> 8) as u8,
+            a: w1 as u8,
+        })),
+        0xF8 => Rdp(SetFogColor(Rgba8 {
+            r: (w1 >> 24) as u8,
+            g: (w1 >> 16) as u8,
+            b: (w1 >> 8) as u8,
+            a: w1 as u8,
+        })),
+        0xF7 => Rdp(SetFillColor([
+            FillColor((w1 >> 16) as u16),
+            FillColor((w1 & 0xFFFF) as u16),
+        ])),
+        0xF6 => Rdp(FillRectangle(Rectangle {
+            ulx: (w1 >> 14) & 0x3FF,
+            uly: (w1 >> 2) & 0x3FF,
+            lrx: (w0 >> 14) & 0x3FF,
+            lry: (w0 >> 2) & 0x3FF,
+        })),
+        0xF5 => Rdp(SetTile(
+            TileIndex(((w1 >> 24) & 0x7) as u8),
+            TileParams {
+                fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
+                size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
+                line: (w0 >> 9) & 0x1FF,
+                tmem: w0 & 0x1FF,
+                palette: (w1 >> 20) & 0xF,
+                cmt: (((w1 >> 18) & 0x3) as u8).into(),
+                maskt: (w1 >> 14) & 0xF,
+                shiftt: (w1 >> 10) & 0xF,
+                cms: (((w1 >> 8) & 0x3) as u8).into(),
+                masks: (w1 >> 4) & 0xF,
+                shifts: w1 & 0xF,
+            },
+        )),
+        0xF4 => Rdp(LoadTile(
+            TileIndex(((w1 >> 24) & 0x7) as u8),
+            TileSize {
+                uls: (w0 >> 12) & 0xFFF,
+                ult: w0 & 0xFFF,
+                lrs: (w1 >> 12) & 0xFFF,
+                lrt: w1 & 0xFFF,
+            },
+        )),
+        0xF3 => Rdp(LoadBlock(
+            TileIndex(((w1 >> 24) & 0x7) as u8),
+            TextureBlock {
+                uls: (w0 >> 12) & 0xFFF,
+                ult: w0 & 0xFFF,
+                lrs: (w1 >> 12) & 0xFFF,
+                dxt: w1 & 0xFFF,
+            },
+        )),
+        0xF2 => Rdp(SetTileSize(
+            TileIndex(((w1 >> 24) & 0x7) as u8),
+            TileSize {
+                uls: (w0 >> 12) & 0xFFF,
+                ult: w0 & 0xFFF,
+                lrs: (w1 >> 12) & 0xFFF,
+                lrt: w1 & 0xFFF,
+            },
+        )),
+        0xF0 => Rdp(LoadTLUTCmd(
+            TileIndex(((w1 >> 24) & 0x7) as u8),
+            ((w1 >> 14) & 0x3FF) as u32,
+        )),
+        0xEF => Rdp(SetOtherMode(Unimplemented { w0, w1 })),
+        0xEE => Rdp(SetPrimDepth(PrimDepth {
+            z: (w1 >> 16) as u16,
+            dz: (w1 & 0xFFFF) as u16,
+        })),
+        0xED => Rdp(SetScissor(
+            (((w1 >> 24) & 0xFF) as u8).try_into().unwrap(),
+            Rectangle {
+                ulx: ((((w0 >> 12) & 0xFFF) / 4) as f32).try_into().unwrap(),
+                uly: (((w0 & 0xFFF) / 4) as f32).try_into().unwrap(),
+                lrx: ((((w1 >> 12) & 0xFFF) / 4) as f32).try_into().unwrap(),
+                lry: (((w1 & 0xFFF) / 4) as f32).try_into().unwrap(),
+            },
+        )),
+        0xEC => Rdp(SetConvert(Unimplemented { w0, w1 })),
+        0xEB => Rdp(SetKeyR(Unimplemented { w0, w1 })),
+        0xEA => Rdp(SetKeyGB(Unimplemented { w0, w1 })),
+        0xE9 => Rdp(FullSync),
+        0xE8 => Rdp(TileSync),
+        0xE7 => Rdp(PipeSync),
+        0xE6 => Rdp(LoadSync),
+        0xE5 => Rdp(TextureRectangleFlip(Unimplemented { w0, w1 })),
+        0xE4 => Rdp(TextureRectangle(Unimplemented { w0, w1 })),
+        //   0xE4 => {
+        // 	   let    ulx = ((w1 >> 12) & 0xFFF) / (1 << 2);
+        // 	   let    uly = ((w1 >> 0) & 0xFFF) / (1 << 2);
+        // 	   let    lrx = ((w0 >> 12) & 0xFFF) / (1 << 2);
+        // 	   let    lry = ((w0 >> 0) & 0xFFF) / (1 << 2);
+        // 	   let    tile = (w1 >> 24) & 0x7;
+        //
+        // 	   let    dl_cmd = get_next_cmd();
+        // 	   let    w0 = dl_cmd >> 32;
+        // 	   let    w1 = dl_cmd & <u32>0xFFFFFFFF;
+        //     # This is supposed to be 0xB4 (??);
+        // 	   let    s = ((w1 >> 16) & 0xFFFF) / (1 << 5);
+        // 	   let    t = ((w1 >> 0) & 0xFFFF) / (1 << 5);
+        //
+        // 	   let    dl_cmd = get_next_cmd();
+        // 	   let    w0 = dl_cmd >> 32;
+        // 	   let    w1 = dl_cmd & <u32>0xFFFFFFFF;
+        //     # This is supposed to be 0xB3 (??);
+        // 	   let    dsdx = ((w1 >> 16) & 0xFFFF) / (1 << 10);
+        // 	   let    dtdy = ((w1 >> 0) & 0xFFFF) / (1 << 10);
+        //
+        //     Rsp(TextureRectangle {  ulx, uly, lrx, lry, tile, s, t, dsdx, dtdy })
+        //  }
+        _ => Unknown { w0, w1 },
+    })
+}
+
+pub fn decode_f3d_display_list<C: RawF3DCommand>(
     raw_dl: impl Iterator<Item = C>,
 ) -> impl Iterator<Item = F3DCommand<C::Ptr>> {
     DlIter { raw_dl }
@@ -476,344 +841,21 @@ where
     type Item = F3DCommand<C::Ptr>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        use DPCommand::*;
-        use F3DCommand::*;
-        use SPCommand::*;
-
-        let full_cmd = self.raw_dl.next()?;
-        let w0 = full_cmd.w0();
-        let w1 = full_cmd.w1();
-        let w1p = full_cmd.w1p();
-        let cmd = w0 >> 24;
-
-        Some(match cmd {
-            0x00 => NoOp,
-
-            // DMA commands
-            0x01 => {
-                let p = ((w0 >> 16) & 0xFF) as u8;
-                Rsp(Matrix {
-                    matrix: w1p,
-                    mode: (p & 0x01).try_into().unwrap(),
-                    op: (p & 0x02).try_into().unwrap(),
-                    push: p & 0x04 != 0,
-                })
-            }
-            0x03 => {
-                let p = (w0 >> 16) & 0xFF;
-                match p {
-                    0x80 => Rsp(Viewport(w1p)),
-                    0x86..=0x94 => Rsp(Light {
-                        light: w1p,
-                        n: (p - 0x86) / 2 + 1,
-                    }),
-                    _ => Unknown { w0, w1 },
+        let raw_command = self.raw_dl.next()?;
+        let mut result = decode_f3d_command(raw_command);
+        while !result.is_complete() {
+            match self.raw_dl.next() {
+                Some(raw_command_cont) => {
+                    result = result.next(raw_command_cont);
+                }
+                None => {
+                    return Some(F3DCommand::Unknown {
+                        w0: raw_command.w0(),
+                        w1: raw_command.w1(),
+                    });
                 }
             }
-            0x04 => Rsp(Vertex {
-                v: w1p,
-                n: ((w0 >> 20) & 0xF) + 1,
-                v0: (w0 >> 16) & 0xF,
-            }),
-            0x06 => {
-                let p = (w0 >> 16) & 0xFF;
-                match p {
-                    0 => Rsp(DisplayList(w1p)),
-                    1 => Rsp(BranchList(w1p)),
-                    _ => Unknown { w0, w1 },
-                }
-            }
-
-            // IMMEDIATE commands
-            0xBF => Rsp(OneTriangle {
-                v0: ((w1 >> 16) & 0xFF) / 10,
-                v1: ((w1 >> 8) & 0xFF) / 10,
-                v2: (w1 & 0xFF) / 10,
-                flag: w1 >> 24,
-            }),
-            0xBD => Rsp(PopMatrix(((w1 & 0x01) as u8).try_into().unwrap())),
-            0xBC => {
-                let index = w0 & 0xFF;
-                match index {
-                    2 => Rsp(NumLights((w1 - 0x80000000) / 0x20 - 1)),
-                    6 => Rsp(Segment {
-                        seg: ((w0 >> 8) & 0xFFFF) / 4,
-                        base: w1p,
-                    }),
-                    8 => Rsp(FogFactor {
-                        mul: ((w1 >> 16) & 0xFFFF),
-                        offset: (w1 & 0xFFFF),
-                    }),
-                    _ => Unknown { w0, w1 },
-                }
-            }
-            0xBB => Rsp(Texture {
-                sc: (w1 >> 16) & 0xFFFF,
-                tc: w1 & 0xFFFF,
-                level: (w0 >> 11) & 0x7,
-                tile: (w0 >> 8) & 0x7,
-                on: (w0 & 0xFF) != 0,
-            }),
-            0xBA => {
-                let shift = (w0 >> 8) & 0xFF;
-                let data = (w1 >> shift) as u8;
-                match shift {
-                    4 => Rdp(SetAlphaDither(data.try_into().unwrap())),
-                    6 => Rdp(SetColorDither(data.try_into().unwrap())),
-                    8 => Rdp(SetCombineKey(data != 0)),
-                    9 => Rdp(SetTextureConvert(data.try_into().unwrap())),
-                    12 => Rdp(SetTextureFilter(data.try_into().unwrap())),
-                    14 => Rdp(SetTextureLUT(data.try_into().unwrap())),
-                    16 => Rdp(SetTextureLOD(data != 0)),
-                    17 => Rdp(SetTextureDetail(data.try_into().unwrap())),
-                    19 => Rdp(SetTexturePersp(data != 0)),
-                    20 => Rdp(SetCycleType(data.try_into().unwrap())),
-                    23 => Rdp(PipelineMode(data.try_into().unwrap())),
-                    _ => Unknown { w0, w1 },
-                }
-            }
-            0xB9 => {
-                let shift = (w0 >> 8) & 0xFF;
-                match shift {
-                    0 => Rdp(SetAlphaCompare(((w1 >> shift) as u8).try_into().unwrap())),
-                    2 => Rdp(SetDepthSource(((w1 >> shift) as u8).try_into().unwrap())),
-                    3 => Rdp(SetRenderMode(RenderMode {
-                        flags: RenderModeFlags::from_bits_truncate(w1 as u16),
-                        cvg_dst: (((w1 >> 8) & 0x3) as u8).try_into().unwrap(),
-                        z_mode: (((w1 >> 10) & 0x3) as u8).try_into().unwrap(),
-                        blend_cycle1: BlendMode {
-                            color1: (((w1 >> 30) & 0x3) as u8).try_into().unwrap(),
-                            alpha1: (((w1 >> 26) & 0x3) as u8).try_into().unwrap(),
-                            color2: (((w1 >> 22) & 0x3) as u8).try_into().unwrap(),
-                            alpha2: (((w1 >> 18) & 0x3) as u8).try_into().unwrap(),
-                        },
-                        blend_cycle2: BlendMode {
-                            color1: (((w1 >> 28) & 0x3) as u8).try_into().unwrap(),
-                            alpha1: (((w1 >> 24) & 0x3) as u8).try_into().unwrap(),
-                            color2: (((w1 >> 20) & 0x3) as u8).try_into().unwrap(),
-                            alpha2: (((w1 >> 16) & 0x3) as u8).try_into().unwrap(),
-                        },
-                    })),
-                    _ => Unknown { w0, w1 },
-                }
-            }
-            0xB8 => Rsp(EndDisplayList),
-            0xB7 => Rsp(SetGeometryMode(GeometryModes::from_bits_truncate(w1))),
-            0xB6 => Rsp(ClearGeometryMode(GeometryModes::from_bits_truncate(w1))),
-            0xB4 => {
-                // TODO: RDPHALF_1
-                Unknown { w0, w1 }
-            }
-            0xB2 => {
-                // TODO: RDPHALF_2
-                Unknown { w0, w1 }
-            }
-
-            // RDP commands
-            0xFF => Rdp(SetColorImage(Image {
-                fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
-                size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
-                width: (w0 & 0xFFF) + 1,
-                img: w1p,
-            })),
-            0xFE => Rdp(SetDepthImage(w1p)),
-            0xFD => Rdp(SetTextureImage(Image {
-                fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
-                size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
-                width: (w0 & 0xFFF) + 1,
-                img: w1p,
-            })),
-            0xFC => Rdp(SetCombineMode(Unimplemented { w0, w1 })),
-            //   0xFC => {
-            // 	   let    cc1 = ((w0 >> 20) & 0xF, (w1 >> 28) & 0xF, (w0 >> 15) & 0x1F, (w1 >> 15) & 0x7);
-            // 	   let    ac1 = ((w0 >> 12) & 0x7, (w1 >> 12) & 0x7, (w0 >> 9) & 0x7, (w1 >> 9) & 0x7);
-            // 	   let    cc2 = ((w0 >> 5) & 0xF, (w1 >> 24) & 0xF, (w0 >> 0) & 0x1F, (w1 >> 6) & 0x7);
-            // 	   let    ac2 = ((w1 >> 21) & 0x7, (w1 >> 3) & 0x7, (w1 >> 18) & 0x7, (w1 >> 0) & 0x7);
-            //
-            //     def get_ccmux(p):
-            //       i, m = p;
-            // 	   let      ccmux = {
-            //         0: "combined",
-            //         1: "texel0",
-            //         2: "texel1",
-            //         3: "primitive",
-            //         4: "shade",
-            //         5: "environment",
-            //       }
-            //       if i == 0 {
-            //         ccmux[6] = "1";
-            //         ccmux[7] = "noise";
-            //       } else if i == 1 {
-            //         ccmux[6] = "center";
-            //         ccmux[7] = "k4";
-            //       } else if i == 2 {
-            //         ccmux.update({
-            //             6: "scale",
-            //             7: "combined_alpha",
-            //             8: "texel0_alpha",
-            //             9: "texel1_alpha",
-            //             10: "primitive_alpha",
-            //             11: "shade_alpha",
-            //             12: "environment_alpha",
-            //             13: "lod_fraction",
-            //             14: "prim_lod_frac",
-            //             15: "k5",
-            //           });
-            //       } else if i == 3 {
-            //         ccmux[6] = "1";
-            //       return ccmux.get(m) or "0";
-            //
-            //     def get_acmux(p):
-            //       i, m = p;
-            // 	   let      acmux = {
-            //         0: "combined_alpha",
-            //         1: "texel0_alpha",
-            //         2: "texel1_alpha",
-            //         3: "primitive_alpha",
-            //         4: "shade_alpha",
-            //         5: "environment_alpha",
-            //         6: "1",
-            //         7: "0",
-            //       }
-            //       if i == 2 {
-            //         acmux[0] = "lod_fraction";
-            //         acmux[6] = "prim_lod_frac";
-            //       return acmux[m];
-            //
-            //     return ("gDPSetCombineMode",
-            //       tuple(map(get_ccmux, enumerate(cc1))),
-            //       tuple(map(get_acmux, enumerate(ac1))),
-            //       tuple(map(get_ccmux, enumerate(cc2))),
-            //       tuple(map(get_acmux, enumerate(ac2))));
-            //  }
-            0xFB => Rdp(SetEnvColor(Rgba8 {
-                r: (w1 >> 24) as u8,
-                g: (w1 >> 16) as u8,
-                b: (w1 >> 8) as u8,
-                a: w1 as u8,
-            })),
-            0xFA => Rdp(SetPrimColor(Rgba8 {
-                r: (w1 >> 24) as u8,
-                g: (w1 >> 16) as u8,
-                b: (w1 >> 8) as u8,
-                a: w1 as u8,
-            })),
-            0xF9 => Rdp(SetBlendColor(Rgba8 {
-                r: (w1 >> 24) as u8,
-                g: (w1 >> 16) as u8,
-                b: (w1 >> 8) as u8,
-                a: w1 as u8,
-            })),
-            0xF8 => Rdp(SetFogColor(Rgba8 {
-                r: (w1 >> 24) as u8,
-                g: (w1 >> 16) as u8,
-                b: (w1 >> 8) as u8,
-                a: w1 as u8,
-            })),
-            0xF7 => Rdp(SetFillColor([
-                FillColor((w1 >> 16) as u16),
-                FillColor((w1 & 0xFFFF) as u16),
-            ])),
-            0xF6 => Rdp(FillRectangle(Rectangle {
-                ulx: (w1 >> 14) & 0x3FF,
-                uly: (w1 >> 2) & 0x3FF,
-                lrx: (w0 >> 14) & 0x3FF,
-                lry: (w0 >> 2) & 0x3FF,
-            })),
-            0xF5 => Rdp(SetTile(
-                TileIndex(((w1 >> 24) & 0x7) as u8),
-                TileParams {
-                    fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
-                    size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
-                    line: (w0 >> 9) & 0x1FF,
-                    tmem: w0 & 0x1FF,
-                    palette: (w1 >> 20) & 0xF,
-                    cmt: (((w1 >> 18) & 0x3) as u8).into(),
-                    maskt: (w1 >> 14) & 0xF,
-                    shiftt: (w1 >> 10) & 0xF,
-                    cms: (((w1 >> 8) & 0x3) as u8).into(),
-                    masks: (w1 >> 4) & 0xF,
-                    shifts: w1 & 0xF,
-                },
-            )),
-            0xF4 => Rdp(LoadTile(
-                TileIndex(((w1 >> 24) & 0x7) as u8),
-                TileSize {
-                    uls: (w0 >> 12) & 0xFFF,
-                    ult: w0 & 0xFFF,
-                    lrs: (w1 >> 12) & 0xFFF,
-                    lrt: w1 & 0xFFF,
-                },
-            )),
-            0xF3 => Rdp(LoadBlock(
-                TileIndex(((w1 >> 24) & 0x7) as u8),
-                TextureBlock {
-                    uls: (w0 >> 12) & 0xFFF,
-                    ult: w0 & 0xFFF,
-                    lrs: (w1 >> 12) & 0xFFF,
-                    dxt: w1 & 0xFFF,
-                },
-            )),
-            0xF2 => Rdp(SetTileSize(
-                TileIndex(((w1 >> 24) & 0x7) as u8),
-                TileSize {
-                    uls: (w0 >> 12) & 0xFFF,
-                    ult: w0 & 0xFFF,
-                    lrs: (w1 >> 12) & 0xFFF,
-                    lrt: w1 & 0xFFF,
-                },
-            )),
-            0xF0 => Rdp(LoadTLUTCmd(
-                TileIndex(((w1 >> 24) & 0x7) as u8),
-                ((w1 >> 14) & 0x3FF) as u32,
-            )),
-            0xEF => Rdp(SetOtherMode(Unimplemented { w0, w1 })),
-            0xEE => Rdp(SetPrimDepth(PrimDepth {
-                z: (w1 >> 16) as u16,
-                dz: (w1 & 0xFFFF) as u16,
-            })),
-            0xED => Rdp(SetScissor(
-                (((w1 >> 24) & 0xFF) as u8).try_into().unwrap(),
-                Rectangle {
-                    ulx: ((((w0 >> 12) & 0xFFF) / 4) as f32).try_into().unwrap(),
-                    uly: (((w0 & 0xFFF) / 4) as f32).try_into().unwrap(),
-                    lrx: ((((w1 >> 12) & 0xFFF) / 4) as f32).try_into().unwrap(),
-                    lry: (((w1 & 0xFFF) / 4) as f32).try_into().unwrap(),
-                },
-            )),
-            0xEC => Rdp(SetConvert(Unimplemented { w0, w1 })),
-            0xEB => Rdp(SetKeyR(Unimplemented { w0, w1 })),
-            0xEA => Rdp(SetKeyGB(Unimplemented { w0, w1 })),
-            0xE9 => Rdp(FullSync),
-            0xE8 => Rdp(TileSync),
-            0xE7 => Rdp(PipeSync),
-            0xE6 => Rdp(LoadSync),
-            0xE5 => Rdp(TextureRectangleFlip(Unimplemented { w0, w1 })),
-            0xE4 => Rdp(TextureRectangle(Unimplemented { w0, w1 })),
-            //   0xE4 => {
-            // 	   let    ulx = ((w1 >> 12) & 0xFFF) / (1 << 2);
-            // 	   let    uly = ((w1 >> 0) & 0xFFF) / (1 << 2);
-            // 	   let    lrx = ((w0 >> 12) & 0xFFF) / (1 << 2);
-            // 	   let    lry = ((w0 >> 0) & 0xFFF) / (1 << 2);
-            // 	   let    tile = (w1 >> 24) & 0x7;
-            //
-            // 	   let    dl_cmd = get_next_cmd();
-            // 	   let    w0 = dl_cmd >> 32;
-            // 	   let    w1 = dl_cmd & <u32>0xFFFFFFFF;
-            //     # This is supposed to be 0xB4 (??);
-            // 	   let    s = ((w1 >> 16) & 0xFFFF) / (1 << 5);
-            // 	   let    t = ((w1 >> 0) & 0xFFFF) / (1 << 5);
-            //
-            // 	   let    dl_cmd = get_next_cmd();
-            // 	   let    w0 = dl_cmd >> 32;
-            // 	   let    w1 = dl_cmd & <u32>0xFFFFFFFF;
-            //     # This is supposed to be 0xB3 (??);
-            // 	   let    dsdx = ((w1 >> 16) & 0xFFFF) / (1 << 10);
-            // 	   let    dtdy = ((w1 >> 0) & 0xFFFF) / (1 << 10);
-            //
-            //     Rsp(TextureRectangle {  ulx, uly, lrx, lry, tile, s, t, dsdx, dtdy })
-            //  }
-            _ => Unknown { w0, w1 },
-        })
+        }
+        Some(result.unwrap())
     }
 }

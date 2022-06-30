@@ -8,7 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use f3d_decode::parse_display_list;
+use f3d_decode::decode_f3d_display_list;
 use n64_render_backend::process_display_list;
 use n64_renderer::N64Renderer;
 use wafel_api::{load_m64, Emu, Game, IntType};
@@ -69,7 +69,7 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
     //     });
 
     // ~~~ shared ~~~
-    let dl = parse_display_list(raw_dl);
+    let dl = decode_f3d_display_list(raw_dl);
 
     eprintln!("Display list:");
     for cmd in dl {
