@@ -8,6 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use custom_renderer::{CustomRenderer, Scene};
 use f3d_decode::decode_f3d_display_list;
 use n64_render_backend::process_display_list;
 use n64_renderer::N64Renderer;
@@ -25,6 +26,7 @@ use crate::{
 };
 pub use n64_render_data::*;
 
+pub mod custom_renderer;
 pub mod f3d_decode;
 mod n64_render_backend;
 mod n64_render_data;
@@ -284,6 +286,144 @@ async fn run(frame0: u32) -> Result<(), Box<dyn Error>> {
             _ => {}
         }
     });
+}
 
-    Ok(())
+pub async fn custom_render_test(scene: Scene) -> Result<(), Box<dyn Error>> {
+    let event_loop = EventLoop::new();
+    let window = WindowBuilder::new()
+        .with_title("Wafel Viz")
+        .with_visible(false)
+        .build(&event_loop)
+        .expect("failed to create window");
+    let init_window_size = window.inner_size();
+
+    let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
+    let adapter = instance
+        .request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::HighPerformance,
+            force_fallback_adapter: false,
+            compatible_surface: None,
+        })
+        .await
+        .expect("failed to request GPU adapter");
+
+    let surface = unsafe { instance.create_surface(&window) };
+
+    let (device, queue) = adapter
+        .request_device(
+            &wgpu::DeviceDescriptor {
+                label: None,
+                // features: wgpu::Features::empty(),
+                features: wgpu::Features::POLYGON_MODE_LINE,
+                limits: wgpu::Limits::downlevel_defaults(),
+            },
+            None,
+        )
+        .await
+        .expect("failed to request GPU device");
+
+    let mut config = wgpu::SurfaceConfiguration {
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        format: wgpu::TextureFormat::Bgra8Unorm,
+        width: init_window_size.width,
+        height: init_window_size.height,
+        present_mode: wgpu::PresentMode::Mailbox,
+    };
+    surface.configure(&device, &config);
+
+    let mut renderer = CustomRenderer::new(&device, config.format);
+
+    window.set_visible(true);
+    let mut first_render = false;
+
+    event_loop.run(move |event, _, control_flow| {
+        let _ = (&instance, &adapter, &renderer, &scene);
+
+        *control_flow = ControlFlow::Poll;
+
+        match event {
+            Event::WindowEvent { event, .. } => match event {
+                WindowEvent::Resized(size) => {
+                    config.width = size.width;
+                    config.height = size.height;
+                    if config.width != 0 && config.height != 0 {
+                        surface.configure(&device, &config);
+                    }
+                }
+                WindowEvent::CloseRequested => {
+                    *control_flow = ControlFlow::Exit;
+                }
+                _ => {}
+            },
+            Event::MainEventsCleared => {
+                if config.width != 0 && config.height != 0 {
+                    let frame = surface
+                        .get_current_texture()
+                        .expect("failed to acquire next swap chain texture");
+                    let output_view = frame
+                        .texture
+                        .create_view(&wgpu::TextureViewDescriptor::default());
+
+                    if first_render {
+                        // Draw a black screen as quickly as possileb
+                        first_render = false;
+                    } else {
+                        renderer.prepare(&device, &scene);
+
+                        // let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
+                        //     label: None,
+                        //     size: wgpu::Extent3d {
+                        //         width: config.width,
+                        //         height: config.height,
+                        //         depth_or_array_layers: 1,
+                        //     },
+                        //     mip_level_count: 1,
+                        //     sample_count: 1,
+                        //     dimension: wgpu::TextureDimension::D2,
+                        //     format: wgpu::TextureFormat::Depth24Plus,
+                        //     usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                        // });
+                        // let depth_texture_view =
+                        //     depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+                        let mut encoder =
+                            device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                                label: None,
+                            });
+
+                        {
+                            let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                label: None,
+                                color_attachments: &[wgpu::RenderPassColorAttachment {
+                                    view: &output_view,
+                                    resolve_target: None,
+                                    ops: wgpu::Operations {
+                                        load: wgpu::LoadOp::Clear(wgpu::Color::WHITE),
+                                        store: true,
+                                    },
+                                }],
+                                depth_stencil_attachment: None,
+                                // depth_stencil_attachment: Some(
+                                //     wgpu::RenderPassDepthStencilAttachment {
+                                //         view: &depth_texture_view,
+                                //         depth_ops: Some(wgpu::Operations {
+                                //             load: wgpu::LoadOp::Clear(1.0),
+                                //             store: true,
+                                //         }),
+                                //         stencil_ops: None,
+                                //     },
+                                // ),
+                            });
+                            renderer.render(&mut rp);
+                        }
+
+                        queue.submit([encoder.finish()]);
+                    }
+
+                    frame.present();
+                }
+            }
+            _ => {}
+        }
+    });
 }
