@@ -161,6 +161,7 @@ pub enum DPCommand<Ptr> {
     SetAlphaCompare(AlphaCompare),
     SetDepthSource(DepthSource),
     SetRenderMode(RenderMode),
+    PerspNormalize(u16),
     SetColorImage(Image<Ptr>),
     SetDepthImage(Ptr),
     SetTextureImage(Image<Ptr>),
@@ -607,8 +608,7 @@ pub fn decode_f3d_command<Ptr>(raw_command: impl RawF3DCommand<Ptr = Ptr>) -> De
         0xB8 => Rsp(EndDisplayList),
         0xB7 => Rsp(SetGeometryMode(GeometryModes::from_bits_truncate(w1))),
         0xB6 => Rsp(ClearGeometryMode(GeometryModes::from_bits_truncate(w1))),
-        // RDPHALF_1, not expected here
-        0xB4 => Unknown { w0, w1 },
+        0xB4 => Rdp(PerspNormalize(w1 as u16)),
         // RDPHALF_2, not expected here
         0xB2 => Unknown { w0, w1 },
         // RDPHALF_CONT, not expected here
