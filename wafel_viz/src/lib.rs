@@ -50,7 +50,7 @@ impl<'a> DllF3DSource<'a> {
 }
 
 impl<'a> F3DSource for DllF3DSource<'a> {
-    type Ptr = usize;
+    type Ptr = *const ();
     type DlIter = F3DCommandIter<RawDlIter<'a>>;
 
     fn root_dl(&self) -> Self::DlIter {
@@ -62,10 +62,7 @@ impl<'a> F3DSource for DllF3DSource<'a> {
     }
 
     fn read_dl(&self, ptr: Self::Ptr) -> Self::DlIter {
-        let addr = self
-            .game
-            .memory
-            .unchecked_pointer_to_address(ptr as *const ());
+        let addr = self.game.memory.unchecked_pointer_to_address(ptr);
         self.read_dl_from_addr(addr)
     }
 }
@@ -77,7 +74,7 @@ pub struct RawDlIter<'a> {
 }
 
 impl<'a> Iterator for RawDlIter<'a> {
-    type Item = [usize; 2];
+    type Item = RawF3DCommand<*const ()>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let w_type = IntType::u_ptr_native();
@@ -88,7 +85,11 @@ impl<'a> Iterator for RawDlIter<'a> {
         let w1 = self.view.read_int(self.addr, w_type).unwrap() as usize;
         self.addr += w_size;
 
-        Some([w0, w1])
+        Some(RawF3DCommand {
+            w0: w0 as u32,
+            w1: w1 as u32,
+            w1_ptr: w1 as *const (),
+        })
     }
 }
 

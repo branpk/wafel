@@ -6,39 +6,20 @@ use bitflags::bitflags;
 use num_enum::TryFromPrimitive;
 use ordered_float::NotNan;
 
-pub trait RawF3DCommand: Copy {
-    type Ptr: Copy;
-
-    fn w0(self) -> u32;
-    fn w1(self) -> u32;
-    fn w1p(self) -> Self::Ptr;
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct RawF3DCommand<Ptr> {
+    pub w0: u32,
+    pub w1: u32,
+    pub w1_ptr: Ptr,
 }
 
-impl RawF3DCommand for [u32; 2] {
-    type Ptr = u32;
-
-    fn w0(self) -> u32 {
-        self[0]
-    }
-    fn w1(self) -> u32 {
-        self[1]
-    }
-    fn w1p(self) -> Self::Ptr {
-        self[1]
-    }
-}
-
-impl RawF3DCommand for [usize; 2] {
-    type Ptr = usize;
-
-    fn w0(self) -> u32 {
-        self[0] as u32
-    }
-    fn w1(self) -> u32 {
-        self[1] as u32
-    }
-    fn w1p(self) -> Self::Ptr {
-        self[1]
+impl<Ptr> fmt::Debug for RawF3DCommand<Ptr> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "RawF3DCommand {{ w0: {:#010X}, w1: {:#010X} }}",
+            self.w0, self.w1
+        )
     }
 }
 
@@ -47,7 +28,7 @@ pub enum F3DCommand<Ptr> {
     NoOp,
     Rsp(SPCommand<Ptr>),
     Rdp(DPCommand<Ptr>),
-    Unknown { w0: u32, w1: u32 },
+    Unknown(RawF3DCommand<Ptr>),
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -575,21 +556,21 @@ impl<Ptr> DecodeResult<Ptr> {
     }
 
     #[track_caller]
-    pub fn next(self, cmd_cont: impl RawF3DCommand<Ptr = Ptr>) -> Self {
+    pub fn next(self, cmd_cont: RawF3DCommand<Ptr>) -> Self {
         match self {
             Self::Complete(_) => panic!("next() called on complete result"),
         }
     }
 }
 
-pub fn decode_f3d_command<Ptr>(raw_command: impl RawF3DCommand<Ptr = Ptr>) -> DecodeResult<Ptr> {
+pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeResult<Ptr> {
     use DPCommand::*;
     use F3DCommand::*;
     use SPCommand::*;
 
-    let w0 = raw_command.w0();
-    let w1 = raw_command.w1();
-    let w1p = raw_command.w1p();
+    let w0 = raw_command.w0;
+    let w1 = raw_command.w1;
+    let w1p = raw_command.w1_ptr;
     let cmd = w0 >> 24;
 
     DecodeResult::Complete(match cmd {
@@ -613,7 +594,7 @@ pub fn decode_f3d_command<Ptr>(raw_command: impl RawF3DCommand<Ptr = Ptr>) -> De
                     light: w1p,
                     n: (p - 0x86) / 2 + 1,
                 }),
-                _ => Unknown { w0, w1 },
+                _ => Unknown(raw_command),
             }
         }
         0x04 => Rsp(Vertex {
@@ -626,7 +607,7 @@ pub fn decode_f3d_command<Ptr>(raw_command: impl RawF3DCommand<Ptr = Ptr>) -> De
             match p {
                 0 => Rsp(DisplayList(w1p)),
                 1 => Rsp(BranchList(w1p)),
-                _ => Unknown { w0, w1 },
+                _ => Unknown(raw_command),
             }
         }
 
@@ -650,7 +631,7 @@ pub fn decode_f3d_command<Ptr>(raw_command: impl RawF3DCommand<Ptr = Ptr>) -> De
                     mul: ((w1 >> 16) & 0xFFFF),
                     offset: (w1 & 0xFFFF),
                 }),
-                _ => Unknown { w0, w1 },
+                _ => Unknown(raw_command),
             }
         }
         0xBB => Rsp(Texture {
@@ -675,7 +656,7 @@ pub fn decode_f3d_command<Ptr>(raw_command: impl RawF3DCommand<Ptr = Ptr>) -> De
                 19 => Rdp(SetTexturePersp(data != 0)),
                 20 => Rdp(SetCycleType(data.try_into().unwrap())),
                 23 => Rdp(PipelineMode(data.try_into().unwrap())),
-                _ => Unknown { w0, w1 },
+                _ => Unknown(raw_command),
             }
         }
         0xB9 => {
@@ -700,7 +681,7 @@ pub fn decode_f3d_command<Ptr>(raw_command: impl RawF3DCommand<Ptr = Ptr>) -> De
                         alpha2: (((w1 >> 16) & 0x3) as u8).try_into().unwrap(),
                     },
                 })),
-                _ => Unknown { w0, w1 },
+                _ => Unknown(raw_command),
             }
         }
         0xB8 => Rsp(EndDisplayList),
@@ -708,9 +689,9 @@ pub fn decode_f3d_command<Ptr>(raw_command: impl RawF3DCommand<Ptr = Ptr>) -> De
         0xB6 => Rsp(ClearGeometryMode(GeometryModes::from_bits_truncate(w1))),
         0xB4 => Rdp(PerspNormalize(w1 as u16)),
         // RDPHALF_2, not expected here
-        0xB2 => Unknown { w0, w1 },
+        0xB2 => Unknown(raw_command),
         // RDPHALF_CONT, not expected here
-        0xB1 => Unknown { w0, w1 },
+        0xB1 => Unknown(raw_command),
 
         // RDP commands
         0xFF => Rdp(SetColorImage(Image {
@@ -916,11 +897,11 @@ pub fn decode_f3d_command<Ptr>(raw_command: impl RawF3DCommand<Ptr = Ptr>) -> De
         //
         //     Rsp(TextureRectangle {  ulx, uly, lrx, lry, tile, s, t, dsdx, dtdy })
         //  }
-        _ => Unknown { w0, w1 },
+        _ => Unknown(raw_command),
     })
 }
 
-pub fn decode_f3d_display_list<C: RawF3DCommand, I: Iterator<Item = C>>(
+pub fn decode_f3d_display_list<Ptr, I: Iterator<Item = RawF3DCommand<Ptr>>>(
     raw_dl: I,
 ) -> F3DCommandIter<I> {
     F3DCommandIter { raw_dl }
@@ -931,12 +912,12 @@ pub struct F3DCommandIter<I> {
     raw_dl: I,
 }
 
-impl<C, I> Iterator for F3DCommandIter<I>
+impl<Ptr, I> Iterator for F3DCommandIter<I>
 where
-    C: RawF3DCommand,
-    I: Iterator<Item = C>,
+    Ptr: Copy,
+    I: Iterator<Item = RawF3DCommand<Ptr>>,
 {
-    type Item = F3DCommand<C::Ptr>;
+    type Item = F3DCommand<Ptr>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let raw_command = self.raw_dl.next()?;
@@ -947,10 +928,7 @@ where
                     result = result.next(raw_command_cont);
                 }
                 None => {
-                    return Some(F3DCommand::Unknown {
-                        w0: raw_command.w0(),
-                        w1: raw_command.w1(),
-                    });
+                    return Some(F3DCommand::Unknown(raw_command));
                 }
             }
         }

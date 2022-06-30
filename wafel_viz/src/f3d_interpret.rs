@@ -145,8 +145,8 @@ impl State {
                     // DPCommand::TextureRectangle(_) => todo!(),
                     _ => {} //unimplemented!("{:?}", cmd),
                 },
-                F3DCommand::Unknown { w0, w1 } => {
-                    eprintln!("{}Unknown: {:08X} {:08X}", indent_str, w0, w1)
+                F3DCommand::Unknown(_) => {
+                    eprintln!("{}{:?}", indent_str, cmd);
                 }
             }
         }
