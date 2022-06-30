@@ -179,13 +179,13 @@ impl DllGameMemory {
         }
     }
 
-    fn unchecked_pointer_to_address<T>(&self, pointer: *const T) -> Address {
+    /// Translate the pointer in the dll to a relocatable address.
+    ///
+    /// This does not perform any alignment or bounds checking, but those will be done when the
+    /// address is accessed.
+    pub fn unchecked_pointer_to_address<T>(&self, pointer: *const T) -> Address {
         let offset = (pointer as usize).wrapping_sub(self.base_pointer.0 as usize);
-        if offset >= self.base_size {
-            Address(0)
-        } else {
-            Address(offset)
-        }
+        Address(offset)
     }
 
     fn unchecked_address_to_pointer<T>(&self, address: Address) -> *const T {
@@ -443,7 +443,7 @@ impl MemoryReadPrimitive for DllStaticMemoryView<'_> {
 /// particular slot.
 ///
 /// See [GameMemory::with_slot].
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct DllSlotMemoryView<'a> {
     memory: &'a DllGameMemory,
     slot: &'a DllSlot,

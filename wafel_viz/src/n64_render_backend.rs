@@ -20,17 +20,23 @@ pub fn process_display_list(
     // state across frames (o/w frame rewind might break)
     let mut backend = N64RenderBackend::default();
     process_display_list_with_backend(memory, base_slot, &mut backend, width, height)?;
-    Ok(backend.data)
+    Ok(backend.finish())
 }
 
 #[derive(Debug, Default)]
-struct N64RenderBackend {
+pub struct N64RenderBackend {
     viewport: ScreenRectangle,
     scissor: ScreenRectangle,
     state: RenderState,
     tile: usize,
     texture_index: [Option<usize>; 2],
     data: N64RenderData,
+}
+
+impl N64RenderBackend {
+    pub fn finish(self) -> N64RenderData {
+        self.data
+    }
 }
 
 impl RenderBackend for N64RenderBackend {

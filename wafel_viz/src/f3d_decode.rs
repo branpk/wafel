@@ -145,6 +145,12 @@ bitflags! {
     }
 }
 
+impl Default for GeometryModes {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DPCommand<Ptr> {
     SetAlphaDither(AlphaDither),
@@ -200,6 +206,12 @@ pub enum AlphaDither {
     Disable = 3,
 }
 
+impl Default for AlphaDither {
+    fn default() -> Self {
+        Self::Disable
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
 #[repr(u8)]
 pub enum ColorDither {
@@ -207,6 +219,12 @@ pub enum ColorDither {
     Bayer = 1,
     Noise = 2,
     Disable = 3,
+}
+
+impl Default for ColorDither {
+    fn default() -> Self {
+        Self::Disable
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
@@ -217,12 +235,24 @@ pub enum TextureConvert {
     Filt = 6,
 }
 
+impl Default for TextureConvert {
+    fn default() -> Self {
+        Self::Conv
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
 #[repr(u8)]
 pub enum TextureFilter {
     Point = 0,
     Average = 3,
     Bilerp = 2,
+}
+
+impl Default for TextureFilter {
+    fn default() -> Self {
+        Self::Point
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
@@ -233,12 +263,24 @@ pub enum TextureLUT {
     Ia16 = 3,
 }
 
+impl Default for TextureLUT {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
 #[repr(u8)]
 pub enum TextureDetail {
     Clamp = 0,
     Sharpen = 1,
     Detail = 2,
+}
+
+impl Default for TextureDetail {
+    fn default() -> Self {
+        Self::Clamp
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
@@ -250,11 +292,23 @@ pub enum CycleType {
     Fill = 3,
 }
 
+impl Default for CycleType {
+    fn default() -> Self {
+        Self::OneCycle
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
 #[repr(u8)]
 pub enum PipelineMode {
     OnePrimitive = 1,
     NPrimitive = 0,
+}
+
+impl Default for PipelineMode {
+    fn default() -> Self {
+        Self::OnePrimitive
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
@@ -265,11 +319,23 @@ pub enum AlphaCompare {
     Dither = 3,
 }
 
+impl Default for AlphaCompare {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
 #[repr(u8)]
 pub enum DepthSource {
     Pixel = 0,
     Prim = 1,
+}
+
+impl Default for DepthSource {
+    fn default() -> Self {
+        Self::Pixel
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -281,16 +347,42 @@ pub struct RenderMode {
     pub blend_cycle2: BlendMode,
 }
 
+impl RenderMode {
+    pub const NO_OP: Self = Self {
+        flags: RenderModeFlags::empty(),
+        cvg_dst: CvgDst::Clamp,
+        z_mode: ZMode::Opaque,
+        blend_cycle1: BlendMode {
+            color1: BlendColor::Input,
+            alpha1: BlendAlpha1::Input,
+            color2: BlendColor::Input,
+            alpha2: BlendAlpha2::OneMinusAlpha,
+        },
+        blend_cycle2: BlendMode {
+            color1: BlendColor::Input,
+            alpha1: BlendAlpha1::Input,
+            color2: BlendColor::Input,
+            alpha2: BlendAlpha2::OneMinusAlpha,
+        },
+    };
+}
+
+impl Default for RenderMode {
+    fn default() -> Self {
+        Self::NO_OP
+    }
+}
+
 bitflags! {
     pub struct RenderModeFlags: u16 {
-        const AA_EN         = 0x0008;
-        const Z_CMP         = 0x0010;
-        const Z_UPD         = 0x0020;
-        const IM_RD         = 0x0040;
-        const CLR_ON_CVG    = 0x0080;
+        const ANTI_ALIASING = 0x0008;
+        const Z_COMPARE     = 0x0010;
+        const Z_UPDATE      = 0x0020;
+        const IMAGE_READ    = 0x0040;
+        const CLEAR_ON_CVG  = 0x0080;
         const CVG_X_ALPHA   = 0x1000;
         const ALPHA_CVG_SEL = 0x2000;
-        const FORCE_BL      = 0x4000;
+        const FORCE_BLEND   = 0x4000;
     }
 }
 
@@ -341,7 +433,7 @@ pub enum BlendAlpha1 {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
 #[repr(u8)]
 pub enum BlendAlpha2 {
-    OneMa = 0,
+    OneMinusAlpha = 0,
     Memory = 1,
     One = 2,
 }
@@ -374,7 +466,7 @@ pub enum ComponentSize {
     DD = 5,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Rgba8 {
     pub r: u8,
     pub g: u8,
@@ -383,10 +475,10 @@ pub struct Rgba8 {
 }
 
 /// Either rgba5551 or zdz (z = 14 bits, dz = 2 bits)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct FillColor(pub u16);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Rectangle<T> {
     pub ulx: T,
     pub uly: T,
@@ -409,7 +501,7 @@ pub struct TileParams {
     pub shifts: u32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct WrapMode {
     pub mirror: bool,
     pub clamp: bool,
@@ -456,6 +548,12 @@ pub enum ScissorMode {
     NonInterlace = 0,
     OddInterlace = 3,
     EvenInterlace = 2,
+}
+
+impl Default for ScissorMode {
+    fn default() -> Self {
+        Self::NonInterlace
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -822,18 +920,18 @@ pub fn decode_f3d_command<Ptr>(raw_command: impl RawF3DCommand<Ptr = Ptr>) -> De
     })
 }
 
-pub fn decode_f3d_display_list<C: RawF3DCommand>(
-    raw_dl: impl Iterator<Item = C>,
-) -> impl Iterator<Item = F3DCommand<C::Ptr>> {
-    DlIter { raw_dl }
+pub fn decode_f3d_display_list<C: RawF3DCommand, I: Iterator<Item = C>>(
+    raw_dl: I,
+) -> F3DCommandIter<I> {
+    F3DCommandIter { raw_dl }
 }
 
 #[derive(Debug)]
-struct DlIter<I> {
+pub struct F3DCommandIter<I> {
     raw_dl: I,
 }
 
-impl<C, I> Iterator for DlIter<I>
+impl<C, I> Iterator for F3DCommandIter<I>
 where
     C: RawF3DCommand,
     I: Iterator<Item = C>,

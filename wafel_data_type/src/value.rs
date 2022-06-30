@@ -1,6 +1,12 @@
 //! Dynamically typed value used for reading and writing to memory.
 
-use std::{array::IntoIter, collections::HashMap, convert::TryFrom, fmt, ops::Add};
+use std::{
+    array::IntoIter,
+    collections::HashMap,
+    convert::TryFrom,
+    fmt,
+    ops::{Add, AddAssign},
+};
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -19,6 +25,12 @@ impl Add<usize> for Address {
 
     fn add(self, rhs: usize) -> Self::Output {
         Self(self.0.wrapping_add(rhs))
+    }
+}
+
+impl AddAssign<usize> for Address {
+    fn add_assign(&mut self, rhs: usize) {
+        *self = *self + rhs;
     }
 }
 

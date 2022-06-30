@@ -9,11 +9,12 @@ use std::{
 };
 
 use custom_renderer::{CustomRenderer, Scene};
-use f3d_decode::decode_f3d_display_list;
-use n64_render_backend::process_display_list;
+use f3d_decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand};
+use f3d_interpret::{interpret_f3d_display_list, F3DSource};
+use n64_render_backend::{process_display_list, N64RenderBackend};
 use n64_renderer::N64Renderer;
-use wafel_api::{load_m64, Emu, Game, IntType};
-use wafel_memory::{DllGameMemory, GameMemory, MemoryRead};
+use wafel_api::{load_m64, Address, Emu, Game, IntType};
+use wafel_memory::{DllGameMemory, DllSlot, DllSlotMemoryView, GameMemory, MemoryRead};
 use winit::{
     event::{ElementState, Event, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -28,10 +29,68 @@ pub use n64_render_data::*;
 
 pub mod custom_renderer;
 pub mod f3d_decode;
+mod f3d_interpret;
 mod n64_render_backend;
 mod n64_render_data;
 mod n64_renderer;
 mod render_api;
+
+#[derive(Debug)]
+pub struct DllF3DSource<'a> {
+    game: &'a Game,
+}
+
+impl<'a> DllF3DSource<'a> {
+    fn read_dl_from_addr(&self, addr: Address) -> F3DCommandIter<RawDlIter<'a>> {
+        decode_f3d_display_list(RawDlIter {
+            view: self.game.memory.with_slot(&self.game.base_slot),
+            addr,
+        })
+    }
+}
+
+impl<'a> F3DSource for DllF3DSource<'a> {
+    type Ptr = usize;
+    type DlIter = F3DCommandIter<RawDlIter<'a>>;
+
+    fn root_dl(&self) -> Self::DlIter {
+        let root_addr = self
+            .game
+            .read("sDisplayListTask->task.t.data_ptr")
+            .as_address();
+        self.read_dl_from_addr(root_addr)
+    }
+
+    fn read_dl(&self, ptr: Self::Ptr) -> Self::DlIter {
+        let addr = self
+            .game
+            .memory
+            .unchecked_pointer_to_address(ptr as *const ());
+        self.read_dl_from_addr(addr)
+    }
+}
+
+#[derive(Debug)]
+pub struct RawDlIter<'a> {
+    view: DllSlotMemoryView<'a>,
+    addr: Address,
+}
+
+impl<'a> Iterator for RawDlIter<'a> {
+    type Item = [usize; 2];
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let w_type = IntType::u_ptr_native();
+        let w_size = w_type.size();
+
+        let w0 = self.view.read_int(self.addr, w_type).unwrap() as usize;
+        self.addr += w_size;
+        let w1 = self.view.read_int(self.addr, w_type).unwrap() as usize;
+        self.addr += w_size;
+
+        Some([w0, w1])
+    }
+}
 
 pub fn test_dl() -> Result<(), Box<dyn Error>> {
     // ~~~ libsm64 ~~~
@@ -41,18 +100,27 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
         game.set_input(inputs[game.frame() as usize]);
         game.advance();
     }
-    let dl_addr = game.read("sDisplayListTask->task.t.data_ptr").as_address();
-    let w_type = IntType::u_ptr_native();
-    let w_size = w_type.size();
+    let f3d_source = DllF3DSource { game: &game };
 
-    let view = game.memory.with_slot(&game.base_slot);
-    let raw_dl = (0..).map(|i| {
-        let i0 = 2 * i;
-        let i1 = 2 * i + 1;
-        let w0 = view.read_int(dl_addr + w_size * i0, w_type).unwrap() as usize;
-        let w1 = view.read_int(dl_addr + w_size * i1, w_type).unwrap() as usize;
-        [w0, w1]
-    });
+    let mut backend = N64RenderBackend::default();
+    interpret_f3d_display_list(&f3d_source, &mut backend);
+    let data0 = backend.finish();
+
+    let data1 = process_display_list(&game.memory, &mut game.base_slot, 640, 480).unwrap();
+
+    assert!(data0.compare(&data1));
+
+    //     let w_type = IntType::u_ptr_native();
+    //     let w_size = w_type.size();
+    //
+    //     let view = game.memory.with_slot(&game.base_slot);
+    //     let raw_dl = (0..).map(|i| {
+    //         let i0 = 2 * i;
+    //         let i1 = 2 * i + 1;
+    //         let w0 = view.read_int(dl_addr + w_size * i0, w_type).unwrap() as usize;
+    //         let w1 = view.read_int(dl_addr + w_size * i1, w_type).unwrap() as usize;
+    //         [w0, w1]
+    //     });
 
     // ~~~ emu ~~~
     //     let emu = Emu::attach(20644, 0x0050B110, wafel_api::SM64Version::US);
@@ -71,19 +139,19 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
     //     });
 
     // ~~~ shared ~~~
-    let dl = decode_f3d_display_list(raw_dl);
-
-    eprintln!("Display list:");
-    for cmd in dl {
-        if let F3DCommand::Unknown { w0, w1 } = cmd {
-            eprintln!("  Unknown: {:08X} {:08X}", w0, w1);
-        } else {
-            eprintln!("  {:?}", cmd);
-        }
-        if cmd == F3DCommand::Rsp(SPCommand::EndDisplayList) {
-            break;
-        }
-    }
+    //     let dl = decode_f3d_display_list(raw_dl);
+    //
+    //     eprintln!("Display list:");
+    //     for cmd in dl {
+    //         if let F3DCommand::Unknown { w0, w1 } = cmd {
+    //             eprintln!("  Unknown: {:08X} {:08X}", w0, w1);
+    //         } else {
+    //             eprintln!("  {:?}", cmd);
+    //         }
+    //         if cmd == F3DCommand::Rsp(SPCommand::EndDisplayList) {
+    //             break;
+    //         }
+    //     }
 
     Ok(())
 }
