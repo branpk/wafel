@@ -1,10 +1,12 @@
 #![allow(missing_docs)]
 
+use std::fmt;
+
 use bitflags::bitflags;
 use num_enum::TryFromPrimitive;
 use ordered_float::NotNan;
 
-pub trait RawDLCommand: Copy {
+pub trait RawF3DCommand: Copy {
     type Ptr: Copy;
 
     fn w0(self) -> u32;
@@ -12,7 +14,7 @@ pub trait RawDLCommand: Copy {
     fn w1p(self) -> Self::Ptr;
 }
 
-impl RawDLCommand for [u32; 2] {
+impl RawF3DCommand for [u32; 2] {
     type Ptr = u32;
 
     fn w0(self) -> u32 {
@@ -26,7 +28,7 @@ impl RawDLCommand for [u32; 2] {
     }
 }
 
-impl RawDLCommand for [usize; 2] {
+impl RawF3DCommand for [usize; 2] {
     type Ptr = usize;
 
     fn w0(self) -> u32 {
@@ -41,11 +43,27 @@ impl RawDLCommand for [usize; 2] {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum DLCommand<Ptr> {
+pub enum F3DCommand<Ptr> {
     NoOp,
     Rsp(SPCommand<Ptr>),
     Rdp(DPCommand<Ptr>),
     Unknown { w0: u32, w1: u32 },
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Unimplemented {
+    pub w0: u32,
+    pub w1: u32,
+}
+
+impl fmt::Debug for Unimplemented {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Unimplemented {{ w0: {:#010X}, w1: {:#010X} }}",
+            self.w0, self.w1
+        )
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -129,27 +147,7 @@ bitflags! {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DPCommand<Ptr> {
-    SetAlphaCompare(AlphaCompare),
-    SetDepthSource(DepthSource),
-    SetRenderMode(RenderMode),
-    SetColorImage(Image<Ptr>),
-    SetDepthImage(Ptr),
-    SetTextureImage(Image<Ptr>),
-    SetEnvColor(Rgba8),
-    SetBlendColor(Rgba8),
-    SetFogColor(Rgba8),
-    SetFillColor(FillColor),
-    FillRectangle(Rectangle<u32>),
-    SetTile(TileParams),
-    LoadBlock(u32, TextureBlock),
-    SetTileSize(u32, TileSize),
-    SetScissor(ScissorMode, Rectangle<NotNan<f32>>),
-    FullSync,
-    TileSync,
-    PipeSync,
-    LoadSync,
-
-    // TODO:
+    SetAlphaDither(AlphaDither),
     SetColorDither(ColorDither),
     SetCombineKey(bool),
     SetTextureConvert(TextureConvert),
@@ -160,9 +158,102 @@ pub enum DPCommand<Ptr> {
     SetTexturePersp(bool),
     SetCycleType(CycleType),
     PipelineMode(PipelineMode),
-    SetCombineMode {
-        // TODO
-    },
+    SetAlphaCompare(AlphaCompare),
+    SetDepthSource(DepthSource),
+    SetRenderMode(RenderMode),
+    SetColorImage(Image<Ptr>),
+    SetDepthImage(Ptr),
+    SetTextureImage(Image<Ptr>),
+    SetCombineMode(Unimplemented),
+    SetEnvColor(Rgba8),
+    SetPrimColor(Rgba8),
+    SetBlendColor(Rgba8),
+    SetFogColor(Rgba8),
+    SetFillColor([FillColor; 2]),
+    FillRectangle(Rectangle<u32>),
+    SetTile(TileIndex, TileParams),
+    LoadTile(TileIndex, TileSize),
+    LoadBlock(TileIndex, TextureBlock),
+    SetTileSize(TileIndex, TileSize),
+    LoadTLUTCmd(TileIndex, u32),
+    SetOtherMode(Unimplemented),
+    SetPrimDepth(PrimDepth),
+    SetScissor(ScissorMode, Rectangle<NotNan<f32>>),
+    SetConvert(Unimplemented),
+    SetKeyR(Unimplemented),
+    SetKeyGB(Unimplemented),
+    FullSync,
+    TileSync,
+    PipeSync,
+    LoadSync,
+    TextureRectangleFlip(Unimplemented),
+    TextureRectangle(Unimplemented),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum AlphaDither {
+    Pattern = 0,
+    NotPattern = 1,
+    Noise = 2,
+    Disable = 3,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum ColorDither {
+    MagicSq = 0,
+    Bayer = 1,
+    Noise = 2,
+    Disable = 3,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum TextureConvert {
+    Conv = 0,
+    FiltConv = 5,
+    Filt = 6,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum TextureFilter {
+    Point = 0,
+    Average = 3,
+    Bilerp = 2,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum TextureLUT {
+    None = 0,
+    Rgba16 = 2,
+    Ia16 = 3,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum TextureDetail {
+    Clamp = 0,
+    Sharpen = 1,
+    Detail = 2,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum CycleType {
+    OneCycle = 0,
+    TwoCycle = 1,
+    Copy = 2,
+    Fill = 3,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum PipelineMode {
+    OnePrimitive = 1,
+    NPrimitive = 0,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
@@ -290,17 +381,9 @@ pub struct Rgba8 {
     pub a: u8,
 }
 
+/// Either rgba5551 or zdz (z = 14 bits, dz = 2 bits)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct FillColor {
-    /// rgba is 5551 bits
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
-    // zdz is 14, 2 bits
-    pub z: u8,
-    pub dz: u8,
-}
+pub struct FillColor(pub u16);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Rectangle<T> {
@@ -316,7 +399,6 @@ pub struct TileParams {
     pub size: ComponentSize,
     pub line: u32,
     pub tmem: u32,
-    pub tile: u32,
     pub palette: u32,
     pub cmt: WrapMode,
     pub maskt: u32,
@@ -330,6 +412,15 @@ pub struct TileParams {
 pub struct WrapMode {
     pub mirror: bool,
     pub clamp: bool,
+}
+
+impl From<u8> for WrapMode {
+    fn from(v: u8) -> Self {
+        Self {
+            mirror: v & 0x1 != 0,
+            clamp: v & 0x2 != 0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -348,6 +439,15 @@ pub struct TileSize {
     pub lrt: u32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TileIndex(pub u8);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PrimDepth {
+    pub z: u16,
+    pub dz: u16,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
 #[repr(u8)]
 #[allow(clippy::enum_variant_names)]
@@ -357,66 +457,9 @@ pub enum ScissorMode {
     EvenInterlace = 2,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum ColorDither {
-    MagicSq = 0,
-    Bayer = 1,
-    Noise = 2,
-    Disable = 3,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum TextureConvert {
-    Conv = 0,
-    FiltConv = 5,
-    Filt = 6,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum TextureFilter {
-    Point = 0,
-    Average = 3,
-    Bilerp = 2,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum TextureLUT {
-    None = 0,
-    Rgba16 = 2,
-    Ia16 = 3,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum TextureDetail {
-    Clamp = 0,
-    Sharpen = 1,
-    Detail = 2,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum CycleType {
-    OneCycle = 0,
-    TwoCycle = 1,
-    Copy = 2,
-    Fill = 3,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum PipelineMode {
-    OnePrimitive = 1,
-    NPrimitive = 0,
-}
-
-pub fn parse_display_list<C: RawDLCommand>(
+pub fn parse_display_list<C: RawF3DCommand>(
     raw_dl: impl Iterator<Item = C>,
-) -> impl Iterator<Item = DLCommand<C::Ptr>> {
+) -> impl Iterator<Item = F3DCommand<C::Ptr>> {
     DlIter { raw_dl }
 }
 
@@ -427,14 +470,14 @@ struct DlIter<I> {
 
 impl<C, I> Iterator for DlIter<I>
 where
-    C: RawDLCommand,
+    C: RawF3DCommand,
     I: Iterator<Item = C>,
 {
-    type Item = DLCommand<C::Ptr>;
+    type Item = F3DCommand<C::Ptr>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        use DLCommand::*;
         use DPCommand::*;
+        use F3DCommand::*;
         use SPCommand::*;
 
         let full_cmd = self.raw_dl.next()?;
@@ -511,55 +554,22 @@ where
                 tile: (w0 >> 8) & 0x7,
                 on: (w0 & 0xFF) != 0,
             }),
-            // TODO: SetOtherMode_H
             0xBA => {
-                // #define	gDPPipelineMode(pkt, mode)	\
-                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_PIPELINE, 1, mode)
-                // #define	gDPSetCycleType(pkt, type)	\
-                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_CYCLETYPE, 2, type)
-                // #define	gDPSetTexturePersp(pkt, type)	\
-                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_TEXTPERSP, 1, type)
-                // #define	gDPSetTextureDetail(pkt, type)	\
-                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_TEXTDETAIL, 2, type)
-                // #define	gDPSetTextureLOD(pkt, type)	\
-                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_TEXTLOD, 1, type)
-                // #define	gDPSetTextureLUT(pkt, type)	\
-                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_TEXTLUT, 2, type)
-                // #define	gDPSetTextureFilter(pkt, type)	\
-                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_TEXTFILT, 2, type)
-                // #define	gDPSetTextureConvert(pkt, type)	\
-                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_TEXTCONV, 3, type)
-                // #define	gDPSetCombineKey(pkt, type)	\
-                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_COMBKEY, 1, type)
-                // #define	gDPSetColorDither(pkt, mode)	\
-                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_RGBDITHER, 2, mode)
-                // #define	gDPSetAlphaDither(pkt, mode)	\
-                //     gSPSetOtherMode(pkt, G_SETOTHERMODE_H, G_MDSFT_ALPHADITHER, 2, mode)
-
                 let shift = (w0 >> 8) & 0xFF;
                 let data = (w1 >> shift) as u8;
-                if w0 == 0xBA000602 {
-                    Rdp(SetColorDither(data.try_into().unwrap()))
-                } else if w0 == 0xBA000801 {
-                    Rdp(SetCombineKey(data != 0))
-                } else if w0 == 0xBA000903 {
-                    Rdp(SetTextureConvert(data.try_into().unwrap()))
-                } else if w0 == 0xBA000C02 {
-                    Rdp(SetTextureFilter(data.try_into().unwrap()))
-                } else if w0 == 0xBA000E02 {
-                    Rdp(SetTextureLUT(data.try_into().unwrap()))
-                } else if w0 == 0xBA001001 {
-                    Rdp(SetTextureLOD(data != 0))
-                } else if w0 == 0xBA001102 {
-                    Rdp(SetTextureDetail(data.try_into().unwrap()))
-                } else if w0 == 0xBA001301 {
-                    Rdp(SetTexturePersp(data != 0))
-                } else if w0 == 0xBA001402 {
-                    Rdp(SetCycleType(data.try_into().unwrap()))
-                } else if w0 == 0xBA001701 {
-                    Rdp(PipelineMode(data.try_into().unwrap()))
-                } else {
-                    Unknown { w0, w1 }
+                match shift {
+                    4 => Rdp(SetAlphaDither(data.try_into().unwrap())),
+                    6 => Rdp(SetColorDither(data.try_into().unwrap())),
+                    8 => Rdp(SetCombineKey(data != 0)),
+                    9 => Rdp(SetTextureConvert(data.try_into().unwrap())),
+                    12 => Rdp(SetTextureFilter(data.try_into().unwrap())),
+                    14 => Rdp(SetTextureLUT(data.try_into().unwrap())),
+                    16 => Rdp(SetTextureLOD(data != 0)),
+                    17 => Rdp(SetTextureDetail(data.try_into().unwrap())),
+                    19 => Rdp(SetTexturePersp(data != 0)),
+                    20 => Rdp(SetCycleType(data.try_into().unwrap())),
+                    23 => Rdp(PipelineMode(data.try_into().unwrap())),
+                    _ => Unknown { w0, w1 },
                 }
             }
             0xB9 => {
@@ -590,7 +600,14 @@ where
             0xB8 => Rsp(EndDisplayList),
             0xB7 => Rsp(SetGeometryMode(GeometryModes::from_bits_truncate(w1))),
             0xB6 => Rsp(ClearGeometryMode(GeometryModes::from_bits_truncate(w1))),
-            // TODO: RDP_HALF_N
+            0xB4 => {
+                // TODO: RDPHALF_1
+                Unknown { w0, w1 }
+            }
+            0xB2 => {
+                // TODO: RDPHALF_2
+                Unknown { w0, w1 }
+            }
 
             // RDP commands
             0xFF => Rdp(SetColorImage(Image {
@@ -606,6 +623,7 @@ where
                 width: (w0 & 0xFFF) + 1,
                 img: w1p,
             })),
+            0xFC => Rdp(SetCombineMode(Unimplemented { w0, w1 })),
             //   0xFC => {
             // 	   let    cc1 = ((w0 >> 20) & 0xF, (w1 >> 28) & 0xF, (w0 >> 15) & 0x1F, (w1 >> 15) & 0x7);
             // 	   let    ac1 = ((w0 >> 12) & 0x7, (w1 >> 12) & 0x7, (w0 >> 9) & 0x7, (w1 >> 9) & 0x7);
@@ -674,7 +692,12 @@ where
                 b: (w1 >> 8) as u8,
                 a: w1 as u8,
             })),
-            // TODO: G_SETPRIMCOLOR
+            0xFA => Rdp(SetPrimColor(Rgba8 {
+                r: (w1 >> 24) as u8,
+                g: (w1 >> 16) as u8,
+                b: (w1 >> 8) as u8,
+                a: w1 as u8,
+            })),
             0xF9 => Rdp(SetBlendColor(Rgba8 {
                 r: (w1 >> 24) as u8,
                 g: (w1 >> 16) as u8,
@@ -687,49 +710,43 @@ where
                 b: (w1 >> 8) as u8,
                 a: w1 as u8,
             })),
-            //   0xF7 => {
-            // 	   let    c = w1 & 0xFFFF;
-            // 	   let    rgba = ((c >> 8) & 0xF8, (c >> 3) & 0xF8, (c << 2) & 0xF8, (c >> 0) & 0x1);
-            // 	   let    zdz = (c >> 2, c & 0x3);
-            //     Rdp(SetFillColor {  rgba, zdz })
-            //  }
-            //   0xF6 => {
-            // 	   let    lrx = (w0 >> 14) & 0x3FF;
-            // 	   let    lry = (w0 >> 2) & 0x3FF;
-            // 	   let    ulx = (w1 >> 14) & 0x3FF;
-            // 	   let    uly = (w1 >> 2) & 0x3FF;
-            //     Rdp(FillRectangle {  ulx, uly, lrx, lry })
-            //  }
-            //   0xF5 => {
-            // 	   let    fmt = {
-            //       0: "rgba",
-            //       1: "yuv",
-            //       2: "ci",
-            //       3: "ia",
-            //       4: "i",
-            // 	   let    size = {
-            //       0: "4b",
-            //       1: "8b",
-            //       2: "16b",
-            //       3: "32b",
-            //       5: "dd",
-            // 	   let    line = (w0 >> 9) & 0x1FF;
-            // 	   let    tmem = w0 & 0x1FF;
-            // 	   let    tile = (w1 >> 24) & 0x7;
-            // 	   let    palette = (w1 >> 20) & 0xF;
-            // 	   let    cmt = (w1 >> 18) & 0x3;
-            // 	   let    cmt = ("mirror" if cmt & 0x1 else "nomirror", "clamp" if cmt & 0x2 else "wrap");
-            // 	   let    maskt = (w1 >> 14) & 0xF;
-            // 	   let    shiftt = (w1 >> 10) & 0xF;
-            // 	   let    cms = (w1 >> 8) & 0x3;
-            // 	   let    cms = ("mirror" if cms & 0x1 else "nomirror", "clamp" if cms & 0x2 else "wrap");
-            // 	   let    masks = (w1 >> 4) & 0xF;
-            // 	   let    shifts = w1 & 0xF;
-            //     Rdp(SetTile {  fmt, size, line, tmem, tile, palette, cmt, maskt, shiftt, cms, masks, shifts })
-            //  }
-            // TODO: G_LOADTILE
+            0xF7 => Rdp(SetFillColor([
+                FillColor((w1 >> 16) as u16),
+                FillColor((w1 & 0xFFFF) as u16),
+            ])),
+            0xF6 => Rdp(FillRectangle(Rectangle {
+                ulx: (w1 >> 14) & 0x3FF,
+                uly: (w1 >> 2) & 0x3FF,
+                lrx: (w0 >> 14) & 0x3FF,
+                lry: (w0 >> 2) & 0x3FF,
+            })),
+            0xF5 => Rdp(SetTile(
+                TileIndex(((w1 >> 24) & 0x7) as u8),
+                TileParams {
+                    fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
+                    size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
+                    line: (w0 >> 9) & 0x1FF,
+                    tmem: w0 & 0x1FF,
+                    palette: (w1 >> 20) & 0xF,
+                    cmt: (((w1 >> 18) & 0x3) as u8).into(),
+                    maskt: (w1 >> 14) & 0xF,
+                    shiftt: (w1 >> 10) & 0xF,
+                    cms: (((w1 >> 8) & 0x3) as u8).into(),
+                    masks: (w1 >> 4) & 0xF,
+                    shifts: w1 & 0xF,
+                },
+            )),
+            0xF4 => Rdp(LoadTile(
+                TileIndex(((w1 >> 24) & 0x7) as u8),
+                TileSize {
+                    uls: (w0 >> 12) & 0xFFF,
+                    ult: w0 & 0xFFF,
+                    lrs: (w1 >> 12) & 0xFFF,
+                    lrt: w1 & 0xFFF,
+                },
+            )),
             0xF3 => Rdp(LoadBlock(
-                (w1 >> 24) & 0x7,
+                TileIndex(((w1 >> 24) & 0x7) as u8),
                 TextureBlock {
                     uls: (w0 >> 12) & 0xFFF,
                     ult: w0 & 0xFFF,
@@ -738,7 +755,7 @@ where
                 },
             )),
             0xF2 => Rdp(SetTileSize(
-                (w1 >> 24) & 0x7,
+                TileIndex(((w1 >> 24) & 0x7) as u8),
                 TileSize {
                     uls: (w0 >> 12) & 0xFFF,
                     ult: w0 & 0xFFF,
@@ -746,9 +763,15 @@ where
                     lrt: w1 & 0xFFF,
                 },
             )),
-            // TODO: G_LOADTLUT
-            // TODO: G_RDPSETOTHERMODE
-            // TODO: G_SETPRIMDEPTH
+            0xF0 => Rdp(LoadTLUTCmd(
+                TileIndex(((w1 >> 24) & 0x7) as u8),
+                ((w1 >> 14) & 0x3FF) as u32,
+            )),
+            0xEF => Rdp(SetOtherMode(Unimplemented { w0, w1 })),
+            0xEE => Rdp(SetPrimDepth(PrimDepth {
+                z: (w1 >> 16) as u16,
+                dz: (w1 & 0xFFFF) as u16,
+            })),
             0xED => Rdp(SetScissor(
                 (((w1 >> 24) & 0xFF) as u8).try_into().unwrap(),
                 Rectangle {
@@ -758,14 +781,15 @@ where
                     lry: (((w1 & 0xFFF) / 4) as f32).try_into().unwrap(),
                 },
             )),
-            // TODO: G_SETCONVERT
-            // TODO: G_SETKEYR
-            // TODO: G_SETKEYGB
+            0xEC => Rdp(SetConvert(Unimplemented { w0, w1 })),
+            0xEB => Rdp(SetKeyR(Unimplemented { w0, w1 })),
+            0xEA => Rdp(SetKeyGB(Unimplemented { w0, w1 })),
             0xE9 => Rdp(FullSync),
             0xE8 => Rdp(TileSync),
             0xE7 => Rdp(PipeSync),
             0xE6 => Rdp(LoadSync),
-            // TODO: G_TEXRECTFLIP
+            0xE5 => Rdp(TextureRectangleFlip(Unimplemented { w0, w1 })),
+            0xE4 => Rdp(TextureRectangle(Unimplemented { w0, w1 })),
             //   0xE4 => {
             // 	   let    ulx = ((w1 >> 12) & 0xFFF) / (1 << 2);
             // 	   let    uly = ((w1 >> 0) & 0xFFF) / (1 << 2);

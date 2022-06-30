@@ -8,7 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use n64_display_list::parse_display_list;
+use f3d_decode::parse_display_list;
 use n64_render_backend::process_display_list;
 use n64_renderer::N64Renderer;
 use wafel_api::{load_m64, Emu, Game, IntType};
@@ -20,12 +20,12 @@ use winit::{
 };
 
 use crate::{
-    n64_display_list::{DLCommand, SPCommand},
+    f3d_decode::{F3DCommand, SPCommand},
     render_api::{decode_shader_id, CCFeatures},
 };
 pub use n64_render_data::*;
 
-pub mod n64_display_list;
+pub mod f3d_decode;
 mod n64_render_backend;
 mod n64_render_data;
 mod n64_renderer;
@@ -73,12 +73,12 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
 
     eprintln!("Display list:");
     for cmd in dl {
-        if let DLCommand::Unknown { w0, w1 } = cmd {
+        if let F3DCommand::Unknown { w0, w1 } = cmd {
             eprintln!("  Unknown: {:08X} {:08X}", w0, w1);
         } else {
             eprintln!("  {:?}", cmd);
         }
-        if cmd == DLCommand::Rsp(SPCommand::EndDisplayList) {
+        if cmd == F3DCommand::Rsp(SPCommand::EndDisplayList) {
             break;
         }
     }
