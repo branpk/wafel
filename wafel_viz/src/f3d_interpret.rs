@@ -58,7 +58,7 @@ struct State<Ptr> {
     tile_size: [TileSize; 8],
     tmem_to_texture_id: HashMap<u32, u32>,
 
-    vertices: Vec<Vertexf>,
+    vertices: Vec<Vertex>,
     vertex_buffer: Vec<f32>,
     vertex_buffer_num_tris: usize,
 }
@@ -95,7 +95,7 @@ impl MatrixState {
 }
 
 impl<Ptr: fmt::Debug + Copy> State<Ptr> {
-    fn vertex(&self, index: u32) -> Vertexf {
+    fn vertex(&self, index: u32) -> Vertex {
         *self
             .vertices
             .get(index as usize)
@@ -156,18 +156,8 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                     }
                     // SPCommand::Light { light, n } => todo!(),
                     SPCommand::Vertex { v, n, v0 } => {
-                        self.vertices = Vec::new();
                         let offset = v0 as usize * mem::size_of::<Vertex>();
-                        for vertex in read_vertices(source, v, offset, n as usize) {
-                            let model_pos = [
-                                vertex.pos[0] as f32,
-                                vertex.pos[1] as f32,
-                                vertex.pos[2] as f32,
-                                1.0,
-                            ];
-                            let pos = &self.proj.cur * (&self.model_view.cur * model_pos);
-                            self.vertices.push(Vertexf { pos, uv: vertex.uv });
-                        }
+                        self.vertices = read_vertices(source, v, offset, n as usize);
                     }
                     SPCommand::DisplayList(ptr) => {
                         let child_dl = source.read_dl(ptr);
@@ -186,11 +176,14 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         let texture_width = (tile_size.lrs - tile_size.uls + 4) / 4;
                         let texture_height = (tile_size.lrt - tile_size.ult + 4) / 4;
 
-                        for mut vtx in vertices {
+                        for vtx in vertices {
+                            let model_pos =
+                                [vtx.pos[0] as f32, vtx.pos[1] as f32, vtx.pos[2] as f32, 1.0];
+                            let mut pos = &self.proj.cur * (&self.model_view.cur * model_pos);
                             if backend.z_is_from_0_to_1() {
-                                vtx.pos[2] = (vtx.pos[2] + vtx.pos[3]) / 2.0;
+                                pos[2] = (pos[2] + pos[3]) / 2.0;
                             }
-                            self.vertex_buffer.extend(&vtx.pos);
+                            self.vertex_buffer.extend(&pos);
 
                             let mut u = vtx.uv[0] as f32 * self.texture_scale[0][0];
                             let mut v = vtx.uv[1] as f32 * self.texture_scale[0][1];
@@ -202,7 +195,6 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                             }
                             u /= texture_width as f32;
                             v /= texture_height as f32;
-
                             self.vertex_buffer.extend(&[u, v]);
                         }
                         self.vertex_buffer_num_tris += 1;
@@ -507,12 +499,6 @@ struct Vertex {
     padding: u16,
     uv: [i16; 2],
     cn: [u8; 4],
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-struct Vertexf {
-    pos: [f32; 4],
-    uv: [i16; 2],
 }
 
 fn read_vertices<S: F3DSource>(
