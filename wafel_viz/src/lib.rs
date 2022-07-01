@@ -5,12 +5,13 @@
 use std::{
     collections::HashSet,
     error::Error,
+    mem,
     time::{Duration, Instant},
 };
 
 use custom_renderer::{CustomRenderer, Scene};
 use f3d_decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand};
-use f3d_interpret::{interpret_f3d_display_list, F3DSource};
+use f3d_interpret::{interpret_f3d_display_list, F3DSource, Vertex, Viewport};
 use n64_render_backend::{process_display_list, N64RenderBackend};
 use n64_renderer::N64Renderer;
 use wafel_api::{load_m64, Address, Emu, Game, IntType};
@@ -47,6 +48,33 @@ impl<'a> DllF3DSource<'a> {
             addr,
         })
     }
+
+    fn read_i16(&self, addr: Address) -> i16 {
+        let view = self.game.memory.with_slot(&self.game.base_slot);
+        view.read_int(addr, IntType::S16).unwrap_or_default() as i16
+    }
+
+    fn read_i16_3(&self, addr: Address) -> [i16; 3] {
+        [
+            self.read_i16(addr),
+            self.read_i16(addr + 2),
+            self.read_i16(addr + 4),
+        ]
+    }
+
+    fn read_i16_4(&self, addr: Address) -> [i16; 4] {
+        [
+            self.read_i16(addr),
+            self.read_i16(addr + 2),
+            self.read_i16(addr + 4),
+            self.read_i16(addr + 6),
+        ]
+    }
+
+    fn read_u8(&self, addr: Address) -> u8 {
+        let view = self.game.memory.with_slot(&self.game.base_slot);
+        view.read_int(addr, IntType::U8).unwrap_or_default() as u8
+    }
 }
 
 impl<'a> F3DSource for DllF3DSource<'a> {
@@ -64,6 +92,36 @@ impl<'a> F3DSource for DllF3DSource<'a> {
     fn read_dl(&self, ptr: Self::Ptr) -> Self::DlIter {
         let addr = self.game.memory.unchecked_pointer_to_address(ptr);
         self.read_dl_from_addr(addr)
+    }
+
+    fn read_viewport(&self, ptr: Self::Ptr) -> Viewport {
+        let addr = self.game.memory.unchecked_pointer_to_address(ptr);
+        Viewport {
+            scale: self.read_i16_4(addr),
+            trans: self.read_i16_4(addr + 8),
+        }
+    }
+
+    fn read_vertices(&self, ptr: Self::Ptr, offset: usize, count: usize) -> Vec<Vertex> {
+        let stride = mem::size_of::<Vertex>();
+        let addr0 = self.game.memory.unchecked_pointer_to_address(ptr) + offset * stride;
+
+        (0..count)
+            .map(|i| {
+                let addr = addr0 + i * stride;
+                Vertex {
+                    pos: self.read_i16_3(addr),
+                    padding: 0,
+                    uv: [self.read_i16(addr + 8), self.read_i16(addr + 10)],
+                    cn: [
+                        self.read_u8(addr + 12),
+                        self.read_u8(addr + 13),
+                        self.read_u8(addr + 14),
+                        self.read_u8(addr + 15),
+                    ],
+                }
+            })
+            .collect()
     }
 }
 
@@ -107,7 +165,7 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
     interpret_f3d_display_list(&f3d_source, &mut backend);
     let data0 = backend.finish();
 
-    let data1 = process_display_list(&game.memory, &mut game.base_slot, 640, 480).unwrap();
+    let data1 = process_display_list(&game.memory, &mut game.base_slot, 320, 240).unwrap();
 
     assert!(data0.compare(&data1));
 
