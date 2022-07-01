@@ -153,10 +153,10 @@ pub enum DPCommand<Ptr> {
     SetDepthImage(Ptr),
     SetTextureImage(Image<Ptr>),
     SetCombineMode(Unimplemented),
-    SetEnvColor(Rgba8),
-    SetPrimColor(Rgba8),
-    SetBlendColor(Rgba8),
-    SetFogColor(Rgba8),
+    SetEnvColor(Rgba32),
+    SetPrimColor(Rgba32),
+    SetBlendColor(Rgba32),
+    SetFogColor(Rgba32),
     SetFillColor([FillColor; 2]),
     FillRectangle(Rectangle<u32>),
     SetTile(TileIndex, TileParams),
@@ -472,7 +472,7 @@ impl ComponentSize {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct Rgba8 {
+pub struct Rgba32 {
     pub r: u8,
     pub g: u8,
     pub b: u8,
@@ -794,25 +794,25 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
         //       tuple(map(get_ccmux, enumerate(cc2))),
         //       tuple(map(get_acmux, enumerate(ac2))));
         //  }
-        0xFB => Rdp(SetEnvColor(Rgba8 {
+        0xFB => Rdp(SetEnvColor(Rgba32 {
             r: (w1 >> 24) as u8,
             g: (w1 >> 16) as u8,
             b: (w1 >> 8) as u8,
             a: w1 as u8,
         })),
-        0xFA => Rdp(SetPrimColor(Rgba8 {
+        0xFA => Rdp(SetPrimColor(Rgba32 {
             r: (w1 >> 24) as u8,
             g: (w1 >> 16) as u8,
             b: (w1 >> 8) as u8,
             a: w1 as u8,
         })),
-        0xF9 => Rdp(SetBlendColor(Rgba8 {
+        0xF9 => Rdp(SetBlendColor(Rgba32 {
             r: (w1 >> 24) as u8,
             g: (w1 >> 16) as u8,
             b: (w1 >> 8) as u8,
             a: w1 as u8,
         })),
-        0xF8 => Rdp(SetFogColor(Rgba8 {
+        0xF8 => Rdp(SetFogColor(Rgba32 {
             r: (w1 >> 24) as u8,
             g: (w1 >> 16) as u8,
             b: (w1 >> 8) as u8,

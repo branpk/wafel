@@ -52,6 +52,11 @@ struct State<Ptr> {
     render_mode: RenderMode,
     persp_normalize: u16,
 
+    env_color: Rgba32,
+    prim_color: Rgba32,
+    blend_color: Rgba32,
+    fog_color: Rgba32,
+
     geometry_mode: GeometryModes,
 
     texture_image: Option<Image<Ptr>>,
@@ -214,13 +219,7 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                     // SPCommand::NumLights(_) => todo!(),
                     // SPCommand::Segment { seg, base } => todo!(),
                     // SPCommand::FogFactor { mul, offset } => todo!(),
-                    SPCommand::Texture {
-                        sc,
-                        tc,
-                        level,
-                        tile,
-                        on,
-                    } => {
+                    SPCommand::Texture { sc, tc, tile, .. } => {
                         self.flush(backend);
                         self.texture_scale[tile as usize] =
                             [sc as f32 / 0x10000 as f32, tc as f32 / 0x10000 as f32];
@@ -334,10 +333,18 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         self.texture_image = Some(image);
                     }
                     // DPCommand::SetCombineMode(_) => todo!(),
-                    // DPCommand::SetEnvColor(_) => todo!(),
-                    // DPCommand::SetPrimColor(_) => todo!(),
-                    // DPCommand::SetBlendColor(_) => todo!(),
-                    // DPCommand::SetFogColor(_) => todo!(),
+                    DPCommand::SetEnvColor(color) => {
+                        self.env_color = color;
+                    }
+                    DPCommand::SetPrimColor(color) => {
+                        self.prim_color = color;
+                    }
+                    DPCommand::SetBlendColor(color) => {
+                        self.blend_color = color;
+                    }
+                    DPCommand::SetFogColor(color) => {
+                        self.fog_color = color;
+                    }
                     // DPCommand::SetFillColor(_) => todo!(),
                     // DPCommand::FillRectangle(_) => todo!(),
                     DPCommand::SetTile(tile, params) => {
@@ -373,7 +380,7 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                                 read_rgba16(source, image.img, size_bytes, line_size_bytes)
                             }
                             // TODO: fmt => unimplemented!("texture format: {:?}", fmt),
-                            _ => Rgba32::dbg_gradient(),
+                            _ => TextureRgba32::dbg_gradient(),
                         };
 
                         // dbg!(line_size_bytes);
@@ -537,13 +544,13 @@ fn read_vertices<S: F3DSource>(
 }
 
 #[derive(Debug, Clone)]
-struct Rgba32 {
+struct TextureRgba32 {
     width: u32,
     height: u32,
     data: Vec<u8>,
 }
 
-impl Rgba32 {
+impl TextureRgba32 {
     #[track_caller]
     fn new(width: u32, height: u32, data: Vec<u8>) -> Self {
         assert!(4 * width * height <= data.len() as u32);
@@ -589,7 +596,7 @@ fn read_rgba16<S: F3DSource>(
     ptr: S::Ptr,
     size_bytes: u32,
     line_size_bytes: u32,
-) -> Rgba32 {
+) -> TextureRgba32 {
     let mut rgba16_data: Vec<u8> = vec![0; size_bytes as usize];
     source.read_u8(&mut rgba16_data, ptr, 0);
 
@@ -602,7 +609,7 @@ fn read_rgba16<S: F3DSource>(
         rgba32_data.extend(&rgba32);
     }
 
-    Rgba32::new(
+    TextureRgba32::new(
         line_size_bytes / 2,
         size_bytes / line_size_bytes,
         rgba32_data,
