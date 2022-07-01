@@ -152,7 +152,7 @@ pub enum DPCommand<Ptr> {
     SetColorImage(Image<Ptr>),
     SetDepthImage(Ptr),
     SetTextureImage(Image<Ptr>),
-    SetCombineMode(Unimplemented),
+    SetCombineMode(CombineMode),
     SetEnvColor(Rgba32),
     SetPrimColor(Rgba32),
     SetBlendColor(Rgba32),
@@ -472,6 +472,70 @@ impl ComponentSize {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct CombineMode {
+    pub color1: ColorCombineMode,
+    pub alpha1: ColorCombineMode,
+    pub color2: ColorCombineMode,
+    pub alpha2: ColorCombineMode,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct ColorCombineMode {
+    /// [A, B, C, D]  ->  (A - B) * C + D
+    pub args: [ColorCombineComponent; 4],
+}
+
+impl From<[u8; 4]> for ColorCombineMode {
+    fn from(v: [u8; 4]) -> Self {
+        Self {
+            args: [
+                ColorCombineComponent::from_u8(v[0]),
+                ColorCombineComponent::from_u8(v[1]),
+                ColorCombineComponent::from_u8(v[2]),
+                ColorCombineComponent::from_u8(v[3]),
+            ],
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[repr(u8)]
+pub enum ColorCombineComponent {
+    CombinedOrPrimLodFraction = 0,
+    Texel0 = 1,
+    Texel1 = 2,
+    Prim = 3,
+    Shade = 4,
+    Env = 5,
+    CenterOrScaleOrOne = 6,
+    CombinedAlphaOrNoiseOrK4OrZero = 7,
+    Texel0Alpha = 8,
+    Texel1Alpha = 9,
+    PrimAlpha = 10,
+    ShadeAlpha = 11,
+    EnvAlpha = 12,
+    LodFraction = 13,
+    PrimLodFraction = 14,
+    K5 = 15,
+    Zero = 31,
+}
+
+impl Default for ColorCombineComponent {
+    fn default() -> Self {
+        Self::Zero
+    }
+}
+
+impl ColorCombineComponent {
+    fn from_u8(v: u8) -> Self {
+        v.try_into().unwrap_or_else(|_| {
+            eprintln!("  color comp: {}", v);
+            Self::Zero
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Rgba32 {
     pub r: u8,
     pub g: u8,
@@ -731,7 +795,38 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
             width: (w0 & 0xFFF) + 1,
             img: w1p,
         })),
-        0xFC => Rdp(SetCombineMode(Unimplemented { w0, w1 })),
+        0xFC => {
+            let cc1 = [
+                ((w0 >> 20) & 0xF) as u8,
+                ((w1 >> 28) & 0xF) as u8,
+                ((w0 >> 15) & 0x1F) as u8,
+                ((w1 >> 15) & 0x7) as u8,
+            ];
+            let ac1 = [
+                ((w0 >> 12) & 0x7) as u8,
+                ((w1 >> 12) & 0x7) as u8,
+                ((w0 >> 9) & 0x7) as u8,
+                ((w1 >> 9) & 0x7) as u8,
+            ];
+            let cc2 = [
+                ((w0 >> 5) & 0xF) as u8,
+                ((w1 >> 24) & 0xF) as u8,
+                (w0 & 0x1F) as u8,
+                ((w1 >> 6) & 0x7) as u8,
+            ];
+            let ac2 = [
+                ((w1 >> 21) & 0x7) as u8,
+                ((w1 >> 3) & 0x7) as u8,
+                ((w1 >> 18) & 0x7) as u8,
+                (w1 & 0x7) as u8,
+            ];
+            Rdp(SetCombineMode(CombineMode {
+                color1: cc1.try_into().unwrap(),
+                alpha1: ac1.try_into().unwrap(),
+                color2: cc2.try_into().unwrap(),
+                alpha2: ac2.try_into().unwrap(),
+            }))
+        }
         //   0xFC => {
         // 	   let    cc1 = ((w0 >> 20) & 0xF, (w1 >> 28) & 0xF, (w0 >> 15) & 0x1F, (w1 >> 15) & 0x7);
         // 	   let    ac1 = ((w0 >> 12) & 0x7, (w1 >> 12) & 0x7, (w0 >> 9) & 0x7, (w1 >> 9) & 0x7);
