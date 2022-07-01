@@ -182,12 +182,26 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
 
     let data1 = process_display_list(&game.memory, &mut game.base_slot, 320, 240).unwrap();
 
-    eprintln!("{:?}", data0.commands[0].vertex_buffer[0..4].to_vec());
-    eprintln!("{:?}", data1.commands[0].vertex_buffer[0..4].to_vec());
+    // let vs0: Vec<f32> = data0
+    //     .commands
+    //     .iter()
+    //     .flat_map(|c| &c.vertex_buffer)
+    //     .cloned()
+    //     .collect();
+    // let vs1: Vec<f32> = data1
+    //     .commands
+    //     .iter()
+    //     .flat_map(|c| &c.vertex_buffer)
+    //     .cloned()
+    //     .collect();
+    // assert_eq!(vs0.len(), vs1.len());
+    // eprintln!("{:?}", data0.commands[0].vertex_buffer[0..4].to_vec());
+    // eprintln!("{:?}", data1.commands[0].vertex_buffer[0..4].to_vec());
 
     // assert!(data0.compare(&data1));
-    env_logger::init();
-    futures::executor::block_on(run(0, Some(data0))).unwrap();
+    // env_logger::init();
+    // futures::executor::block_on(run(0, Some(data0))).unwrap();
+    return Ok(());
 
     //     let w_type = IntType::u_ptr_native();
     //     let w_size = w_type.size();

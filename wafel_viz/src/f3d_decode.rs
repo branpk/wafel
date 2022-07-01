@@ -437,6 +437,12 @@ pub enum ImageFormat {
     I = 4,
 }
 
+impl Default for ImageFormat {
+    fn default() -> Self {
+        Self::Rgba
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
 #[repr(u8)]
 pub enum ComponentSize {
@@ -445,6 +451,12 @@ pub enum ComponentSize {
     Bits16 = 2,
     Bits32 = 3,
     DD = 5,
+}
+
+impl Default for ComponentSize {
+    fn default() -> Self {
+        Self::Bits4
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -467,7 +479,7 @@ pub struct Rectangle<T> {
     pub lry: T,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct TileParams {
     pub fmt: ImageFormat,
     pub size: ComponentSize,
@@ -505,7 +517,7 @@ pub struct TextureBlock {
     pub dxt: u32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct TileSize {
     pub uls: u32,
     pub ult: u32,

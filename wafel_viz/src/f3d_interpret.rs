@@ -1,6 +1,7 @@
 use core::fmt;
 use std::ops;
 
+use derivative::Derivative;
 use ordered_float::NotNan;
 
 use crate::{
@@ -40,11 +41,13 @@ pub fn interpret_f3d_display_list(source: &impl F3DSource, backend: &mut impl Re
     state.flush(backend);
 }
 
-#[derive(Debug, Default)]
-struct State {
+#[derive(Debug, Derivative)]
+#[derivative(Default(bound = ""))]
+struct State<Ptr> {
+    viewport: Viewport,
+    scissor: (ScissorMode, Rectangle<NotNan<f32>>),
     model_view: MatrixState,
     proj: MatrixState,
-    viewport: Viewport,
 
     alpha_dither: AlphaDither,
     color_dither: ColorDither,
@@ -62,7 +65,10 @@ struct State {
     render_mode: RenderMode,
     persp_normalize: u16,
 
-    scissor: (ScissorMode, Rectangle<NotNan<f32>>),
+    texture_image: Option<Image<Ptr>>,
+    texture_scale: [[f32; 2]; 8],
+    tile_params: [TileParams; 8],
+    tile_size: [TileSize; 8],
 
     vertices: Vec<Vertexf>,
     vertex_buffer: Vec<f32>,
@@ -94,9 +100,13 @@ impl MatrixState {
             MatrixOp::Mul => self.cur = &self.cur * &m,
         }
     }
+
+    fn pop(&mut self) {
+        self.cur = self.stack.pop().expect("popMatrix without push");
+    }
 }
 
-impl State {
+impl<Ptr: fmt::Debug + Copy> State<Ptr> {
     fn vertex(&self, index: u32) -> Vertexf {
         *self
             .vertices
@@ -114,7 +124,7 @@ impl State {
         }
     }
 
-    fn interpret<S: F3DSource>(
+    fn interpret<S: F3DSource<Ptr = Ptr>>(
         &mut self,
         source: &S,
         backend: &mut impl RenderBackend,
@@ -191,17 +201,24 @@ impl State {
                         }
                         self.vertex_buffer_num_tris += 1;
                     }
-                    // SPCommand::PopMatrix(_) => todo!(),
+                    SPCommand::PopMatrix(mode) => match mode {
+                        MatrixMode::Proj => self.proj.pop(),
+                        MatrixMode::ModelView => self.model_view.pop(),
+                    },
                     // SPCommand::NumLights(_) => todo!(),
                     // SPCommand::Segment { seg, base } => todo!(),
                     // SPCommand::FogFactor { mul, offset } => todo!(),
-                    // SPCommand::Texture {
-                    //     sc,
-                    //     tc,
-                    //     level,
-                    //     tile,
-                    //     on,
-                    // } => todo!(),
+                    SPCommand::Texture {
+                        sc,
+                        tc,
+                        level,
+                        tile,
+                        on,
+                    } => {
+                        self.flush(backend);
+                        self.texture_scale[tile as usize] =
+                            [sc as f32 / 0x10000 as f32, tc as f32 / 0x10000 as f32];
+                    }
                     SPCommand::EndDisplayList => break,
                     // SPCommand::SetGeometryMode(_) => todo!(),
                     // SPCommand::ClearGeometryMode(_) => todo!(),
@@ -300,7 +317,9 @@ impl State {
                     }
                     // DPCommand::SetColorImage(_) => todo!(),
                     // DPCommand::SetDepthImage(_) => todo!(),
-                    // DPCommand::SetTextureImage(_) => todo!(),
+                    DPCommand::SetTextureImage(image) => {
+                        self.texture_image = Some(image);
+                    }
                     // DPCommand::SetCombineMode(_) => todo!(),
                     // DPCommand::SetEnvColor(_) => todo!(),
                     // DPCommand::SetPrimColor(_) => todo!(),
@@ -308,10 +327,19 @@ impl State {
                     // DPCommand::SetFogColor(_) => todo!(),
                     // DPCommand::SetFillColor(_) => todo!(),
                     // DPCommand::FillRectangle(_) => todo!(),
-                    // DPCommand::SetTile(_, _) => todo!(),
+                    DPCommand::SetTile(tile, params) => {
+                        self.flush(backend);
+                        self.tile_params[tile.0 as usize] = params;
+                    }
                     // DPCommand::LoadTile(_, _) => todo!(),
-                    // DPCommand::LoadBlock(_, _) => todo!(),
-                    // DPCommand::SetTileSize(_, _) => todo!(),
+                    DPCommand::LoadBlock(tile, params) => {
+                        self.flush(backend);
+                        eprintln!("{:?}", cmd);
+                    }
+                    DPCommand::SetTileSize(tile, size) => {
+                        self.flush(backend);
+                        self.tile_size[tile.0 as usize] = size;
+                    }
                     // DPCommand::LoadTLUTCmd(_, _) => todo!(),
                     // DPCommand::SetOtherMode(_) => todo!(),
                     // DPCommand::SetPrimDepth(_) => todo!(),
