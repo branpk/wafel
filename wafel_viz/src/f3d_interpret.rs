@@ -166,7 +166,7 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                                 1.0,
                             ];
                             let pos = &self.proj.cur * (&self.model_view.cur * model_pos);
-                            self.vertices.push(Vertexf { pos });
+                            self.vertices.push(Vertexf { pos, uv: vertex.uv });
                         }
                     }
                     SPCommand::DisplayList(ptr) => {
@@ -181,20 +181,29 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                     SPCommand::OneTriangle { v0, v1, v2, flag } => {
                         // TODO: Use flag for flat shading
                         let vertices = [self.vertex(v0), self.vertex(v1), self.vertex(v2)];
-                        let mut i = 0;
-                        for mut v in vertices {
+
+                        let tile_size = &self.tile_size[0];
+                        let texture_width = (tile_size.lrs - tile_size.uls + 4) / 4;
+                        let texture_height = (tile_size.lrt - tile_size.ult + 4) / 4;
+
+                        for mut vtx in vertices {
                             if backend.z_is_from_0_to_1() {
-                                v.pos[2] = (v.pos[2] + v.pos[3]) / 2.0;
+                                vtx.pos[2] = (vtx.pos[2] + vtx.pos[3]) / 2.0;
                             }
-                            self.vertex_buffer.extend(&v.pos);
-                            let uv = match i {
-                                0 => [0.0, 0.0],
-                                1 => [1.0, 0.0],
-                                2 => [0.0, 1.0],
-                                _ => unreachable!(),
-                            };
-                            self.vertex_buffer.extend(&uv);
-                            i += 1;
+                            self.vertex_buffer.extend(&vtx.pos);
+
+                            let mut u = vtx.uv[0] as f32 * self.texture_scale[0][0];
+                            let mut v = vtx.uv[1] as f32 * self.texture_scale[0][1];
+                            u = (u - tile_size.uls as f32 * 8.0) / 32.0;
+                            v = (v - tile_size.ult as f32 * 8.0) / 32.0;
+                            if self.texture_filter != TextureFilter::Point {
+                                u += 0.5;
+                                v += 0.5;
+                            }
+                            u /= texture_width as f32;
+                            v /= texture_height as f32;
+
+                            self.vertex_buffer.extend(&[u, v]);
                         }
                         self.vertex_buffer_num_tris += 1;
                     }
@@ -473,11 +482,6 @@ impl ops::Mul<[f32; 4]> for &Matrixf {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-struct Vertexf {
-    pos: [f32; 4],
-}
-
 fn read_matrix<S: F3DSource>(source: &S, ptr: S::Ptr, offset: usize) -> Vec<i32> {
     let mut m = vec![0; 16];
     source.read_u32(cast_slice_mut(&mut m), ptr, offset);
@@ -503,6 +507,12 @@ struct Vertex {
     padding: u16,
     uv: [i16; 2],
     cn: [u8; 4],
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct Vertexf {
+    pos: [f32; 4],
+    uv: [i16; 2],
 }
 
 fn read_vertices<S: F3DSource>(
