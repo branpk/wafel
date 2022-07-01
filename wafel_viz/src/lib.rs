@@ -1,6 +1,6 @@
 #![feature(stmt_expr_attributes)]
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
-#![allow(clippy::map_entry)]
+#![allow(clippy::map_entry, clippy::needless_range_loop)]
 #![allow(missing_docs)] // FIXME: remove
 
 use std::{
@@ -12,7 +12,7 @@ use std::{
 
 use custom_renderer::{CustomRenderer, Scene};
 use f3d_decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand};
-use f3d_interpret::{interpret_f3d_display_list, F3DSource, Vertex, Viewport};
+use f3d_interpret::{interpret_f3d_display_list, F3DSource};
 use n64_render_backend::{process_display_list, N64RenderBackend};
 use n64_renderer::N64Renderer;
 use wafel_api::{load_m64, Address, Emu, Game, IntType};
@@ -43,21 +43,23 @@ pub struct DllF3DSource<'a> {
 }
 
 impl<'a> DllF3DSource<'a> {
+    fn view(&self) -> DllSlotMemoryView<'a> {
+        self.game.memory.with_slot(&self.game.base_slot)
+    }
+
     fn read_dl_from_addr(&self, addr: Address) -> F3DCommandIter<RawDlIter<'a>> {
         decode_f3d_display_list(RawDlIter {
-            view: self.game.memory.with_slot(&self.game.base_slot),
+            view: self.view(),
             addr,
         })
     }
 
     fn read_i32(&self, addr: Address) -> i32 {
-        let view = self.game.memory.with_slot(&self.game.base_slot);
-        view.read_int(addr, IntType::S32).unwrap_or_default() as i32
+        self.view().read_int(addr, IntType::S32).unwrap_or_default() as i32
     }
 
     fn read_i16(&self, addr: Address) -> i16 {
-        let view = self.game.memory.with_slot(&self.game.base_slot);
-        view.read_int(addr, IntType::S16).unwrap_or_default() as i16
+        self.view().read_int(addr, IntType::S16).unwrap_or_default() as i16
     }
 
     fn read_i16_3(&self, addr: Address) -> [i16; 3] {
@@ -78,8 +80,7 @@ impl<'a> DllF3DSource<'a> {
     }
 
     fn read_u8(&self, addr: Address) -> u8 {
-        let view = self.game.memory.with_slot(&self.game.base_slot);
-        view.read_int(addr, IntType::U8).unwrap_or_default() as u8
+        self.view().read_int(addr, IntType::U8).unwrap_or_default() as u8
     }
 }
 
@@ -100,43 +101,32 @@ impl<'a> F3DSource for DllF3DSource<'a> {
         self.read_dl_from_addr(addr)
     }
 
-    fn read_matrix(&self, ptr: Self::Ptr) -> Vec<i32> {
-        let addr = self.game.memory.unchecked_pointer_to_address(ptr);
-        let mut result = Vec::new();
-        for i in 0..16 {
-            result.push(self.read_i32(addr + 4 * i));
-        }
-        result
-    }
-
-    fn read_viewport(&self, ptr: Self::Ptr) -> Viewport {
-        let addr = self.game.memory.unchecked_pointer_to_address(ptr);
-        Viewport {
-            scale: self.read_i16_4(addr),
-            trans: self.read_i16_4(addr + 8),
+    fn read_u8(&self, dst: &mut [u8], ptr: Self::Ptr, offset: usize) {
+        let view = self.view();
+        let addr = self.game.memory.unchecked_pointer_to_address(ptr) + offset;
+        for i in 0..dst.len() {
+            dst[i] = view.read_int(addr + i, IntType::U8).unwrap_or_default() as u8;
         }
     }
 
-    fn read_vertices(&self, ptr: Self::Ptr, offset: usize, count: usize) -> Vec<Vertex> {
-        let stride = mem::size_of::<Vertex>();
-        let addr0 = self.game.memory.unchecked_pointer_to_address(ptr) + offset * stride;
+    fn read_u16(&self, dst: &mut [u16], ptr: Self::Ptr, offset: usize) {
+        let view = self.view();
+        let addr = self.game.memory.unchecked_pointer_to_address(ptr) + offset;
+        for i in 0..dst.len() {
+            dst[i] = view
+                .read_int(addr + 2 * i, IntType::U16)
+                .unwrap_or_default() as u16;
+        }
+    }
 
-        (0..count)
-            .map(|i| {
-                let addr = addr0 + i * stride;
-                Vertex {
-                    pos: self.read_i16_3(addr),
-                    padding: 0,
-                    uv: [self.read_i16(addr + 8), self.read_i16(addr + 10)],
-                    cn: [
-                        self.read_u8(addr + 12),
-                        self.read_u8(addr + 13),
-                        self.read_u8(addr + 14),
-                        self.read_u8(addr + 15),
-                    ],
-                }
-            })
-            .collect()
+    fn read_u32(&self, dst: &mut [u32], ptr: Self::Ptr, offset: usize) {
+        let view = self.view();
+        let addr = self.game.memory.unchecked_pointer_to_address(ptr) + offset;
+        for i in 0..dst.len() {
+            dst[i] = view
+                .read_int(addr + 4 * i, IntType::U32)
+                .unwrap_or_default() as u32;
+        }
     }
 }
 

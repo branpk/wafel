@@ -1,6 +1,7 @@
 use core::fmt;
-use std::ops;
+use std::{mem, ops};
 
+use bytemuck::cast_slice_mut;
 use derivative::Derivative;
 use ordered_float::NotNan;
 
@@ -16,23 +17,55 @@ pub trait F3DSource {
     fn root_dl(&self) -> Self::DlIter;
     fn read_dl(&self, ptr: Self::Ptr) -> Self::DlIter;
 
-    fn read_matrix(&self, ptr: Self::Ptr) -> Vec<i32>;
-    fn read_viewport(&self, ptr: Self::Ptr) -> Viewport;
-    fn read_vertices(&self, ptr: Self::Ptr, offset: usize, count: usize) -> Vec<Vertex>;
+    fn read_u8(&self, dst: &mut [u8], ptr: Self::Ptr, offset: usize);
+    fn read_u16(&self, dst: &mut [u16], ptr: Self::Ptr, offset: usize);
+    fn read_u32(&self, dst: &mut [u32], ptr: Self::Ptr, offset: usize);
+}
+
+fn read_matrix<S: F3DSource>(source: &S, ptr: S::Ptr, offset: usize) -> Vec<i32> {
+    let mut m = vec![0; 16];
+    source.read_u32(cast_slice_mut(&mut m), ptr, offset);
+    m
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct Viewport {
-    pub scale: [i16; 4],
-    pub trans: [i16; 4],
+struct Viewport {
+    scale: [i16; 4],
+    trans: [i16; 4],
+}
+
+fn read_viewport<S: F3DSource>(source: &S, ptr: S::Ptr, offset: usize) -> Viewport {
+    let mut v = Viewport::default();
+    source.read_u16(cast_slice_mut(&mut v.scale), ptr, offset);
+    source.read_u16(cast_slice_mut(&mut v.trans), ptr, offset + 8);
+    v
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct Vertex {
-    pub pos: [i16; 3],
-    pub padding: u16,
-    pub uv: [i16; 2],
-    pub cn: [u8; 4],
+struct Vertex {
+    pos: [i16; 3],
+    padding: u16,
+    uv: [i16; 2],
+    cn: [u8; 4],
+}
+
+fn read_vertices<S: F3DSource>(
+    source: &S,
+    ptr: S::Ptr,
+    offset: usize,
+    count: usize,
+) -> Vec<Vertex> {
+    let stride = mem::size_of::<Vertex>();
+    let mut vs = Vec::new();
+    for i in 0..count {
+        let mut v = Vertex::default();
+        let voffset = offset + i * stride;
+        source.read_u16(cast_slice_mut(&mut v.pos), ptr, voffset);
+        source.read_u16(cast_slice_mut(&mut v.uv), ptr, voffset + 8);
+        source.read_u8(cast_slice_mut(&mut v.cn), ptr, voffset + 12);
+        vs.push(v);
+    }
+    vs
 }
 
 pub fn interpret_f3d_display_list(source: &impl F3DSource, backend: &mut impl RenderBackend) {
@@ -145,7 +178,7 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         op,
                         push,
                     } => {
-                        let fixed = source.read_matrix(matrix);
+                        let fixed = read_matrix(source, matrix, 0);
                         let m = Matrixf::from_fixed(&fixed);
                         match mode {
                             MatrixMode::Proj => self.proj.execute(m, op, push),
@@ -153,7 +186,7 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         }
                     }
                     SPCommand::Viewport(ptr) => {
-                        let viewport = source.read_viewport(ptr);
+                        let viewport = read_viewport(source, ptr, 0);
                         if self.viewport != viewport {
                             self.flush(backend);
                             self.viewport = viewport;
@@ -169,7 +202,8 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                     // SPCommand::Light { light, n } => todo!(),
                     SPCommand::Vertex { v, n, v0 } => {
                         self.vertices = Vec::new();
-                        for vertex in source.read_vertices(v, v0 as usize, n as usize) {
+                        let offset = v0 as usize * mem::size_of::<Vertex>();
+                        for vertex in read_vertices(source, v, offset, n as usize) {
                             let model_pos = [
                                 vertex.pos[0] as f32,
                                 vertex.pos[1] as f32,
@@ -422,7 +456,6 @@ impl ops::Mul<&Matrixf> for &Matrixf {
 impl ops::Mul<[f32; 4]> for &Matrixf {
     type Output = [f32; 4];
 
-    #[allow(clippy::needless_range_loop)]
     fn mul(self, rhs: [f32; 4]) -> Self::Output {
         let mut out = [0.0; 4];
         for i in 0..4 {
