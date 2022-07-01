@@ -35,6 +35,9 @@ impl AddAssign<usize> for Address {
 }
 
 impl Address {
+    /// The NULL address.
+    pub const NULL: Address = Address(0);
+
     /// Returns true if the address is null (equal to zero).
     pub fn is_null(self) -> bool {
         self.0 == 0

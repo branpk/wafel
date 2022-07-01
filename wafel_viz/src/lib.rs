@@ -47,7 +47,7 @@ impl<'a> DllF3DSource<'a> {
         self.game.memory.with_slot(&self.game.base_slot)
     }
 
-    fn read_dl_from_addr(&self, addr: Address) -> F3DCommandIter<RawDlIter<'a>> {
+    fn read_dl_from_addr(&self, addr: Option<Address>) -> F3DCommandIter<RawDlIter<'a>> {
         decode_f3d_display_list(RawDlIter {
             view: self.view(),
             addr,
@@ -91,14 +91,15 @@ impl<'a> F3DSource for DllF3DSource<'a> {
     fn root_dl(&self) -> Self::DlIter {
         let root_addr = self
             .game
-            .read("sDisplayListTask->task.t.data_ptr")
-            .as_address();
+            .read("sDisplayListTask?.task.t.data_ptr")
+            .option()
+            .map(|a| a.as_address());
         self.read_dl_from_addr(root_addr)
     }
 
     fn read_dl(&self, ptr: Self::Ptr) -> Self::DlIter {
         let addr = self.game.memory.unchecked_pointer_to_address(ptr);
-        self.read_dl_from_addr(addr)
+        self.read_dl_from_addr(Some(addr))
     }
 
     fn read_u8(&self, dst: &mut [u8], ptr: Self::Ptr, offset: usize) {
@@ -133,44 +134,46 @@ impl<'a> F3DSource for DllF3DSource<'a> {
 #[derive(Debug)]
 pub struct RawDlIter<'a> {
     view: DllSlotMemoryView<'a>,
-    addr: Address,
+    addr: Option<Address>,
 }
 
 impl<'a> Iterator for RawDlIter<'a> {
     type Item = RawF3DCommand<*const ()>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let w_type = IntType::u_ptr_native();
-        let w_size = w_type.size();
+        self.addr.as_mut().map(|addr| {
+            let w_type = IntType::u_ptr_native();
+            let w_size = w_type.size();
 
-        let w0 = self.view.read_int(self.addr, w_type).unwrap() as usize;
-        self.addr += w_size;
-        let w1 = self.view.read_int(self.addr, w_type).unwrap() as usize;
-        self.addr += w_size;
+            let w0 = self.view.read_int(*addr, w_type).unwrap() as usize;
+            *addr += w_size;
+            let w1 = self.view.read_int(*addr, w_type).unwrap() as usize;
+            *addr += w_size;
 
-        Some(RawF3DCommand {
-            w0: w0 as u32,
-            w1: w1 as u32,
-            w1_ptr: w1 as *const (),
+            RawF3DCommand {
+                w0: w0 as u32,
+                w1: w1 as u32,
+                w1_ptr: w1 as *const (),
+            }
         })
     }
 }
 
 pub fn test_dl() -> Result<(), Box<dyn Error>> {
     // ~~~ libsm64 ~~~
-    let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
-    let (_, inputs) = load_m64("test_files/120_u.m64");
-    while game.read("gGlobalTimer").as_int() < 927 {
-        game.set_input(inputs[game.frame() as usize]);
-        game.advance();
-    }
-    let f3d_source = DllF3DSource { game: &game };
-
-    let mut backend = N64RenderBackend::default();
-    interpret_f3d_display_list(&f3d_source, &mut backend);
-    let data0 = backend.finish();
-
-    let data1 = process_display_list(&game.memory, &mut game.base_slot, 320, 240).unwrap();
+    //     let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
+    //     let (_, inputs) = load_m64("test_files/120_u.m64");
+    //     while game.read("gGlobalTimer").as_int() < 927 {
+    //         game.set_input(inputs[game.frame() as usize]);
+    //         game.advance();
+    //     }
+    //
+    //     let mut backend = N64RenderBackend::default();
+    //     let f3d_source = DllF3DSource { game: &game };
+    //     interpret_f3d_display_list(&f3d_source, &mut backend);
+    //     let data0 = backend.finish();
+    //
+    //     let data1 = process_display_list(&game.memory, &mut game.base_slot, 320, 240).unwrap();
 
     // let vs0: Vec<f32> = data0
     //     .commands
@@ -190,7 +193,7 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
 
     // assert!(data0.compare(&data1));
     env_logger::init();
-    futures::executor::block_on(run(0, Some(data0))).unwrap();
+    futures::executor::block_on(run(0, None, true)).unwrap();
     return Ok(());
 
     //     let w_type = IntType::u_ptr_native();
@@ -241,10 +244,14 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
 
 pub fn test(frame0: u32) -> Result<(), Box<dyn Error>> {
     env_logger::init();
-    futures::executor::block_on(run(frame0, None))
+    futures::executor::block_on(run(frame0, None, false))
 }
 
-async fn run(frame0: u32, arg_data: Option<N64RenderData>) -> Result<(), Box<dyn Error>> {
+async fn run(
+    frame0: u32,
+    arg_data: Option<N64RenderData>,
+    use_rust_f3d: bool,
+) -> Result<(), Box<dyn Error>> {
     let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
     let (_, inputs) = load_m64("../sm64-bot/bad_bot.m64");
 
@@ -393,13 +400,20 @@ async fn run(frame0: u32, arg_data: Option<N64RenderData>) -> Result<(), Box<dyn
                         }
 
                         let render_data = arg_data.clone().unwrap_or_else(|| {
-                            process_display_list(
-                                &game.memory,
-                                &mut game.base_slot,
-                                config.width,
-                                config.height,
-                            )
-                            .expect("failed to render game")
+                            if use_rust_f3d {
+                                let mut backend = N64RenderBackend::default();
+                                let f3d_source = DllF3DSource { game: &game };
+                                interpret_f3d_display_list(&f3d_source, &mut backend);
+                                backend.finish()
+                            } else {
+                                process_display_list(
+                                    &game.memory,
+                                    &mut game.base_slot,
+                                    config.width,
+                                    config.height,
+                                )
+                                .expect("failed to render game")
+                            }
                         });
                         renderer.prepare(&device, &queue, output_format, &render_data);
 

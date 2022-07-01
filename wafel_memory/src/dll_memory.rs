@@ -184,8 +184,12 @@ impl DllGameMemory {
     /// This does not perform any alignment or bounds checking, but those will be done when the
     /// address is accessed.
     pub fn unchecked_pointer_to_address<T>(&self, pointer: *const T) -> Address {
-        let offset = (pointer as usize).wrapping_sub(self.base_pointer.0 as usize);
-        Address(offset)
+        if pointer.is_null() {
+            Address::NULL
+        } else {
+            let offset = (pointer as usize).wrapping_sub(self.base_pointer.0 as usize);
+            Address(offset)
+        }
     }
 
     fn unchecked_address_to_pointer<T>(&self, address: Address) -> *const T {

@@ -52,6 +52,8 @@ struct State<Ptr> {
     render_mode: RenderMode,
     persp_normalize: u16,
 
+    geometry_mode: GeometryModes,
+
     texture_image: Option<Image<Ptr>>,
     texture_scale: [[f32; 2]; 8],
     tile_params: [TileParams; 8],
@@ -110,6 +112,12 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
             self.vertex_buffer_num_tris = 0;
             // std::process::exit(0);
         }
+    }
+
+    fn set_geometry_mode(&mut self, backend: &mut impl RenderBackend, mode: GeometryModes) {
+        self.flush(backend);
+        self.geometry_mode = mode;
+        backend.set_depth_test(mode.contains(GeometryModes::ZBUFFER));
     }
 
     fn interpret<S: F3DSource<Ptr = Ptr>>(
@@ -218,8 +226,12 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                             [sc as f32 / 0x10000 as f32, tc as f32 / 0x10000 as f32];
                     }
                     SPCommand::EndDisplayList => break,
-                    // SPCommand::SetGeometryMode(_) => todo!(),
-                    // SPCommand::ClearGeometryMode(_) => todo!(),
+                    SPCommand::SetGeometryMode(mode) => {
+                        self.set_geometry_mode(backend, self.geometry_mode | mode);
+                    }
+                    SPCommand::ClearGeometryMode(mode) => {
+                        self.set_geometry_mode(backend, self.geometry_mode & !mode);
+                    }
                     _ => {} //unimplemented!("{:?}", cmd),
                 },
                 F3DCommand::Rdp(cmd) => match cmd {
@@ -410,7 +422,8 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                     _ => {} //unimplemented!("{:?}", cmd),
                 },
                 F3DCommand::Unknown(_) => {
-                    eprintln!("{}{:?}", indent_str, cmd);
+                    // TODO
+                    // eprintln!("{}{:?}", indent_str, cmd);
                 }
             }
         }
@@ -528,6 +541,16 @@ struct Rgba32 {
 }
 
 impl Rgba32 {
+    #[track_caller]
+    fn new(width: u32, height: u32, data: Vec<u8>) -> Self {
+        assert!(4 * width * height <= data.len() as u32);
+        Self {
+            width,
+            height,
+            data,
+        }
+    }
+
     #[allow(dead_code)]
     fn dbg_constant(r: u8, g: u8, b: u8, a: u8) -> Self {
         let width = 32;
@@ -536,11 +559,7 @@ impl Rgba32 {
         for _ in 0..width * height {
             data.extend(&[r, g, b, a]);
         }
-        Self {
-            width,
-            height,
-            data,
-        }
+        Self::new(width, height, data)
     }
 
     #[allow(dead_code)]
@@ -558,11 +577,7 @@ impl Rgba32 {
                 data.extend(&[(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8, 255]);
             }
         }
-        Self {
-            width,
-            height,
-            data,
-        }
+        Self::new(width, height, data)
     }
 }
 
@@ -584,11 +599,11 @@ fn read_rgba16<S: F3DSource>(
         rgba32_data.extend(&rgba32);
     }
 
-    Rgba32 {
-        width: line_size_bytes / 2,
-        height: size_bytes / line_size_bytes,
-        data: rgba32_data,
-    }
+    Rgba32::new(
+        line_size_bytes / 2,
+        size_bytes / line_size_bytes,
+        rgba32_data,
+    )
 }
 
 fn rgba_16_to_32(rgba16: u16) -> [u8; 4] {
