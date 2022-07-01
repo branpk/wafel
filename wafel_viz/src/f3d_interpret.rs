@@ -319,6 +319,7 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                             self.render_mode = v;
 
                             backend.set_depth_mask(v.flags.contains(RenderModeFlags::Z_UPDATE));
+                            backend.set_zmode_decal(v.z_mode == ZMode::Decal);
                         }
                     }
                     DPCommand::PerspNormalize(v) => {
