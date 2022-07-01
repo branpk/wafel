@@ -550,7 +550,7 @@ impl N64Renderer {
         }
     }
 
-    pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>) {
+    pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>, output_size: (u32, u32)) {
         let mut current_state = None;
 
         for command in &self.commands {
@@ -569,22 +569,23 @@ impl N64Renderer {
             let viewport_height = height;
             rp.set_viewport(x as f32, y as f32, width as f32, height as f32, 0.0, 1.0);
 
-            // TODO: Truncate to output size
             let ScreenRectangle {
                 x,
                 y,
                 width,
                 height,
             } = command.scissor;
-            if width == 0 || height == 0 {
+            let y = viewport_height - y - height;
+            let x0 = x.clamp(0, output_size.0 as i32);
+            let y0 = y.clamp(0, output_size.1 as i32);
+            let x1 = (x + width).clamp(0, output_size.0 as i32);
+            let y1 = (y + height).clamp(0, output_size.1 as i32);
+            let w = x1 - x0;
+            let h = y1 - y0;
+            if w <= 0 || h <= 0 {
                 continue;
             }
-            rp.set_scissor_rect(
-                x as u32,
-                (viewport_height - y - height) as u32,
-                width as u32,
-                height as u32,
-            );
+            rp.set_scissor_rect(x as u32, y as u32, w as u32, h as u32);
 
             if current_state != Some(command.state) {
                 current_state = Some(command.state);

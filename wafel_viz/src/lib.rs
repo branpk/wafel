@@ -423,7 +423,7 @@ async fn run(frame0: u32, arg_data: Option<N64RenderData>) -> Result<(), Box<dyn
                                     },
                                 ),
                             });
-                            renderer.render(&mut rp);
+                            renderer.render(&mut rp, (config.width, config.height));
                         }
 
                         queue.submit([encoder.finish()]);
