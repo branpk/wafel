@@ -317,6 +317,8 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         if self.render_mode != v {
                             self.flush(backend);
                             self.render_mode = v;
+
+                            backend.set_depth_mask(v.flags.contains(RenderModeFlags::Z_UPDATE));
                         }
                     }
                     DPCommand::PerspNormalize(v) => {
