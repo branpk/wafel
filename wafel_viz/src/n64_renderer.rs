@@ -355,7 +355,12 @@ impl N64Renderer {
                 entry_point: "vs_main",
                 buffers: &[vertex_buffer_layout],
             },
-            primitive: wgpu::PrimitiveState::default(),
+            // primitive: wgpu::PrimitiveState::default(),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                polygon_mode: wgpu::PolygonMode::Line,
+                ..Default::default()
+            },
             depth_stencil: Some(wgpu::DepthStencilState {
                 format: wgpu::TextureFormat::Depth24Plus,
                 depth_write_enabled: state.depth_mask,
@@ -564,6 +569,7 @@ impl N64Renderer {
             let viewport_height = height;
             rp.set_viewport(x as f32, y as f32, width as f32, height as f32, 0.0, 1.0);
 
+            // TODO: Truncate to output size
             let ScreenRectangle {
                 x,
                 y,

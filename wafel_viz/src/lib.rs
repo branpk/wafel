@@ -1,6 +1,7 @@
 #![feature(stmt_expr_attributes)]
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 #![allow(clippy::map_entry)]
+#![allow(missing_docs)] // FIXME: remove
 
 use std::{
     collections::HashSet,
@@ -49,6 +50,11 @@ impl<'a> DllF3DSource<'a> {
         })
     }
 
+    fn read_i32(&self, addr: Address) -> i32 {
+        let view = self.game.memory.with_slot(&self.game.base_slot);
+        view.read_int(addr, IntType::S32).unwrap_or_default() as i32
+    }
+
     fn read_i16(&self, addr: Address) -> i16 {
         let view = self.game.memory.with_slot(&self.game.base_slot);
         view.read_int(addr, IntType::S16).unwrap_or_default() as i16
@@ -92,6 +98,15 @@ impl<'a> F3DSource for DllF3DSource<'a> {
     fn read_dl(&self, ptr: Self::Ptr) -> Self::DlIter {
         let addr = self.game.memory.unchecked_pointer_to_address(ptr);
         self.read_dl_from_addr(addr)
+    }
+
+    fn read_matrix(&self, ptr: Self::Ptr) -> Vec<i32> {
+        let addr = self.game.memory.unchecked_pointer_to_address(ptr);
+        let mut result = Vec::new();
+        for i in 0..16 {
+            result.push(self.read_i32(addr + 4 * i));
+        }
+        result
     }
 
     fn read_viewport(&self, ptr: Self::Ptr) -> Viewport {
@@ -167,7 +182,12 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
 
     let data1 = process_display_list(&game.memory, &mut game.base_slot, 320, 240).unwrap();
 
-    assert!(data0.compare(&data1));
+    eprintln!("{:?}", data0.commands[0].vertex_buffer[0..4].to_vec());
+    eprintln!("{:?}", data1.commands[0].vertex_buffer[0..4].to_vec());
+
+    // assert!(data0.compare(&data1));
+    env_logger::init();
+    futures::executor::block_on(run(0, Some(data0))).unwrap();
 
     //     let w_type = IntType::u_ptr_native();
     //     let w_size = w_type.size();
@@ -217,10 +237,10 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
 
 pub fn test(frame0: u32) -> Result<(), Box<dyn Error>> {
     env_logger::init();
-    futures::executor::block_on(run(frame0))
+    futures::executor::block_on(run(frame0, None))
 }
 
-async fn run(frame0: u32) -> Result<(), Box<dyn Error>> {
+async fn run(frame0: u32, arg_data: Option<N64RenderData>) -> Result<(), Box<dyn Error>> {
     let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
     let (_, inputs) = load_m64("../sm64-bot/bad_bot.m64");
 
@@ -368,13 +388,15 @@ async fn run(frame0: u32) -> Result<(), Box<dyn Error>> {
                             }
                         }
 
-                        let render_data = process_display_list(
-                            &game.memory,
-                            &mut game.base_slot,
-                            config.width,
-                            config.height,
-                        )
-                        .expect("failed to render game");
+                        let render_data = arg_data.clone().unwrap_or_else(|| {
+                            process_display_list(
+                                &game.memory,
+                                &mut game.base_slot,
+                                config.width,
+                                config.height,
+                            )
+                            .expect("failed to render game")
+                        });
                         renderer.prepare(&device, &queue, output_format, &render_data);
 
                         let mut encoder =

@@ -1,8 +1,12 @@
 use core::fmt;
+use std::ops;
 
 use ordered_float::NotNan;
 
-use crate::{f3d_decode::*, render_api::RenderBackend};
+use crate::{
+    f3d_decode::*,
+    render_api::{RenderBackend, ShaderId},
+};
 
 pub trait F3DSource {
     type Ptr: fmt::Debug + Copy;
@@ -11,6 +15,7 @@ pub trait F3DSource {
     fn root_dl(&self) -> Self::DlIter;
     fn read_dl(&self, ptr: Self::Ptr) -> Self::DlIter;
 
+    fn read_matrix(&self, ptr: Self::Ptr) -> Vec<i32>;
     fn read_viewport(&self, ptr: Self::Ptr) -> Viewport;
     fn read_vertices(&self, ptr: Self::Ptr, offset: usize, count: usize) -> Vec<Vertex>;
 }
@@ -37,6 +42,8 @@ pub fn interpret_f3d_display_list(source: &impl F3DSource, backend: &mut impl Re
 
 #[derive(Debug, Default)]
 struct State {
+    model_view: MatrixState,
+    proj: MatrixState,
     viewport: Viewport,
 
     alpha_dither: AlphaDither,
@@ -57,13 +64,40 @@ struct State {
 
     scissor: (ScissorMode, Rectangle<NotNan<f32>>),
 
-    vertices: Vec<Vertex>,
+    vertices: Vec<Vertexf>,
     vertex_buffer: Vec<f32>,
     vertex_buffer_num_tris: usize,
 }
 
+#[derive(Debug)]
+struct MatrixState {
+    stack: Vec<Matrixf>,
+    cur: Matrixf,
+}
+
+impl Default for MatrixState {
+    fn default() -> Self {
+        Self {
+            stack: Vec::new(),
+            cur: Matrixf::identity(),
+        }
+    }
+}
+
+impl MatrixState {
+    fn execute(&mut self, m: Matrixf, op: MatrixOp, push: bool) {
+        if push {
+            self.stack.push(self.cur.clone());
+        }
+        match op {
+            MatrixOp::Load => self.cur = m,
+            MatrixOp::Mul => self.cur = &self.cur * &m,
+        }
+    }
+}
+
 impl State {
-    fn vertex(&self, index: u32) -> Vertex {
+    fn vertex(&self, index: u32) -> Vertexf {
         *self
             .vertices
             .get(index as usize)
@@ -72,6 +106,7 @@ impl State {
 
     fn flush(&mut self, backend: &mut impl RenderBackend) {
         if self.vertex_buffer_num_tris > 0 {
+            backend.load_shader(ShaderId(0x00000200)); // TODO
             backend.draw_triangles(&self.vertex_buffer, self.vertex_buffer_num_tris);
             self.vertex_buffer.clear();
             self.vertex_buffer_num_tris = 0;
@@ -94,12 +129,19 @@ impl State {
             match cmd {
                 F3DCommand::NoOp => {}
                 F3DCommand::Rsp(cmd) => match cmd {
-                    // SPCommand::Matrix {
-                    //     matrix,
-                    //     mode,
-                    //     op,
-                    //     push,
-                    // } => todo!(),
+                    SPCommand::Matrix {
+                        matrix,
+                        mode,
+                        op,
+                        push,
+                    } => {
+                        let fixed = source.read_matrix(matrix);
+                        let m = Matrixf::from_fixed(&fixed);
+                        match mode {
+                            MatrixMode::Proj => self.proj.execute(m, op, push),
+                            MatrixMode::ModelView => self.model_view.execute(m, op, push),
+                        }
+                    }
                     SPCommand::Viewport(ptr) => {
                         let viewport = source.read_viewport(ptr);
                         if self.viewport != viewport {
@@ -116,7 +158,17 @@ impl State {
                     }
                     // SPCommand::Light { light, n } => todo!(),
                     SPCommand::Vertex { v, n, v0 } => {
-                        self.vertices = source.read_vertices(v, v0 as usize, n as usize);
+                        self.vertices = Vec::new();
+                        for vertex in source.read_vertices(v, v0 as usize, n as usize) {
+                            let model_pos = [
+                                vertex.pos[0] as f32,
+                                vertex.pos[1] as f32,
+                                vertex.pos[2] as f32,
+                                1.0,
+                            ];
+                            let pos = &self.proj.cur * (&self.model_view.cur * model_pos);
+                            self.vertices.push(Vertexf { pos });
+                        }
                     }
                     SPCommand::DisplayList(ptr) => {
                         let child_dl = source.read_dl(ptr);
@@ -132,9 +184,8 @@ impl State {
                         let vertices = [self.vertex(v0), self.vertex(v1), self.vertex(v2)];
                         for v in vertices {
                             // TODO: transform vertices + fixed point
-                            self.vertex_buffer.push(v.pos[0] as f32);
-                            self.vertex_buffer.push(v.pos[1] as f32);
-                            self.vertex_buffer.push(v.pos[2] as f32);
+                            self.vertex_buffer.extend(&v.pos);
+                            self.vertex_buffer.extend(&[1.0, 0.0, 0.0]);
                         }
                         self.vertex_buffer_num_tris += 1;
                     }
@@ -293,4 +344,67 @@ impl State {
             }
         }
     }
+}
+
+#[derive(Debug, Clone, Default)]
+struct Matrixf([[f32; 4]; 4]);
+
+impl Matrixf {
+    fn identity() -> Self {
+        Self([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ])
+    }
+
+    fn from_fixed(m: &[i32]) -> Self {
+        let mut r = Self::default();
+        for i in [0, 2] {
+            for j in 0..4 {
+                let int_part = m[j * 2 + i / 2] as u32;
+                let frac_part = m[8 + j * 2 + i / 2] as u32;
+                r.0[i][j] = ((int_part & 0xFFFF0000) | (frac_part >> 16)) as i32 as f32 / 65536.0;
+                r.0[i + 1][j] = ((int_part << 16) | (frac_part & 0xFFFF)) as i32 as f32 / 65536.0;
+            }
+        }
+        r
+    }
+}
+
+impl ops::Mul<&Matrixf> for &Matrixf {
+    type Output = Matrixf;
+
+    fn mul(self, rhs: &Matrixf) -> Self::Output {
+        let mut out = Matrixf::default();
+        for i in 0..4 {
+            for j in 0..4 {
+                for k in 0..4 {
+                    out.0[i][j] += self.0[i][k] * rhs.0[k][j];
+                }
+            }
+        }
+        out
+    }
+}
+
+impl ops::Mul<[f32; 4]> for &Matrixf {
+    type Output = [f32; 4];
+
+    #[allow(clippy::needless_range_loop)]
+    fn mul(self, rhs: [f32; 4]) -> Self::Output {
+        let mut out = [0.0; 4];
+        for i in 0..4 {
+            for k in 0..4 {
+                out[i] += self.0[i][k] * rhs[k];
+            }
+        }
+        out
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Vertexf {
+    pub pos: [f32; 4],
 }
