@@ -182,8 +182,10 @@ impl State {
                     SPCommand::OneTriangle { v0, v1, v2, flag } => {
                         // TODO: Use flag for flat shading
                         let vertices = [self.vertex(v0), self.vertex(v1), self.vertex(v2)];
-                        for v in vertices {
-                            // TODO: transform vertices + fixed point
+                        for mut v in vertices {
+                            if backend.z_is_from_0_to_1() {
+                                v.pos[2] = (v.pos[2] + v.pos[3]) / 2.0;
+                            }
                             self.vertex_buffer.extend(&v.pos);
                             self.vertex_buffer.extend(&[1.0, 0.0, 0.0]);
                         }
