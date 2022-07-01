@@ -90,7 +90,7 @@ impl RenderBackend for N64RenderBackend {
     }
 
     fn upload_texture(&mut self, rgba32_buf: &[u8], width: i32, height: i32) {
-        assert!(4 * width * height == rgba32_buf.len() as i32);
+        assert_eq!(4 * width * height, rgba32_buf.len() as i32);
         let texture_index = self.texture_index[self.tile].expect("no selected texture");
         self.data.textures[texture_index].data = Some(TextureData {
             rgba8: rgba32_buf.to_vec(),

@@ -355,12 +355,11 @@ impl N64Renderer {
                 entry_point: "vs_main",
                 buffers: &[vertex_buffer_layout],
             },
-            // primitive: wgpu::PrimitiveState::default(),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                polygon_mode: wgpu::PolygonMode::Line,
-                ..Default::default()
-            },
+            primitive: wgpu::PrimitiveState::default(),
+            // primitive: wgpu::PrimitiveState {
+            //     polygon_mode: wgpu::PolygonMode::Line,
+            //     ..Default::default()
+            // },
             depth_stencil: Some(wgpu::DepthStencilState {
                 format: wgpu::TextureFormat::Depth24Plus,
                 depth_write_enabled: state.depth_mask,

@@ -189,8 +189,8 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
     // eprintln!("{:?}", data1.commands[0].vertex_buffer[0..4].to_vec());
 
     // assert!(data0.compare(&data1));
-    // env_logger::init();
-    // futures::executor::block_on(run(0, Some(data0))).unwrap();
+    env_logger::init();
+    futures::executor::block_on(run(0, Some(data0))).unwrap();
     return Ok(());
 
     //     let w_type = IntType::u_ptr_native();

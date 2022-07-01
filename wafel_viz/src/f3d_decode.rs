@@ -459,6 +459,18 @@ impl Default for ComponentSize {
     }
 }
 
+impl ComponentSize {
+    pub fn num_bits(self) -> u32 {
+        match self {
+            ComponentSize::Bits4 => 4,
+            ComponentSize::Bits8 => 8,
+            ComponentSize::Bits16 => 16,
+            ComponentSize::Bits32 => 32,
+            ComponentSize::DD => unimplemented!("DD"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Rgba8 {
     pub r: u8,
