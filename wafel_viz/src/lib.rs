@@ -164,7 +164,7 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
 
     // assert!(data0.compare(&data1));
     env_logger::init();
-    futures::executor::block_on(run(0, None, true)).unwrap();
+    futures::executor::block_on(run(3468, None, true)).unwrap();
     return Ok(());
 
     //     let w_type = IntType::u_ptr_native();
@@ -226,6 +226,7 @@ async fn run(
     let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
     // let (_, inputs) = load_m64("../sm64-bot/bad_bot.m64");
     let (_, inputs) = load_m64("test_files/120_u.m64");
+    // let (_, inputs) = load_m64("test_files/lod-test.m64");
 
     while game.frame() < frame0 {
         if let Some(&input) = inputs.get(game.frame() as usize) {

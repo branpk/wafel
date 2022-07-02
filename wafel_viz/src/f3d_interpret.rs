@@ -282,7 +282,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
 
         let fmt = (tile_params.fmt, tile_params.size);
         if let Some(&texture_id) = tmem.texture_ids.get(&fmt) {
-            backend.select_texture(0, texture_id);
+            backend.select_texture(tile.0.into(), texture_id);
             return texture_id;
         }
 
@@ -301,7 +301,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         // dbg!((rgba32.width, rgba32.height));
 
         let texture_id = backend.new_texture();
-        backend.select_texture(tile.0 as i32, texture_id);
+        backend.select_texture(tile.0.into(), texture_id);
         backend.upload_texture(&rgba32.data, rgba32.width as i32, rgba32.height as i32);
 
         backend.set_sampler_parameters(
