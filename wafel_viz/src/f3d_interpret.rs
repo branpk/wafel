@@ -66,7 +66,7 @@ struct State<Ptr> {
     texture_scale: [[f32; 2]; 8],
     tile_params: [TileParams; 8],
     tile_size: [TileSize; 8],
-    tmem_to_texture_id: HashMap<u32, u32>,
+    texture_memory: HashMap<u32, TextureMemory<Ptr>>,
 
     vertices: Vec<Vertex>,
     vertex_buffer: Vec<f32>,
@@ -102,6 +102,13 @@ impl MatrixState {
     fn pop(&mut self) {
         self.cur = self.stack.pop().expect("popMatrix without push");
     }
+}
+
+#[derive(Debug)]
+struct TextureMemory<Ptr> {
+    image: Image<Ptr>,
+    block: TextureBlock,
+    texture_ids: HashMap<(ImageFormat, ComponentSize), u32>,
 }
 
 impl<Ptr: fmt::Debug + Copy> State<Ptr> {
@@ -186,6 +193,53 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
         components
     }
 
+    fn load_texture<S: F3DSource<Ptr = Ptr>>(
+        &mut self,
+        source: &S,
+        backend: &mut impl RenderBackend,
+        tile: TileIndex,
+    ) -> u32 {
+        use ComponentSize::*;
+        use ImageFormat::*;
+
+        self.flush(backend);
+
+        let tile_params = &self.tile_params[tile.0 as usize];
+        let tmem = self
+            .texture_memory
+            .get_mut(&tile_params.tmem)
+            .expect("invalid tmem offset");
+
+        let line_size_bytes = tile_params.line * 8;
+        let size_bytes = tile_params.size.num_bits() * (tmem.block.lrs + 1) / 8;
+
+        let fmt = (tile_params.fmt, tile_params.size);
+        if let Some(&texture_id) = tmem.texture_ids.get(&fmt) {
+            backend.select_texture(0, texture_id);
+            return texture_id;
+        }
+
+        let rgba32 = match fmt {
+            (Rgba, Bits16) => read_rgba16(source, tmem.image.img, size_bytes, line_size_bytes),
+            (Ia, Bits16) => read_ia16(source, tmem.image.img, size_bytes, line_size_bytes),
+            // TODO
+            // fmt => unimplemented!("texture format: {:?}", fmt),
+            _ => TextureRgba32::dbg_gradient(),
+        };
+
+        // dbg!(line_size_bytes);
+        // dbg!(size_bytes);
+        // dbg!((rgba32.width, rgba32.height));
+
+        let texture_id = backend.new_texture();
+        backend.select_texture(0, texture_id);
+        backend.upload_texture(&rgba32.data, rgba32.width as i32, rgba32.height as i32);
+        backend.set_sampler_parameters(0, true, 0, 0);
+
+        tmem.texture_ids.insert(fmt, texture_id);
+        texture_id
+    }
+
     fn interpret<S: F3DSource<Ptr = Ptr>>(
         &mut self,
         source: &S,
@@ -246,6 +300,12 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                     SPCommand::OneTriangle { v0, v1, v2, flag } => {
                         let cc_features = decode_shader_id(self.get_shader_id());
                         let input_comps = self.get_vertex_input_components();
+
+                        for i in 0..2 {
+                            if cc_features.used_textures[i] {
+                                self.load_texture(source, backend, TileIndex(i as u8));
+                            }
+                        }
 
                         // TODO: Use flag for flat shading
                         let vertices = [self.vertex(v0), self.vertex(v1), self.vertex(v2)];
@@ -472,51 +532,20 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         self.tile_params[tile.0 as usize] = params;
                     }
                     // DPCommand::LoadTile(_, _) => todo!(),
-                    DPCommand::LoadBlock(tile, params) => {
-                        use ComponentSize::*;
-                        use ImageFormat::*;
-
+                    DPCommand::LoadBlock(tile, block) => {
                         self.flush(backend);
 
-                        let load_tile_params = &self.tile_params[tile.0 as usize];
-                        let render_tile_params = &self.tile_params[0];
-                        let image = self
-                            .texture_image
-                            .as_ref()
-                            .expect("missing call to SetTextureImage");
+                        let tile_params = &self.tile_params[tile.0 as usize];
+                        let image = self.texture_image.expect("missing call to SetTextureImage");
 
-                        // eprintln!("Load block:");
-                        // eprintln!("{:?}", params);
-                        // eprintln!("{:?}", load_tile_params);
-                        // eprintln!("{:?}", render_tile_params);
-                        // eprintln!("{:?}", image);
-
-                        let line_size_bytes = render_tile_params.line * 8;
-                        let size_bytes = render_tile_params.size.num_bits() * (params.lrs + 1) / 8;
-
-                        let rgba32 = match (render_tile_params.fmt, render_tile_params.size) {
-                            (Rgba, Bits16) => {
-                                read_rgba16(source, image.img, size_bytes, line_size_bytes)
-                            }
-                            // TODO: fmt => unimplemented!("texture format: {:?}", fmt),
-                            _ => TextureRgba32::dbg_gradient(),
-                        };
-
-                        // dbg!(line_size_bytes);
-                        // dbg!(size_bytes);
-                        // dbg!((rgba32.width, rgba32.height));
-
-                        let texture_id = backend.new_texture();
-                        backend.select_texture(0, texture_id);
-                        backend.upload_texture(
-                            &rgba32.data,
-                            rgba32.width as i32,
-                            rgba32.height as i32,
+                        self.texture_memory.insert(
+                            tile_params.tmem,
+                            TextureMemory {
+                                image,
+                                block,
+                                texture_ids: HashMap::new(),
+                            },
                         );
-                        backend.set_sampler_parameters(0, true, 0, 0);
-
-                        self.tmem_to_texture_id
-                            .insert(load_tile_params.tmem, texture_id);
                     }
                     DPCommand::SetTileSize(tile, size) => {
                         self.flush(backend);
@@ -742,4 +771,29 @@ fn rgba_16_to_32(rgba16: u16) -> [u8; 4] {
         (((rgba16 << 2) & 0xF8) as u32 * 255 / 0xF8) as u8,
         (rgba16 & 0x1) as u8 * 255,
     ]
+}
+
+fn read_ia16<S: F3DSource>(
+    source: &S,
+    ptr: S::Ptr,
+    size_bytes: u32,
+    line_size_bytes: u32,
+) -> TextureRgba32 {
+    let mut ia16_data: Vec<u8> = vec![0; size_bytes as usize];
+    source.read_u8(&mut ia16_data, ptr, 0);
+
+    let mut rgba32_data: Vec<u8> = Vec::with_capacity(2 * size_bytes as usize);
+
+    for i in 0..size_bytes / 2 {
+        let i0 = (2 * i) as usize;
+        let intensity = ia16_data[i0] as u8;
+        let alpha = ia16_data[i0 + 1] as u8;
+        rgba32_data.extend(&[intensity, intensity, intensity, alpha]);
+    }
+
+    TextureRgba32::new(
+        line_size_bytes / 2,
+        size_bytes / line_size_bytes,
+        rgba32_data,
+    )
 }
