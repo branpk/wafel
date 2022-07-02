@@ -222,9 +222,11 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
         let rgba32 = match fmt {
             (Rgba, Bits16) => read_rgba16(source, tmem.image.img, size_bytes, line_size_bytes),
             (Ia, Bits16) => read_ia16(source, tmem.image.img, size_bytes, line_size_bytes),
+            (Ia, Bits8) => read_ia8(source, tmem.image.img, size_bytes, line_size_bytes),
+            (Ia, Bits4) => read_ia4(source, tmem.image.img, size_bytes, line_size_bytes),
             // TODO
-            // fmt => unimplemented!("texture format: {:?}", fmt),
-            _ => TextureRgba32::dbg_gradient(),
+            fmt => unimplemented!("texture format: {:?}", fmt),
+            // _ => TextureRgba32::dbg_gradient(),
         };
 
         // dbg!(line_size_bytes);
@@ -789,6 +791,56 @@ fn read_ia16<S: F3DSource>(
         let intensity = ia16_data[i0] as u8;
         let alpha = ia16_data[i0 + 1] as u8;
         rgba32_data.extend(&[intensity, intensity, intensity, alpha]);
+    }
+
+    TextureRgba32::new(
+        line_size_bytes / 2,
+        size_bytes / line_size_bytes,
+        rgba32_data,
+    )
+}
+
+fn read_ia8<S: F3DSource>(
+    source: &S,
+    ptr: S::Ptr,
+    size_bytes: u32,
+    line_size_bytes: u32,
+) -> TextureRgba32 {
+    let mut ia8_data: Vec<u8> = vec![0; size_bytes as usize];
+    source.read_u8(&mut ia8_data, ptr, 0);
+
+    let mut rgba32_data: Vec<u8> = Vec::with_capacity(4 * size_bytes as usize);
+
+    for i in 0..size_bytes {
+        let i0 = i as usize;
+        let intensity = (ia8_data[i0] >> 4) * 0x11;
+        let alpha = (ia8_data[i0] & 0xF) * 0x11;
+        rgba32_data.extend(&[intensity, intensity, intensity, alpha]);
+    }
+
+    TextureRgba32::new(
+        line_size_bytes / 2,
+        size_bytes / line_size_bytes,
+        rgba32_data,
+    )
+}
+
+fn read_ia4<S: F3DSource>(
+    source: &S,
+    ptr: S::Ptr,
+    size_bytes: u32,
+    line_size_bytes: u32,
+) -> TextureRgba32 {
+    let mut ia4_data: Vec<u8> = vec![0; size_bytes as usize];
+    source.read_u8(&mut ia4_data, ptr, 0);
+
+    let mut rgba32_data: Vec<u8> = Vec::with_capacity(4 * size_bytes as usize);
+
+    for i in 0..size_bytes {
+        let v = (ia4_data[(i / 2) as usize] >> ((1 - i % 2) * 4)) & 0xF;
+        let intensity = (v >> 1) * 0x24;
+        let alpha = v & 0x1;
+        rgba32_data.extend(&[intensity, intensity, intensity, alpha * 255]);
     }
 
     TextureRgba32::new(
