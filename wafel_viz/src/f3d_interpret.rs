@@ -60,6 +60,9 @@ struct State<Ptr> {
     blend_color: Rgba32,
     fog_color: Rgba32,
 
+    lights: [Light; 8],
+    num_dir_lights: u32,
+
     geometry_mode: GeometryModes,
 
     texture_image: Option<Image<Ptr>>,
@@ -285,7 +288,11 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                             backend.set_viewport(x as i32, y as i32, width as i32, height as i32);
                         }
                     }
-                    // SPCommand::Light { light, n } => todo!(),
+                    SPCommand::Light { light, n } => {
+                        self.flush(backend);
+                        let index = (n - 1) as usize;
+                        self.lights[index] = read_light(source, light);
+                    }
                     SPCommand::Vertex { v, n, v0 } => {
                         let offset = v0 as usize * mem::size_of::<Vertex>();
                         self.vertices = read_vertices(source, v, offset, n as usize);
@@ -343,6 +350,41 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                                 self.vertex_buffer.extend(&[1.0, 1.0, 1.0, 1.0]);
                             }
 
+                            let mut shade_rgb: [u8; 3];
+                            if self.geometry_mode.contains(GeometryModes::LIGHTING) {
+                                // TODO: Cache light normals
+
+                                shade_rgb = self.lights[self.num_dir_lights as usize].color;
+                                for light in &self.lights[0..self.num_dir_lights as usize] {
+                                    let light_dir = [
+                                        light.dir[0] as f32 / 127.0,
+                                        light.dir[1] as f32 / 127.0,
+                                        light.dir[2] as f32 / 127.0,
+                                        0.0,
+                                    ];
+                                    let mut light_n = &self.model_view.cur.transpose() * light_dir;
+                                    light_n[3] = 0.0;
+                                    let light_n = normalize(light_n);
+
+                                    let n = [
+                                        vtx.cn[0] as i8 as f32 / 127.0,
+                                        vtx.cn[1] as i8 as f32 / 127.0,
+                                        vtx.cn[2] as i8 as f32 / 127.0,
+                                        0.0,
+                                    ];
+                                    let intensity = dot(light_n, n).max(0.0);
+                                    for i in 0..3 {
+                                        shade_rgb[i] = (shade_rgb[i] as f32
+                                            + intensity * light.color[i] as f32)
+                                            .min(255.0)
+                                            as u8;
+                                    }
+                                }
+                            } else {
+                                shade_rgb = [vtx.cn[0], vtx.cn[1], vtx.cn[2]];
+                            }
+                            let shade_a = vtx.cn[3];
+
                             let lod_fraction = ((pos[3] - 3000.0) / 3000.0).clamp(0.0, 1.0);
                             let lod_fraction_u8 = (lod_fraction * 255.0) as u8;
 
@@ -350,9 +392,7 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                                 let rgb_comp = input_comps[0][input_index as usize];
                                 let [r, g, b] = match rgb_comp {
                                     ColorCombineComponent::Prim => self.prim_color.rgb(),
-                                    ColorCombineComponent::Shade => {
-                                        [vtx.cn[0], vtx.cn[1], vtx.cn[2]]
-                                    } // TODO
+                                    ColorCombineComponent::Shade => shade_rgb,
                                     ColorCombineComponent::Env => self.env_color.rgb(),
                                     ColorCombineComponent::LodFraction => {
                                         [lod_fraction_u8, lod_fraction_u8, lod_fraction_u8]
@@ -371,7 +411,7 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                                     // TODO: use_fog && color == &v_arr[i]->color implies a = 255
                                     let a = match a_comp {
                                         ColorCombineComponent::Prim => self.prim_color.a,
-                                        ColorCombineComponent::Shade => vtx.cn[3], // TODO
+                                        ColorCombineComponent::Shade => shade_a,
                                         ColorCombineComponent::Env => self.env_color.a,
                                         ColorCombineComponent::LodFraction => lod_fraction_u8,
                                         ColorCombineComponent::Zero => 0,
@@ -390,7 +430,10 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                             MatrixMode::ModelView => self.model_view.pop(),
                         }
                     }
-                    // SPCommand::NumLights(_) => todo!(),
+                    SPCommand::NumLights(n) => {
+                        self.flush(backend);
+                        self.num_dir_lights = n;
+                    }
                     // SPCommand::Segment { seg, base } => todo!(),
                     // SPCommand::FogFactor { mul, offset } => todo!(),
                     SPCommand::Texture { sc, tc, tile, .. } => {
@@ -615,6 +658,16 @@ impl Matrixf {
         }
         r
     }
+
+    fn transpose(&self) -> Self {
+        let mut r = Self::default();
+        for i in 0..4 {
+            for j in 0..4 {
+                r.0[i][j] = self.0[j][i];
+            }
+        }
+        r
+    }
 }
 
 impl ops::Mul<&Matrixf> for &Matrixf {
@@ -651,6 +704,19 @@ fn read_matrix<S: F3DSource>(source: &S, ptr: S::Ptr, offset: usize) -> Vec<i32>
     let mut m = vec![0; 16];
     source.read_u32(cast_slice_mut(&mut m), ptr, offset);
     m
+}
+
+fn normalize(v: [f32; 4]) -> [f32; 4] {
+    let mag = dot(v, v).sqrt();
+    if mag == 0.0 {
+        v
+    } else {
+        [v[0] / mag, v[1] / mag, v[2] / mag, v[3] / mag]
+    }
+}
+
+fn dot(v: [f32; 4], w: [f32; 4]) -> f32 {
+    v[0] * w[0] + v[1] * w[1] + v[2] * w[2] + v[3] * w[3]
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -691,6 +757,24 @@ fn read_vertices<S: F3DSource>(
         vs.push(v);
     }
     vs
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+struct Light {
+    color: [u8; 3],
+    pad1: u8,
+    color_copy: [u8; 3],
+    pad2: u8,
+    dir: [i8; 3],
+    pad3: u8,
+}
+
+fn read_light<S: F3DSource>(source: &S, ptr: S::Ptr) -> Light {
+    let mut light = Light::default();
+    source.read_u8(&mut light.color, ptr, 0);
+    source.read_u8(&mut light.color_copy, ptr, 4);
+    source.read_u8(cast_slice_mut(&mut light.dir), ptr, 8);
+    light
 }
 
 #[derive(Debug, Clone)]
