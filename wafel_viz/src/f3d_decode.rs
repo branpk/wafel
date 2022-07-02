@@ -543,6 +543,12 @@ pub struct Rgba32 {
     pub a: u8,
 }
 
+impl Rgba32 {
+    pub fn rgb(self) -> [u8; 3] {
+        [self.r, self.g, self.b]
+    }
+}
+
 /// Either rgba5551 or zdz (z = 14 bits, dz = 2 bits)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct FillColor(pub u16);

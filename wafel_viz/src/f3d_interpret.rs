@@ -165,6 +165,27 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
         encode_shader_id(cc_features)
     }
 
+    fn get_vertex_input_components(&self) -> [[ColorCombineComponent; 4]; 2] {
+        let cm = &self.combine_mode;
+        let mut components: [[ColorCombineComponent; 4]; 2] = Default::default();
+        for (i, mode) in [cm.color1, cm.alpha1].into_iter().enumerate() {
+            let mut num_inputs = 0;
+            for cc in mode.args {
+                if matches!(
+                    cc,
+                    ColorCombineComponent::Prim
+                        | ColorCombineComponent::Shade
+                        | ColorCombineComponent::Env
+                        | ColorCombineComponent::LodFraction
+                ) {
+                    components[i][num_inputs] = cc;
+                    num_inputs += 1;
+                };
+            }
+        }
+        components
+    }
+
     fn interpret<S: F3DSource<Ptr = Ptr>>(
         &mut self,
         source: &S,
@@ -224,6 +245,7 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                     }
                     SPCommand::OneTriangle { v0, v1, v2, flag } => {
                         let cc_features = decode_shader_id(self.get_shader_id());
+                        let input_comps = self.get_vertex_input_components();
 
                         // TODO: Use flag for flat shading
                         let vertices = [self.vertex(v0), self.vertex(v1), self.vertex(v2)];
@@ -259,11 +281,41 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                                 self.vertex_buffer.extend(&[1.0, 1.0, 1.0, 1.0]);
                             }
 
+                            let lod_fraction = ((pos[3] - 3000.0) / 3000.0).clamp(0.0, 1.0);
+                            let lod_fraction_u8 = (lod_fraction * 255.0) as u8;
+
                             for input_index in 0..cc_features.num_inputs {
+                                let rgb_comp = input_comps[0][input_index as usize];
+                                let [r, g, b] = match rgb_comp {
+                                    ColorCombineComponent::Prim => self.prim_color.rgb(),
+                                    ColorCombineComponent::Shade => {
+                                        [vtx.cn[0], vtx.cn[1], vtx.cn[2]]
+                                    } // TODO
+                                    ColorCombineComponent::Env => self.env_color.rgb(),
+                                    ColorCombineComponent::LodFraction => {
+                                        [lod_fraction_u8, lod_fraction_u8, lod_fraction_u8]
+                                    }
+                                    ColorCombineComponent::Zero => [0, 0, 0],
+                                    c => unimplemented!("{:?}", c),
+                                };
+                                self.vertex_buffer.extend(&[
+                                    r as f32 / 255.0,
+                                    g as f32 / 255.0,
+                                    b as f32 / 255.0,
+                                ]);
+
                                 if cc_features.opt_alpha {
-                                    self.vertex_buffer.extend(&[1.0, 0.0, 0.0, 1.0]);
-                                } else {
-                                    self.vertex_buffer.extend(&[0.0, 1.0, 0.0]);
+                                    let a_comp = input_comps[1][input_index as usize];
+                                    // TODO: use_fog && color == &v_arr[i]->color implies a = 255
+                                    let a = match a_comp {
+                                        ColorCombineComponent::Prim => self.prim_color.a,
+                                        ColorCombineComponent::Shade => vtx.cn[3], // TODO
+                                        ColorCombineComponent::Env => self.env_color.a,
+                                        ColorCombineComponent::LodFraction => lod_fraction_u8,
+                                        ColorCombineComponent::Zero => 0,
+                                        c => unimplemented!("{:?}", c),
+                                    };
+                                    self.vertex_buffer.push(a as f32 / 255.0);
                                 }
                             }
                         }
@@ -349,9 +401,9 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         }
                     }
                     DPCommand::SetCycleType(v) => {
-                        if v == CycleType::TwoCycle {
-                            unimplemented!("cycle type: {:?}", v);
-                        }
+                        // if v == CycleType::TwoCycle {
+                        //     unimplemented!("cycle type: {:?}", v);
+                        // }
                         if self.cycle_type != v {
                             self.flush(backend);
                             self.cycle_type = v;
