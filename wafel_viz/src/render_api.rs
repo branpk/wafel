@@ -2,6 +2,8 @@ use std::{ptr, slice};
 
 use wafel_memory::{DllGameMemory, DllSlot, MemoryError};
 
+use crate::f3d_decode::ColorCombineComponent;
+
 use self::global_backend::{use_backend, using_global_backend};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -176,6 +178,30 @@ pub fn decode_shader_id(shader_id: u32) -> CCFeatures {
     cc_features.color_alpha_same = (shader_id & 0xfff) == ((shader_id >> 12) & 0xfff);
 
     cc_features
+}
+
+pub fn encode_shader_id(cc_features: CCFeatures) -> u32 {
+    let mut shader_id = 0;
+
+    for i in 0..4 {
+        shader_id |= cc_features.c[0][i].to_index() << (i * 3);
+        shader_id |= cc_features.c[1][i].to_index() << (12 + i * 3);
+    }
+
+    if cc_features.opt_alpha {
+        shader_id |= 1 << 24;
+    }
+    if cc_features.opt_fog {
+        shader_id |= 1 << 25;
+    }
+    if cc_features.opt_texture_edge {
+        shader_id |= 1 << 26;
+    }
+    if cc_features.opt_noise {
+        shader_id |= 1 << 27;
+    }
+
+    shader_id
 }
 
 #[repr(C)]

@@ -7,7 +7,9 @@ use ordered_float::NotNan;
 
 use crate::{
     f3d_decode::*,
-    render_api::{RenderBackend, ShaderId},
+    render_api::{
+        decode_shader_id, encode_shader_id, CCFeatures, RenderBackend, ShaderId, ShaderItem,
+    },
 };
 
 pub trait F3DSource {
@@ -52,6 +54,7 @@ struct State<Ptr> {
     render_mode: RenderMode,
     persp_normalize: u16,
 
+    combine_mode: CombineMode,
     env_color: Rgba32,
     prim_color: Rgba32,
     blend_color: Rgba32,
@@ -111,7 +114,8 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
 
     fn flush(&mut self, backend: &mut impl RenderBackend) {
         if self.vertex_buffer_num_tris > 0 {
-            backend.load_shader(ShaderId(0x00000A00)); // TODO
+            let shader_id = self.get_shader_id();
+            backend.load_shader(ShaderId(shader_id as usize));
             backend.draw_triangles(&self.vertex_buffer, self.vertex_buffer_num_tris);
             self.vertex_buffer.clear();
             self.vertex_buffer_num_tris = 0;
@@ -123,6 +127,42 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
         self.flush(backend);
         self.geometry_mode = mode;
         backend.set_depth_test(mode.contains(GeometryModes::ZBUFFER));
+    }
+
+    fn get_shader_id(&self) -> u32 {
+        let rm = &self.render_mode;
+        let cm = &self.combine_mode;
+
+        let mut cc_features = CCFeatures {
+            opt_alpha: rm.blend_cycle1.alpha2 != BlendAlpha2::Memory
+                || rm.flags.contains(RenderModeFlags::CVG_X_ALPHA),
+            opt_fog: rm.blend_cycle1.color1 == BlendColor::Fog,
+            opt_texture_edge: rm.flags.contains(RenderModeFlags::CVG_X_ALPHA),
+            opt_noise: self.alpha_compare == AlphaCompare::Dither,
+            ..Default::default()
+        };
+
+        for (i, mode) in [cm.color1, cm.alpha1].into_iter().enumerate() {
+            let mut num_inputs = 0;
+            for (j, cc) in mode.args.into_iter().enumerate() {
+                let item = match cc {
+                    ColorCombineComponent::Texel0 => ShaderItem::Texel0,
+                    ColorCombineComponent::Texel1 => ShaderItem::Texel1,
+                    ColorCombineComponent::Texel0Alpha => ShaderItem::Texel0A,
+                    ColorCombineComponent::Prim
+                    | ColorCombineComponent::Shade
+                    | ColorCombineComponent::Env
+                    | ColorCombineComponent::LodFraction => {
+                        num_inputs += 1;
+                        ShaderItem::from_index(num_inputs)
+                    }
+                    _ => ShaderItem::Zero,
+                };
+                cc_features.c[i][j] = item;
+            }
+        }
+
+        encode_shader_id(cc_features)
     }
 
     fn interpret<S: F3DSource<Ptr = Ptr>>(
@@ -146,6 +186,7 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         op,
                         push,
                     } => {
+                        self.flush(backend);
                         let fixed = read_matrix(source, matrix, 0);
                         let m = Matrixf::from_fixed(&fixed);
                         match mode {
@@ -182,6 +223,8 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         break;
                     }
                     SPCommand::OneTriangle { v0, v1, v2, flag } => {
+                        let cc_features = decode_shader_id(self.get_shader_id());
+
                         // TODO: Use flag for flat shading
                         let vertices = [self.vertex(v0), self.vertex(v1), self.vertex(v2)];
 
@@ -198,24 +241,41 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                             }
                             self.vertex_buffer.extend(&pos);
 
-                            let mut u = vtx.uv[0] as f32 * self.texture_scale[0][0];
-                            let mut v = vtx.uv[1] as f32 * self.texture_scale[0][1];
-                            u = (u - tile_size.uls as f32 * 8.0) / 32.0;
-                            v = (v - tile_size.ult as f32 * 8.0) / 32.0;
-                            if self.texture_filter != TextureFilter::Point {
-                                u += 0.5;
-                                v += 0.5;
+                            if cc_features.uses_textures() {
+                                let mut u = vtx.uv[0] as f32 * self.texture_scale[0][0];
+                                let mut v = vtx.uv[1] as f32 * self.texture_scale[0][1];
+                                u = (u - tile_size.uls as f32 * 8.0) / 32.0;
+                                v = (v - tile_size.ult as f32 * 8.0) / 32.0;
+                                if self.texture_filter != TextureFilter::Point {
+                                    u += 0.5;
+                                    v += 0.5;
+                                }
+                                u /= texture_width as f32;
+                                v /= texture_height as f32;
+                                self.vertex_buffer.extend(&[u, v]);
                             }
-                            u /= texture_width as f32;
-                            v /= texture_height as f32;
-                            self.vertex_buffer.extend(&[u, v]);
+
+                            if cc_features.opt_fog {
+                                self.vertex_buffer.extend(&[1.0, 1.0, 1.0, 1.0]);
+                            }
+
+                            for input_index in 0..cc_features.num_inputs {
+                                if cc_features.opt_alpha {
+                                    self.vertex_buffer.extend(&[1.0, 0.0, 0.0, 1.0]);
+                                } else {
+                                    self.vertex_buffer.extend(&[0.0, 1.0, 0.0]);
+                                }
+                            }
                         }
                         self.vertex_buffer_num_tris += 1;
                     }
-                    SPCommand::PopMatrix(mode) => match mode {
-                        MatrixMode::Proj => self.proj.pop(),
-                        MatrixMode::ModelView => self.model_view.pop(),
-                    },
+                    SPCommand::PopMatrix(mode) => {
+                        self.flush(backend);
+                        match mode {
+                            MatrixMode::Proj => self.proj.pop(),
+                            MatrixMode::ModelView => self.model_view.pop(),
+                        }
+                    }
                     // SPCommand::NumLights(_) => todo!(),
                     // SPCommand::Segment { seg, base } => todo!(),
                     // SPCommand::FogFactor { mul, offset } => todo!(),
@@ -289,6 +349,9 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         }
                     }
                     DPCommand::SetCycleType(v) => {
+                        if v == CycleType::TwoCycle {
+                            unimplemented!("cycle type: {:?}", v);
+                        }
                         if self.cycle_type != v {
                             self.flush(backend);
                             self.cycle_type = v;
@@ -332,7 +395,12 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                     DPCommand::SetTextureImage(image) => {
                         self.texture_image = Some(image);
                     }
-                    // DPCommand::SetCombineMode(_) => todo!(),
+                    DPCommand::SetCombineMode(mode) => {
+                        if self.combine_mode != mode {
+                            self.flush(backend);
+                            self.combine_mode = mode;
+                        }
+                    }
                     DPCommand::SetEnvColor(color) => {
                         self.env_color = color;
                     }
@@ -371,7 +439,6 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         // eprintln!("{:?}", render_tile_params);
                         // eprintln!("{:?}", image);
 
-                        // TODO: why?
                         let line_size_bytes = render_tile_params.line * 8;
                         let size_bytes = render_tile_params.size.num_bits() * (params.lrs + 1) / 8;
 

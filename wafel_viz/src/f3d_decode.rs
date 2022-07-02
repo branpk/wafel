@@ -3,7 +3,7 @@
 use std::fmt;
 
 use bitflags::bitflags;
-use num_enum::TryFromPrimitive;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ordered_float::NotNan;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -498,7 +498,7 @@ impl From<[u8; 4]> for ColorCombineMode {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum ColorCombineComponent {
     CombinedOrPrimLodFraction = 0,
