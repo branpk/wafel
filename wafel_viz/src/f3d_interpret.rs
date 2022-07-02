@@ -14,7 +14,7 @@ use crate::{
 };
 
 pub trait F3DSource {
-    type Ptr: fmt::Debug + Copy;
+    type Ptr: fmt::Debug + Copy + PartialEq;
     type DlIter: Iterator<Item = F3DCommand<Self::Ptr>>;
 
     fn root_dl(&self) -> Self::DlIter;
@@ -34,6 +34,9 @@ pub fn interpret_f3d_display_list(source: &impl F3DSource, backend: &mut impl Re
 #[derive(Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 struct State<Ptr> {
+    color_image: Option<Image<Ptr>>,
+    depth_image: Option<Ptr>,
+
     viewport: Viewport,
     scissor: (ScissorMode, Rectangle<NotNan<f32>>),
     model_view: MatrixState,
@@ -60,6 +63,8 @@ struct State<Ptr> {
     prim_color: Rgba32,
     blend_color: Rgba32,
     fog_color: Rgba32,
+
+    fill_color: FillColor,
 
     lights: [Light; 8],
     num_dir_lights: u32,
@@ -117,7 +122,7 @@ struct TextureMemory<Ptr> {
     texture_ids: HashMap<(ImageFormat, ComponentSize), u32>,
 }
 
-impl<Ptr: fmt::Debug + Copy> State<Ptr> {
+impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
     fn vertex(&self, index: u32) -> Vertex {
         *self
             .vertices
@@ -149,6 +154,53 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
         } else {
             backend.set_cull_mode(CullMode::None);
         }
+    }
+
+    fn set_viewport(&mut self, backend: &mut impl RenderBackend, viewport: Viewport) {
+        self.flush(backend);
+        self.viewport = viewport;
+
+        let width = 2.0 * viewport.scale[0] as f32 / 4.0;
+        let height = 2.0 * viewport.scale[1] as f32 / 4.0;
+        let x = (viewport.trans[0] as f32 / 4.0) - width / 2.0;
+        let y = 240.0 - ((viewport.trans[1] as f32 / 4.0) + height / 2.0);
+
+        backend.set_viewport(x as i32, y as i32, width as i32, height as i32);
+    }
+
+    fn set_scissor(
+        &mut self,
+        backend: &mut impl RenderBackend,
+        mode: ScissorMode,
+        rect: Rectangle<NotNan<f32>>,
+    ) {
+        assert!(rect.lrx > rect.ulx && rect.lry > rect.uly);
+        self.flush(backend);
+        self.scissor = (mode, rect);
+
+        let ulx = rect.ulx.into_inner();
+        let uly = rect.uly.into_inner();
+        let lrx = rect.lrx.into_inner();
+        let lry = rect.lry.into_inner();
+
+        backend.set_scissor(
+            ulx as i32,
+            (240.0 - lry) as i32,
+            (lrx - ulx) as i32,
+            (lry - uly) as i32,
+        );
+    }
+
+    fn set_render_mode(&mut self, backend: &mut impl RenderBackend, rm: RenderMode) {
+        self.flush(backend);
+        self.render_mode = rm;
+
+        backend.set_depth_mask(rm.flags.contains(RenderModeFlags::Z_UPDATE));
+        backend.set_zmode_decal(rm.z_mode == ZMode::Decal);
+        backend.set_use_alpha(
+            rm.blend_cycle1.alpha2 != BlendAlpha2::Memory
+                || rm.flags.contains(RenderModeFlags::CVG_X_ALPHA),
+        );
     }
 
     fn get_shader_id(&self) -> u32 {
@@ -295,15 +347,7 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                     SPCommand::Viewport(ptr) => {
                         let viewport = read_viewport(source, ptr, 0);
                         if self.viewport != viewport {
-                            self.flush(backend);
-                            self.viewport = viewport;
-
-                            let width = 2.0 * viewport.scale[0] as f32 / 4.0;
-                            let height = 2.0 * viewport.scale[1] as f32 / 4.0;
-                            let x = (viewport.trans[0] as f32 / 4.0) - width / 2.0;
-                            let y = 240.0 - ((viewport.trans[1] as f32 / 4.0) + height / 2.0);
-
-                            backend.set_viewport(x as i32, y as i32, width as i32, height as i32);
+                            self.set_viewport(backend, viewport);
                         }
                     }
                     SPCommand::Light { light, n } => {
@@ -328,7 +372,7 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         if self.geometry_mode.contains(GeometryModes::CULL_BACK)
                             && self.geometry_mode.contains(GeometryModes::CULL_FRONT)
                         {
-                            return;
+                            continue;
                         }
 
                         let cc_features = decode_shader_id(self.get_shader_id());
@@ -577,15 +621,7 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                     }
                     DPCommand::SetRenderMode(v) => {
                         if self.render_mode != v {
-                            self.flush(backend);
-                            self.render_mode = v;
-
-                            backend.set_depth_mask(v.flags.contains(RenderModeFlags::Z_UPDATE));
-                            backend.set_zmode_decal(v.z_mode == ZMode::Decal);
-                            backend.set_use_alpha(
-                                v.blend_cycle1.alpha2 != BlendAlpha2::Memory
-                                    || v.flags.contains(RenderModeFlags::CVG_X_ALPHA),
-                            );
+                            self.set_render_mode(backend, v);
                         }
                     }
                     DPCommand::PerspNormalize(v) => {
@@ -594,8 +630,14 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                             self.persp_normalize = v;
                         }
                     }
-                    // DPCommand::SetColorImage(_) => todo!(),
-                    // DPCommand::SetDepthImage(_) => todo!(),
+                    DPCommand::SetColorImage(image) => {
+                        self.flush(backend);
+                        self.color_image = Some(image);
+                    }
+                    DPCommand::SetDepthImage(image) => {
+                        self.flush(backend);
+                        self.depth_image = Some(image);
+                    }
                     DPCommand::SetTextureImage(image) => {
                         self.texture_image = Some(image);
                     }
@@ -617,8 +659,80 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                     DPCommand::SetFogColor(color) => {
                         self.fog_color = color;
                     }
-                    // DPCommand::SetFillColor(_) => todo!(),
-                    // DPCommand::FillRectangle(_) => todo!(),
+                    DPCommand::SetFillColor(fill_color) => {
+                        assert_eq!(
+                            fill_color[0], fill_color[1],
+                            "multiple fill colors not implemented"
+                        );
+                        self.fill_color = fill_color[0];
+                    }
+                    DPCommand::FillRectangle(mut rect) => {
+                        use ShaderItem::*;
+
+                        if let (Some(color), Some(depth)) = (self.color_image, self.depth_image) {
+                            if color.img == depth {
+                                continue;
+                            }
+                        }
+
+                        self.flush(backend);
+
+                        if matches!(self.cycle_type, CycleType::Fill | CycleType::Copy) {
+                            rect.lrx += 1;
+                            rect.lry += 1;
+                        }
+
+                        let cc_features = CCFeatures {
+                            c: [[Zero, Zero, Zero, Input1], [Zero, Zero, Zero, Input1]],
+                            opt_alpha: true,
+                            num_inputs: 1,
+                            ..Default::default()
+                        };
+                        let shader_id = encode_shader_id(cc_features);
+
+                        backend.load_shader(ShaderId(shader_id as usize));
+                        backend.set_depth_test(false);
+                        backend.set_depth_mask(false);
+                        backend.set_viewport(0, 0, 320, 240);
+                        backend.set_scissor(0, 0, 320, 240);
+                        backend.set_use_alpha(true);
+                        backend.set_cull_mode(CullMode::None);
+
+                        let fill_color = rgba_16_to_32(self.fill_color.0);
+
+                        let mut vertex_buffer: Vec<f32> = Vec::new();
+                        let mut add_vertex = |x, y| {
+                            vertex_buffer.extend(&[x, y, 0.0, 1.0]);
+                            vertex_buffer.extend(&[
+                                fill_color[0] as f32 / 255.0,
+                                fill_color[1] as f32 / 255.0,
+                                fill_color[2] as f32 / 255.0,
+                                fill_color[3] as f32 / 255.0,
+                            ]);
+                        };
+
+                        let x0 = 2.0 * (rect.ulx as f32 / 320.0) - 1.0;
+                        let x1 = 2.0 * (rect.lrx as f32 / 320.0) - 1.0;
+                        let y0 = 1.0 - 2.0 * (rect.uly as f32 / 240.0);
+                        let y1 = 1.0 - 2.0 * (rect.lry as f32 / 240.0);
+
+                        add_vertex(x0, y1);
+                        add_vertex(x1, y1);
+                        add_vertex(x0, y0);
+
+                        add_vertex(x1, y1);
+                        add_vertex(x0, y0);
+                        add_vertex(x1, y0);
+
+                        backend.draw_triangles(&vertex_buffer, 2);
+
+                        self.flush(backend);
+                        backend.load_shader(ShaderId(self.get_shader_id() as usize));
+                        self.set_geometry_mode(backend, self.geometry_mode);
+                        self.set_render_mode(backend, self.render_mode);
+                        self.set_viewport(backend, self.viewport);
+                        self.set_scissor(backend, self.scissor.0, self.scissor.1);
+                    }
                     DPCommand::SetTile(tile, params) => {
                         self.flush(backend);
                         self.tile_params[tile.0 as usize] = params;
@@ -649,17 +763,8 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                     // DPCommand::SetOtherMode(_) => todo!(),
                     // DPCommand::SetPrimDepth(_) => todo!(),
                     DPCommand::SetScissor(mode, rect) => {
-                        assert!(rect.lrx > rect.ulx && rect.lry > rect.uly);
-                        let new_scissor = (mode, rect);
-                        if self.scissor != new_scissor {
-                            self.flush(backend);
-                            self.scissor = new_scissor;
-                            backend.set_scissor(
-                                rect.ulx.into_inner() as i32,
-                                rect.uly.into_inner() as i32,
-                                (rect.lrx - rect.ulx).into_inner() as i32,
-                                (rect.lry - rect.uly).into_inner() as i32,
-                            );
+                        if self.scissor != (mode, rect) {
+                            self.set_scissor(backend, mode, rect);
                         }
                     }
                     // DPCommand::SetConvert(_) => todo!(),

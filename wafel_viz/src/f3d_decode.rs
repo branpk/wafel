@@ -479,6 +479,17 @@ pub struct CombineMode {
     pub alpha2: ColorCombineMode,
 }
 
+impl CombineMode {
+    pub fn one_cycle(color: ColorCombineMode, alpha: ColorCombineMode) -> Self {
+        Self {
+            color1: color,
+            alpha1: alpha,
+            color2: color,
+            alpha2: alpha,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct ColorCombineMode {
     /// [A, B, C, D]  ->  (A - B) * C + D
@@ -493,6 +504,19 @@ impl From<[u8; 4]> for ColorCombineMode {
                 ColorCombineComponent::from_u8(v[1]),
                 ColorCombineComponent::from_u8(v[2]),
                 ColorCombineComponent::from_u8(v[3]),
+            ],
+        }
+    }
+}
+
+impl From<ColorCombineComponent> for ColorCombineMode {
+    fn from(v: ColorCombineComponent) -> Self {
+        Self {
+            args: [
+                ColorCombineComponent::Zero,
+                ColorCombineComponent::Zero,
+                ColorCombineComponent::Zero,
+                v,
             ],
         }
     }
