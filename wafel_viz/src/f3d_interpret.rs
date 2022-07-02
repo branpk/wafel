@@ -63,6 +63,8 @@ struct State<Ptr> {
 
     lights: [Light; 8],
     num_dir_lights: u32,
+    fog_mul: i16,
+    fog_offset: i16,
 
     geometry_mode: GeometryModes,
 
@@ -144,6 +146,8 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
         } else if mode.contains(GeometryModes::CULL_FRONT) {
             // CULL_BOTH handled in software
             backend.set_cull_mode(CullMode::Front);
+        } else {
+            backend.set_cull_mode(CullMode::None);
         }
     }
 
@@ -365,10 +369,6 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                                 self.vertex_buffer.extend(&[u, v]);
                             }
 
-                            if cc_features.opt_fog {
-                                self.vertex_buffer.extend(&[0.0, 0.0, 0.0, 0.0]);
-                            }
-
                             let mut shade_rgb: [u8; 3];
                             if self.geometry_mode.contains(GeometryModes::LIGHTING) {
                                 // TODO: Cache light normals
@@ -404,6 +404,27 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                             }
                             let shade_a = vtx.cn[3];
 
+                            if cc_features.opt_fog {
+                                self.vertex_buffer.extend(&[
+                                    self.fog_color.r as f32 / 255.0,
+                                    self.fog_color.g as f32 / 255.0,
+                                    self.fog_color.b as f32 / 255.0,
+                                ]);
+
+                                let mut w = pos[3];
+                                if w.abs() < 0.001 {
+                                    w = 0.001;
+                                }
+                                let mut w_inv = 1.0 / w;
+                                if w_inv < 0.0 {
+                                    w_inv = 32767.0;
+                                }
+                                let fog_factor =
+                                    pos[2] * w_inv * self.fog_mul as f32 + self.fog_offset as f32;
+                                self.vertex_buffer
+                                    .push(fog_factor.clamp(0.0, 255.0) / 255.0);
+                            }
+
                             let lod_fraction = ((pos[3] - 3000.0) / 3000.0).clamp(0.0, 1.0);
                             let lod_fraction_u8 = (lod_fraction * 255.0) as u8;
 
@@ -427,7 +448,6 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
 
                                 if cc_features.opt_alpha {
                                     let a_comp = input_comps[1][input_index as usize];
-                                    // TODO: use_fog && color == &v_arr[i]->color implies a = 255
                                     let a = match a_comp {
                                         ColorCombineComponent::Prim => self.prim_color.a,
                                         ColorCombineComponent::Shade => shade_a,
@@ -454,7 +474,11 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         self.num_dir_lights = n;
                     }
                     // SPCommand::Segment { seg, base } => todo!(),
-                    // SPCommand::FogFactor { mul, offset } => todo!(),
+                    SPCommand::FogFactor { mul, offset } => {
+                        self.flush(backend);
+                        self.fog_mul = mul;
+                        self.fog_offset = offset;
+                    }
                     SPCommand::Texture { sc, tc, tile, .. } => {
                         self.flush(backend);
                         self.texture_scale[tile as usize] =
@@ -599,9 +623,9 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         self.flush(backend);
                         self.tile_params[tile.0 as usize] = params;
                     }
-                    DPCommand::LoadTile(tile, params) => {
-                        todo!()
-                    }
+                    // DPCommand::LoadTile(tile, params) => {
+                    //     todo!()
+                    // }
                     DPCommand::LoadBlock(tile, block) => {
                         self.flush(backend);
 

@@ -80,8 +80,8 @@ pub enum SPCommand<Ptr> {
         base: Ptr,
     },
     FogFactor {
-        mul: u32,
-        offset: u32,
+        mul: i16,
+        offset: i16,
     },
     Texture {
         sc: u32,
@@ -735,8 +735,8 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
                     base: w1p,
                 }),
                 8 => Rsp(FogFactor {
-                    mul: ((w1 >> 16) & 0xFFFF),
-                    offset: (w1 & 0xFFFF),
+                    mul: ((w1 >> 16) & 0xFFFF) as i16,
+                    offset: (w1 & 0xFFFF) as i16,
                 }),
                 _ => Unknown(raw_command),
             }
