@@ -10,7 +10,7 @@ use crate::{
     n64_render_data::{
         N64RenderData, RenderState, SamplerState, ScreenRectangle, TextureData, TextureState,
     },
-    render_api::{decode_shader_id, CCFeatures, ShaderItem},
+    render_api::{decode_shader_id, CCFeatures, CullMode, ShaderItem},
 };
 
 #[derive(Debug)]
@@ -355,7 +355,16 @@ impl N64Renderer {
                 entry_point: "vs_main",
                 buffers: &[vertex_buffer_layout],
             },
-            primitive: wgpu::PrimitiveState::default(),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: match state.cull_mode {
+                    CullMode::None => None,
+                    CullMode::Front => Some(wgpu::Face::Front),
+                    CullMode::Back => Some(wgpu::Face::Back),
+                },
+                ..Default::default()
+            },
             // primitive: wgpu::PrimitiveState {
             //     polygon_mode: wgpu::PolygonMode::Line,
             //     ..Default::default()

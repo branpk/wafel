@@ -32,11 +32,25 @@ pub trait RenderBackend {
     fn set_viewport(&mut self, x: i32, y: i32, width: i32, height: i32);
     fn set_scissor(&mut self, x: i32, y: i32, width: i32, height: i32);
     fn set_use_alpha(&mut self, use_alpha: bool);
+    fn set_cull_mode(&mut self, cull_mode: CullMode);
     fn draw_triangles(&mut self, buf_vbo: &[f32], buf_vbo_num_tris: usize);
     fn on_resize(&mut self);
     fn start_frame(&mut self);
     fn end_frame(&mut self);
     fn finish_render(&mut self);
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CullMode {
+    None,
+    Front,
+    Back,
+}
+
+impl Default for CullMode {
+    fn default() -> Self {
+        Self::None
+    }
 }
 
 pub fn process_display_list_with_backend(

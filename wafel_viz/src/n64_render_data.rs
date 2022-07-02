@@ -1,5 +1,7 @@
 use core::fmt;
 
+use crate::render_api::CullMode;
+
 /// Contains the set of vertex and render state data needed to render one in-game frame.
 ///
 /// This data does not contain display lists, but rather the processed display list output.
@@ -116,4 +118,5 @@ pub(crate) struct RenderState {
     pub(crate) depth_mask: bool,
     pub(crate) zmode_decal: bool,
     pub(crate) use_alpha: bool,
+    pub(crate) cull_mode: CullMode,
 }

@@ -8,7 +8,8 @@ use ordered_float::NotNan;
 use crate::{
     f3d_decode::*,
     render_api::{
-        decode_shader_id, encode_shader_id, CCFeatures, RenderBackend, ShaderId, ShaderItem,
+        decode_shader_id, encode_shader_id, CCFeatures, CullMode, RenderBackend, ShaderId,
+        ShaderItem,
     },
 };
 
@@ -136,7 +137,14 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
     fn set_geometry_mode(&mut self, backend: &mut impl RenderBackend, mode: GeometryModes) {
         self.flush(backend);
         self.geometry_mode = mode;
+
         backend.set_depth_test(mode.contains(GeometryModes::ZBUFFER));
+        if mode.contains(GeometryModes::CULL_BACK) {
+            backend.set_cull_mode(CullMode::Back);
+        } else if mode.contains(GeometryModes::CULL_FRONT) {
+            // CULL_BOTH handled in software
+            backend.set_cull_mode(CullMode::Front);
+        }
     }
 
     fn get_shader_id(&self) -> u32 {
@@ -312,7 +320,13 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         self.interpret(source, backend, child_dl, indent + 1);
                         break;
                     }
-                    SPCommand::OneTriangle { v0, v1, v2, flag } => {
+                    SPCommand::OneTriangle { v0, v1, v2, .. } => {
+                        if self.geometry_mode.contains(GeometryModes::CULL_BACK)
+                            && self.geometry_mode.contains(GeometryModes::CULL_FRONT)
+                        {
+                            return;
+                        }
+
                         let cc_features = decode_shader_id(self.get_shader_id());
                         let input_comps = self.get_vertex_input_components();
 
@@ -322,7 +336,6 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                             }
                         }
 
-                        // TODO: Use flag for flat shading
                         let vertices = [self.vertex(v0), self.vertex(v1), self.vertex(v2)];
 
                         let tile_size = &self.tile_size[0];
@@ -353,7 +366,7 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                             }
 
                             if cc_features.opt_fog {
-                                self.vertex_buffer.extend(&[1.0, 1.0, 1.0, 1.0]);
+                                self.vertex_buffer.extend(&[0.0, 0.0, 0.0, 0.0]);
                             }
 
                             let mut shade_rgb: [u8; 3];

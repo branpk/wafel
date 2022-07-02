@@ -6,7 +6,8 @@ use crate::{
         TextureState,
     },
     render_api::{
-        decode_shader_id, process_display_list_with_backend, RenderBackend, ShaderId, ShaderInfo,
+        decode_shader_id, process_display_list_with_backend, CullMode, RenderBackend, ShaderId,
+        ShaderInfo,
     },
 };
 
@@ -141,6 +142,10 @@ impl RenderBackend for N64RenderBackend {
 
     fn set_use_alpha(&mut self, use_alpha: bool) {
         self.state.use_alpha = use_alpha;
+    }
+
+    fn set_cull_mode(&mut self, cull_mode: CullMode) {
+        self.state.cull_mode = cull_mode;
     }
 
     fn draw_triangles(&mut self, buf_vbo: &[f32], buf_vbo_num_tris: usize) {
