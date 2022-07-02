@@ -574,7 +574,7 @@ impl N64Renderer {
             if width == 0 || height == 0 {
                 continue;
             }
-            let viewport_height = height;
+            let y = output_size.1 as i32 - y - height;
             rp.set_viewport(x as f32, y as f32, width as f32, height as f32, 0.0, 1.0);
 
             let ScreenRectangle {
@@ -583,7 +583,7 @@ impl N64Renderer {
                 width,
                 height,
             } = command.scissor;
-            let y = viewport_height - y - height;
+            let y = output_size.1 as i32 - y - height;
             let x0 = x.clamp(0, output_size.0 as i32);
             let y0 = y.clamp(0, output_size.1 as i32);
             let x1 = (x + width).clamp(0, output_size.0 as i32);

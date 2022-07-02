@@ -4,7 +4,6 @@ use std::fmt;
 
 use bitflags::bitflags;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use ordered_float::NotNan;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RawF3DCommand<Ptr> {
@@ -166,7 +165,7 @@ pub enum DPCommand<Ptr> {
     LoadTLUTCmd(TileIndex, u32),
     SetOtherMode(Unimplemented),
     SetPrimDepth(PrimDepth),
-    SetScissor(ScissorMode, Rectangle<NotNan<f32>>),
+    SetScissor(ScissorMode, Rectangle<u16>),
     SetConvert(Unimplemented),
     SetKeyR(Unimplemented),
     SetKeyGB(Unimplemented),
@@ -175,7 +174,7 @@ pub enum DPCommand<Ptr> {
     PipeSync,
     LoadSync,
     TextureRectangleFlip(Unimplemented),
-    TextureRectangle(Unimplemented),
+    TextureRectangle(TextureRectangle),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
@@ -669,8 +668,28 @@ impl Default for ScissorMode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TextureRectangle {
+    pub rect: Rectangle<u32>,
+    pub tile: TileIndex,
+    pub s: u16,
+    pub t: u16,
+    pub dsdx: u16,
+    pub dtdy: u16,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DecodeResult<Ptr> {
     Complete(F3DCommand<Ptr>),
+    TextureRectangle1 {
+        rect: Rectangle<u32>,
+        tile: TileIndex,
+    },
+    TextureRectangle2 {
+        rect: Rectangle<u32>,
+        tile: TileIndex,
+        s: u16,
+        t: u16,
+    },
 }
 
 impl<Ptr> DecodeResult<Ptr> {
@@ -688,8 +707,31 @@ impl<Ptr> DecodeResult<Ptr> {
 
     #[track_caller]
     pub fn next(self, cmd_cont: RawF3DCommand<Ptr>) -> Self {
+        let w1 = cmd_cont.w1;
+        let cmd = cmd_cont.w0 >> 24;
+
+        if ![0xB3, 0xB2, 0xB1].contains(&cmd) {
+            return Self::Complete(F3DCommand::Unknown(cmd_cont));
+        }
+
         match self {
             Self::Complete(_) => panic!("next() called on complete result"),
+            Self::TextureRectangle1 { rect, tile } => Self::TextureRectangle2 {
+                rect,
+                tile,
+                s: (w1 >> 16) as u16,
+                t: w1 as u16,
+            },
+            Self::TextureRectangle2 { rect, tile, s, t } => Self::Complete(F3DCommand::Rdp(
+                DPCommand::TextureRectangle(TextureRectangle {
+                    rect,
+                    tile,
+                    s,
+                    t,
+                    dsdx: (w1 >> 16) as u16,
+                    dtdy: w1 as u16,
+                }),
+            )),
         }
     }
 }
@@ -819,10 +861,8 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
         0xB7 => Rsp(SetGeometryMode(GeometryModes::from_bits_truncate(w1))),
         0xB6 => Rsp(ClearGeometryMode(GeometryModes::from_bits_truncate(w1))),
         0xB4 => Rdp(PerspNormalize(w1 as u16)),
-        // RDPHALF_2, not expected here
-        0xB2 => Unknown(raw_command),
-        // RDPHALF_CONT, not expected here
-        0xB1 => Unknown(raw_command),
+        // RDPHALF_X, not expected here
+        0xB3 | 0xB2 | 0xB1 => Unknown(raw_command),
 
         // RDP commands
         0xFF => Rdp(SetColorImage(Image {
@@ -1021,10 +1061,10 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
         0xED => Rdp(SetScissor(
             (((w1 >> 24) & 0xFF) as u8).try_into().unwrap(),
             Rectangle {
-                ulx: ((((w0 >> 12) & 0xFFF) / 4) as f32).try_into().unwrap(),
-                uly: (((w0 & 0xFFF) / 4) as f32).try_into().unwrap(),
-                lrx: ((((w1 >> 12) & 0xFFF) / 4) as f32).try_into().unwrap(),
-                lry: (((w1 & 0xFFF) / 4) as f32).try_into().unwrap(),
+                ulx: ((w0 >> 12) & 0xFFF) as u16,
+                uly: (w0 & 0xFFF) as u16,
+                lrx: ((w1 >> 12) & 0xFFF) as u16,
+                lry: (w1 & 0xFFF) as u16,
             },
         )),
         0xEC => Rdp(SetConvert(Unimplemented { w0, w1 })),
@@ -1035,30 +1075,17 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
         0xE7 => Rdp(PipeSync),
         0xE6 => Rdp(LoadSync),
         0xE5 => Rdp(TextureRectangleFlip(Unimplemented { w0, w1 })),
-        0xE4 => Rdp(TextureRectangle(Unimplemented { w0, w1 })),
-        //   0xE4 => {
-        // 	   let    ulx = ((w1 >> 12) & 0xFFF) / (1 << 2);
-        // 	   let    uly = ((w1 >> 0) & 0xFFF) / (1 << 2);
-        // 	   let    lrx = ((w0 >> 12) & 0xFFF) / (1 << 2);
-        // 	   let    lry = ((w0 >> 0) & 0xFFF) / (1 << 2);
-        // 	   let    tile = (w1 >> 24) & 0x7;
-        //
-        // 	   let    dl_cmd = get_next_cmd();
-        // 	   let    w0 = dl_cmd >> 32;
-        // 	   let    w1 = dl_cmd & <u32>0xFFFFFFFF;
-        //     # This is supposed to be 0xB4 (??);
-        // 	   let    s = ((w1 >> 16) & 0xFFFF) / (1 << 5);
-        // 	   let    t = ((w1 >> 0) & 0xFFFF) / (1 << 5);
-        //
-        // 	   let    dl_cmd = get_next_cmd();
-        // 	   let    w0 = dl_cmd >> 32;
-        // 	   let    w1 = dl_cmd & <u32>0xFFFFFFFF;
-        //     # This is supposed to be 0xB3 (??);
-        // 	   let    dsdx = ((w1 >> 16) & 0xFFFF) / (1 << 10);
-        // 	   let    dtdy = ((w1 >> 0) & 0xFFFF) / (1 << 10);
-        //
-        //     Rsp(TextureRectangle {  ulx, uly, lrx, lry, tile, s, t, dsdx, dtdy })
-        //  }
+        0xE4 => {
+            return DecodeResult::TextureRectangle1 {
+                rect: Rectangle {
+                    ulx: (w1 >> 12) & 0xFFF,
+                    uly: w1 & 0xFFF,
+                    lrx: (w0 >> 12) & 0xFFF,
+                    lry: w0 & 0xFFF,
+                },
+                tile: TileIndex(((w1 >> 24) & 0x7) as u8),
+            };
+        }
         _ => Unknown(raw_command),
     })
 }

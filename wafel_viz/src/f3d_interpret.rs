@@ -3,7 +3,6 @@ use std::{collections::HashMap, mem, ops};
 
 use bytemuck::cast_slice_mut;
 use derivative::Derivative;
-use ordered_float::NotNan;
 
 use crate::{
     f3d_decode::*,
@@ -38,7 +37,7 @@ struct State<Ptr> {
     depth_image: Option<Ptr>,
 
     viewport: Viewport,
-    scissor: (ScissorMode, Rectangle<NotNan<f32>>),
+    scissor: (ScissorMode, Rectangle<u16>),
     model_view: MatrixState,
     proj: MatrixState,
 
@@ -172,16 +171,16 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         &mut self,
         backend: &mut impl RenderBackend,
         mode: ScissorMode,
-        rect: Rectangle<NotNan<f32>>,
+        rect: Rectangle<u16>,
     ) {
         assert!(rect.lrx > rect.ulx && rect.lry > rect.uly);
         self.flush(backend);
         self.scissor = (mode, rect);
 
-        let ulx = rect.ulx.into_inner();
-        let uly = rect.uly.into_inner();
-        let lrx = rect.lrx.into_inner();
-        let lry = rect.lry.into_inner();
+        let ulx = rect.ulx as f32 / 4.0;
+        let uly = rect.uly as f32 / 4.0;
+        let lrx = rect.lrx as f32 / 4.0;
+        let lry = rect.lry as f32 / 4.0;
 
         backend.set_scissor(
             ulx as i32,
@@ -303,16 +302,21 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         let texture_id = backend.new_texture();
         backend.select_texture(tile.0.into(), texture_id);
         backend.upload_texture(&rgba32.data, rgba32.width as i32, rgba32.height as i32);
+        tmem.texture_ids.insert(fmt, texture_id);
 
+        self.set_sampler_parameters(backend, tile);
+
+        texture_id
+    }
+
+    fn set_sampler_parameters(&self, backend: &mut impl RenderBackend, tile: TileIndex) {
+        let tile_params = &self.tile_params[tile.0 as usize];
         backend.set_sampler_parameters(
             tile.0.into(),
             self.texture_filter != TextureFilter::Point,
             u8::from(tile_params.cms).into(),
             u8::from(tile_params.cmt).into(),
         );
-
-        tmem.texture_ids.insert(fmt, texture_id);
-        texture_id
     }
 
     fn interpret<S: F3DSource<Ptr = Ptr>>(
@@ -535,7 +539,8 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                     SPCommand::ClearGeometryMode(mode) => {
                         self.set_geometry_mode(backend, self.geometry_mode & !mode);
                     }
-                    _ => {} //unimplemented!("{:?}", cmd),
+                    // _ => unimplemented!("{:?}", cmd),
+                    _ => {}
                 },
                 F3DCommand::Rdp(cmd) => match cmd {
                     DPCommand::SetAlphaDither(v) => {
@@ -593,9 +598,6 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         }
                     }
                     DPCommand::SetCycleType(v) => {
-                        // if v == CycleType::TwoCycle {
-                        //     unimplemented!("cycle type: {:?}", v);
-                        // }
                         if self.cycle_type != v {
                             self.flush(backend);
                             self.cycle_type = v;
@@ -694,7 +696,6 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         backend.set_depth_test(false);
                         backend.set_depth_mask(false);
                         backend.set_viewport(0, 0, 320, 240);
-                        backend.set_scissor(0, 0, 320, 240);
                         backend.set_use_alpha(true);
                         backend.set_cull_mode(CullMode::None);
 
@@ -727,11 +728,9 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         backend.draw_triangles(&vertex_buffer, 2);
 
                         self.flush(backend);
-                        backend.load_shader(ShaderId(self.get_shader_id() as usize));
                         self.set_geometry_mode(backend, self.geometry_mode);
                         self.set_render_mode(backend, self.render_mode);
                         self.set_viewport(backend, self.viewport);
-                        self.set_scissor(backend, self.scissor.0, self.scissor.1);
                     }
                     DPCommand::SetTile(tile, params) => {
                         self.flush(backend);
@@ -775,8 +774,100 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                     DPCommand::PipeSync => {}
                     DPCommand::LoadSync => {}
                     // DPCommand::TextureRectangleFlip(_) => todo!(),
-                    // DPCommand::TextureRectangle(_) => todo!(),
-                    _ => {} //unimplemented!("{:?}", cmd),
+                    DPCommand::TextureRectangle(tex_rect) => {
+                        use ShaderItem::*;
+
+                        if let (Some(color), Some(depth)) = (self.color_image, self.depth_image) {
+                            if color.img == depth {
+                                continue;
+                            }
+                        }
+
+                        self.flush(backend);
+
+                        let ulx = tex_rect.rect.ulx as f32 / 4.0;
+                        let uly = tex_rect.rect.uly as f32 / 4.0;
+                        let mut lrx = tex_rect.rect.lrx as f32 / 4.0;
+                        let mut lry = tex_rect.rect.lry as f32 / 4.0;
+
+                        if matches!(self.cycle_type, CycleType::Fill | CycleType::Copy) {
+                            lrx += 1.0;
+                            lry += 1.0;
+                        }
+
+                        let cc_features = CCFeatures {
+                            c: [[Zero, Zero, Zero, Texel0], [Zero, Zero, Zero, Texel0]],
+                            opt_alpha: true,
+                            ..Default::default()
+                        };
+                        let shader_id = encode_shader_id(cc_features);
+
+                        backend.load_shader(ShaderId(shader_id as usize));
+                        backend.set_depth_test(false);
+                        backend.set_depth_mask(false);
+                        backend.set_viewport(0, 0, 320, 240);
+                        backend.set_use_alpha(true);
+                        backend.set_cull_mode(CullMode::None);
+
+                        let tile = tex_rect.tile;
+                        self.load_texture(source, backend, tile);
+
+                        let tile_params = &self.tile_params[tile.0 as usize];
+                        backend.set_sampler_parameters(
+                            tile.0 as i32,
+                            self.cycle_type != CycleType::Copy
+                                && self.texture_filter != TextureFilter::Point,
+                            u8::from(tile_params.cms).into(),
+                            u8::from(tile_params.cmt).into(),
+                        );
+
+                        let mut vertex_buffer: Vec<f32> = Vec::new();
+                        let mut add_vertex = |x, y, u, v| {
+                            vertex_buffer.extend(&[x, y, 0.0, 1.0]);
+                            vertex_buffer.extend(&[u, v]);
+                        };
+
+                        let x0 = 2.0 * (ulx / 320.0) - 1.0;
+                        let x1 = 2.0 * (lrx / 320.0) - 1.0;
+                        let y0 = 1.0 - 2.0 * (uly / 240.0);
+                        let y1 = 1.0 - 2.0 * (lry / 240.0);
+
+                        let tile_size = &self.tile_size[tex_rect.tile.0 as usize];
+                        let texture_width = (tile_size.lrs - tile_size.uls + 4) / 4;
+                        let texture_height = (tile_size.lrt - tile_size.ult + 4) / 4;
+
+                        let s = tex_rect.s as f32 / 32.0;
+                        let t = tex_rect.t as f32 / 32.0;
+                        let mut dsdx = tex_rect.dsdx as f32 / 1024.0;
+                        let dtdy = tex_rect.dtdy as f32 / 1024.0;
+
+                        if self.cycle_type == CycleType::Copy {
+                            dsdx /= 4.0;
+                        }
+
+                        let u0 = s as f32 / 32.0 / texture_width as f32;
+                        let v0 = t as f32 / 32.0 / texture_height as f32;
+                        let u1 = u0 + dsdx * (lrx - ulx) / texture_width as f32;
+                        let v1 = v0 + dtdy * (lry - uly) / texture_height as f32;
+
+                        add_vertex(x0, y1, u0, v1);
+                        add_vertex(x1, y1, u1, v1);
+                        add_vertex(x0, y0, u0, v0);
+
+                        add_vertex(x1, y1, u1, v1);
+                        add_vertex(x0, y0, u0, v0);
+                        add_vertex(x1, y0, u1, v0);
+
+                        backend.draw_triangles(&vertex_buffer, 2);
+
+                        self.flush(backend);
+                        self.set_sampler_parameters(backend, tile);
+                        self.set_geometry_mode(backend, self.geometry_mode);
+                        self.set_render_mode(backend, self.render_mode);
+                        self.set_viewport(backend, self.viewport);
+                    }
+                    // _ => unimplemented!("{:?}", cmd),
+                    _ => {}
                 },
                 F3DCommand::Unknown(_) => {
                     // TODO

@@ -164,7 +164,7 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
 
     // assert!(data0.compare(&data1));
     env_logger::init();
-    futures::executor::block_on(run(3468, None, true)).unwrap();
+    futures::executor::block_on(run(0, None, false)).unwrap();
     return Ok(());
 
     //     let w_type = IntType::u_ptr_native();
@@ -401,7 +401,10 @@ async fn run(
                                 color_attachments: &[wgpu::RenderPassColorAttachment {
                                     view: &output_view,
                                     resolve_target: None,
-                                    ops: wgpu::Operations::default(),
+                                    ops: wgpu::Operations {
+                                        load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                                        store: true,
+                                    },
                                 }],
                                 depth_stencil_attachment: Some(
                                     wgpu::RenderPassDepthStencilAttachment {
