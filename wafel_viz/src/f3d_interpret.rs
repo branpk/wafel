@@ -237,9 +237,15 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
         // dbg!((rgba32.width, rgba32.height));
 
         let texture_id = backend.new_texture();
-        backend.select_texture(0, texture_id);
+        backend.select_texture(tile.0 as i32, texture_id);
         backend.upload_texture(&rgba32.data, rgba32.width as i32, rgba32.height as i32);
-        backend.set_sampler_parameters(0, true, 0, 0);
+
+        backend.set_sampler_parameters(
+            tile.0.into(),
+            self.texture_filter != TextureFilter::Point,
+            u8::from(tile_params.cms).into(),
+            u8::from(tile_params.cmt).into(),
+        );
 
         tmem.texture_ids.insert(fmt, texture_id);
         texture_id

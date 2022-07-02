@@ -591,6 +591,19 @@ impl From<u8> for WrapMode {
     }
 }
 
+impl From<WrapMode> for u8 {
+    fn from(m: WrapMode) -> Self {
+        let mut v = 0;
+        if m.mirror {
+            v |= 0x1;
+        }
+        if m.clamp {
+            v |= 0x2;
+        }
+        v
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TextureBlock {
     pub uls: u32,
