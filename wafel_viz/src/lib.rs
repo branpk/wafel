@@ -164,7 +164,7 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
 
     // assert!(data0.compare(&data1));
     env_logger::init();
-    futures::executor::block_on(run(0, None, false)).unwrap();
+    futures::executor::block_on(run(53145, None, true)).unwrap();
     return Ok(());
 
     //     let w_type = IntType::u_ptr_native();

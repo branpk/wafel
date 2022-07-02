@@ -394,6 +394,20 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         let texture_width = (tile_size.lrs - tile_size.uls + 4) / 4;
                         let texture_height = (tile_size.lrt - tile_size.ult + 4) / 4;
 
+                        let mut lookat_x_coeffs = [0.0; 4];
+                        let mut lookat_y_coeffs = [0.0; 4];
+                        if self.geometry_mode.contains(GeometryModes::TEXTURE_GEN) {
+                            let lookat_x = [1.0, 0.0, 0.0, 0.0];
+                            lookat_x_coeffs = &self.model_view.cur.transpose() * lookat_x;
+                            lookat_x_coeffs[3] = 0.0;
+                            lookat_x_coeffs = normalize(lookat_x_coeffs);
+
+                            let lookat_y = [0.0, 1.0, 0.0, 0.0];
+                            lookat_y_coeffs = &self.model_view.cur.transpose() * lookat_y;
+                            lookat_y_coeffs[3] = 0.0;
+                            lookat_y_coeffs = normalize(lookat_y_coeffs);
+                        }
+
                         for vtx in vertices {
                             let model_pos =
                                 [vtx.pos[0] as f32, vtx.pos[1] as f32, vtx.pos[2] as f32, 1.0];
@@ -404,8 +418,23 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             self.vertex_buffer.extend(&pos);
 
                             if cc_features.uses_textures() {
-                                let mut u = vtx.uv[0] as f32 * self.texture_scale[0][0];
-                                let mut v = vtx.uv[1] as f32 * self.texture_scale[0][1];
+                                let mut u;
+                                let mut v;
+                                if self.geometry_mode.contains(GeometryModes::TEXTURE_GEN) {
+                                    let mut dotx = 0.0;
+                                    let mut doty = 0.0;
+                                    for i in 0..3 {
+                                        dotx += vtx.cn[i] as i8 as f32 * lookat_x_coeffs[i];
+                                        doty += vtx.cn[i] as i8 as f32 * lookat_y_coeffs[i];
+                                    }
+                                    u = (dotx / 127.0 + 1.0) / 4.0 * 0x10000 as f32;
+                                    v = (doty / 127.0 + 1.0) / 4.0 * 0x10000 as f32;
+                                } else {
+                                    u = vtx.uv[0] as f32;
+                                    v = vtx.uv[1] as f32;
+                                }
+                                u *= self.texture_scale[0][0];
+                                v *= self.texture_scale[0][1];
                                 u = (u - tile_size.uls as f32 * 8.0) / 32.0;
                                 v = (v - tile_size.ult as f32 * 8.0) / 32.0;
                                 if self.texture_filter != TextureFilter::Point {
