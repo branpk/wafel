@@ -53,35 +53,6 @@ impl<'a> DllF3DSource<'a> {
             addr,
         })
     }
-
-    fn read_i32(&self, addr: Address) -> i32 {
-        self.view().read_int(addr, IntType::S32).unwrap_or_default() as i32
-    }
-
-    fn read_i16(&self, addr: Address) -> i16 {
-        self.view().read_int(addr, IntType::S16).unwrap_or_default() as i16
-    }
-
-    fn read_i16_3(&self, addr: Address) -> [i16; 3] {
-        [
-            self.read_i16(addr),
-            self.read_i16(addr + 2),
-            self.read_i16(addr + 4),
-        ]
-    }
-
-    fn read_i16_4(&self, addr: Address) -> [i16; 4] {
-        [
-            self.read_i16(addr),
-            self.read_i16(addr + 2),
-            self.read_i16(addr + 4),
-            self.read_i16(addr + 6),
-        ]
-    }
-
-    fn read_u8(&self, addr: Address) -> u8 {
-        self.view().read_int(addr, IntType::U8).unwrap_or_default() as u8
-    }
 }
 
 impl<'a> F3DSource for DllF3DSource<'a> {
@@ -253,7 +224,8 @@ async fn run(
     use_rust_f3d: bool,
 ) -> Result<(), Box<dyn Error>> {
     let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
-    let (_, inputs) = load_m64("../sm64-bot/bad_bot.m64");
+    // let (_, inputs) = load_m64("../sm64-bot/bad_bot.m64");
+    let (_, inputs) = load_m64("test_files/120_u.m64");
 
     while game.frame() < frame0 {
         if let Some(&input) = inputs.get(game.frame() as usize) {

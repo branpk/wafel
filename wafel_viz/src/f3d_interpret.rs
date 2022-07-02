@@ -214,7 +214,7 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
             .expect("invalid tmem offset");
 
         let line_size_bytes = tile_params.line * 8;
-        let size_bytes = tile_params.size.num_bits() * (tmem.block.lrs + 1) / 8;
+        let size_bytes = tmem.image.size.num_bits() * (tmem.block.lrs + 1) / 8;
 
         let fmt = (tile_params.fmt, tile_params.size);
         if let Some(&texture_id) = tmem.texture_ids.get(&fmt) {
@@ -545,6 +545,10 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
 
                             backend.set_depth_mask(v.flags.contains(RenderModeFlags::Z_UPDATE));
                             backend.set_zmode_decal(v.z_mode == ZMode::Decal);
+                            backend.set_use_alpha(
+                                v.blend_cycle1.alpha2 != BlendAlpha2::Memory
+                                    || v.flags.contains(RenderModeFlags::CVG_X_ALPHA),
+                            );
                         }
                     }
                     DPCommand::PerspNormalize(v) => {
@@ -582,7 +586,9 @@ impl<Ptr: fmt::Debug + Copy> State<Ptr> {
                         self.flush(backend);
                         self.tile_params[tile.0 as usize] = params;
                     }
-                    // DPCommand::LoadTile(_, _) => todo!(),
+                    DPCommand::LoadTile(tile, params) => {
+                        todo!()
+                    }
                     DPCommand::LoadBlock(tile, block) => {
                         self.flush(backend);
 
@@ -896,6 +902,8 @@ fn read_ia8<S: F3DSource>(
     size_bytes: u32,
     line_size_bytes: u32,
 ) -> TextureRgba32 {
+    // eprintln!("{} {}", size_bytes, line_size_bytes);
+
     let mut ia8_data: Vec<u8> = vec![0; size_bytes as usize];
     source.read_u8(&mut ia8_data, ptr, 0);
 
@@ -908,11 +916,18 @@ fn read_ia8<S: F3DSource>(
         rgba32_data.extend(&[intensity, intensity, intensity, alpha]);
     }
 
-    TextureRgba32::new(
-        line_size_bytes / 2,
-        size_bytes / line_size_bytes,
-        rgba32_data,
-    )
+    // use std::io::Write;
+    // let f = std::fs::File::create("wafel_viz/gen_shaders/output.txt").unwrap();
+    // let mut w = std::io::BufWriter::new(f);
+    // for i in 0..(size_bytes / line_size_bytes) {
+    //     for j in 0..line_size_bytes {
+    //         let c = rgba32_data[(4 * (i * line_size_bytes + j) + 3) as usize];
+    //         write!(w, "{:#02} ", c).unwrap();
+    //     }
+    //     writeln!(w).unwrap();
+    // }
+
+    TextureRgba32::new(line_size_bytes, size_bytes / line_size_bytes, rgba32_data)
 }
 
 fn read_ia4<S: F3DSource>(
@@ -924,9 +939,9 @@ fn read_ia4<S: F3DSource>(
     let mut ia4_data: Vec<u8> = vec![0; size_bytes as usize];
     source.read_u8(&mut ia4_data, ptr, 0);
 
-    let mut rgba32_data: Vec<u8> = Vec::with_capacity(4 * size_bytes as usize);
+    let mut rgba32_data: Vec<u8> = Vec::with_capacity(8 * size_bytes as usize);
 
-    for i in 0..size_bytes {
+    for i in 0..2 * size_bytes {
         let v = (ia4_data[(i / 2) as usize] >> ((1 - i % 2) * 4)) & 0xF;
         let intensity = (v >> 1) * 0x24;
         let alpha = v & 0x1;
@@ -934,7 +949,7 @@ fn read_ia4<S: F3DSource>(
     }
 
     TextureRgba32::new(
-        line_size_bytes / 2,
+        line_size_bytes * 2,
         size_bytes / line_size_bytes,
         rgba32_data,
     )
