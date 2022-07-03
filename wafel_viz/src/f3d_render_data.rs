@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct N64RenderData {
+pub struct F3DRenderData {
     pub pipelines: HashMap<PipelineId, PipelineInfo>,
     pub textures: HashMap<TextureIndex, TextureState>,
     pub commands: Vec<DrawCommand<Vec<f32>>>,

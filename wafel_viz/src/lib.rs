@@ -17,7 +17,7 @@ use std::{
 use custom_renderer::{CustomRenderer, Scene};
 use f3d_decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand};
 use f3d_interpret::{interpret_f3d_display_list, F3DSource};
-use n64_render_backend::N64RenderBackend;
+use f3d_render_backend::F3DRenderBackend;
 use wafel_api::{load_m64, Address, Game, IntType, SaveState};
 use wafel_memory::{DllSlotMemoryView, GameMemory, MemoryRead};
 use winit::{
@@ -26,19 +26,19 @@ use winit::{
     window::WindowBuilder,
 };
 
-pub use n64_render_data::*;
-pub use n64_renderer::*;
+pub use f3d_render_data::*;
+pub use f3d_renderer::*;
 
 pub mod custom_renderer;
 pub mod f3d_decode;
 mod f3d_interpret;
-mod n64_render_backend;
-mod n64_render_data;
-mod n64_renderer;
+mod f3d_render_backend;
+mod f3d_render_data;
+mod f3d_renderer;
 mod render_api;
 
-pub fn prepare_render_data(game: &Game, screen_size: (u32, u32)) -> N64RenderData {
-    let mut backend = N64RenderBackend::default();
+pub fn prepare_render_data(game: &Game, screen_size: (u32, u32)) -> F3DRenderData {
+    let mut backend = F3DRenderBackend::default();
     let f3d_source = DllF3DSource { game };
     interpret_f3d_display_list(&f3d_source, &mut backend, screen_size);
     backend.finish()
@@ -225,7 +225,7 @@ pub fn test(frame0: u32) -> Result<(), Box<dyn Error>> {
     futures::executor::block_on(run(frame0, None))
 }
 
-async fn run(frame0: u32, arg_data: Option<N64RenderData>) -> Result<(), Box<dyn Error>> {
+async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn Error>> {
     let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
     // let (_, inputs) = load_m64("../sm64-bot/bad_bot.m64");
     let (_, inputs) = load_m64("test_files/120_u.m64");
@@ -295,7 +295,7 @@ async fn run(frame0: u32, arg_data: Option<N64RenderData>) -> Result<(), Box<dyn
     };
     surface.configure(&device, &config);
 
-    let mut renderer = N64Renderer::new(&device);
+    let mut renderer = F3DRenderer::new(&device);
 
     window.set_visible(true);
     let mut first_render = false;
@@ -404,7 +404,7 @@ async fn run(frame0: u32, arg_data: Option<N64RenderData>) -> Result<(), Box<dyn
                         }
 
                         let render_data = arg_data.clone().unwrap_or_else(|| {
-                            let mut backend = N64RenderBackend::default();
+                            let mut backend = F3DRenderBackend::default();
                             let f3d_source = DllF3DSource { game: &game };
                             interpret_f3d_display_list(
                                 &f3d_source,

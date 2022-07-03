@@ -6,10 +6,10 @@ use std::{
 use bytemuck::cast_slice;
 use wgpu::util::DeviceExt;
 
-use crate::n64_render_data::*;
+use crate::f3d_render_data::*;
 
 #[derive(Debug)]
-pub struct N64Renderer {
+pub struct F3DRenderer {
     texture_bind_group_layout: wgpu::BindGroupLayout,
     texture_bind_groups: HashMap<TextureIndex, wgpu::BindGroup>,
     pipelines: HashMap<PipelineId, wgpu::RenderPipeline>,
@@ -80,7 +80,7 @@ fn arg_expr(arg: ColorArg) -> String {
     }
 }
 
-impl N64Renderer {
+impl F3DRenderer {
     pub fn new(device: &wgpu::Device) -> Self {
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -454,7 +454,7 @@ impl N64Renderer {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         output_format: wgpu::TextureFormat,
-        data: &N64RenderData,
+        data: &F3DRenderData,
     ) {
         for (&pipeline_id, pipeline_info) in &data.pipelines {
             self.prepare_pipeline(device, output_format, pipeline_id, pipeline_info);

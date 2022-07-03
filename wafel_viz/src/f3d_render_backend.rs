@@ -1,16 +1,16 @@
 use crate::{
-    n64_render_data::*,
+    f3d_render_data::*,
     render_api::{decode_shader_id, RenderBackend, ShaderId, ShaderInfo, ShaderItem},
 };
 
 #[derive(Debug, Default)]
-pub struct N64RenderBackend {
+pub struct F3DRenderBackend {
     viewport: ScreenRectangle,
     scissor: ScreenRectangle,
     state: RenderState,
     tile: usize,
     texture_index: [Option<TextureIndex>; 2],
-    data: N64RenderData,
+    data: F3DRenderData,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -23,13 +23,13 @@ struct RenderState {
     cull_mode: CullMode,
 }
 
-impl N64RenderBackend {
-    pub fn finish(self) -> N64RenderData {
+impl F3DRenderBackend {
+    pub fn finish(self) -> F3DRenderData {
         self.data
     }
 }
 
-impl RenderBackend for N64RenderBackend {
+impl RenderBackend for F3DRenderBackend {
     fn z_is_from_0_to_1(&self) -> bool {
         true
     }

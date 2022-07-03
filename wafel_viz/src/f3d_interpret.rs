@@ -6,7 +6,7 @@ use derivative::Derivative;
 
 use crate::{
     f3d_decode::*,
-    n64_render_data::CullMode,
+    f3d_render_data::CullMode,
     render_api::{
         decode_shader_id, encode_shader_id, CCFeatures, RenderBackend, ShaderId, ShaderItem,
     },

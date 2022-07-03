@@ -2,7 +2,7 @@ use std::{env, fmt::Write, fs};
 
 use image::{Pixel, Rgb, RgbImage};
 use wafel_api::{load_m64, Game};
-use wafel_viz::{prepare_render_data, N64Renderer};
+use wafel_viz::{prepare_render_data, F3DRenderer};
 
 #[derive(Debug)]
 struct TestCase {
@@ -302,7 +302,7 @@ struct Renderer {
     device_info: String,
     device: wgpu::Device,
     queue: wgpu::Queue,
-    renderer: N64Renderer,
+    renderer: F3DRenderer,
     output_size: (u32, u32),
     output_format: wgpu::TextureFormat,
     output_texture: wgpu::Texture,
@@ -341,7 +341,7 @@ impl Renderer {
 
         let output_format = wgpu::TextureFormat::Rgba8Unorm;
 
-        let renderer = N64Renderer::new(&device);
+        let renderer = F3DRenderer::new(&device);
 
         let output_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
