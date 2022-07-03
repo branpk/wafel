@@ -135,56 +135,63 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
 
     fn flush(&mut self, backend: &mut F3DRenderBackend) {
         if self.vertex_buffer_num_tris > 0 {
-            self.flush_with_pipeline(backend, self.pipeline_state());
+            self.flush_with(
+                backend,
+                self.viewport_screen(),
+                self.scissor_screen(),
+                self.pipeline_state(),
+            );
         }
     }
 
-    fn flush_with_pipeline(&mut self, backend: &mut F3DRenderBackend, pipeline: PipelineInfo) {
+    fn flush_with(
+        &mut self,
+        backend: &mut F3DRenderBackend,
+        viewport: ScreenRectangle,
+        scissor: ScreenRectangle,
+        pipeline: PipelineInfo,
+    ) {
         if self.vertex_buffer_num_tris > 0 {
-            backend.draw_triangles(pipeline, &self.vertex_buffer, self.vertex_buffer_num_tris);
+            backend.draw_triangles(
+                viewport,
+                scissor,
+                pipeline,
+                &self.vertex_buffer,
+                self.vertex_buffer_num_tris,
+            );
             self.vertex_buffer.clear();
             self.vertex_buffer_num_tris = 0;
         }
     }
 
-    fn set_viewport(&mut self, backend: &mut F3DRenderBackend, viewport: Viewport) {
-        self.flush(backend);
-        self.viewport = viewport;
+    fn viewport_screen(&self) -> ScreenRectangle {
+        let w = 2.0 * self.viewport.scale[0] as f32 / 4.0;
+        let h = 2.0 * self.viewport.scale[1] as f32 / 4.0;
+        let x = (self.viewport.trans[0] as f32 / 4.0) - w / 2.0;
+        let y = (self.viewport.trans[1] as f32 / 4.0) - h / 2.0;
 
-        let mut width = 2.0 * viewport.scale[0] as f32 / 4.0;
-        let mut height = 2.0 * viewport.scale[1] as f32 / 4.0;
-        let mut x = (viewport.trans[0] as f32 / 4.0) - width / 2.0;
-        let mut y = (viewport.trans[1] as f32 / 4.0) - height / 2.0;
-
-        x *= self.screen_scale_x();
-        y *= self.screen_scale_y();
-        width *= self.screen_scale_x();
-        height *= self.screen_scale_y();
-
-        backend.set_viewport(x as i32, y as i32, width as i32, height as i32);
+        ScreenRectangle {
+            x: (x * self.screen_scale_x()) as i32,
+            y: (y * self.screen_scale_y()) as i32,
+            w: (w * self.screen_scale_x()) as i32,
+            h: (h * self.screen_scale_y()) as i32,
+        }
     }
 
-    fn set_scissor(
-        &mut self,
-        backend: &mut F3DRenderBackend,
-        mode: ScissorMode,
-        rect: Rectangle<u16>,
-    ) {
-        assert!(rect.lrx > rect.ulx && rect.lry > rect.uly);
-        self.flush(backend);
-        self.scissor = (mode, rect);
+    fn scissor_screen(&self) -> ScreenRectangle {
+        let rect = self.scissor.1;
 
         let ulx = rect.ulx as f32 / 4.0;
         let uly = rect.uly as f32 / 4.0;
         let lrx = rect.lrx as f32 / 4.0;
         let lry = rect.lry as f32 / 4.0;
 
-        backend.set_scissor(
-            (ulx * self.screen_scale_x()) as i32,
-            (uly * self.screen_scale_y()) as i32,
-            ((lrx - ulx) * self.screen_scale_x()) as i32,
-            ((lry - uly) * self.screen_scale_y()) as i32,
-        );
+        ScreenRectangle {
+            x: (ulx * self.screen_scale_x()) as i32,
+            y: (uly * self.screen_scale_y()) as i32,
+            w: ((lrx - ulx) * self.screen_scale_x()) as i32,
+            h: ((lry - uly) * self.screen_scale_y()) as i32,
+        }
     }
 
     fn pipeline_state(&self) -> PipelineInfo {
@@ -528,7 +535,8 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                     SPCommand::Viewport(ptr) => {
                         let viewport = read_viewport(memory, ptr, 0);
                         if self.viewport != viewport {
-                            self.set_viewport(backend, viewport);
+                            self.flush(backend);
+                            self.viewport = viewport;
                         }
                     }
                     SPCommand::Light { light, n } => {
@@ -699,13 +707,6 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             ..Default::default()
                         };
 
-                        backend.set_viewport(
-                            0,
-                            0,
-                            self.screen_size.0 as i32,
-                            self.screen_size.1 as i32,
-                        );
-
                         let fill_color = rgba_16_to_32(self.fill_color.0);
 
                         let mut add_vertex = |x, y| {
@@ -733,8 +734,14 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
 
                         self.vertex_buffer_num_tris += 2;
 
-                        self.flush_with_pipeline(backend, pipeline);
-                        self.set_viewport(backend, self.viewport);
+                        let viewport = ScreenRectangle {
+                            x: 0,
+                            y: 0,
+                            w: self.screen_size.0 as i32,
+                            h: self.screen_size.1 as i32,
+                        };
+                        let scissor = self.scissor_screen();
+                        self.flush_with(backend, viewport, scissor, pipeline);
                     }
                     DPCommand::SetTile(tile, params) => {
                         self.flush(backend);
@@ -761,7 +768,8 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                     }
                     DPCommand::SetScissor(mode, rect) => {
                         if self.scissor != (mode, rect) {
-                            self.set_scissor(backend, mode, rect);
+                            self.flush(backend);
+                            self.scissor = (mode, rect);
                         }
                     }
                     DPCommand::FullSync => {}
@@ -825,13 +833,6 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         ];
 
                         if self.cycle_type == CycleType::Copy {
-                            backend.set_viewport(
-                                0,
-                                0,
-                                self.screen_size.0 as i32,
-                                self.screen_size.1 as i32,
-                            );
-
                             let tile_params = &self.tile_params[tile.0 as usize];
                             backend.set_sampler_parameters(
                                 tile.0 as i32,
@@ -858,8 +859,15 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             }
 
                             self.vertex_buffer_num_tris += 2;
-                            self.flush_with_pipeline(backend, pipeline);
-                            self.set_viewport(backend, self.viewport);
+
+                            let viewport = ScreenRectangle {
+                                x: 0,
+                                y: 0,
+                                w: self.screen_size.0 as i32,
+                                h: self.screen_size.1 as i32,
+                            };
+                            let scissor = self.scissor_screen();
+                            self.flush_with(backend, viewport, scissor, pipeline);
                         } else {
                             let pipeline = self.pipeline_state();
                             let input_comps = self.get_color_input_components();

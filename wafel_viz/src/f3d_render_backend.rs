@@ -2,8 +2,6 @@ use crate::f3d_render_data::*;
 
 #[derive(Debug, Default)]
 pub struct F3DRenderBackend {
-    viewport: ScreenRectangle,
-    scissor: ScreenRectangle,
     texture_index: [Option<TextureIndex>; 2],
     data: F3DRenderData,
 }
@@ -49,26 +47,10 @@ impl F3DRenderBackend {
         texture.sampler = sampler;
     }
 
-    pub fn set_viewport(&mut self, x: i32, y: i32, width: i32, height: i32) {
-        self.viewport = ScreenRectangle {
-            x,
-            y,
-            w: width,
-            h: height,
-        };
-    }
-
-    pub fn set_scissor(&mut self, x: i32, y: i32, width: i32, height: i32) {
-        self.scissor = ScreenRectangle {
-            x,
-            y,
-            w: width,
-            h: height,
-        };
-    }
-
     pub fn draw_triangles(
         &mut self,
+        viewport: ScreenRectangle,
+        scissor: ScreenRectangle,
         pipeline_info: PipelineInfo,
         buf_vbo: &[f32],
         buf_vbo_num_tris: usize,
@@ -79,8 +61,8 @@ impl F3DRenderBackend {
         self.data.pipelines.insert(pipeline, pipeline_info);
 
         self.data.commands.push(DrawCommand {
-            viewport: self.viewport,
-            scissor: self.scissor,
+            viewport,
+            scissor,
             pipeline,
             textures: self.texture_index,
             vertex_buffer: buf_vbo.to_vec(),
