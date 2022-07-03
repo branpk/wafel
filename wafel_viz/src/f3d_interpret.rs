@@ -24,8 +24,15 @@ pub trait F3DSource {
     fn read_u32(&self, dst: &mut [u32], ptr: Self::Ptr, offset: usize);
 }
 
-pub fn interpret_f3d_display_list(source: &impl F3DSource, backend: &mut impl RenderBackend) {
-    let mut state = State::default();
+pub fn interpret_f3d_display_list(
+    source: &impl F3DSource,
+    backend: &mut impl RenderBackend,
+    screen_size: (u32, u32),
+) {
+    let state = State {
+        screen_size,
+        ..Default::default()
+    };
     state.interpret(source, backend, source.root_dl());
     state.flush(backend);
 }
@@ -33,6 +40,8 @@ pub fn interpret_f3d_display_list(source: &impl F3DSource, backend: &mut impl Re
 #[derive(Debug, Derivative)]
 #[derivative(Default(bound = ""))]
 struct State<Ptr> {
+    screen_size: (u32, u32),
+
     color_image: Option<Image<Ptr>>,
     depth_image: Option<Ptr>,
 
@@ -122,6 +131,18 @@ struct TextureMemory<Ptr> {
 }
 
 impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
+    fn aspect(&self) -> f32 {
+        self.screen_size.0 as f32 / self.screen_size.1 as f32
+    }
+
+    fn screen_scale_x(&self) -> f32 {
+        self.screen_size.0 as f32 / 320.0
+    }
+
+    fn screen_scale_y(&self) -> f32 {
+        self.screen_size.1 as f32 / 240.0
+    }
+
     fn vertex(&self, index: u32) -> Vertex {
         *self
             .vertices
@@ -163,10 +184,15 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         self.flush(backend);
         self.viewport = viewport;
 
-        let width = 2.0 * viewport.scale[0] as f32 / 4.0;
-        let height = 2.0 * viewport.scale[1] as f32 / 4.0;
-        let x = (viewport.trans[0] as f32 / 4.0) - width / 2.0;
-        let y = 240.0 - ((viewport.trans[1] as f32 / 4.0) + height / 2.0);
+        let mut width = 2.0 * viewport.scale[0] as f32 / 4.0;
+        let mut height = 2.0 * viewport.scale[1] as f32 / 4.0;
+        let mut x = (viewport.trans[0] as f32 / 4.0) - width / 2.0;
+        let mut y = 240.0 - ((viewport.trans[1] as f32 / 4.0) + height / 2.0);
+
+        x *= self.screen_scale_x();
+        y *= self.screen_scale_y();
+        width *= self.screen_scale_x();
+        height *= self.screen_scale_y();
 
         backend.set_viewport(x as i32, y as i32, width as i32, height as i32);
     }
@@ -187,10 +213,10 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         let lry = rect.lry as f32 / 4.0;
 
         backend.set_scissor(
-            ulx as i32,
-            (240.0 - lry) as i32,
-            (lrx - ulx) as i32,
-            (lry - uly) as i32,
+            (ulx * self.screen_scale_x()) as i32,
+            ((240.0 - lry) * self.screen_scale_y()) as i32,
+            ((lrx - ulx) * self.screen_scale_x()) as i32,
+            ((lry - uly) * self.screen_scale_y()) as i32,
         );
     }
 
@@ -321,6 +347,14 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
     fn transform_pos(&self, vtx: &Vertex) -> [f32; 4] {
         let model_pos = [vtx.pos[0] as f32, vtx.pos[1] as f32, vtx.pos[2] as f32, 1.0];
         &self.proj.cur * (&self.model_view.cur * model_pos)
+    }
+
+    fn push_pos(&mut self, backend: &mut impl RenderBackend, mut pos: [f32; 4]) {
+        if backend.z_is_from_0_to_1() {
+            pos[2] = (pos[2] + pos[3]) / 2.0;
+        }
+        pos[0] *= (320.0 / 240.0) / self.aspect();
+        self.vertex_buffer.extend(&pos);
     }
 
     fn calculate_uv(&self, vtx: &Vertex) -> [f32; 2] {
@@ -476,7 +510,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         self.flush(backend);
         backend.set_depth_test(false);
         backend.set_depth_mask(false);
-        backend.set_viewport(0, 0, 320, 240);
+        backend.set_viewport(0, 0, self.screen_size.0 as i32, self.screen_size.1 as i32);
         backend.set_use_alpha(true);
         backend.set_cull_mode(CullMode::None);
     }
@@ -559,11 +593,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             let vtx = self.vertex(vi);
 
                             let pos = self.transform_pos(&vtx);
-                            let mut rendered_pos = pos;
-                            if backend.z_is_from_0_to_1() {
-                                rendered_pos[2] = (pos[2] + pos[3]) / 2.0;
-                            }
-                            self.vertex_buffer.extend(&rendered_pos);
+                            self.push_pos(backend, pos);
 
                             if cc_features.uses_textures() {
                                 let uv = self.calculate_uv(&vtx);
@@ -762,7 +792,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         let fill_color = rgba_16_to_32(self.fill_color.0);
 
                         let mut add_vertex = |x, y| {
-                            self.vertex_buffer.extend(&[x, y, 0.0, 1.0]);
+                            self.push_pos(backend, [x, y, 0.0, 1.0]);
                             self.vertex_buffer.extend(&[
                                 fill_color[0] as f32 / 255.0,
                                 fill_color[1] as f32 / 255.0,
@@ -896,7 +926,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             let shader_id = encode_shader_id(cc_features);
 
                             for [x, y, u, v] in vertices {
-                                self.vertex_buffer.extend(&[x, y, 0.0, 1.0]);
+                                self.push_pos(backend, [x, y, 0.0, 1.0]);
                                 self.vertex_buffer.extend(&[u, v]);
                             }
 
@@ -908,7 +938,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             let input_comps = self.get_vertex_input_components();
 
                             for [x, y, u, v] in vertices {
-                                self.vertex_buffer.extend(&[x, y, 0.0, 1.0]);
+                                self.push_pos(backend, [x, y, 0.0, 1.0]);
                                 if cc_features.uses_textures() {
                                     self.vertex_buffer.extend(&[u, v]);
                                 }

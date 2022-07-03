@@ -8,9 +8,10 @@
 #![allow(missing_docs)] // FIXME: remove
 
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     error::Error,
     mem,
+    rc::Rc,
     time::{Duration, Instant},
 };
 
@@ -19,7 +20,7 @@ use f3d_decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand};
 use f3d_interpret::{interpret_f3d_display_list, F3DSource};
 use n64_render_backend::{process_display_list, N64RenderBackend};
 use n64_renderer::N64Renderer;
-use wafel_api::{load_m64, Address, Emu, Game, IntType};
+use wafel_api::{load_m64, Address, Emu, Game, IntType, SaveState};
 use wafel_memory::{DllGameMemory, DllSlot, DllSlotMemoryView, GameMemory, MemoryRead};
 use winit::{
     event::{ElementState, Event, VirtualKeyCode, WindowEvent},
@@ -232,11 +233,24 @@ async fn run(
     let (_, inputs) = load_m64("test_files/120_u.m64");
     // let (_, inputs) = load_m64("test_files/lod-test.m64");
 
+    let mut save_states: HashMap<u32, Rc<SaveState>> = HashMap::new();
+    let save_state_freq = 1000;
+    let save_state_dur = 10_000;
+
     while game.frame() < frame0 {
         if let Some(&input) = inputs.get(game.frame() as usize) {
             game.set_input(input);
         }
         game.advance();
+
+        if game.frame() % save_state_freq == 0 {
+            save_states.insert(game.frame(), Rc::new(game.save_state()));
+            save_states = save_states
+                .clone()
+                .into_iter()
+                .filter(|e| e.0 + save_state_dur >= game.frame())
+                .collect();
+        }
     }
 
     let event_loop = EventLoop::new();
@@ -315,6 +329,13 @@ async fn run(
                                 if key == VirtualKeyCode::Return {
                                     eprintln!("frame = {}", game.frame());
                                 }
+                                if key == VirtualKeyCode::Left {
+                                    let frame = game.frame().saturating_sub(1) / save_state_freq
+                                        * save_state_freq;
+                                    if let Some(state) = save_states.get(&frame) {
+                                        game.load_state(state);
+                                    }
+                                }
                                 held.insert(key);
                             }
                             ElementState::Released => {
@@ -373,6 +394,14 @@ async fn run(
                                     game.write("gControllerPads[0].stick_y", input.stick_y.into());
                                 }
                                 game.advance();
+                                if game.frame() % save_state_freq == 0 {
+                                    save_states.insert(game.frame(), Rc::new(game.save_state()));
+                                    save_states = save_states
+                                        .clone()
+                                        .into_iter()
+                                        .filter(|e| e.0 + save_state_dur >= game.frame())
+                                        .collect();
+                                }
                             }
                         }
 
@@ -380,7 +409,11 @@ async fn run(
                             if use_rust_f3d {
                                 let mut backend = N64RenderBackend::default();
                                 let f3d_source = DllF3DSource { game: &game };
-                                interpret_f3d_display_list(&f3d_source, &mut backend);
+                                interpret_f3d_display_list(
+                                    &f3d_source,
+                                    &mut backend,
+                                    (config.width, config.height),
+                                );
                                 backend.finish()
                             } else {
                                 process_display_list(
