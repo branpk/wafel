@@ -1,6 +1,6 @@
-use std::fs;
+use std::{env, fmt::Write, fs};
 
-use image::{Pixel, Rgba, RgbaImage};
+use image::{Pixel, Rgb, RgbImage};
 use wafel_api::{load_m64, Game};
 use wafel_viz::{prepare_render_data, N64Renderer};
 
@@ -174,16 +174,22 @@ fn u120_test_cases() -> Vec<TestCase> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let calc_diffs = env::args().any(|arg| arg == "--diff");
+
     env_logger::init();
 
     let _ = fs::remove_dir_all("wafel_viz_tests/output");
     fs::create_dir_all("wafel_viz_tests/output/all")?;
     fs::create_dir_all("wafel_viz_tests/output/mismatches")?;
+    if calc_diffs {
+        fs::create_dir_all("wafel_viz_tests/output/diff")?;
+    }
 
     let mut renderer = futures::executor::block_on(Renderer::new((320, 240)));
 
     // FIXME: Update to libsm64/sm64_us.dll
     // TODO: Other game versions
+    // TODO: Other resolution tests
     let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
     let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
 
@@ -202,14 +208,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             game.advance();
         }
 
-        let actual = renderer.render(&mut game);
+        let actual = renderer.render(&game);
 
         let expected = image::open(format!(
             "wafel_viz_tests/{}/{}.png",
             renderer.device_info, case.name
         ))
         .ok()
-        .map(|img| img.to_rgba8());
+        .map(|img| img.to_rgb8());
 
         actual.save(format!("wafel_viz_tests/output/all/{}.png", case.name))?;
 
@@ -220,6 +226,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 case.name
             ))?;
             mismatches.push(case.name);
+
+            if calc_diffs {
+                if let Some(expected) = expected.as_ref() {
+                    let w = expected.width();
+                    let h = expected.height();
+                    if actual.width() == w && actual.height() == h {
+                        let mut diff = RgbImage::new(w, h);
+                        for y in 0..h {
+                            for x in 0..w {
+                                let actual_rgb = *actual.get_pixel(x, y);
+                                let expected_rgb = *expected.get_pixel(x, y);
+                                let diff_rgb = Rgb::from([
+                                    actual_rgb.0[0].abs_diff(expected_rgb.0[0]),
+                                    actual_rgb.0[1].abs_diff(expected_rgb.0[1]),
+                                    actual_rgb.0[2].abs_diff(expected_rgb.0[2]),
+                                ]);
+                                diff.put_pixel(x, y, diff_rgb);
+                            }
+                            diff.save(format!("wafel_viz_tests/output/diff/{}.png", case.name))?;
+                        }
+                    }
+                }
+            }
         };
 
         eprintln!(
@@ -235,11 +264,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if mismatches.is_empty() {
         eprintln!("\x1b[32mAll cases match!\x1b[0m");
     } else {
-        eprintln!("\x1b[31m{} mismatches:\x1b[0m", mismatches.len());
-        for name in mismatches {
-            eprintln!("  {}", name);
-        }
+        eprintln!("\x1b[31m{} mismatches\x1b[0m", mismatches.len());
     }
+
+    let template = fs::read_to_string("wafel_viz_tests/index.html.template")?;
+    let mut image_html = String::new();
+    for &name in &mismatches {
+        writeln!(
+            image_html,
+            r#"
+                <tr>
+                    <td>{}</td>
+                    <td><img src="{}/{}.png"></td>
+                    <td><img src="output/all/{}.png"></td>
+                    {}
+                </tr>
+            "#,
+            name,
+            renderer.device_info,
+            name,
+            name,
+            if calc_diffs {
+                format!(r#"<td><img src="output/diff/{}.png"></td>"#, name)
+            } else {
+                "".to_string()
+            }
+        )?;
+    }
+    let html = template.replace("[[images]]", &image_html);
+    fs::write("wafel_viz_tests/index.html", html)?;
 
     Ok(())
 }
@@ -344,7 +397,7 @@ impl Renderer {
         }
     }
 
-    fn render(&mut self, game: &mut Game) -> RgbaImage {
+    fn render(&mut self, game: &Game) -> RgbImage {
         let render_data = prepare_render_data(game, self.output_size);
         self.renderer
             .prepare(&self.device, &self.queue, self.output_format, &render_data);
@@ -408,12 +461,12 @@ impl Renderer {
 
         let image = {
             let buffer_view = buffer_slice.get_mapped_range();
-            let mut image = RgbaImage::new(self.output_size.0, self.output_size.1);
+            let mut image = RgbImage::new(self.output_size.0, self.output_size.1);
             for y in 0..self.output_size.1 {
                 for x in 0..self.output_size.0 {
                     let i = (y * self.padded_bytes_per_row + 4 * x) as usize;
-                    let rgba = *Rgba::from_slice(&buffer_view[i..i + 4]);
-                    image.put_pixel(x, y, rgba);
+                    let rgb = *Rgb::from_slice(&buffer_view[i..i + 3]);
+                    image.put_pixel(x, y, rgb);
                 }
             }
             image
