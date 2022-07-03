@@ -216,7 +216,7 @@ impl fmt::Display for M64Metadata {
 }
 
 /// A set of inputs for a given frame.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Input {
     /// The standard button bit flags.
     pub buttons: u16,

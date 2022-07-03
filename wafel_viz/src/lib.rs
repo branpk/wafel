@@ -19,7 +19,6 @@ use custom_renderer::{CustomRenderer, Scene};
 use f3d_decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand};
 use f3d_interpret::{interpret_f3d_display_list, F3DSource};
 use n64_render_backend::{process_display_list, N64RenderBackend};
-use n64_renderer::N64Renderer;
 use wafel_api::{load_m64, Address, Emu, Game, IntType, SaveState};
 use wafel_memory::{DllGameMemory, DllSlot, DllSlotMemoryView, GameMemory, MemoryRead};
 use winit::{
@@ -33,6 +32,7 @@ use crate::{
     render_api::{decode_shader_id, CCFeatures},
 };
 pub use n64_render_data::*;
+pub use n64_renderer::*;
 
 pub mod custom_renderer;
 pub mod f3d_decode;
@@ -42,8 +42,15 @@ mod n64_render_data;
 mod n64_renderer;
 mod render_api;
 
+pub fn prepare_render_data(game: &Game, screen_size: (u32, u32)) -> N64RenderData {
+    let mut backend = N64RenderBackend::default();
+    let f3d_source = DllF3DSource { game };
+    interpret_f3d_display_list(&f3d_source, &mut backend, screen_size);
+    backend.finish()
+}
+
 #[derive(Debug)]
-pub struct DllF3DSource<'a> {
+struct DllF3DSource<'a> {
     game: &'a Game,
 }
 
