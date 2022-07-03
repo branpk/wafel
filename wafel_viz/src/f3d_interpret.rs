@@ -569,7 +569,11 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             let vtx = self.vertex(vi);
 
                             let pos = self.transform_pos(&vtx);
-                            self.vertex_buffer.extend(&pos);
+                            let mut rendered_pos = pos;
+                            if backend.z_is_from_0_to_1() {
+                                rendered_pos[2] = (pos[2] + pos[3]) / 2.0;
+                            }
+                            self.vertex_buffer.extend(&rendered_pos);
 
                             if cc_features.uses_textures() {
                                 let uv = self.calculate_uv(&vtx);
