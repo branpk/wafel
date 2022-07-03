@@ -29,7 +29,7 @@ pub fn interpret_f3d_display_list(
     backend: &mut impl RenderBackend,
     screen_size: (u32, u32),
 ) {
-    let state = State {
+    let mut state = State {
         screen_size,
         ..Default::default()
     };
