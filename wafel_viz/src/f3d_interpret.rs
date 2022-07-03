@@ -131,12 +131,16 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
 
     fn flush(&mut self, backend: &mut impl RenderBackend) {
         if self.vertex_buffer_num_tris > 0 {
-            let shader_id = self.get_shader_id();
+            self.flush_with_shader(backend, self.get_shader_id());
+        }
+    }
+
+    fn flush_with_shader(&mut self, backend: &mut impl RenderBackend, shader_id: u32) {
+        if self.vertex_buffer_num_tris > 0 {
             backend.load_shader(ShaderId(shader_id as usize));
             backend.draw_triangles(&self.vertex_buffer, self.vertex_buffer_num_tris);
             self.vertex_buffer.clear();
             self.vertex_buffer_num_tris = 0;
-            // std::process::exit(0);
         }
     }
 
@@ -319,6 +323,179 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         );
     }
 
+    fn transform_pos(&self, vtx: &Vertex) -> [f32; 4] {
+        let model_pos = [vtx.pos[0] as f32, vtx.pos[1] as f32, vtx.pos[2] as f32, 1.0];
+        &self.proj.cur * (&self.model_view.cur * model_pos)
+    }
+
+    fn calculate_uv(&self, vtx: &Vertex) -> [f32; 2] {
+        let tile_size = &self.tile_size[0];
+        let texture_width = (tile_size.lrs - tile_size.uls + 4) / 4;
+        let texture_height = (tile_size.lrt - tile_size.ult + 4) / 4;
+
+        // TODO: Cache lookat coeffs
+        let mut lookat_x_coeffs = [0.0; 4];
+        let mut lookat_y_coeffs = [0.0; 4];
+        if self.geometry_mode.contains(GeometryModes::TEXTURE_GEN) {
+            let lookat_x = [1.0, 0.0, 0.0, 0.0];
+            lookat_x_coeffs = &self.model_view.cur.transpose() * lookat_x;
+            lookat_x_coeffs[3] = 0.0;
+            lookat_x_coeffs = normalize(lookat_x_coeffs);
+
+            let lookat_y = [0.0, 1.0, 0.0, 0.0];
+            lookat_y_coeffs = &self.model_view.cur.transpose() * lookat_y;
+            lookat_y_coeffs[3] = 0.0;
+            lookat_y_coeffs = normalize(lookat_y_coeffs);
+        }
+
+        let mut u;
+        let mut v;
+        if self.geometry_mode.contains(GeometryModes::TEXTURE_GEN) {
+            let mut dotx = 0.0;
+            let mut doty = 0.0;
+            for i in 0..3 {
+                dotx += vtx.cn[i] as i8 as f32 * lookat_x_coeffs[i];
+                doty += vtx.cn[i] as i8 as f32 * lookat_y_coeffs[i];
+            }
+            u = (dotx / 127.0 + 1.0) / 4.0 * 0x10000 as f32;
+            v = (doty / 127.0 + 1.0) / 4.0 * 0x10000 as f32;
+        } else {
+            u = vtx.uv[0] as f32;
+            v = vtx.uv[1] as f32;
+        }
+
+        u *= self.texture_scale[0][0];
+        v *= self.texture_scale[0][1];
+        u = (u - tile_size.uls as f32 * 8.0) / 32.0;
+        v = (v - tile_size.ult as f32 * 8.0) / 32.0;
+        if self.texture_filter != TextureFilter::Point {
+            u += 0.5;
+            v += 0.5;
+        }
+        u /= texture_width as f32;
+        v /= texture_height as f32;
+
+        [u, v]
+    }
+
+    fn calculate_shade(&self, vtx: &Vertex) -> Rgba32 {
+        let mut shade_rgb: [u8; 3];
+        if self.geometry_mode.contains(GeometryModes::LIGHTING) {
+            // TODO: Cache light normals
+
+            shade_rgb = self.lights[self.num_dir_lights as usize].color;
+            for light in &self.lights[0..self.num_dir_lights as usize] {
+                let light_dir = [
+                    light.dir[0] as f32 / 127.0,
+                    light.dir[1] as f32 / 127.0,
+                    light.dir[2] as f32 / 127.0,
+                    0.0,
+                ];
+                let mut light_n = &self.model_view.cur.transpose() * light_dir;
+                light_n[3] = 0.0;
+                let light_n = normalize(light_n);
+
+                let n = [
+                    vtx.cn[0] as i8 as f32 / 127.0,
+                    vtx.cn[1] as i8 as f32 / 127.0,
+                    vtx.cn[2] as i8 as f32 / 127.0,
+                    0.0,
+                ];
+                let intensity = dot(light_n, n).max(0.0);
+                for i in 0..3 {
+                    shade_rgb[i] =
+                        (shade_rgb[i] as f32 + intensity * light.color[i] as f32).min(255.0) as u8;
+                }
+            }
+        } else {
+            shade_rgb = [vtx.cn[0], vtx.cn[1], vtx.cn[2]];
+        }
+
+        Rgba32::from_rgb_a(shade_rgb, vtx.cn[3])
+    }
+
+    fn calculate_fog(&self, pos: [f32; 4]) -> [f32; 4] {
+        let mut w = pos[3];
+        if w.abs() < 0.001 {
+            w = 0.001;
+        }
+        let mut w_inv = 1.0 / w;
+        if w_inv < 0.0 {
+            w_inv = 32767.0;
+        }
+        let fog_factor = pos[2] * w_inv * self.fog_mul as f32 + self.fog_offset as f32;
+        [
+            self.fog_color.r as f32 / 255.0,
+            self.fog_color.g as f32 / 255.0,
+            self.fog_color.b as f32 / 255.0,
+            fog_factor.clamp(0.0, 255.0) / 255.0,
+        ]
+    }
+
+    fn calculate_lod_fraction(&self, pos: [f32; 4]) -> u8 {
+        let lod_fraction = ((pos[3] - 3000.0) / 3000.0).clamp(0.0, 1.0);
+        (lod_fraction * 255.0) as u8
+    }
+
+    fn push_vertex_color_inputs(
+        &mut self,
+        cc_features: &CCFeatures,
+        input_comps: &[[ColorCombineComponent; 4]; 2],
+        vtx: &Vertex,
+        pos: [f32; 4],
+    ) {
+        if cc_features.opt_fog {
+            let fog = self.calculate_fog(pos);
+            self.vertex_buffer.extend(&fog);
+        }
+
+        let shade = self.calculate_shade(vtx);
+        let lod_fraction = self.calculate_lod_fraction(pos);
+
+        for input_index in 0..cc_features.num_inputs {
+            let rgb_comp = input_comps[0][input_index as usize];
+            let [r, g, b] = match rgb_comp {
+                ColorCombineComponent::Prim => self.prim_color.rgb(),
+                ColorCombineComponent::Shade => shade.rgb(),
+                ColorCombineComponent::Env => self.env_color.rgb(),
+                ColorCombineComponent::LodFraction => [lod_fraction, lod_fraction, lod_fraction],
+                ColorCombineComponent::Zero => [0, 0, 0],
+                c => unimplemented!("{:?}", c),
+            };
+            self.vertex_buffer
+                .extend(&[r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0]);
+
+            if cc_features.opt_alpha {
+                let a_comp = input_comps[1][input_index as usize];
+                let a = match a_comp {
+                    ColorCombineComponent::Prim => self.prim_color.a,
+                    ColorCombineComponent::Shade => shade.a,
+                    ColorCombineComponent::Env => self.env_color.a,
+                    ColorCombineComponent::LodFraction => lod_fraction,
+                    ColorCombineComponent::Zero => 0,
+                    c => unimplemented!("{:?}", c),
+                };
+                self.vertex_buffer.push(a as f32 / 255.0);
+            }
+        }
+    }
+
+    fn set_modes_for_rect(&mut self, backend: &mut impl RenderBackend) {
+        self.flush(backend);
+        backend.set_depth_test(false);
+        backend.set_depth_mask(false);
+        backend.set_viewport(0, 0, 320, 240);
+        backend.set_use_alpha(true);
+        backend.set_cull_mode(CullMode::None);
+    }
+
+    fn reset_modes_for_rect(&mut self, backend: &mut impl RenderBackend) {
+        assert!(self.vertex_buffer.is_empty());
+        self.set_geometry_mode(backend, self.geometry_mode);
+        self.set_render_mode(backend, self.render_mode);
+        self.set_viewport(backend, self.viewport);
+    }
+
     fn interpret<S: F3DSource<Ptr = Ptr>>(
         &mut self,
         source: &S,
@@ -388,155 +565,20 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             }
                         }
 
-                        let vertices = [self.vertex(v0), self.vertex(v1), self.vertex(v2)];
+                        for vi in [v0, v1, v2] {
+                            let vtx = self.vertex(vi);
 
-                        let tile_size = &self.tile_size[0];
-                        let texture_width = (tile_size.lrs - tile_size.uls + 4) / 4;
-                        let texture_height = (tile_size.lrt - tile_size.ult + 4) / 4;
-
-                        let mut lookat_x_coeffs = [0.0; 4];
-                        let mut lookat_y_coeffs = [0.0; 4];
-                        if self.geometry_mode.contains(GeometryModes::TEXTURE_GEN) {
-                            let lookat_x = [1.0, 0.0, 0.0, 0.0];
-                            lookat_x_coeffs = &self.model_view.cur.transpose() * lookat_x;
-                            lookat_x_coeffs[3] = 0.0;
-                            lookat_x_coeffs = normalize(lookat_x_coeffs);
-
-                            let lookat_y = [0.0, 1.0, 0.0, 0.0];
-                            lookat_y_coeffs = &self.model_view.cur.transpose() * lookat_y;
-                            lookat_y_coeffs[3] = 0.0;
-                            lookat_y_coeffs = normalize(lookat_y_coeffs);
-                        }
-
-                        for vtx in vertices {
-                            let model_pos =
-                                [vtx.pos[0] as f32, vtx.pos[1] as f32, vtx.pos[2] as f32, 1.0];
-                            let mut pos = &self.proj.cur * (&self.model_view.cur * model_pos);
-                            if backend.z_is_from_0_to_1() {
-                                pos[2] = (pos[2] + pos[3]) / 2.0;
-                            }
+                            let pos = self.transform_pos(&vtx);
                             self.vertex_buffer.extend(&pos);
 
                             if cc_features.uses_textures() {
-                                let mut u;
-                                let mut v;
-                                if self.geometry_mode.contains(GeometryModes::TEXTURE_GEN) {
-                                    let mut dotx = 0.0;
-                                    let mut doty = 0.0;
-                                    for i in 0..3 {
-                                        dotx += vtx.cn[i] as i8 as f32 * lookat_x_coeffs[i];
-                                        doty += vtx.cn[i] as i8 as f32 * lookat_y_coeffs[i];
-                                    }
-                                    u = (dotx / 127.0 + 1.0) / 4.0 * 0x10000 as f32;
-                                    v = (doty / 127.0 + 1.0) / 4.0 * 0x10000 as f32;
-                                } else {
-                                    u = vtx.uv[0] as f32;
-                                    v = vtx.uv[1] as f32;
-                                }
-                                u *= self.texture_scale[0][0];
-                                v *= self.texture_scale[0][1];
-                                u = (u - tile_size.uls as f32 * 8.0) / 32.0;
-                                v = (v - tile_size.ult as f32 * 8.0) / 32.0;
-                                if self.texture_filter != TextureFilter::Point {
-                                    u += 0.5;
-                                    v += 0.5;
-                                }
-                                u /= texture_width as f32;
-                                v /= texture_height as f32;
-                                self.vertex_buffer.extend(&[u, v]);
+                                let uv = self.calculate_uv(&vtx);
+                                self.vertex_buffer.extend(&uv);
                             }
 
-                            let mut shade_rgb: [u8; 3];
-                            if self.geometry_mode.contains(GeometryModes::LIGHTING) {
-                                // TODO: Cache light normals
-
-                                shade_rgb = self.lights[self.num_dir_lights as usize].color;
-                                for light in &self.lights[0..self.num_dir_lights as usize] {
-                                    let light_dir = [
-                                        light.dir[0] as f32 / 127.0,
-                                        light.dir[1] as f32 / 127.0,
-                                        light.dir[2] as f32 / 127.0,
-                                        0.0,
-                                    ];
-                                    let mut light_n = &self.model_view.cur.transpose() * light_dir;
-                                    light_n[3] = 0.0;
-                                    let light_n = normalize(light_n);
-
-                                    let n = [
-                                        vtx.cn[0] as i8 as f32 / 127.0,
-                                        vtx.cn[1] as i8 as f32 / 127.0,
-                                        vtx.cn[2] as i8 as f32 / 127.0,
-                                        0.0,
-                                    ];
-                                    let intensity = dot(light_n, n).max(0.0);
-                                    for i in 0..3 {
-                                        shade_rgb[i] = (shade_rgb[i] as f32
-                                            + intensity * light.color[i] as f32)
-                                            .min(255.0)
-                                            as u8;
-                                    }
-                                }
-                            } else {
-                                shade_rgb = [vtx.cn[0], vtx.cn[1], vtx.cn[2]];
-                            }
-                            let shade_a = vtx.cn[3];
-
-                            if cc_features.opt_fog {
-                                self.vertex_buffer.extend(&[
-                                    self.fog_color.r as f32 / 255.0,
-                                    self.fog_color.g as f32 / 255.0,
-                                    self.fog_color.b as f32 / 255.0,
-                                ]);
-
-                                let mut w = pos[3];
-                                if w.abs() < 0.001 {
-                                    w = 0.001;
-                                }
-                                let mut w_inv = 1.0 / w;
-                                if w_inv < 0.0 {
-                                    w_inv = 32767.0;
-                                }
-                                let fog_factor =
-                                    pos[2] * w_inv * self.fog_mul as f32 + self.fog_offset as f32;
-                                self.vertex_buffer
-                                    .push(fog_factor.clamp(0.0, 255.0) / 255.0);
-                            }
-
-                            let lod_fraction = ((pos[3] - 3000.0) / 3000.0).clamp(0.0, 1.0);
-                            let lod_fraction_u8 = (lod_fraction * 255.0) as u8;
-
-                            for input_index in 0..cc_features.num_inputs {
-                                let rgb_comp = input_comps[0][input_index as usize];
-                                let [r, g, b] = match rgb_comp {
-                                    ColorCombineComponent::Prim => self.prim_color.rgb(),
-                                    ColorCombineComponent::Shade => shade_rgb,
-                                    ColorCombineComponent::Env => self.env_color.rgb(),
-                                    ColorCombineComponent::LodFraction => {
-                                        [lod_fraction_u8, lod_fraction_u8, lod_fraction_u8]
-                                    }
-                                    ColorCombineComponent::Zero => [0, 0, 0],
-                                    c => unimplemented!("{:?}", c),
-                                };
-                                self.vertex_buffer.extend(&[
-                                    r as f32 / 255.0,
-                                    g as f32 / 255.0,
-                                    b as f32 / 255.0,
-                                ]);
-
-                                if cc_features.opt_alpha {
-                                    let a_comp = input_comps[1][input_index as usize];
-                                    let a = match a_comp {
-                                        ColorCombineComponent::Prim => self.prim_color.a,
-                                        ColorCombineComponent::Shade => shade_a,
-                                        ColorCombineComponent::Env => self.env_color.a,
-                                        ColorCombineComponent::LodFraction => lod_fraction_u8,
-                                        ColorCombineComponent::Zero => 0,
-                                        c => unimplemented!("{:?}", c),
-                                    };
-                                    self.vertex_buffer.push(a as f32 / 255.0);
-                                }
-                            }
+                            self.push_vertex_color_inputs(&cc_features, &input_comps, &vtx, pos);
                         }
+
                         self.vertex_buffer_num_tris += 1;
                     }
                     SPCommand::PopMatrix(mode) => {
@@ -721,19 +763,13 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         };
                         let shader_id = encode_shader_id(cc_features);
 
-                        backend.load_shader(ShaderId(shader_id as usize));
-                        backend.set_depth_test(false);
-                        backend.set_depth_mask(false);
-                        backend.set_viewport(0, 0, 320, 240);
-                        backend.set_use_alpha(true);
-                        backend.set_cull_mode(CullMode::None);
+                        self.set_modes_for_rect(backend);
 
                         let fill_color = rgba_16_to_32(self.fill_color.0);
 
-                        let mut vertex_buffer: Vec<f32> = Vec::new();
                         let mut add_vertex = |x, y| {
-                            vertex_buffer.extend(&[x, y, 0.0, 1.0]);
-                            vertex_buffer.extend(&[
+                            self.vertex_buffer.extend(&[x, y, 0.0, 1.0]);
+                            self.vertex_buffer.extend(&[
                                 fill_color[0] as f32 / 255.0,
                                 fill_color[1] as f32 / 255.0,
                                 fill_color[2] as f32 / 255.0,
@@ -750,16 +786,14 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         add_vertex(x1, y1);
                         add_vertex(x0, y0);
 
-                        add_vertex(x1, y1);
-                        add_vertex(x0, y0);
                         add_vertex(x1, y0);
+                        add_vertex(x0, y0);
+                        add_vertex(x1, y1);
 
-                        backend.draw_triangles(&vertex_buffer, 2);
+                        self.vertex_buffer_num_tris += 2;
 
-                        self.flush(backend);
-                        self.set_geometry_mode(backend, self.geometry_mode);
-                        self.set_render_mode(backend, self.render_mode);
-                        self.set_viewport(backend, self.viewport);
+                        self.flush_with_shader(backend, shader_id);
+                        self.reset_modes_for_rect(backend);
                     }
                     DPCommand::SetTile(tile, params) => {
                         self.flush(backend);
@@ -824,37 +858,8 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             lry += 1.0;
                         }
 
-                        let cc_features = CCFeatures {
-                            c: [[Zero, Zero, Zero, Texel0], [Zero, Zero, Zero, Texel0]],
-                            opt_alpha: true,
-                            ..Default::default()
-                        };
-                        let shader_id = encode_shader_id(cc_features);
-
-                        backend.load_shader(ShaderId(shader_id as usize));
-                        backend.set_depth_test(false);
-                        backend.set_depth_mask(false);
-                        backend.set_viewport(0, 0, 320, 240);
-                        backend.set_use_alpha(true);
-                        backend.set_cull_mode(CullMode::None);
-
                         let tile = tex_rect.tile;
                         self.load_texture(source, backend, tile);
-
-                        let tile_params = &self.tile_params[tile.0 as usize];
-                        backend.set_sampler_parameters(
-                            tile.0 as i32,
-                            self.cycle_type != CycleType::Copy
-                                && self.texture_filter != TextureFilter::Point,
-                            u8::from(tile_params.cms).into(),
-                            u8::from(tile_params.cmt).into(),
-                        );
-
-                        let mut vertex_buffer: Vec<f32> = Vec::new();
-                        let mut add_vertex = |x, y, u, v| {
-                            vertex_buffer.extend(&[x, y, 0.0, 1.0]);
-                            vertex_buffer.extend(&[u, v]);
-                        };
 
                         let x0 = 2.0 * (ulx / 320.0) - 1.0;
                         let x1 = 2.0 * (lrx / 320.0) - 1.0;
@@ -879,21 +884,62 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         let u1 = u0 + dsdx * (lrx - ulx) / texture_width as f32;
                         let v1 = v0 + dtdy * (lry - uly) / texture_height as f32;
 
-                        add_vertex(x0, y1, u0, v1);
-                        add_vertex(x1, y1, u1, v1);
-                        add_vertex(x0, y0, u0, v0);
+                        let vertices = [
+                            [x0, y1, u0, v1],
+                            [x1, y1, u1, v1],
+                            [x0, y0, u0, v0],
+                            [x1, y0, u1, v0],
+                            [x0, y0, u0, v0],
+                            [x1, y1, u1, v1],
+                        ];
 
-                        add_vertex(x1, y1, u1, v1);
-                        add_vertex(x0, y0, u0, v0);
-                        add_vertex(x1, y0, u1, v0);
+                        if self.cycle_type == CycleType::Copy {
+                            self.set_modes_for_rect(backend);
 
-                        backend.draw_triangles(&vertex_buffer, 2);
+                            let tile_params = &self.tile_params[tile.0 as usize];
+                            backend.set_sampler_parameters(
+                                tile.0 as i32,
+                                false,
+                                u8::from(tile_params.cms).into(),
+                                u8::from(tile_params.cmt).into(),
+                            );
 
-                        self.flush(backend);
-                        self.set_sampler_parameters(backend, tile);
-                        self.set_geometry_mode(backend, self.geometry_mode);
-                        self.set_render_mode(backend, self.render_mode);
-                        self.set_viewport(backend, self.viewport);
+                            let cc_features = CCFeatures {
+                                c: [[Zero, Zero, Zero, Texel0], [Zero, Zero, Zero, Texel0]],
+                                opt_alpha: true,
+                                ..Default::default()
+                            };
+                            let shader_id = encode_shader_id(cc_features);
+
+                            for [x, y, u, v] in vertices {
+                                self.vertex_buffer.extend(&[x, y, 0.0, 1.0]);
+                                self.vertex_buffer.extend(&[u, v]);
+                            }
+
+                            self.vertex_buffer_num_tris += 2;
+                            self.flush_with_shader(backend, shader_id);
+                            self.reset_modes_for_rect(backend);
+                        } else {
+                            let cc_features = decode_shader_id(self.get_shader_id());
+                            let input_comps = self.get_vertex_input_components();
+
+                            for [x, y, u, v] in vertices {
+                                self.vertex_buffer.extend(&[x, y, 0.0, 1.0]);
+                                if cc_features.uses_textures() {
+                                    self.vertex_buffer.extend(&[u, v]);
+                                }
+                                // Assumes that inputs like shade and fog aren't needed
+                                self.push_vertex_color_inputs(
+                                    &cc_features,
+                                    &input_comps,
+                                    &Vertex::default(),
+                                    Default::default(),
+                                );
+                            }
+
+                            self.vertex_buffer_num_tris += 2;
+                            self.flush(backend);
+                        }
                     }
                     // _ => unimplemented!("{:?}", cmd),
                     _ => {}
@@ -1164,8 +1210,6 @@ fn read_ia8<S: F3DSource>(
     size_bytes: u32,
     line_size_bytes: u32,
 ) -> TextureRgba32 {
-    // eprintln!("{} {}", size_bytes, line_size_bytes);
-
     let mut ia8_data: Vec<u8> = vec![0; size_bytes as usize];
     source.read_u8(&mut ia8_data, ptr, 0);
 

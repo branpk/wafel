@@ -1,6 +1,10 @@
 #![feature(stmt_expr_attributes)]
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
-#![allow(clippy::map_entry, clippy::needless_range_loop)]
+#![allow(
+    clippy::map_entry,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments
+)]
 #![allow(missing_docs)] // FIXME: remove
 
 use std::{
@@ -164,7 +168,7 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
 
     // assert!(data0.compare(&data1));
     env_logger::init();
-    futures::executor::block_on(run(53145, None, true)).unwrap();
+    futures::executor::block_on(run(54187, None, true)).unwrap();
     return Ok(());
 
     //     let w_type = IntType::u_ptr_native();

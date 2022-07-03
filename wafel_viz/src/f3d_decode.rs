@@ -570,6 +570,10 @@ impl Rgba32 {
     pub fn rgb(self) -> [u8; 3] {
         [self.r, self.g, self.b]
     }
+
+    pub fn from_rgb_a([r, g, b]: [u8; 3], a: u8) -> Self {
+        Self { r, g, b, a }
+    }
 }
 
 /// Either rgba5551 or zdz (z = 14 bits, dz = 2 bits)
