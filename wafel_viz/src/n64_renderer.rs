@@ -6,50 +6,35 @@ use std::{
 use bytemuck::cast_slice;
 use wgpu::util::DeviceExt;
 
-use crate::{
-    n64_render_data::{
-        N64RenderData, RenderState, SamplerState, ScreenRectangle, TextureData, TextureState,
-    },
-    render_api::{decode_shader_id, CCFeatures, CullMode, ShaderItem},
-};
+use crate::n64_render_data::*;
 
 #[derive(Debug)]
 pub struct N64Renderer {
     texture_bind_group_layout: wgpu::BindGroupLayout,
-    texture_bind_groups: HashMap<usize, wgpu::BindGroup>,
-    pipelines: HashMap<RenderState, wgpu::RenderPipeline>,
-    commands: Vec<Command>,
+    texture_bind_groups: HashMap<TextureIndex, wgpu::BindGroup>,
+    pipelines: HashMap<PipelineId, wgpu::RenderPipeline>,
+    commands: Vec<DrawCommand<wgpu::Buffer>>,
 }
 
-#[derive(Debug)]
-struct Command {
-    viewport: ScreenRectangle,
-    scissor: ScreenRectangle,
-    state: RenderState,
-    texture_index: [Option<usize>; 2],
-    buffer: wgpu::Buffer,
-    num_vertices: u32,
-}
-
-fn label(prefix: &str, shader_id: u32) -> &'static str {
-    let label = format!("{}-{:#010X}", prefix, shader_id);
+fn label(prefix: &str, pipeline_id: PipelineId) -> &'static str {
+    let label = format!("{}-{:?}", prefix, pipeline_id);
     Box::leak(label.into_boxed_str())
 }
 
 #[rustfmt::skip]
-fn write_fragment_shader_body(s: &mut String, cc_features: CCFeatures) -> Result<(), fmt::Error> {
+fn write_fragment_shader_body(s: &mut String, p: &PipelineInfo) -> Result<(), fmt::Error> {
     for i in 0..2 {
-        if cc_features.used_textures[i] {
+        if p.used_textures[i] {
             writeln!(s, "    let tex{} = textureSample(r_texture{}, r_sampler{}, in.uv);", i, i, i)?;
         }
     }
 
-    if cc_features.opt_alpha && cc_features.color_alpha_same {
-        writeln!(s, "    out.color = {};", component_expr(cc_features, 0))?;
+    if p.blend && p.output_color.rgb == p.output_color.a {
+        writeln!(s, "    out.color = {};", color_expr(p.output_color.rgb))?;
     } else {
-        writeln!(s, "    let rgb = ({}).rgb;", component_expr(cc_features, 0))?;
-        if cc_features.opt_alpha {
-            writeln!(s, "    let a = ({}).a;", component_expr(cc_features, 1))?;
+        writeln!(s, "    let rgb = ({}).rgb;", color_expr(p.output_color.rgb))?;
+        if p.blend {
+            writeln!(s, "    let a = ({}).a;", color_expr(p.output_color.a))?;
             writeln!(s, "    out.color = vec4<f32>(rgb, a);")?;
         }
         else {
@@ -57,7 +42,7 @@ fn write_fragment_shader_body(s: &mut String, cc_features: CCFeatures) -> Result
         }
     }
 
-    if cc_features.opt_texture_edge && cc_features.opt_alpha {
+    if p.texture_edge && p.blend {
         writeln!(s, "    if out.color.a > 0.3 {{")?;
         writeln!(s, "        out.color = vec4<f32>(out.color.rgb, 1.0);")?;
         writeln!(s, "    }} else {{")?;
@@ -65,69 +50,33 @@ fn write_fragment_shader_body(s: &mut String, cc_features: CCFeatures) -> Result
         writeln!(s, "    }}")?;
     }
 
-    if cc_features.opt_fog {
+    if p.fog {
         writeln!(s, "    let fog_mixed = mix(out.color.rgb, in.fog.rgb, in.fog.a);")?;
         writeln!(s, "    out.color = vec4<f32>(fog_mixed, out.color.a);")?;
     }
 
     // TODO: Noise
-    // if (cc_features.opt_alpha && cc_features.opt_noise) {
-    //     append_line(fs_buf, &fs_len, "texel.a *= floor(random(vec3(floor(gl_FragCoord.xy * (240.0 / float(window_height))), float(frame_count))) + 0.5);");
-    // }
 
     Ok(())
 }
 
-fn component_expr(cc_features: CCFeatures, i: usize) -> String {
-    let items = cc_features.c[i];
-    if cc_features.do_single[i] {
-        single_expr(items)
-    } else if cc_features.do_multiply[i] {
-        multiply_expr(items)
-    } else if cc_features.do_mix[i] {
-        mix_expr(items)
-    } else {
-        linear_expr(items)
-    }
-}
-
-fn single_expr(items: [ShaderItem; 4]) -> String {
-    item_expr(items[3]).to_string()
-}
-
-fn multiply_expr(items: [ShaderItem; 4]) -> String {
-    format!("{} * {}", item_expr(items[0]), item_expr(items[2]))
-}
-
-fn mix_expr(items: [ShaderItem; 4]) -> String {
-    format!(
-        "mix({}, {}, {})",
-        item_expr(items[1]),
-        item_expr(items[0]),
-        item_expr(items[2])
-    )
-}
-
-fn linear_expr(items: [ShaderItem; 4]) -> String {
+fn color_expr(args: [ColorArg; 4]) -> String {
     format!(
         "({} - {}) * {} + {}",
-        item_expr(items[0]),
-        item_expr(items[1]),
-        item_expr(items[2]),
-        item_expr(items[3])
+        arg_expr(args[0]),
+        arg_expr(args[1]),
+        arg_expr(args[2]),
+        arg_expr(args[3])
     )
 }
 
-fn item_expr(item: ShaderItem) -> &'static str {
-    match item {
-        ShaderItem::Zero => "vec4<f32>()",
-        ShaderItem::Input1 => "in.input1",
-        ShaderItem::Input2 => "in.input2",
-        ShaderItem::Input3 => "in.input3",
-        ShaderItem::Input4 => "in.input4",
-        ShaderItem::Texel0 => "tex0",
-        ShaderItem::Texel0A => "vec4<f32>(tex0.a)",
-        ShaderItem::Texel1 => "tex1",
+fn arg_expr(arg: ColorArg) -> String {
+    match arg {
+        ColorArg::Zero => "vec4<f32>()".to_string(),
+        ColorArg::Input(i) => format!("in.input{}", i),
+        ColorArg::Texel0 => "tex0".to_string(),
+        ColorArg::Texel0Alpha => "vec4<f32>(tex0.a)".to_string(),
+        ColorArg::Texel1 => "tex1".to_string(),
     }
 }
 
@@ -170,19 +119,18 @@ impl N64Renderer {
         &self,
         device: &wgpu::Device,
         output_format: wgpu::TextureFormat,
-        state: RenderState,
+        pipeline_id: PipelineId,
+        p: &PipelineInfo,
     ) -> Result<wgpu::RenderPipeline, fmt::Error> {
-        let shader_id = state.shader_id.expect("missing shader id");
-        let cc_features = decode_shader_id(shader_id);
-
         let mut s = String::new();
-        writeln!(s, "// Shader {:#010X}", shader_id)?;
+        writeln!(s, "// Pipeline {:?}:", pipeline_id)?;
+        writeln!(s, "/*\n{:#?}\n*/", p)?;
         writeln!(s)?;
 
         let mut bind_group_layouts: Vec<&wgpu::BindGroupLayout> = Vec::new();
         #[rustfmt::skip]
         for i in 0..2 {
-            if cc_features.used_textures[i] {
+            if p.used_textures[i] {
                 writeln!(s, "@group({}) @binding(0) var r_sampler{}: sampler;", i, i)?;
                 writeln!(s, "@group({}) @binding(1) var r_texture{}: texture_2d<f32>;", i, i)?;
                 writeln!(s)?;
@@ -211,7 +159,7 @@ impl N64Renderer {
                 current_attribute_offset += 16;
                 current_location += 1;
 
-                if cc_features.uses_textures() {
+                if p.uses_textures() {
                     writeln!(s, "    @location({}) uv: vec2<f32>,", current_location)?;
                     vertex_attributes.push(wgpu::VertexAttribute {
                         format: wgpu::VertexFormat::Float32x2,
@@ -222,7 +170,7 @@ impl N64Renderer {
                     current_location += 1;
                 }
 
-                if cc_features.opt_fog {
+                if p.fog {
                     writeln!(s, "    @location({}) fog: vec4<f32>,", current_location)?;
                     vertex_attributes.push(wgpu::VertexAttribute {
                         format: wgpu::VertexFormat::Float32x4,
@@ -233,12 +181,12 @@ impl N64Renderer {
                     current_location += 1;
                 }
 
-                for input_index in 1..=cc_features.num_inputs {
-                    let length = if cc_features.opt_alpha { 4 } else { 3 };
+                for i in 0..p.num_inputs {
+                    let length = if p.blend { 4 } else { 3 };
                     writeln!(
                         s,
                         "    @location({}) input{}: vec{}<f32>,",
-                        current_location, input_index, length,
+                        current_location, i, length,
                     )?;
                     vertex_attributes.push(wgpu::VertexAttribute {
                         format: wgpu::VertexFormat::Float32x4,
@@ -263,20 +211,16 @@ impl N64Renderer {
             writeln!(s, "struct VertexOutput {{")?;
             writeln!(s, "    @builtin(position) position: vec4<f32>,")?;
             let mut location = 0;
-            if cc_features.uses_textures() {
+            if p.uses_textures() {
                 writeln!(s, "    @location({}) uv: vec2<f32>,", location)?;
                 location += 1;
             }
-            if cc_features.opt_fog {
+            if p.fog {
                 writeln!(s, "    @location({}) fog: vec4<f32>,", location)?;
                 location += 1;
             }
-            for input_index in 1..=cc_features.num_inputs {
-                writeln!(
-                    s,
-                    "    @location({}) input{}: vec4<f32>,",
-                    location, input_index
-                )?;
+            for i in 0..p.num_inputs {
+                writeln!(s, "    @location({}) input{}: vec4<f32>,", location, i)?;
                 location += 1;
             }
             writeln!(s, "}}")?;
@@ -288,21 +232,17 @@ impl N64Renderer {
             writeln!(s, "fn vs_main(in: VertexData) -> VertexOutput {{")?;
             writeln!(s, "    var out = VertexOutput();")?;
             writeln!(s, "    out.position = in.pos;")?;
-            if cc_features.uses_textures() {
+            if p.uses_textures() {
                 writeln!(s, "    out.uv = in.uv;")?;
             }
-            if cc_features.opt_fog {
+            if p.fog {
                 writeln!(s, "    out.fog = in.fog;")?;
             }
-            for input_index in 1..=cc_features.num_inputs {
-                if cc_features.opt_alpha {
-                    writeln!(s, "    out.input{} = in.input{};", input_index, input_index)?
+            for i in 0..p.num_inputs {
+                if p.blend {
+                    writeln!(s, "    out.input{} = in.input{};", i, i)?
                 } else {
-                    writeln!(
-                        s,
-                        "    out.input{} = vec4<f32>(in.input{}, 1.0);",
-                        input_index, input_index
-                    )?
+                    writeln!(s, "    out.input{} = vec4<f32>(in.input{}, 1.0);", i, i)?
                 }
             }
             writeln!(s, "    return out;")?;
@@ -312,19 +252,10 @@ impl N64Renderer {
 
         {
             writeln!(s, "struct FragmentOutput {{")?;
-            if state.zmode_decal {
+            if p.decal {
                 writeln!(s, "    @builtin(frag_depth) frag_depth: f32,")?;
             }
             writeln!(s, "    @location(0) color: vec4<f32>,")?;
-            writeln!(s, "}}")?;
-            writeln!(s)?;
-        }
-
-        #[rustfmt::skip]
-        if cc_features.opt_noise {
-            writeln!(s, "fn random(v: vec3<f32>) -> f32 {{")?;
-            writeln!(s, "    let r = dot(sin(v), vec3<f32>(12.9898, 78.233, 37.719));")?;
-            writeln!(s, "    return fract(sin(r) * 143758.5453);")?;
             writeln!(s, "}}")?;
             writeln!(s)?;
         }
@@ -333,22 +264,22 @@ impl N64Renderer {
             writeln!(s, "@fragment")?;
             writeln!(s, "fn fs_main(in: VertexOutput) -> FragmentOutput {{")?;
             writeln!(s, "    var out = FragmentOutput();")?;
-            if state.zmode_decal {
+            if p.decal {
                 writeln!(s, "    out.frag_depth = in.position.z - 0.001;")?;
             }
-            write_fragment_shader_body(&mut s, cc_features)?;
+            write_fragment_shader_body(&mut s, p)?;
             writeln!(s, "    return out;")?;
             writeln!(s, "}}")?;
             writeln!(s)?;
         }
 
         let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some(label("shader", shader_id)),
+            label: Some(label("shader", pipeline_id)),
             source: wgpu::ShaderSource::Wgsl(s.into()),
         });
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some(label("pipeline", shader_id)),
+            label: Some(label("pipeline", pipeline_id)),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader_module,
@@ -358,21 +289,17 @@ impl N64Renderer {
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: match state.cull_mode {
+                cull_mode: match p.cull_mode {
                     CullMode::None => None,
                     CullMode::Front => Some(wgpu::Face::Front),
                     CullMode::Back => Some(wgpu::Face::Back),
                 },
                 ..Default::default()
             },
-            // primitive: wgpu::PrimitiveState {
-            //     polygon_mode: wgpu::PolygonMode::Line,
-            //     ..Default::default()
-            // },
             depth_stencil: Some(wgpu::DepthStencilState {
                 format: wgpu::TextureFormat::Depth24Plus,
-                depth_write_enabled: state.depth_mask,
-                depth_compare: if state.depth_test {
+                depth_write_enabled: p.depth_write,
+                depth_compare: if p.depth_compare {
                     wgpu::CompareFunction::LessEqual
                 } else {
                     wgpu::CompareFunction::Always
@@ -386,7 +313,7 @@ impl N64Renderer {
                 entry_point: "fs_main",
                 targets: &[wgpu::ColorTargetState {
                     format: output_format,
-                    blend: Some(wgpu::BlendState::ALPHA_BLENDING).filter(|_| state.use_alpha),
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING).filter(|_| p.blend),
                     write_mask: wgpu::ColorWrites::all(),
                 }],
             }),
@@ -400,35 +327,38 @@ impl N64Renderer {
         &mut self,
         device: &wgpu::Device,
         output_format: wgpu::TextureFormat,
-        state: RenderState,
+        pipeline_id: PipelineId,
+        pipeline_info: &PipelineInfo,
     ) {
-        if !self.pipelines.contains_key(&state) {
-            let pipeline = self.create_pipeline(device, output_format, state).unwrap();
-            self.pipelines.insert(state, pipeline);
+        if !self.pipelines.contains_key(&pipeline_id) {
+            let pipeline = self
+                .create_pipeline(device, output_format, pipeline_id, pipeline_info)
+                .unwrap();
+            self.pipelines.insert(pipeline_id, pipeline);
         }
     }
 
-    fn create_sampler(&mut self, device: &wgpu::Device, state: SamplerState) -> wgpu::Sampler {
-        let filter = if state.linear_filter {
+    fn create_sampler(
+        &mut self,
+        device: &wgpu::Device,
+        sampler_state: &SamplerState,
+    ) -> wgpu::Sampler {
+        let filter = if sampler_state.linear_filter {
             wgpu::FilterMode::Linear
         } else {
             wgpu::FilterMode::Nearest
         };
 
-        let address_mode = |v| {
-            if v & 0x2 != 0 {
-                wgpu::AddressMode::ClampToEdge
-            } else if v & 0x1 != 0 {
-                wgpu::AddressMode::MirrorRepeat
-            } else {
-                wgpu::AddressMode::Repeat
-            }
+        let address_mode = |m| match m {
+            WrapMode::Clamp => wgpu::AddressMode::ClampToEdge,
+            WrapMode::Repeat => wgpu::AddressMode::Repeat,
+            WrapMode::MirrorRepeat => wgpu::AddressMode::MirrorRepeat,
         };
 
         device.create_sampler(&wgpu::SamplerDescriptor {
             label: None,
-            address_mode_u: address_mode(state.cms),
-            address_mode_v: address_mode(state.cmt),
+            address_mode_u: address_mode(sampler_state.u_wrap),
+            address_mode_v: address_mode(sampler_state.v_wrap),
             address_mode_w: wgpu::AddressMode::ClampToEdge,
             mag_filter: filter,
             min_filter: filter,
@@ -489,17 +419,12 @@ impl N64Renderer {
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        texture_index: usize,
-        texture: &TextureState,
+        texture_index: TextureIndex,
+        texture_state: &TextureState,
     ) {
         if !self.texture_bind_groups.contains_key(&texture_index) {
-            let sampler =
-                self.create_sampler(device, texture.sampler.expect("sampler parameters not set"));
-            let texture = self.create_texture(
-                device,
-                queue,
-                texture.data.as_ref().expect("texture not uploaded"),
-            );
+            let sampler = self.create_sampler(device, &texture_state.sampler);
+            let texture = self.create_texture(device, queue, &texture_state.data);
 
             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: None,
@@ -531,63 +456,44 @@ impl N64Renderer {
         output_format: wgpu::TextureFormat,
         data: &N64RenderData,
     ) {
+        for (&pipeline_id, pipeline_info) in &data.pipelines {
+            self.prepare_pipeline(device, output_format, pipeline_id, pipeline_info);
+        }
+
         // Textures may change index across frames
         self.texture_bind_groups.clear();
-        for (texture_index, texture) in data.textures.iter().enumerate() {
+        for (&texture_index, texture) in &data.textures {
             self.prepare_texture_bind_group(device, queue, texture_index, texture);
         }
 
         self.commands.clear();
         for command in &data.commands {
-            self.prepare_pipeline(device, output_format, command.state);
-
             let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: None,
                 contents: cast_slice(&command.vertex_buffer),
                 usage: wgpu::BufferUsages::VERTEX,
             });
-
-            self.commands.push(Command {
-                viewport: command.viewport,
-                scissor: command.scissor,
-                state: command.state,
-                texture_index: command.texture_index,
-                buffer,
-                num_vertices: 3 * command.num_tris as u32,
-            });
+            self.commands.push(command.with_buffer(buffer));
         }
     }
 
     pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>, output_size: (u32, u32)) {
-        let mut current_state = None;
+        let mut current_pipeline = None;
 
         for command in &self.commands {
-            let shader_id = command.state.shader_id.expect("missing shader id");
-            let cc_features = decode_shader_id(shader_id);
-
-            let ScreenRectangle {
-                x,
-                y,
-                width,
-                height,
-            } = command.viewport;
-            if width == 0 || height == 0 {
+            let ScreenRectangle { x, y, w, h } = command.viewport;
+            if w == 0 || h == 0 {
                 continue;
             }
-            let y = output_size.1 as i32 - y - height;
-            rp.set_viewport(x as f32, y as f32, width as f32, height as f32, 0.0, 1.0);
+            let y = output_size.1 as i32 - y - h;
+            rp.set_viewport(x as f32, y as f32, w as f32, h as f32, 0.0, 1.0);
 
-            let ScreenRectangle {
-                x,
-                y,
-                width,
-                height,
-            } = command.scissor;
-            let y = output_size.1 as i32 - y - height;
+            let ScreenRectangle { x, y, w, h } = command.scissor;
+            let y = output_size.1 as i32 - y - h;
             let x0 = x.clamp(0, output_size.0 as i32);
             let y0 = y.clamp(0, output_size.1 as i32);
-            let x1 = (x + width).clamp(0, output_size.0 as i32);
-            let y1 = (y + height).clamp(0, output_size.1 as i32);
+            let x1 = (x + w).clamp(0, output_size.0 as i32);
+            let y1 = (y + h).clamp(0, output_size.1 as i32);
             let w = x1 - x0;
             let h = y1 - y0;
             if w <= 0 || h <= 0 {
@@ -595,29 +501,26 @@ impl N64Renderer {
             }
             rp.set_scissor_rect(x as u32, y as u32, w as u32, h as u32);
 
-            if current_state != Some(command.state) {
-                current_state = Some(command.state);
+            if current_pipeline != Some(command.pipeline) {
+                current_pipeline = Some(command.pipeline);
                 let pipeline = self
                     .pipelines
-                    .get(&command.state)
+                    .get(&command.pipeline)
                     .expect("pipeline not prepared");
                 rp.set_pipeline(pipeline);
             }
 
             for i in 0..2 {
-                if cc_features.used_textures[i] {
-                    let texture_index = command.texture_index[i].expect("missing texture index");
-
+                if let Some(texture_index) = command.textures[i] {
                     let bind_group = self
                         .texture_bind_groups
                         .get(&texture_index)
                         .expect("texture bind group not prepared");
-
                     rp.set_bind_group(i as u32, bind_group, &[]);
                 }
             }
 
-            rp.set_vertex_buffer(0, command.buffer.slice(..));
+            rp.set_vertex_buffer(0, command.vertex_buffer.slice(..));
             rp.draw(0..command.num_vertices, 0..1);
         }
     }

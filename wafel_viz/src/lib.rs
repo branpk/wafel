@@ -10,7 +10,6 @@
 use std::{
     collections::{HashMap, HashSet},
     error::Error,
-    mem,
     rc::Rc,
     time::{Duration, Instant},
 };
@@ -18,19 +17,15 @@ use std::{
 use custom_renderer::{CustomRenderer, Scene};
 use f3d_decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand};
 use f3d_interpret::{interpret_f3d_display_list, F3DSource};
-use n64_render_backend::{process_display_list, N64RenderBackend};
-use wafel_api::{load_m64, Address, Emu, Game, IntType, SaveState};
-use wafel_memory::{DllGameMemory, DllSlot, DllSlotMemoryView, GameMemory, MemoryRead};
+use n64_render_backend::N64RenderBackend;
+use wafel_api::{load_m64, Address, Game, IntType, SaveState};
+use wafel_memory::{DllSlotMemoryView, GameMemory, MemoryRead};
 use winit::{
     event::{ElementState, Event, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
 
-use crate::{
-    f3d_decode::{F3DCommand, SPCommand},
-    render_api::{decode_shader_id, CCFeatures},
-};
 pub use n64_render_data::*;
 pub use n64_renderer::*;
 
@@ -176,7 +171,7 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
 
     // assert!(data0.compare(&data1));
     env_logger::init();
-    futures::executor::block_on(run(0, None, true)).unwrap();
+    futures::executor::block_on(run(0, None)).unwrap();
     return Ok(());
 
     //     let w_type = IntType::u_ptr_native();
@@ -227,14 +222,10 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
 
 pub fn test(frame0: u32) -> Result<(), Box<dyn Error>> {
     env_logger::init();
-    futures::executor::block_on(run(frame0, None, false))
+    futures::executor::block_on(run(frame0, None))
 }
 
-async fn run(
-    frame0: u32,
-    arg_data: Option<N64RenderData>,
-    use_rust_f3d: bool,
-) -> Result<(), Box<dyn Error>> {
+async fn run(frame0: u32, arg_data: Option<N64RenderData>) -> Result<(), Box<dyn Error>> {
     let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
     // let (_, inputs) = load_m64("../sm64-bot/bad_bot.m64");
     let (_, inputs) = load_m64("test_files/120_u.m64");
@@ -413,24 +404,14 @@ async fn run(
                         }
 
                         let render_data = arg_data.clone().unwrap_or_else(|| {
-                            if use_rust_f3d {
-                                let mut backend = N64RenderBackend::default();
-                                let f3d_source = DllF3DSource { game: &game };
-                                interpret_f3d_display_list(
-                                    &f3d_source,
-                                    &mut backend,
-                                    (config.width, config.height),
-                                );
-                                backend.finish()
-                            } else {
-                                process_display_list(
-                                    &game.memory,
-                                    &mut game.base_slot,
-                                    config.width,
-                                    config.height,
-                                )
-                                .expect("failed to render game")
-                            }
+                            let mut backend = N64RenderBackend::default();
+                            let f3d_source = DllF3DSource { game: &game };
+                            interpret_f3d_display_list(
+                                &f3d_source,
+                                &mut backend,
+                                (config.width, config.height),
+                            );
+                            backend.finish()
                         });
                         renderer.prepare(&device, &queue, output_format, &render_data);
 
