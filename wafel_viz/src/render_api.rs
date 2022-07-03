@@ -1,5 +1,3 @@
-use crate::CullMode;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ShaderId(pub usize);
 
@@ -7,31 +5,6 @@ pub struct ShaderId(pub usize);
 pub struct ShaderInfo {
     pub num_inputs: u8,
     pub used_textures: [bool; 2],
-}
-
-pub trait RenderBackend {
-    fn z_is_from_0_to_1(&self) -> bool;
-    fn unload_shader(&mut self, old_prg: ShaderId);
-    fn load_shader(&mut self, new_prg: ShaderId);
-    fn create_and_load_new_shader(&mut self, shader_id: u32) -> ShaderId;
-    fn lookup_shader(&self, shader_id: u32) -> Option<ShaderId>;
-    fn shader_get_info(&self, prg: ShaderId) -> ShaderInfo;
-    fn new_texture(&mut self) -> u32;
-    fn select_texture(&mut self, tile: i32, texture_id: u32);
-    fn upload_texture(&mut self, rgba32_buf: &[u8], width: i32, height: i32);
-    fn set_sampler_parameters(&mut self, tile: i32, linear_filter: bool, cms: u32, cmt: u32);
-    fn set_depth_test(&mut self, depth_test: bool);
-    fn set_depth_mask(&mut self, z_upd: bool);
-    fn set_zmode_decal(&mut self, zmode_decal: bool);
-    fn set_viewport(&mut self, x: i32, y: i32, width: i32, height: i32);
-    fn set_scissor(&mut self, x: i32, y: i32, width: i32, height: i32);
-    fn set_use_alpha(&mut self, use_alpha: bool);
-    fn set_cull_mode(&mut self, cull_mode: CullMode);
-    fn draw_triangles(&mut self, buf_vbo: &[f32], buf_vbo_num_tris: usize);
-    fn on_resize(&mut self);
-    fn start_frame(&mut self);
-    fn end_frame(&mut self);
-    fn finish_render(&mut self);
 }
 
 #[derive(Debug, Clone, Copy, Default)]

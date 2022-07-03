@@ -595,21 +595,21 @@ pub struct TileParams {
     pub line: u32,
     pub tmem: u32,
     pub palette: u32,
-    pub cmt: WrapMode,
+    pub cmt: F3DWrapMode,
     pub maskt: u32,
     pub shiftt: u32,
-    pub cms: WrapMode,
+    pub cms: F3DWrapMode,
     pub masks: u32,
     pub shifts: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct WrapMode {
+pub struct F3DWrapMode {
     pub mirror: bool,
     pub clamp: bool,
 }
 
-impl From<u8> for WrapMode {
+impl From<u8> for F3DWrapMode {
     fn from(v: u8) -> Self {
         Self {
             mirror: v & 0x1 != 0,
@@ -618,8 +618,8 @@ impl From<u8> for WrapMode {
     }
 }
 
-impl From<WrapMode> for u8 {
-    fn from(m: WrapMode) -> Self {
+impl From<F3DWrapMode> for u8 {
+    fn from(m: F3DWrapMode) -> Self {
         let mut v = 0;
         if m.mirror {
             v |= 0x1;

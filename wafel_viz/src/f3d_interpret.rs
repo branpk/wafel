@@ -6,13 +6,12 @@ use derivative::Derivative;
 
 use crate::{
     f3d_decode::*,
-    f3d_render_data::CullMode,
-    render_api::{
-        decode_shader_id, encode_shader_id, CCFeatures, RenderBackend, ShaderId, ShaderItem,
-    },
+    f3d_render_backend::F3DRenderBackend,
+    f3d_render_data::*,
+    render_api::{decode_shader_id, encode_shader_id, CCFeatures, ShaderId, ShaderItem},
 };
 
-pub trait F3DSource {
+pub trait F3DMemory {
     type Ptr: fmt::Debug + Copy + PartialEq;
     type DlIter: Iterator<Item = F3DCommand<Self::Ptr>>;
 
@@ -25,16 +24,17 @@ pub trait F3DSource {
 }
 
 pub fn interpret_f3d_display_list(
-    source: &impl F3DSource,
-    backend: &mut impl RenderBackend,
+    memory: &impl F3DMemory,
     screen_size: (u32, u32),
-) {
+) -> F3DRenderData {
+    let mut backend = F3DRenderBackend::default();
     let mut state = State {
         screen_size,
         ..Default::default()
     };
-    state.interpret(source, backend, source.root_dl());
-    state.flush(backend);
+    state.interpret(memory, &mut backend, memory.root_dl());
+    state.flush(&mut backend);
+    backend.finish()
 }
 
 #[derive(Debug, Derivative)]
@@ -150,13 +150,13 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
             .expect("invalid vertex index")
     }
 
-    fn flush(&mut self, backend: &mut impl RenderBackend) {
+    fn flush(&mut self, backend: &mut F3DRenderBackend) {
         if self.vertex_buffer_num_tris > 0 {
             self.flush_with_shader(backend, self.get_shader_id());
         }
     }
 
-    fn flush_with_shader(&mut self, backend: &mut impl RenderBackend, shader_id: u32) {
+    fn flush_with_shader(&mut self, backend: &mut F3DRenderBackend, shader_id: u32) {
         if self.vertex_buffer_num_tris > 0 {
             backend.load_shader(ShaderId(shader_id as usize));
             backend.draw_triangles(&self.vertex_buffer, self.vertex_buffer_num_tris);
@@ -165,7 +165,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         }
     }
 
-    fn set_geometry_mode(&mut self, backend: &mut impl RenderBackend, mode: GeometryModes) {
+    fn set_geometry_mode(&mut self, backend: &mut F3DRenderBackend, mode: GeometryModes) {
         self.flush(backend);
         self.geometry_mode = mode;
 
@@ -180,7 +180,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         }
     }
 
-    fn set_viewport(&mut self, backend: &mut impl RenderBackend, viewport: Viewport) {
+    fn set_viewport(&mut self, backend: &mut F3DRenderBackend, viewport: Viewport) {
         self.flush(backend);
         self.viewport = viewport;
 
@@ -199,7 +199,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
 
     fn set_scissor(
         &mut self,
-        backend: &mut impl RenderBackend,
+        backend: &mut F3DRenderBackend,
         mode: ScissorMode,
         rect: Rectangle<u16>,
     ) {
@@ -220,7 +220,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         );
     }
 
-    fn set_render_mode(&mut self, backend: &mut impl RenderBackend, rm: RenderMode) {
+    fn set_render_mode(&mut self, backend: &mut F3DRenderBackend, rm: RenderMode) {
         self.flush(backend);
         self.render_mode = rm;
 
@@ -289,10 +289,10 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         components
     }
 
-    fn load_texture<S: F3DSource<Ptr = Ptr>>(
+    fn load_texture<M: F3DMemory<Ptr = Ptr>>(
         &mut self,
-        source: &S,
-        backend: &mut impl RenderBackend,
+        memory: &M,
+        backend: &mut F3DRenderBackend,
         tile: TileIndex,
     ) -> u32 {
         use ComponentSize::*;
@@ -316,17 +316,22 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         }
 
         let rgba32 = match fmt {
-            (Rgba, Bits16) => read_rgba16(source, tmem.image.img, size_bytes, line_size_bytes),
-            (Ia, Bits16) => read_ia16(source, tmem.image.img, size_bytes, line_size_bytes),
-            (Ia, Bits8) => read_ia8(source, tmem.image.img, size_bytes, line_size_bytes),
-            (Ia, Bits4) => read_ia4(source, tmem.image.img, size_bytes, line_size_bytes),
+            (Rgba, Bits16) => read_rgba16(memory, tmem.image.img, size_bytes, line_size_bytes),
+            (Ia, Bits16) => read_ia16(memory, tmem.image.img, size_bytes, line_size_bytes),
+            (Ia, Bits8) => read_ia8(memory, tmem.image.img, size_bytes, line_size_bytes),
+            (Ia, Bits4) => read_ia4(memory, tmem.image.img, size_bytes, line_size_bytes),
             fmt => unimplemented!("texture format: {:?}", fmt),
             // _ => TextureRgba32::dbg_gradient(),
         };
 
         let texture_id = backend.new_texture();
         backend.select_texture(tile.0.into(), texture_id);
-        backend.upload_texture(&rgba32.data, rgba32.width as i32, rgba32.height as i32);
+        backend.upload_texture(
+            tile.0.into(),
+            &rgba32.data,
+            rgba32.width as i32,
+            rgba32.height as i32,
+        );
         tmem.texture_ids.insert(fmt, texture_id);
 
         self.set_sampler_parameters(backend, tile);
@@ -334,13 +339,15 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         texture_id
     }
 
-    fn set_sampler_parameters(&self, backend: &mut impl RenderBackend, tile: TileIndex) {
+    fn set_sampler_parameters(&self, backend: &mut F3DRenderBackend, tile: TileIndex) {
         let tile_params = &self.tile_params[tile.0 as usize];
         backend.set_sampler_parameters(
             tile.0.into(),
-            self.texture_filter != TextureFilter::Point,
-            u8::from(tile_params.cms).into(),
-            u8::from(tile_params.cmt).into(),
+            SamplerState {
+                u_wrap: tile_params.cms.into(),
+                v_wrap: tile_params.cmt.into(),
+                linear_filter: self.texture_filter != TextureFilter::Point,
+            },
         );
     }
 
@@ -349,7 +356,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         &self.proj.cur * (&self.model_view.cur * model_pos)
     }
 
-    fn push_pos(&mut self, backend: &mut impl RenderBackend, mut pos: [f32; 4]) {
+    fn push_pos(&mut self, backend: &mut F3DRenderBackend, mut pos: [f32; 4]) {
         if backend.z_is_from_0_to_1() {
             pos[2] = (pos[2] + pos[3]) / 2.0;
         }
@@ -506,7 +513,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         }
     }
 
-    fn set_modes_for_rect(&mut self, backend: &mut impl RenderBackend) {
+    fn set_modes_for_rect(&mut self, backend: &mut F3DRenderBackend) {
         self.flush(backend);
         backend.set_depth_test(false);
         backend.set_depth_mask(false);
@@ -515,18 +522,18 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         backend.set_cull_mode(CullMode::None);
     }
 
-    fn reset_modes_for_rect(&mut self, backend: &mut impl RenderBackend) {
+    fn reset_modes_for_rect(&mut self, backend: &mut F3DRenderBackend) {
         assert!(self.vertex_buffer.is_empty());
         self.set_geometry_mode(backend, self.geometry_mode);
         self.set_render_mode(backend, self.render_mode);
         self.set_viewport(backend, self.viewport);
     }
 
-    fn interpret<S: F3DSource<Ptr = Ptr>>(
+    fn interpret<M: F3DMemory<Ptr = Ptr>>(
         &mut self,
-        source: &S,
-        backend: &mut impl RenderBackend,
-        dl: S::DlIter,
+        memory: &M,
+        backend: &mut F3DRenderBackend,
+        dl: M::DlIter,
     ) {
         for cmd in dl {
             // if !matches!(cmd, F3DCommand::Unknown { .. }) {
@@ -542,7 +549,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         push,
                     } => {
                         self.flush(backend);
-                        let fixed = read_matrix(source, matrix, 0);
+                        let fixed = read_matrix(memory, matrix, 0);
                         let m = Matrixf::from_fixed(&fixed);
                         match mode {
                             MatrixMode::Proj => self.proj.execute(m, op, push),
@@ -550,7 +557,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         }
                     }
                     SPCommand::Viewport(ptr) => {
-                        let viewport = read_viewport(source, ptr, 0);
+                        let viewport = read_viewport(memory, ptr, 0);
                         if self.viewport != viewport {
                             self.set_viewport(backend, viewport);
                         }
@@ -558,19 +565,19 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                     SPCommand::Light { light, n } => {
                         self.flush(backend);
                         let index = (n - 1) as usize;
-                        self.lights[index] = read_light(source, light);
+                        self.lights[index] = read_light(memory, light);
                     }
                     SPCommand::Vertex { v, n, v0 } => {
                         let offset = v0 as usize * mem::size_of::<Vertex>();
-                        self.vertices = read_vertices(source, v, offset, n as usize);
+                        self.vertices = read_vertices(memory, v, offset, n as usize);
                     }
                     SPCommand::DisplayList(ptr) => {
-                        let child_dl = source.read_dl(ptr);
-                        self.interpret(source, backend, child_dl);
+                        let child_dl = memory.read_dl(ptr);
+                        self.interpret(memory, backend, child_dl);
                     }
                     SPCommand::BranchList(ptr) => {
-                        let child_dl = source.read_dl(ptr);
-                        self.interpret(source, backend, child_dl);
+                        let child_dl = memory.read_dl(ptr);
+                        self.interpret(memory, backend, child_dl);
                         break;
                     }
                     SPCommand::OneTriangle { v0, v1, v2, .. } => {
@@ -585,7 +592,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
 
                         for i in 0..2 {
                             if cc_features.used_textures[i] {
-                                self.load_texture(source, backend, TileIndex(i as u8));
+                                self.load_texture(memory, backend, TileIndex(i as u8));
                             }
                         }
 
@@ -873,7 +880,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         }
 
                         let tile = tex_rect.tile;
-                        self.load_texture(source, backend, tile);
+                        self.load_texture(memory, backend, tile);
 
                         let x0 = 2.0 * (ulx / 320.0) - 1.0;
                         let x1 = 2.0 * (lrx / 320.0) - 1.0;
@@ -913,9 +920,11 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             let tile_params = &self.tile_params[tile.0 as usize];
                             backend.set_sampler_parameters(
                                 tile.0 as i32,
-                                false,
-                                u8::from(tile_params.cms).into(),
-                                u8::from(tile_params.cmt).into(),
+                                SamplerState {
+                                    u_wrap: tile_params.cms.into(),
+                                    v_wrap: tile_params.cmt.into(),
+                                    linear_filter: false,
+                                },
                             );
 
                             let cc_features = CCFeatures {
@@ -962,6 +971,18 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                     // unimplemented!("{:?}", cmd)
                 }
             }
+        }
+    }
+}
+
+impl From<F3DWrapMode> for WrapMode {
+    fn from(m: F3DWrapMode) -> Self {
+        if m.clamp {
+            WrapMode::Clamp
+        } else if m.mirror {
+            WrapMode::MirrorRepeat
+        } else {
+            WrapMode::Repeat
         }
     }
 }
@@ -1033,9 +1054,9 @@ impl ops::Mul<[f32; 4]> for &Matrixf {
     }
 }
 
-fn read_matrix<S: F3DSource>(source: &S, ptr: S::Ptr, offset: usize) -> Vec<i32> {
+fn read_matrix<M: F3DMemory>(memory: &M, ptr: M::Ptr, offset: usize) -> Vec<i32> {
     let mut m = vec![0; 16];
-    source.read_u32(cast_slice_mut(&mut m), ptr, offset);
+    memory.read_u32(cast_slice_mut(&mut m), ptr, offset);
     m
 }
 
@@ -1058,10 +1079,10 @@ struct Viewport {
     trans: [i16; 4],
 }
 
-fn read_viewport<S: F3DSource>(source: &S, ptr: S::Ptr, offset: usize) -> Viewport {
+fn read_viewport<M: F3DMemory>(memory: &M, ptr: M::Ptr, offset: usize) -> Viewport {
     let mut v = Viewport::default();
-    source.read_u16(cast_slice_mut(&mut v.scale), ptr, offset);
-    source.read_u16(cast_slice_mut(&mut v.trans), ptr, offset + 8);
+    memory.read_u16(cast_slice_mut(&mut v.scale), ptr, offset);
+    memory.read_u16(cast_slice_mut(&mut v.trans), ptr, offset + 8);
     v
 }
 
@@ -1073,9 +1094,9 @@ struct Vertex {
     cn: [u8; 4],
 }
 
-fn read_vertices<S: F3DSource>(
-    source: &S,
-    ptr: S::Ptr,
+fn read_vertices<M: F3DMemory>(
+    memory: &M,
+    ptr: M::Ptr,
     offset: usize,
     count: usize,
 ) -> Vec<Vertex> {
@@ -1084,9 +1105,9 @@ fn read_vertices<S: F3DSource>(
     for i in 0..count {
         let mut v = Vertex::default();
         let voffset = offset + i * stride;
-        source.read_u16(cast_slice_mut(&mut v.pos), ptr, voffset);
-        source.read_u16(cast_slice_mut(&mut v.uv), ptr, voffset + 8);
-        source.read_u8(cast_slice_mut(&mut v.cn), ptr, voffset + 12);
+        memory.read_u16(cast_slice_mut(&mut v.pos), ptr, voffset);
+        memory.read_u16(cast_slice_mut(&mut v.uv), ptr, voffset + 8);
+        memory.read_u8(cast_slice_mut(&mut v.cn), ptr, voffset + 12);
         vs.push(v);
     }
     vs
@@ -1102,11 +1123,11 @@ struct Light {
     pad3: u8,
 }
 
-fn read_light<S: F3DSource>(source: &S, ptr: S::Ptr) -> Light {
+fn read_light<M: F3DMemory>(memory: &M, ptr: M::Ptr) -> Light {
     let mut light = Light::default();
-    source.read_u8(&mut light.color, ptr, 0);
-    source.read_u8(&mut light.color_copy, ptr, 4);
-    source.read_u8(cast_slice_mut(&mut light.dir), ptr, 8);
+    memory.read_u8(&mut light.color, ptr, 0);
+    memory.read_u8(&mut light.color_copy, ptr, 4);
+    memory.read_u8(cast_slice_mut(&mut light.dir), ptr, 8);
     light
 }
 
@@ -1158,14 +1179,14 @@ impl TextureRgba32 {
     }
 }
 
-fn read_rgba16<S: F3DSource>(
-    source: &S,
-    ptr: S::Ptr,
+fn read_rgba16<M: F3DMemory>(
+    memory: &M,
+    ptr: M::Ptr,
     size_bytes: u32,
     line_size_bytes: u32,
 ) -> TextureRgba32 {
     let mut rgba16_data: Vec<u8> = vec![0; size_bytes as usize];
-    source.read_u8(&mut rgba16_data, ptr, 0);
+    memory.read_u8(&mut rgba16_data, ptr, 0);
 
     let mut rgba32_data: Vec<u8> = Vec::with_capacity(2 * size_bytes as usize);
 
@@ -1192,14 +1213,14 @@ fn rgba_16_to_32(rgba16: u16) -> [u8; 4] {
     ]
 }
 
-fn read_ia16<S: F3DSource>(
-    source: &S,
-    ptr: S::Ptr,
+fn read_ia16<M: F3DMemory>(
+    memory: &M,
+    ptr: M::Ptr,
     size_bytes: u32,
     line_size_bytes: u32,
 ) -> TextureRgba32 {
     let mut ia16_data: Vec<u8> = vec![0; size_bytes as usize];
-    source.read_u8(&mut ia16_data, ptr, 0);
+    memory.read_u8(&mut ia16_data, ptr, 0);
 
     let mut rgba32_data: Vec<u8> = Vec::with_capacity(2 * size_bytes as usize);
 
@@ -1217,14 +1238,14 @@ fn read_ia16<S: F3DSource>(
     )
 }
 
-fn read_ia8<S: F3DSource>(
-    source: &S,
-    ptr: S::Ptr,
+fn read_ia8<M: F3DMemory>(
+    memory: &M,
+    ptr: M::Ptr,
     size_bytes: u32,
     line_size_bytes: u32,
 ) -> TextureRgba32 {
     let mut ia8_data: Vec<u8> = vec![0; size_bytes as usize];
-    source.read_u8(&mut ia8_data, ptr, 0);
+    memory.read_u8(&mut ia8_data, ptr, 0);
 
     let mut rgba32_data: Vec<u8> = Vec::with_capacity(4 * size_bytes as usize);
 
@@ -1238,14 +1259,14 @@ fn read_ia8<S: F3DSource>(
     TextureRgba32::new(line_size_bytes, size_bytes / line_size_bytes, rgba32_data)
 }
 
-fn read_ia4<S: F3DSource>(
-    source: &S,
-    ptr: S::Ptr,
+fn read_ia4<M: F3DMemory>(
+    memory: &M,
+    ptr: M::Ptr,
     size_bytes: u32,
     line_size_bytes: u32,
 ) -> TextureRgba32 {
     let mut ia4_data: Vec<u8> = vec![0; size_bytes as usize];
-    source.read_u8(&mut ia4_data, ptr, 0);
+    memory.read_u8(&mut ia4_data, ptr, 0);
 
     let mut rgba32_data: Vec<u8> = Vec::with_capacity(8 * size_bytes as usize);
 

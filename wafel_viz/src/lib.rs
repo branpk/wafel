@@ -16,7 +16,7 @@ use std::{
 
 use custom_renderer::{CustomRenderer, Scene};
 use f3d_decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand};
-use f3d_interpret::{interpret_f3d_display_list, F3DSource};
+use f3d_interpret::{interpret_f3d_display_list, F3DMemory};
 use f3d_render_backend::F3DRenderBackend;
 use wafel_api::{load_m64, Address, Game, IntType, SaveState};
 use wafel_memory::{DllSlotMemoryView, GameMemory, MemoryRead};
@@ -38,10 +38,8 @@ mod f3d_renderer;
 mod render_api;
 
 pub fn prepare_render_data(game: &Game, screen_size: (u32, u32)) -> F3DRenderData {
-    let mut backend = F3DRenderBackend::default();
     let f3d_source = DllF3DSource { game };
-    interpret_f3d_display_list(&f3d_source, &mut backend, screen_size);
-    backend.finish()
+    interpret_f3d_display_list(&f3d_source, screen_size)
 }
 
 #[derive(Debug)]
@@ -62,7 +60,7 @@ impl<'a> DllF3DSource<'a> {
     }
 }
 
-impl<'a> F3DSource for DllF3DSource<'a> {
+impl<'a> F3DMemory for DllF3DSource<'a> {
     type Ptr = *const ();
     type DlIter = F3DCommandIter<RawDlIter<'a>>;
 
@@ -404,14 +402,8 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                         }
 
                         let render_data = arg_data.clone().unwrap_or_else(|| {
-                            let mut backend = F3DRenderBackend::default();
                             let f3d_source = DllF3DSource { game: &game };
-                            interpret_f3d_display_list(
-                                &f3d_source,
-                                &mut backend,
-                                (config.width, config.height),
-                            );
-                            backend.finish()
+                            interpret_f3d_display_list(&f3d_source, (config.width, config.height))
                         });
                         renderer.prepare(&device, &queue, output_format, &render_data);
 
