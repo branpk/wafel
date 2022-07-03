@@ -26,7 +26,7 @@ pub trait F3DSource {
 
 pub fn interpret_f3d_display_list(source: &impl F3DSource, backend: &mut impl RenderBackend) {
     let mut state = State::default();
-    state.interpret(source, backend, source.root_dl(), 0);
+    state.interpret(source, backend, source.root_dl());
     state.flush(backend);
 }
 
@@ -294,14 +294,9 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
             (Ia, Bits16) => read_ia16(source, tmem.image.img, size_bytes, line_size_bytes),
             (Ia, Bits8) => read_ia8(source, tmem.image.img, size_bytes, line_size_bytes),
             (Ia, Bits4) => read_ia4(source, tmem.image.img, size_bytes, line_size_bytes),
-            // TODO
             fmt => unimplemented!("texture format: {:?}", fmt),
             // _ => TextureRgba32::dbg_gradient(),
         };
-
-        // dbg!(line_size_bytes);
-        // dbg!(size_bytes);
-        // dbg!((rgba32.width, rgba32.height));
 
         let texture_id = backend.new_texture();
         backend.select_texture(tile.0.into(), texture_id);
@@ -333,7 +328,6 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         let texture_width = (tile_size.lrs - tile_size.uls + 4) / 4;
         let texture_height = (tile_size.lrt - tile_size.ult + 4) / 4;
 
-        // TODO: Cache lookat coeffs
         let mut lookat_x_coeffs = [0.0; 4];
         let mut lookat_y_coeffs = [0.0; 4];
         if self.geometry_mode.contains(GeometryModes::TEXTURE_GEN) {
@@ -381,8 +375,6 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
     fn calculate_shade(&self, vtx: &Vertex) -> Rgba32 {
         let mut shade_rgb: [u8; 3];
         if self.geometry_mode.contains(GeometryModes::LIGHTING) {
-            // TODO: Cache light normals
-
             shade_rgb = self.lights[self.num_dir_lights as usize].color;
             for light in &self.lights[0..self.num_dir_lights as usize] {
                 let light_dir = [
@@ -501,9 +493,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         source: &S,
         backend: &mut impl RenderBackend,
         dl: S::DlIter,
-        indent: usize,
     ) {
-        let indent_str = "  ".repeat(indent);
         for cmd in dl {
             // if !matches!(cmd, F3DCommand::Unknown { .. }) {
             //     eprintln!("{}{:?}", indent_str, cmd);
@@ -542,11 +532,11 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                     }
                     SPCommand::DisplayList(ptr) => {
                         let child_dl = source.read_dl(ptr);
-                        self.interpret(source, backend, child_dl, indent + 1);
+                        self.interpret(source, backend, child_dl);
                     }
                     SPCommand::BranchList(ptr) => {
                         let child_dl = source.read_dl(ptr);
-                        self.interpret(source, backend, child_dl, indent + 1);
+                        self.interpret(source, backend, child_dl);
                         break;
                     }
                     SPCommand::OneTriangle { v0, v1, v2, .. } => {
@@ -614,8 +604,8 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                     SPCommand::ClearGeometryMode(mode) => {
                         self.set_geometry_mode(backend, self.geometry_mode & !mode);
                     }
-                    // _ => unimplemented!("{:?}", cmd),
-                    _ => {}
+                    _ => unimplemented!("{:?}", cmd),
+                    // _ => {}
                 },
                 F3DCommand::Rdp(cmd) => match cmd {
                     DPCommand::SetAlphaDither(v) => {
@@ -803,9 +793,6 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         self.flush(backend);
                         self.tile_params[tile.0 as usize] = params;
                     }
-                    // DPCommand::LoadTile(tile, params) => {
-                    //     todo!()
-                    // }
                     DPCommand::LoadBlock(tile, block) => {
                         self.flush(backend);
 
@@ -825,22 +812,15 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         self.flush(backend);
                         self.tile_size[tile.0 as usize] = size;
                     }
-                    // DPCommand::LoadTLUTCmd(_, _) => todo!(),
-                    // DPCommand::SetOtherMode(_) => todo!(),
-                    // DPCommand::SetPrimDepth(_) => todo!(),
                     DPCommand::SetScissor(mode, rect) => {
                         if self.scissor != (mode, rect) {
                             self.set_scissor(backend, mode, rect);
                         }
                     }
-                    // DPCommand::SetConvert(_) => todo!(),
-                    // DPCommand::SetKeyR(_) => todo!(),
-                    // DPCommand::SetKeyGB(_) => todo!(),
                     DPCommand::FullSync => {}
                     DPCommand::TileSync => {}
                     DPCommand::PipeSync => {}
                     DPCommand::LoadSync => {}
-                    // DPCommand::TextureRectangleFlip(_) => todo!(),
                     DPCommand::TextureRectangle(tex_rect) => {
                         use ShaderItem::*;
 
@@ -945,12 +925,11 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             self.flush(backend);
                         }
                     }
-                    // _ => unimplemented!("{:?}", cmd),
-                    _ => {}
+                    _ => unimplemented!("{:?}", cmd),
+                    // _ => {}
                 },
                 F3DCommand::Unknown(_) => {
-                    // TODO
-                    // eprintln!("{}{:?}", indent_str, cmd);
+                    // unimplemented!("{:?}", cmd)
                 }
             }
         }
@@ -1225,17 +1204,6 @@ fn read_ia8<S: F3DSource>(
         let alpha = (ia8_data[i0] & 0xF) * 0x11;
         rgba32_data.extend(&[intensity, intensity, intensity, alpha]);
     }
-
-    // use std::io::Write;
-    // let f = std::fs::File::create("wafel_viz/gen_shaders/output.txt").unwrap();
-    // let mut w = std::io::BufWriter::new(f);
-    // for i in 0..(size_bytes / line_size_bytes) {
-    //     for j in 0..line_size_bytes {
-    //         let c = rgba32_data[(4 * (i * line_size_bytes + j) + 3) as usize];
-    //         write!(w, "{:#02} ", c).unwrap();
-    //     }
-    //     writeln!(w).unwrap();
-    // }
 
     TextureRgba32::new(line_size_bytes, size_bytes / line_size_bytes, rgba32_data)
 }
