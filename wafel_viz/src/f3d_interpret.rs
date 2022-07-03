@@ -23,23 +23,25 @@ pub fn interpret_f3d_display_list(
     z_is_from_0_to_1: bool,
 ) -> F3DRenderData {
     let mut state = State {
+        memory: Some(memory),
         screen_size,
         z_is_from_0_to_1,
         ..Default::default()
     };
-    state.interpret(memory, memory.root_dl());
-    state.finish(memory)
+    state.interpret(memory.root_dl());
+    state.finish()
 }
 
 #[derive(Debug, Derivative)]
 #[derivative(Default(bound = ""))]
-struct State<Ptr> {
+struct State<'m, M: F3DMemory> {
+    memory: Option<&'m M>,
     screen_size: (u32, u32),
     z_is_from_0_to_1: bool,
     result: F3DRenderData,
 
-    color_image: Option<Image<Ptr>>,
-    depth_image: Option<Ptr>,
+    color_image: Option<Image<M::Ptr>>,
+    depth_image: Option<M::Ptr>,
 
     viewport: Viewport,
     scissor: (ScissorMode, Rectangle<u16>),
@@ -65,15 +67,15 @@ struct State<Ptr> {
 
     geometry_mode: GeometryModes,
 
-    texture_image: Option<Image<Ptr>>,
+    texture_image: Option<Image<M::Ptr>>,
     texture_scale: [[f32; 2]; 8],
     tile_params: [TileParams; 8],
     tile_size: [TileSize; 8],
-    texture_memory: HashMap<u32, TextureMemory<Ptr>>,
+    texture_memory: HashMap<u32, TextureMemory<M::Ptr>>,
 
     vertices: Vec<Vertex>,
     vertex_buffer: Vec<f32>,
-    vertex_buffer_num_tris: usize,
+    num_vertices: u32,
 }
 
 #[derive(Debug)]
@@ -83,10 +85,14 @@ struct TextureMemory<Ptr> {
     loaded: HashMap<(ImageFormat, ComponentSize), TextureIndex>,
 }
 
-impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
-    fn finish<M: F3DMemory<Ptr = Ptr>>(mut self, memory: &M) -> F3DRenderData {
-        self.flush(memory);
+impl<'m, M: F3DMemory> State<'m, M> {
+    fn finish(mut self) -> F3DRenderData {
+        self.flush();
         self.result
+    }
+
+    fn memory(&self) -> &M {
+        self.memory.unwrap()
     }
 
     fn aspect(&self) -> f32 {
@@ -108,10 +114,10 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
             .expect("invalid vertex index")
     }
 
-    fn flush<M: F3DMemory<Ptr = Ptr>>(&mut self, memory: &M) {
-        if self.vertex_buffer_num_tris > 0 {
+    fn flush(&mut self) {
+        if self.num_vertices > 0 {
             let pipeline = self.pipeline_state();
-            let textures = self.load_textures(memory, &pipeline);
+            let textures = self.load_textures(&pipeline);
             self.flush_with(
                 self.viewport_screen(),
                 self.scissor_screen(),
@@ -136,16 +142,15 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
             .entry(pipeline)
             .or_insert(pipeline_info);
 
-        if self.vertex_buffer_num_tris > 0 {
+        if self.num_vertices > 0 {
             self.result.commands.push(DrawCommand {
                 viewport,
                 scissor,
                 pipeline,
                 textures,
                 vertex_buffer: mem::take(&mut self.vertex_buffer),
-                num_vertices: 3 * self.vertex_buffer_num_tris as u32,
+                num_vertices: mem::take(&mut self.num_vertices),
             });
-            self.vertex_buffer_num_tris = 0;
         }
     }
 
@@ -266,32 +271,24 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         components
     }
 
-    fn load_textures<M: F3DMemory<Ptr = Ptr>>(
-        &mut self,
-        memory: &M,
-        pipeline: &PipelineInfo,
-    ) -> [Option<TextureIndex>; 2] {
+    fn load_textures(&mut self, pipeline: &PipelineInfo) -> [Option<TextureIndex>; 2] {
         [0, 1].map(|i| {
             if pipeline.used_textures[i] {
-                Some(self.load_texture(memory, TileIndex(i as u8)))
+                Some(self.load_texture(TileIndex(i as u8)))
             } else {
                 None
             }
         })
     }
 
-    fn load_texture<M: F3DMemory<Ptr = Ptr>>(
-        &mut self,
-        memory: &M,
-        tile: TileIndex,
-    ) -> TextureIndex {
+    fn load_texture(&mut self, tile: TileIndex) -> TextureIndex {
         use ComponentSize::*;
         use ImageFormat::*;
 
         let tile_params = &self.tile_params[tile.0 as usize];
         let tmem = self
             .texture_memory
-            .get_mut(&tile_params.tmem)
+            .get(&tile_params.tmem)
             .expect("invalid tmem offset");
 
         let line_size_bytes = tile_params.line * 8;
@@ -302,11 +299,12 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
             return texture_index;
         }
 
+        let ptr = tmem.image.img;
         let data = match fmt {
-            (Rgba, Bits16) => read_rgba16(memory, tmem.image.img, size_bytes, line_size_bytes),
-            (Ia, Bits16) => read_ia16(memory, tmem.image.img, size_bytes, line_size_bytes),
-            (Ia, Bits8) => read_ia8(memory, tmem.image.img, size_bytes, line_size_bytes),
-            (Ia, Bits4) => read_ia4(memory, tmem.image.img, size_bytes, line_size_bytes),
+            (Rgba, Bits16) => read_rgba16(self.memory(), ptr, size_bytes, line_size_bytes),
+            (Ia, Bits16) => read_ia16(self.memory(), ptr, size_bytes, line_size_bytes),
+            (Ia, Bits8) => read_ia8(self.memory(), ptr, size_bytes, line_size_bytes),
+            (Ia, Bits4) => read_ia4(self.memory(), ptr, size_bytes, line_size_bytes),
             fmt => unimplemented!("texture format: {:?}", fmt),
             // _ => TextureRgba32::dbg_gradient(),
         };
@@ -322,6 +320,8 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
 
         let texture_index = TextureIndex(self.result.textures.len() as u32);
         self.result.textures.insert(texture_index, texture);
+
+        let tmem = self.texture_memory.get_mut(&tile_params.tmem).unwrap();
         tmem.loaded.insert(fmt, texture_index);
 
         texture_index
@@ -493,7 +493,34 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         }
     }
 
-    fn interpret<M: F3DMemory<Ptr = Ptr>>(&mut self, memory: &M, dl: M::DlIter) {
+    fn draw_triangle(&mut self, v0: u32, v1: u32, v2: u32) {
+        if self.geometry_mode.contains(GeometryModes::CULL_BACK)
+            && self.geometry_mode.contains(GeometryModes::CULL_FRONT)
+        {
+            return;
+        }
+
+        let pipeline = self.pipeline_state();
+        let input_comps = self.get_color_input_components();
+
+        for vi in [v0, v1, v2] {
+            let vtx = self.vertex(vi);
+
+            let pos = self.transform_pos(&vtx);
+            self.push_pos(pos);
+
+            if pipeline.uses_textures() {
+                let uv = self.calculate_uv(&vtx);
+                self.vertex_buffer.extend(&uv);
+            }
+
+            self.push_vertex_color_inputs(&pipeline, &input_comps, &vtx, pos);
+        }
+
+        self.num_vertices += 3;
+    }
+
+    fn interpret(&mut self, dl: M::DlIter) {
         for cmd in dl {
             // if !matches!(cmd, F3DCommand::Unknown { .. }) {
             //     eprintln!("{}{:?}", indent_str, cmd);
@@ -507,8 +534,8 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         op,
                         push,
                     } => {
-                        self.flush(memory);
-                        let fixed = read_matrix(memory, matrix, 0);
+                        self.flush();
+                        let fixed = read_matrix(self.memory(), matrix, 0);
                         let m = Matrixf::from_fixed(&fixed);
                         match mode {
                             MatrixMode::Proj => self.proj.execute(m, op, push),
@@ -516,85 +543,62 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         }
                     }
                     SPCommand::Viewport(ptr) => {
-                        let viewport = read_viewport(memory, ptr, 0);
+                        let viewport = read_viewport(self.memory(), ptr, 0);
                         if self.viewport != viewport {
-                            self.flush(memory);
+                            self.flush();
                             self.viewport = viewport;
                         }
                     }
                     SPCommand::Light { light, n } => {
-                        self.flush(memory);
+                        self.flush();
                         let index = (n - 1) as usize;
-                        self.lights[index] = read_light(memory, light);
+                        self.lights[index] = read_light(self.memory(), light);
                     }
                     SPCommand::Vertex { v, n, v0 } => {
                         let offset = v0 as usize * mem::size_of::<Vertex>();
-                        self.vertices = read_vertices(memory, v, offset, n as usize);
+                        self.vertices = read_vertices(self.memory(), v, offset, n as usize);
                     }
                     SPCommand::DisplayList(ptr) => {
-                        let child_dl = memory.read_dl(ptr);
-                        self.interpret(memory, child_dl);
+                        let child_dl = self.memory().read_dl(ptr);
+                        self.interpret(child_dl);
                     }
                     SPCommand::BranchList(ptr) => {
-                        let child_dl = memory.read_dl(ptr);
-                        self.interpret(memory, child_dl);
+                        let child_dl = self.memory().read_dl(ptr);
+                        self.interpret(child_dl);
                         break;
                     }
                     SPCommand::OneTriangle { v0, v1, v2, .. } => {
-                        if self.geometry_mode.contains(GeometryModes::CULL_BACK)
-                            && self.geometry_mode.contains(GeometryModes::CULL_FRONT)
-                        {
-                            continue;
-                        }
-
-                        let pipeline = self.pipeline_state();
-                        let input_comps = self.get_color_input_components();
-
-                        for vi in [v0, v1, v2] {
-                            let vtx = self.vertex(vi);
-
-                            let pos = self.transform_pos(&vtx);
-                            self.push_pos(pos);
-
-                            if pipeline.uses_textures() {
-                                let uv = self.calculate_uv(&vtx);
-                                self.vertex_buffer.extend(&uv);
-                            }
-
-                            self.push_vertex_color_inputs(&pipeline, &input_comps, &vtx, pos);
-                        }
-
-                        self.vertex_buffer_num_tris += 1;
+                        self.draw_triangle(v0, v1, v2);
                     }
                     SPCommand::PopMatrix(mode) => {
-                        self.flush(memory);
+                        self.flush();
                         match mode {
                             MatrixMode::Proj => self.proj.pop(),
                             MatrixMode::ModelView => self.model_view.pop(),
                         }
                     }
                     SPCommand::NumLights(n) => {
-                        self.flush(memory);
+                        self.flush();
                         self.num_dir_lights = n;
                     }
                     // SPCommand::Segment { seg, base } => todo!(),
                     SPCommand::FogFactor { mul, offset } => {
-                        self.flush(memory);
+                        self.flush();
                         self.fog_mul = mul;
                         self.fog_offset = offset;
                     }
                     SPCommand::Texture { sc, tc, tile, .. } => {
-                        self.flush(memory);
+                        self.flush();
                         self.texture_scale[tile as usize] =
                             [sc as f32 / 0x10000 as f32, tc as f32 / 0x10000 as f32];
                     }
                     SPCommand::EndDisplayList => break,
                     SPCommand::SetGeometryMode(mode) => {
-                        self.flush(memory);
+                        self.flush();
                         self.geometry_mode |= mode;
                     }
                     SPCommand::ClearGeometryMode(mode) => {
-                        self.flush(memory);
+                        self.flush();
                         self.geometry_mode &= !mode;
                     }
                     // _ => unimplemented!("{:?}", cmd),
@@ -603,34 +607,34 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                 F3DCommand::Rdp(cmd) => match cmd {
                     DPCommand::SetTextureFilter(v) => {
                         if self.texture_filter != v {
-                            self.flush(memory);
+                            self.flush();
                             self.texture_filter = v;
                         }
                     }
                     DPCommand::SetCycleType(v) => {
                         if self.cycle_type != v {
-                            self.flush(memory);
+                            self.flush();
                             self.cycle_type = v;
                         }
                     }
                     DPCommand::SetAlphaCompare(v) => {
                         if self.alpha_compare != v {
-                            self.flush(memory);
+                            self.flush();
                             self.alpha_compare = v;
                         }
                     }
                     DPCommand::SetRenderMode(v) => {
                         if self.render_mode != v {
-                            self.flush(memory);
+                            self.flush();
                             self.render_mode = v;
                         }
                     }
                     DPCommand::SetColorImage(image) => {
-                        self.flush(memory);
+                        self.flush();
                         self.color_image = Some(image);
                     }
                     DPCommand::SetDepthImage(image) => {
-                        self.flush(memory);
+                        self.flush();
                         self.depth_image = Some(image);
                     }
                     DPCommand::SetTextureImage(image) => {
@@ -638,7 +642,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                     }
                     DPCommand::SetCombineMode(mode) => {
                         if self.combine_mode != mode {
-                            self.flush(memory);
+                            self.flush();
                             self.combine_mode = mode;
                         }
                     }
@@ -667,7 +671,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             }
                         }
 
-                        self.flush(memory);
+                        self.flush();
 
                         if matches!(self.cycle_type, CycleType::Fill | CycleType::Copy) {
                             rect.lrx += 1;
@@ -709,7 +713,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         add_vertex(x0, y0);
                         add_vertex(x1, y1);
 
-                        self.vertex_buffer_num_tris += 2;
+                        self.num_vertices += 6;
 
                         let viewport = ScreenRectangle {
                             x: 0,
@@ -718,15 +722,15 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             h: self.screen_size.1 as i32,
                         };
                         let scissor = self.scissor_screen();
-                        let textures = self.load_textures(memory, &pipeline);
+                        let textures = self.load_textures(&pipeline);
                         self.flush_with(viewport, scissor, pipeline, textures);
                     }
                     DPCommand::SetTile(tile, params) => {
-                        self.flush(memory);
+                        self.flush();
                         self.tile_params[tile.0 as usize] = params;
                     }
                     DPCommand::LoadBlock(tile, block) => {
-                        self.flush(memory);
+                        self.flush();
 
                         let tile_params = &self.tile_params[tile.0 as usize];
                         let image = self.texture_image.expect("missing call to SetTextureImage");
@@ -741,12 +745,12 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         );
                     }
                     DPCommand::SetTileSize(tile, size) => {
-                        self.flush(memory);
+                        self.flush();
                         self.tile_size[tile.0 as usize] = size;
                     }
                     DPCommand::SetScissor(mode, rect) => {
                         if self.scissor != (mode, rect) {
-                            self.flush(memory);
+                            self.flush();
                             self.scissor = (mode, rect);
                         }
                     }
@@ -763,7 +767,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             }
                         }
 
-                        self.flush(memory);
+                        self.flush();
 
                         let ulx = tex_rect.rect.ulx as f32 / 4.0;
                         let uly = tex_rect.rect.uly as f32 / 4.0;
@@ -776,7 +780,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         }
 
                         let tile = tex_rect.tile;
-                        self.load_texture(memory, tile);
+                        self.load_texture(tile);
 
                         let x0 = 2.0 * (ulx / 320.0) - 1.0;
                         let x1 = 2.0 * (lrx / 320.0) - 1.0;
@@ -811,7 +815,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         ];
 
                         if self.cycle_type == CycleType::Copy {
-                            let texture_index = self.load_texture(memory, tile);
+                            let texture_index = self.load_texture(tile);
 
                             let sampler = &mut self.texture_mut(texture_index).sampler;
                             let saved_linear_filter = sampler.linear_filter;
@@ -832,7 +836,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                                 self.vertex_buffer.extend(&[u, v]);
                             }
 
-                            self.vertex_buffer_num_tris += 2;
+                            self.num_vertices += 6;
 
                             let viewport = ScreenRectangle {
                                 x: 0,
@@ -869,8 +873,8 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                                 );
                             }
 
-                            self.vertex_buffer_num_tris += 2;
-                            self.flush(memory);
+                            self.num_vertices += 6;
+                            self.flush();
                         }
                     }
                     // _ => unimplemented!("{:?}", cmd),
