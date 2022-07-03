@@ -42,11 +42,19 @@ mod n64_render_data;
 mod n64_renderer;
 mod render_api;
 
-pub fn prepare_render_data(game: &Game, screen_size: (u32, u32)) -> N64RenderData {
-    let mut backend = N64RenderBackend::default();
-    let f3d_source = DllF3DSource { game };
-    interpret_f3d_display_list(&f3d_source, &mut backend, screen_size);
-    backend.finish()
+pub fn prepare_render_data(game: &mut Game, screen_size: (u32, u32)) -> N64RenderData {
+    // let mut backend = N64RenderBackend::default();
+    // let f3d_source = DllF3DSource { game };
+    // interpret_f3d_display_list(&f3d_source, &mut backend, screen_size);
+    // backend.finish()
+
+    process_display_list(
+        &game.memory,
+        &mut game.base_slot,
+        screen_size.0,
+        screen_size.1,
+    )
+    .expect("failed to render game")
 }
 
 #[derive(Debug)]
