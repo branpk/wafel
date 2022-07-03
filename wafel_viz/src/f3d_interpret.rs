@@ -154,7 +154,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         let mut width = 2.0 * viewport.scale[0] as f32 / 4.0;
         let mut height = 2.0 * viewport.scale[1] as f32 / 4.0;
         let mut x = (viewport.trans[0] as f32 / 4.0) - width / 2.0;
-        let mut y = 240.0 - ((viewport.trans[1] as f32 / 4.0) + height / 2.0);
+        let mut y = (viewport.trans[1] as f32 / 4.0) - height / 2.0;
 
         x *= self.screen_scale_x();
         y *= self.screen_scale_y();
@@ -181,7 +181,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
 
         backend.set_scissor(
             (ulx * self.screen_scale_x()) as i32,
-            ((240.0 - lry) * self.screen_scale_y()) as i32,
+            (uly * self.screen_scale_y()) as i32,
             ((lrx - ulx) * self.screen_scale_x()) as i32,
             ((lry - uly) * self.screen_scale_y()) as i32,
         );
