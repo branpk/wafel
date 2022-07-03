@@ -35,7 +35,6 @@ mod f3d_interpret;
 mod f3d_render_backend;
 mod f3d_render_data;
 mod f3d_renderer;
-mod render_api;
 
 pub fn prepare_render_data(game: &Game, screen_size: (u32, u32)) -> F3DRenderData {
     let f3d_source = DllF3DSource { game };

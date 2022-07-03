@@ -22,6 +22,7 @@ pub struct PipelineInfo {
     pub used_textures: [bool; 2],
     pub texture_edge: bool,
     pub fog: bool,
+    pub noise: bool,
     pub num_inputs: u32,
     pub output_color: ColorExpr,
 }

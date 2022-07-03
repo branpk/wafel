@@ -4,12 +4,7 @@ use std::{collections::HashMap, mem, ops};
 use bytemuck::cast_slice_mut;
 use derivative::Derivative;
 
-use crate::{
-    f3d_decode::*,
-    f3d_render_backend::F3DRenderBackend,
-    f3d_render_data::*,
-    render_api::{decode_shader_id, encode_shader_id, CCFeatures, ShaderId, ShaderItem},
-};
+use crate::{f3d_decode::*, f3d_render_backend::F3DRenderBackend, f3d_render_data::*};
 
 pub trait F3DMemory {
     type Ptr: fmt::Debug + Copy + PartialEq;
@@ -50,26 +45,14 @@ struct State<Ptr> {
     model_view: MatrixState,
     proj: MatrixState,
 
-    alpha_dither: AlphaDither,
-    color_dither: ColorDither,
-    combine_key: bool,
-    texture_convert: TextureConvert,
     texture_filter: TextureFilter,
-    texture_lut: TextureLUT,
-    texture_lod: bool,
-    texture_detail: TextureDetail,
-    texture_persp: bool,
     cycle_type: CycleType,
-    pipeline_mode: PipelineMode,
     alpha_compare: AlphaCompare,
-    depth_source: DepthSource,
     render_mode: RenderMode,
-    persp_normalize: u16,
 
     combine_mode: CombineMode,
     env_color: Rgba32,
     prim_color: Rgba32,
-    blend_color: Rgba32,
     fog_color: Rgba32,
 
     fill_color: FillColor,
@@ -152,31 +135,15 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
 
     fn flush(&mut self, backend: &mut F3DRenderBackend) {
         if self.vertex_buffer_num_tris > 0 {
-            self.flush_with_shader(backend, self.get_shader_id());
+            self.flush_with_pipeline(backend, self.pipeline_state());
         }
     }
 
-    fn flush_with_shader(&mut self, backend: &mut F3DRenderBackend, shader_id: u32) {
+    fn flush_with_pipeline(&mut self, backend: &mut F3DRenderBackend, pipeline: PipelineInfo) {
         if self.vertex_buffer_num_tris > 0 {
-            backend.load_shader(ShaderId(shader_id as usize));
-            backend.draw_triangles(&self.vertex_buffer, self.vertex_buffer_num_tris);
+            backend.draw_triangles(pipeline, &self.vertex_buffer, self.vertex_buffer_num_tris);
             self.vertex_buffer.clear();
             self.vertex_buffer_num_tris = 0;
-        }
-    }
-
-    fn set_geometry_mode(&mut self, backend: &mut F3DRenderBackend, mode: GeometryModes) {
-        self.flush(backend);
-        self.geometry_mode = mode;
-
-        backend.set_depth_test(mode.contains(GeometryModes::ZBUFFER));
-        if mode.contains(GeometryModes::CULL_BACK) {
-            backend.set_cull_mode(CullMode::Back);
-        } else if mode.contains(GeometryModes::CULL_FRONT) {
-            // CULL_BOTH handled in software
-            backend.set_cull_mode(CullMode::Front);
-        } else {
-            backend.set_cull_mode(CullMode::None);
         }
     }
 
@@ -220,55 +187,73 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         );
     }
 
-    fn set_render_mode(&mut self, backend: &mut F3DRenderBackend, rm: RenderMode) {
-        self.flush(backend);
-        self.render_mode = rm;
-
-        backend.set_depth_mask(rm.flags.contains(RenderModeFlags::Z_UPDATE));
-        backend.set_zmode_decal(rm.z_mode == ZMode::Decal);
-        backend.set_use_alpha(
-            rm.blend_cycle1.alpha2 != BlendAlpha2::Memory
-                || rm.flags.contains(RenderModeFlags::CVG_X_ALPHA),
-        );
-    }
-
-    fn get_shader_id(&self) -> u32 {
+    fn pipeline_state(&self) -> PipelineInfo {
         let rm = &self.render_mode;
         let cm = &self.combine_mode;
+        let gm = &self.geometry_mode;
 
-        let mut cc_features = CCFeatures {
-            opt_alpha: rm.blend_cycle1.alpha2 != BlendAlpha2::Memory
-                || rm.flags.contains(RenderModeFlags::CVG_X_ALPHA),
-            opt_fog: rm.blend_cycle1.color1 == BlendColor::Fog,
-            opt_texture_edge: rm.flags.contains(RenderModeFlags::CVG_X_ALPHA),
-            opt_noise: self.alpha_compare == AlphaCompare::Dither,
-            ..Default::default()
-        };
+        let mut used_textures = [false; 2];
+        let mut num_inputs = 0;
+        let mut output_color = ColorExpr::default();
 
         for (i, mode) in [cm.color1, cm.alpha1].into_iter().enumerate() {
-            let mut num_inputs = 0;
+            let channel = if i == 0 {
+                &mut output_color.rgb
+            } else {
+                &mut output_color.a
+            };
+            let mut channel_num_inputs = 0;
             for (j, cc) in mode.args.into_iter().enumerate() {
-                let item = match cc {
-                    ColorCombineComponent::Texel0 => ShaderItem::Texel0,
-                    ColorCombineComponent::Texel1 => ShaderItem::Texel1,
-                    ColorCombineComponent::Texel0Alpha => ShaderItem::Texel0A,
+                let arg = match cc {
+                    ColorCombineComponent::Texel0 => {
+                        used_textures[0] = true;
+                        ColorArg::Texel0
+                    }
+                    ColorCombineComponent::Texel1 => {
+                        used_textures[1] = true;
+                        ColorArg::Texel1
+                    }
+                    ColorCombineComponent::Texel0Alpha => {
+                        used_textures[0] = true;
+                        ColorArg::Texel0Alpha
+                    }
                     ColorCombineComponent::Prim
                     | ColorCombineComponent::Shade
                     | ColorCombineComponent::Env
                     | ColorCombineComponent::LodFraction => {
-                        num_inputs += 1;
-                        ShaderItem::from_index(num_inputs)
+                        channel_num_inputs += 1;
+                        ColorArg::Input(channel_num_inputs - 1)
                     }
-                    _ => ShaderItem::Zero,
+                    _ => ColorArg::Zero,
                 };
-                cc_features.c[i][j] = item;
+                channel[j] = arg;
             }
+            num_inputs = num_inputs.max(channel_num_inputs);
         }
 
-        encode_shader_id(cc_features)
+        PipelineInfo {
+            blend: rm.blend_cycle1.alpha2 != BlendAlpha2::Memory
+                || rm.flags.contains(RenderModeFlags::CVG_X_ALPHA),
+            fog: rm.blend_cycle1.color1 == BlendColor::Fog,
+            texture_edge: rm.flags.contains(RenderModeFlags::CVG_X_ALPHA),
+            noise: self.alpha_compare == AlphaCompare::Dither,
+            cull_mode: if gm.contains(GeometryModes::CULL_BACK) {
+                CullMode::Back
+            } else if gm.contains(GeometryModes::CULL_FRONT) {
+                CullMode::Front
+            } else {
+                CullMode::None
+            },
+            depth_compare: gm.contains(GeometryModes::ZBUFFER),
+            depth_write: rm.flags.contains(RenderModeFlags::Z_UPDATE),
+            decal: rm.z_mode == ZMode::Decal,
+            used_textures,
+            num_inputs,
+            output_color,
+        }
     }
 
-    fn get_vertex_input_components(&self) -> [[ColorCombineComponent; 4]; 2] {
+    fn get_color_input_components(&self) -> [[ColorCombineComponent; 4]; 2] {
         let cm = &self.combine_mode;
         let mut components: [[ColorCombineComponent; 4]; 2] = Default::default();
         for (i, mode) in [cm.color1, cm.alpha1].into_iter().enumerate() {
@@ -472,12 +457,12 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
 
     fn push_vertex_color_inputs(
         &mut self,
-        cc_features: &CCFeatures,
+        pipeline: &PipelineInfo,
         input_comps: &[[ColorCombineComponent; 4]; 2],
         vtx: &Vertex,
         pos: [f32; 4],
     ) {
-        if cc_features.opt_fog {
+        if pipeline.fog {
             let fog = self.calculate_fog(pos);
             self.vertex_buffer.extend(&fog);
         }
@@ -485,7 +470,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
         let shade = self.calculate_shade(vtx);
         let lod_fraction = self.calculate_lod_fraction(pos);
 
-        for input_index in 0..cc_features.num_inputs {
+        for input_index in 0..pipeline.num_inputs {
             let rgb_comp = input_comps[0][input_index as usize];
             let [r, g, b] = match rgb_comp {
                 ColorCombineComponent::Prim => self.prim_color.rgb(),
@@ -498,7 +483,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
             self.vertex_buffer
                 .extend(&[r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0]);
 
-            if cc_features.opt_alpha {
+            if pipeline.blend {
                 let a_comp = input_comps[1][input_index as usize];
                 let a = match a_comp {
                     ColorCombineComponent::Prim => self.prim_color.a,
@@ -511,22 +496,6 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                 self.vertex_buffer.push(a as f32 / 255.0);
             }
         }
-    }
-
-    fn set_modes_for_rect(&mut self, backend: &mut F3DRenderBackend) {
-        self.flush(backend);
-        backend.set_depth_test(false);
-        backend.set_depth_mask(false);
-        backend.set_viewport(0, 0, self.screen_size.0 as i32, self.screen_size.1 as i32);
-        backend.set_use_alpha(true);
-        backend.set_cull_mode(CullMode::None);
-    }
-
-    fn reset_modes_for_rect(&mut self, backend: &mut F3DRenderBackend) {
-        assert!(self.vertex_buffer.is_empty());
-        self.set_geometry_mode(backend, self.geometry_mode);
-        self.set_render_mode(backend, self.render_mode);
-        self.set_viewport(backend, self.viewport);
     }
 
     fn interpret<M: F3DMemory<Ptr = Ptr>>(
@@ -587,11 +556,11 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             continue;
                         }
 
-                        let cc_features = decode_shader_id(self.get_shader_id());
-                        let input_comps = self.get_vertex_input_components();
+                        let pipeline = self.pipeline_state();
+                        let input_comps = self.get_color_input_components();
 
                         for i in 0..2 {
-                            if cc_features.used_textures[i] {
+                            if pipeline.used_textures[i] {
                                 self.load_texture(memory, backend, TileIndex(i as u8));
                             }
                         }
@@ -602,12 +571,12 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             let pos = self.transform_pos(&vtx);
                             self.push_pos(backend, pos);
 
-                            if cc_features.uses_textures() {
+                            if pipeline.uses_textures() {
                                 let uv = self.calculate_uv(&vtx);
                                 self.vertex_buffer.extend(&uv);
                             }
 
-                            self.push_vertex_color_inputs(&cc_features, &input_comps, &vtx, pos);
+                            self.push_vertex_color_inputs(&pipeline, &input_comps, &vtx, pos);
                         }
 
                         self.vertex_buffer_num_tris += 1;
@@ -636,67 +605,21 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                     }
                     SPCommand::EndDisplayList => break,
                     SPCommand::SetGeometryMode(mode) => {
-                        self.set_geometry_mode(backend, self.geometry_mode | mode);
+                        self.flush(backend);
+                        self.geometry_mode |= mode;
                     }
                     SPCommand::ClearGeometryMode(mode) => {
-                        self.set_geometry_mode(backend, self.geometry_mode & !mode);
+                        self.flush(backend);
+                        self.geometry_mode &= !mode;
                     }
-                    _ => unimplemented!("{:?}", cmd),
-                    // _ => {}
+                    // _ => unimplemented!("{:?}", cmd),
+                    _ => {}
                 },
                 F3DCommand::Rdp(cmd) => match cmd {
-                    DPCommand::SetAlphaDither(v) => {
-                        if self.alpha_dither != v {
-                            self.flush(backend);
-                            self.alpha_dither = v;
-                        }
-                    }
-                    DPCommand::SetColorDither(v) => {
-                        if self.color_dither != v {
-                            self.flush(backend);
-                            self.color_dither = v;
-                        }
-                    }
-                    DPCommand::SetCombineKey(v) => {
-                        if self.combine_key != v {
-                            self.flush(backend);
-                            self.combine_key = v;
-                        }
-                    }
-                    DPCommand::SetTextureConvert(v) => {
-                        if self.texture_convert != v {
-                            self.flush(backend);
-                            self.texture_convert = v;
-                        }
-                    }
                     DPCommand::SetTextureFilter(v) => {
                         if self.texture_filter != v {
                             self.flush(backend);
                             self.texture_filter = v;
-                        }
-                    }
-                    DPCommand::SetTextureLUT(v) => {
-                        if self.texture_lut != v {
-                            self.flush(backend);
-                            self.texture_lut = v;
-                        }
-                    }
-                    DPCommand::SetTextureLOD(v) => {
-                        if self.texture_lod != v {
-                            self.flush(backend);
-                            self.texture_lod = v;
-                        }
-                    }
-                    DPCommand::SetTextureDetail(v) => {
-                        if self.texture_detail != v {
-                            self.flush(backend);
-                            self.texture_detail = v;
-                        }
-                    }
-                    DPCommand::SetTexturePersp(v) => {
-                        if self.texture_persp != v {
-                            self.flush(backend);
-                            self.texture_persp = v;
                         }
                     }
                     DPCommand::SetCycleType(v) => {
@@ -705,33 +628,16 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             self.cycle_type = v;
                         }
                     }
-                    DPCommand::PipelineMode(v) => {
-                        if self.pipeline_mode != v {
-                            self.flush(backend);
-                            self.pipeline_mode = v;
-                        }
-                    }
                     DPCommand::SetAlphaCompare(v) => {
                         if self.alpha_compare != v {
                             self.flush(backend);
                             self.alpha_compare = v;
                         }
                     }
-                    DPCommand::SetDepthSource(v) => {
-                        if self.depth_source != v {
-                            self.flush(backend);
-                            self.depth_source = v;
-                        }
-                    }
                     DPCommand::SetRenderMode(v) => {
                         if self.render_mode != v {
-                            self.set_render_mode(backend, v);
-                        }
-                    }
-                    DPCommand::PerspNormalize(v) => {
-                        if self.persp_normalize != v {
                             self.flush(backend);
-                            self.persp_normalize = v;
+                            self.render_mode = v;
                         }
                     }
                     DPCommand::SetColorImage(image) => {
@@ -757,9 +663,6 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                     DPCommand::SetPrimColor(color) => {
                         self.prim_color = color;
                     }
-                    DPCommand::SetBlendColor(color) => {
-                        self.blend_color = color;
-                    }
                     DPCommand::SetFogColor(color) => {
                         self.fog_color = color;
                     }
@@ -771,7 +674,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         self.fill_color = fill_color[0];
                     }
                     DPCommand::FillRectangle(mut rect) => {
-                        use ShaderItem::*;
+                        use ColorArg::*;
 
                         if let (Some(color), Some(depth)) = (self.color_image, self.depth_image) {
                             if color.img == depth {
@@ -786,15 +689,22 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             rect.lry += 1;
                         }
 
-                        let cc_features = CCFeatures {
-                            c: [[Zero, Zero, Zero, Input1], [Zero, Zero, Zero, Input1]],
-                            opt_alpha: true,
+                        let pipeline = PipelineInfo {
+                            blend: true,
                             num_inputs: 1,
+                            output_color: ColorExpr {
+                                rgb: [Zero, Zero, Zero, Input(0)],
+                                a: [Zero, Zero, Zero, Input(0)],
+                            },
                             ..Default::default()
                         };
-                        let shader_id = encode_shader_id(cc_features);
 
-                        self.set_modes_for_rect(backend);
+                        backend.set_viewport(
+                            0,
+                            0,
+                            self.screen_size.0 as i32,
+                            self.screen_size.1 as i32,
+                        );
 
                         let fill_color = rgba_16_to_32(self.fill_color.0);
 
@@ -823,8 +733,8 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
 
                         self.vertex_buffer_num_tris += 2;
 
-                        self.flush_with_shader(backend, shader_id);
-                        self.reset_modes_for_rect(backend);
+                        self.flush_with_pipeline(backend, pipeline);
+                        self.set_viewport(backend, self.viewport);
                     }
                     DPCommand::SetTile(tile, params) => {
                         self.flush(backend);
@@ -859,7 +769,7 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                     DPCommand::PipeSync => {}
                     DPCommand::LoadSync => {}
                     DPCommand::TextureRectangle(tex_rect) => {
-                        use ShaderItem::*;
+                        use ColorArg::*;
 
                         if let (Some(color), Some(depth)) = (self.color_image, self.depth_image) {
                             if color.img == depth {
@@ -915,7 +825,12 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                         ];
 
                         if self.cycle_type == CycleType::Copy {
-                            self.set_modes_for_rect(backend);
+                            backend.set_viewport(
+                                0,
+                                0,
+                                self.screen_size.0 as i32,
+                                self.screen_size.1 as i32,
+                            );
 
                             let tile_params = &self.tile_params[tile.0 as usize];
                             backend.set_sampler_parameters(
@@ -927,12 +842,15 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                                 },
                             );
 
-                            let cc_features = CCFeatures {
-                                c: [[Zero, Zero, Zero, Texel0], [Zero, Zero, Zero, Texel0]],
-                                opt_alpha: true,
+                            let pipeline = PipelineInfo {
+                                blend: true,
+                                output_color: ColorExpr {
+                                    rgb: [Zero, Zero, Zero, Texel0],
+                                    a: [Zero, Zero, Zero, Texel0],
+                                },
+                                used_textures: [true, false],
                                 ..Default::default()
                             };
-                            let shader_id = encode_shader_id(cc_features);
 
                             for [x, y, u, v] in vertices {
                                 self.push_pos(backend, [x, y, 0.0, 1.0]);
@@ -940,20 +858,20 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             }
 
                             self.vertex_buffer_num_tris += 2;
-                            self.flush_with_shader(backend, shader_id);
-                            self.reset_modes_for_rect(backend);
+                            self.flush_with_pipeline(backend, pipeline);
+                            self.set_viewport(backend, self.viewport);
                         } else {
-                            let cc_features = decode_shader_id(self.get_shader_id());
-                            let input_comps = self.get_vertex_input_components();
+                            let pipeline = self.pipeline_state();
+                            let input_comps = self.get_color_input_components();
 
                             for [x, y, u, v] in vertices {
                                 self.push_pos(backend, [x, y, 0.0, 1.0]);
-                                if cc_features.uses_textures() {
+                                if pipeline.uses_textures() {
                                     self.vertex_buffer.extend(&[u, v]);
                                 }
                                 // Assumes that inputs like shade and fog aren't needed
                                 self.push_vertex_color_inputs(
-                                    &cc_features,
+                                    &pipeline,
                                     &input_comps,
                                     &Vertex::default(),
                                     Default::default(),
@@ -964,8 +882,8 @@ impl<Ptr: fmt::Debug + Copy + PartialEq> State<Ptr> {
                             self.flush(backend);
                         }
                     }
-                    _ => unimplemented!("{:?}", cmd),
-                    // _ => {}
+                    // _ => unimplemented!("{:?}", cmd),
+                    _ => {}
                 },
                 F3DCommand::Unknown(_) => {
                     // unimplemented!("{:?}", cmd)
