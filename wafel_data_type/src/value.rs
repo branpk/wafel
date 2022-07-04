@@ -1,6 +1,12 @@
 //! Dynamically typed value used for reading and writing to memory.
 
-use std::{array::IntoIter, collections::HashMap, convert::TryFrom, fmt, ops::Add};
+use std::{
+    array::IntoIter,
+    collections::HashMap,
+    convert::TryFrom,
+    fmt,
+    ops::{Add, AddAssign},
+};
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -22,7 +28,16 @@ impl Add<usize> for Address {
     }
 }
 
+impl AddAssign<usize> for Address {
+    fn add_assign(&mut self, rhs: usize) {
+        *self = *self + rhs;
+    }
+}
+
 impl Address {
+    /// The NULL address.
+    pub const NULL: Address = Address(0);
+
     /// Returns true if the address is null (equal to zero).
     pub fn is_null(self) -> bool {
         self.0 == 0

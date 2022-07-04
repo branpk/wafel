@@ -47,10 +47,10 @@ use crate::{
 pub struct Game {
     id: Arc<()>,
     layout: Arc<DataLayout>,
-    memory: Arc<DllGameMemory>,
+    pub memory: Arc<DllGameMemory>, // FIXME: Remove pubs
     symbols_by_address: HashMap<Address, String>,
     base_slot_frame: u32,
-    base_slot: <DllGameMemory as GameMemory>::Slot,
+    pub base_slot: <DllGameMemory as GameMemory>::Slot,
     data_path_cache: DataPathCache,
     rerecords: u32,
 }

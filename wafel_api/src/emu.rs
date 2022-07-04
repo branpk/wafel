@@ -36,7 +36,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Emu {
     layout: Arc<DataLayout>,
-    memory: EmuMemory,
+    pub memory: EmuMemory, // FIXME: Remove pub
     symbols_by_address: HashMap<Address, String>,
     data_path_cache: DataPathCache<EmptySymbolLookup>,
 }

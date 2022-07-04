@@ -205,7 +205,7 @@ impl M64Metadata {
 impl fmt::Display for M64Metadata {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "M64Metadata(")?;
-        writeln!(f, "  crc_code = {:#08X},", self.crc_code)?;
+        writeln!(f, "  crc_code = {:#010X},", self.crc_code)?;
         writeln!(f, "  country_code = {:?},", self.country_code as char)?;
         writeln!(f, "  author = {:?},", self.author)?;
         writeln!(f, "  description = {:?},", self.description)?;
@@ -216,7 +216,7 @@ impl fmt::Display for M64Metadata {
 }
 
 /// A set of inputs for a given frame.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Input {
     /// The standard button bit flags.
     pub buttons: u16,

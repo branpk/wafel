@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "fast3d",
     "libsm64_lock",
     "sm64_layout",
     "sm64_var_dump",
@@ -11,6 +12,8 @@ members = [
     "wafel_memory",
     "wafel_python",
     "wafel_timeline",
+    "wafel_viz",
+    "wafel_viz_tests",
 ]
 resolver = "2"
 

@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<head>
+</head>
+<body>
+  <table>
+    <thead>
+      <th></th>
+      <th>Expected</th>
+      <th>Actual</th>
+    </thead>
+    <tbody>
+      [[images]]
+    </tbody>
+  </table>
+</body>
+</html>

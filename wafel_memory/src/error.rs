@@ -13,6 +13,7 @@ pub enum MemoryError {
     },
     ValueTypeError(ValueTypeError),
     UndefinedTypeName(TypeName),
+    UndefinedSymbol(String),
     ReadUnsizedArray,
     ReadUnion,
     WriteExtraField(String),
@@ -32,6 +33,9 @@ impl fmt::Display for MemoryError {
             MemoryError::ValueTypeError(error) => write!(f, "{}", error),
             MemoryError::UndefinedTypeName(type_name) => {
                 write!(f, "undefined type name: {}", type_name)
+            }
+            MemoryError::UndefinedSymbol(name) => {
+                write!(f, "undefined symbol: {}", name)
             }
             MemoryError::ReadUnsizedArray => {
                 write!(f, "cannot read array with unknown length")

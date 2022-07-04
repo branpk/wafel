@@ -1,6 +1,6 @@
 //! Types and functions for representing C data types.
 
-use std::{fmt, sync::Arc};
+use std::{fmt, mem, sync::Arc};
 
 use indexmap::IndexMap;
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
@@ -90,6 +90,15 @@ pub enum FloatType {
 }
 
 impl IntType {
+    /// An unsigned IntType with the same size as native usize.
+    pub fn u_ptr_native() -> Self {
+        match mem::size_of::<usize>() {
+            4 => Self::U32,
+            8 => Self::U64,
+            s => unimplemented!("size_of<usize> = {}", s),
+        }
+    }
+
     /// The size of the int in bytes.
     pub fn size(&self) -> usize {
         match self {
