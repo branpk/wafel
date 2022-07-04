@@ -21,4 +21,4 @@ pub mod interpret;
 #[cfg(any(feature = "wgpu", doc))]
 #[doc(cfg(feature = "wgpu"))]
 pub mod render;
-mod util;
+pub mod util;

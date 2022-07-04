@@ -1,3 +1,8 @@
+//! Utilities for working with Fast3D-related data.
+
+#![allow(missing_docs)]
+
+use core::fmt;
 use std::{mem, ops};
 
 use bytemuck::cast_slice_mut;
@@ -20,8 +25,8 @@ impl From<F3DWrapMode> for WrapMode {
     }
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct Matrixf([[f32; 4]; 4]);
+#[derive(Clone, Default)]
+pub struct Matrixf(pub [[f32; 4]; 4]);
 
 impl Matrixf {
     pub fn identity() -> Self {
@@ -46,6 +51,21 @@ impl Matrixf {
         r
     }
 
+    pub fn to_fixed(&self) -> Vec<i32> {
+        let mut r = vec![0; 16];
+        for i in [0, 2] {
+            for j in 0..4 {
+                let v1 = (self.0[i][j] * 65536.0) as i32 as u32;
+                let v2 = (self.0[i + 1][j] * 65536.0) as i32 as u32;
+                let frac_part = (v1 << 16) | (v2 & 0xFFFF);
+                let int_part = (v1 & 0xFFFF0000) | (v2 >> 16);
+                r[j * 2 + i / 2] = int_part as i32;
+                r[8 + j * 2 + i / 2] = frac_part as i32;
+            }
+        }
+        r
+    }
+
     pub fn transpose(&self) -> Self {
         let mut r = Self::default();
         for i in 0..4 {
@@ -54,6 +74,21 @@ impl Matrixf {
             }
         }
         r
+    }
+}
+
+impl fmt::Debug for Matrixf {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Matrixf [")?;
+        for i in 0..4 {
+            write!(f, "  [ ")?;
+            for j in 0..4 {
+                write!(f, "\t{:.3} ", self.0[i][j])?;
+            }
+            writeln!(f, "\t]")?;
+        }
+        writeln!(f, "]")?;
+        Ok(())
     }
 }
 
@@ -197,7 +232,7 @@ pub fn read_light<M: F3DMemory>(memory: &M, ptr: M::Ptr) -> Light {
 
 impl TextureData {
     #[track_caller]
-    pub(crate) fn new(width: u32, height: u32, rgba8: Vec<u8>) -> Self {
+    pub fn new(width: u32, height: u32, rgba8: Vec<u8>) -> Self {
         assert!(4 * width * height <= rgba8.len() as u32);
         Self {
             width,
@@ -207,7 +242,7 @@ impl TextureData {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn dbg_constant(r: u8, g: u8, b: u8, a: u8) -> Self {
+    pub fn dbg_constant(r: u8, g: u8, b: u8, a: u8) -> Self {
         let width = 32;
         let height = 32;
         let mut data = Vec::new();
@@ -218,7 +253,7 @@ impl TextureData {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn dbg_gradient() -> Self {
+    pub fn dbg_gradient() -> Self {
         let width = 32;
         let height = 32;
         let mut data = Vec::new();

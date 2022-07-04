@@ -14,11 +14,16 @@ use std::{
     time::{Duration, Instant},
 };
 
+use bytemuck::cast_slice;
 use custom_renderer::{CustomRenderer, Scene};
 use fast3d::{
-    decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand},
+    decode::{
+        decode_f3d_display_list, F3DCommand, F3DCommandIter, GeometryModes, RawF3DCommand,
+        SPCommand,
+    },
     interpret::{interpret_f3d_display_list, F3DMemory, F3DRenderData},
     render::F3DRenderer,
+    util::Matrixf,
 };
 use wafel_api::{load_m64, Address, Game, IntType, SaveState};
 use wafel_memory::{DllSlotMemoryView, GameMemory, MemoryRead};
@@ -35,6 +40,22 @@ pub fn prepare_render_data(game: &Game, screen_size: (u32, u32)) -> F3DRenderDat
     interpret_f3d_display_list(&f3d_source, screen_size, true)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum OverridePtr {
+    Ptr(*const ()),
+    MtxOverride([i32; 16]),
+}
+
+impl OverridePtr {
+    fn ptr(&self) -> *const () {
+        if let Self::Ptr(ptr) = self {
+            *ptr
+        } else {
+            panic!();
+        }
+    }
+}
+
 #[derive(Debug)]
 struct DllF3DSource<'a> {
     game: &'a Game,
@@ -45,17 +66,21 @@ impl<'a> DllF3DSource<'a> {
         self.game.memory.with_slot(&self.game.base_slot)
     }
 
-    fn read_dl_from_addr(&self, addr: Option<Address>) -> F3DCommandIter<RawDlIter<'a>> {
-        decode_f3d_display_list(RawDlIter {
-            view: self.view(),
-            addr,
-        })
+    fn read_dl_from_addr(&self, addr: Option<Address>, is_root: bool) -> ProcessingDlIter<'a> {
+        ProcessingDlIter::new(
+            DllF3DSource { game: self.game },
+            decode_f3d_display_list(RawDlIter {
+                view: self.view(),
+                addr,
+            }),
+            is_root,
+        )
     }
 }
 
 impl<'a> F3DMemory for DllF3DSource<'a> {
-    type Ptr = *const ();
-    type DlIter = F3DCommandIter<RawDlIter<'a>>;
+    type Ptr = OverridePtr;
+    type DlIter = ProcessingDlIter<'a>;
 
     fn root_dl(&self) -> Self::DlIter {
         let root_addr = self
@@ -63,17 +88,17 @@ impl<'a> F3DMemory for DllF3DSource<'a> {
             .read("sDisplayListTask?.task.t.data_ptr")
             .option()
             .map(|a| a.as_address());
-        self.read_dl_from_addr(root_addr)
+        self.read_dl_from_addr(root_addr, true)
     }
 
     fn read_dl(&self, ptr: Self::Ptr) -> Self::DlIter {
-        let addr = self.game.memory.unchecked_pointer_to_address(ptr);
-        self.read_dl_from_addr(Some(addr))
+        let addr = self.game.memory.unchecked_pointer_to_address(ptr.ptr());
+        self.read_dl_from_addr(Some(addr), false)
     }
 
     fn read_u8(&self, dst: &mut [u8], ptr: Self::Ptr, offset: usize) {
         let view = self.view();
-        let addr = self.game.memory.unchecked_pointer_to_address(ptr) + offset;
+        let addr = self.game.memory.unchecked_pointer_to_address(ptr.ptr()) + offset;
         for i in 0..dst.len() {
             dst[i] = view.read_int(addr + i, IntType::U8).unwrap_or_default() as u8;
         }
@@ -81,7 +106,7 @@ impl<'a> F3DMemory for DllF3DSource<'a> {
 
     fn read_u16(&self, dst: &mut [u16], ptr: Self::Ptr, offset: usize) {
         let view = self.view();
-        let addr = self.game.memory.unchecked_pointer_to_address(ptr) + offset;
+        let addr = self.game.memory.unchecked_pointer_to_address(ptr.ptr()) + offset;
         for i in 0..dst.len() {
             dst[i] = view
                 .read_int(addr + 2 * i, IntType::U16)
@@ -90,12 +115,21 @@ impl<'a> F3DMemory for DllF3DSource<'a> {
     }
 
     fn read_u32(&self, dst: &mut [u32], ptr: Self::Ptr, offset: usize) {
-        let view = self.view();
-        let addr = self.game.memory.unchecked_pointer_to_address(ptr) + offset;
-        for i in 0..dst.len() {
-            dst[i] = view
-                .read_int(addr + 4 * i, IntType::U32)
-                .unwrap_or_default() as u32;
+        match ptr {
+            OverridePtr::Ptr(ptr) => {
+                let view = self.view();
+                let addr = self.game.memory.unchecked_pointer_to_address(ptr) + offset;
+                for i in 0..dst.len() {
+                    dst[i] = view
+                        .read_int(addr + 4 * i, IntType::U32)
+                        .unwrap_or_default() as u32;
+                }
+            }
+            OverridePtr::MtxOverride(mtx) => {
+                assert!(offset == 0);
+                assert!(dst.len() == mtx.len());
+                dst.copy_from_slice(cast_slice(&mtx));
+            }
         }
     }
 }
@@ -107,7 +141,7 @@ struct RawDlIter<'a> {
 }
 
 impl<'a> Iterator for RawDlIter<'a> {
-    type Item = RawF3DCommand<*const ()>;
+    type Item = RawF3DCommand<OverridePtr>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.addr.as_mut().map(|addr| {
@@ -122,20 +156,113 @@ impl<'a> Iterator for RawDlIter<'a> {
             RawF3DCommand {
                 w0: w0 as u32,
                 w1: w1 as u32,
-                w1_ptr: w1 as *const (),
+                w1_ptr: OverridePtr::Ptr(w1 as *const ()),
             }
         })
     }
 }
 
+#[derive(Debug)]
+struct ProcessingDlIter<'a> {
+    memory: DllF3DSource<'a>,
+    iter: F3DCommandIter<RawDlIter<'a>>,
+    is_root: bool,
+    z_buffer: bool,
+    found: bool,
+}
+
+impl<'a> ProcessingDlIter<'a> {
+    fn new(memory: DllF3DSource<'a>, iter: F3DCommandIter<RawDlIter<'a>>, is_root: bool) -> Self {
+        Self {
+            memory,
+            iter,
+            is_root,
+            z_buffer: false,
+            found: false,
+        }
+    }
+}
+
+impl<'a> Iterator for ProcessingDlIter<'a> {
+    type Item = F3DCommand<OverridePtr>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|mut cmd| {
+            if self.is_root {
+                match &mut cmd {
+                    F3DCommand::Rsp(cmd) => match cmd {
+                        SPCommand::Matrix {
+                            matrix,
+                            mode,
+                            op,
+                            push,
+                        } => {
+                            if self.z_buffer {
+                                self.found = true;
+
+                                let mtx_fixed = fast3d::util::read_matrix(&self.memory, *matrix, 0);
+                                let mut mtx = Matrixf::from_fixed(&mtx_fixed);
+
+                                mtx.0[0][3] += 200.0;
+
+                                let mtx_new = mtx.to_fixed();
+                                let mut mtx_array = [0; 16];
+                                mtx_array.copy_from_slice(&mtx_new);
+                                *matrix = OverridePtr::MtxOverride(mtx_array);
+                            }
+                        }
+                        SPCommand::SetGeometryMode(m) => {
+                            if m.contains(GeometryModes::ZBUFFER) {
+                                self.z_buffer = true;
+                            }
+                        }
+                        SPCommand::ClearGeometryMode(m) => {
+                            if m.contains(GeometryModes::ZBUFFER) {
+                                self.z_buffer = false;
+                            }
+                        }
+                        _ => {}
+                    },
+                    _ => {}
+                }
+            }
+
+            // TODO
+            cmd
+        })
+    }
+}
+
 pub fn test_dl() -> Result<(), Box<dyn Error>> {
-    // ~~~ libsm64 ~~~
     //     let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
     //     let (_, inputs) = load_m64("test_files/120_u.m64");
-    //     while game.read("gGlobalTimer").as_int() < 927 {
+    //     while game.read("gGlobalTimer").as_int() < 1617 {
     //         game.set_input(inputs[game.frame() as usize]);
     //         game.advance();
     //     }
+    //
+    //     let memory = DllF3DSource { game: &game };
+    //
+    //     for cmd in memory.root_dl() {
+    //         println!("{:?}", cmd);
+    //         if let F3DCommand::Rsp(SPCommand::Matrix {
+    //             matrix,
+    //             mode,
+    //             op,
+    //             push,
+    //         }) = cmd
+    //         {
+    //             let mtx_fixed = fast3d::util::read_matrix(&memory, matrix, 0);
+    //             let mtx = Matrixf::from_fixed(&mtx_fixed);
+    //             println!("{:?}", mtx);
+    //         }
+    //         if matches!(cmd, F3DCommand::Rsp(SPCommand::EndDisplayList)) {
+    //             break;
+    //         }
+    //     }
+    //
+    //     return Ok(());
+
     //
     //     let mut backend = N64RenderBackend::default();
     //     let f3d_source = DllF3DSource { game: &game };
