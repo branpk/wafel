@@ -44,7 +44,7 @@ pub fn run_tests(mut test_cases: Vec<TestCase>) -> Result<(), Box<dyn std::error
                 "wafel_viz_tests/output/mismatches/{}.png",
                 case.name
             ))?;
-            mismatches.push(case.name);
+            mismatches.push(case.name.clone());
 
             if calc_diffs {
                 if let Some(expected) = expected.as_ref() {
@@ -88,7 +88,7 @@ pub fn run_tests(mut test_cases: Vec<TestCase>) -> Result<(), Box<dyn std::error
 
     let template = fs::read_to_string("wafel_viz_tests/index.html.template")?;
     let mut image_html = String::new();
-    for &name in &mismatches {
+    for name in &mismatches {
         writeln!(
             image_html,
             r#"
