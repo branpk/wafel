@@ -351,7 +351,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Emu</span> {
     <span class="ident">layout</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DataLayout</span><span class="op">&gt;</span>,
-    <span class="ident">memory</span>: <span class="ident">EmuMemory</span>,
+    <span class="kw">pub</span> <span class="ident">memory</span>: <span class="ident">EmuMemory</span>, <span class="comment">// FIXME: Remove pub</span>
     <span class="ident">symbols_by_address</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Address</span>, <span class="ident">String</span><span class="op">&gt;</span>,
     <span class="ident">data_path_cache</span>: <span class="ident">DataPathCache</span><span class="op">&lt;</span><span class="ident">EmptySymbolLookup</span><span class="op">&gt;</span>,
 }
@@ -623,5 +623,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_api" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (830880640 2022-06-28)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_api" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (495b21669 2022-07-03)" ></div>
 </body></html>

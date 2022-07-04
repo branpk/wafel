@@ -121,6 +121,10 @@
 <span id="115">115</span>
 <span id="116">116</span>
 <span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">error::Error</span>, <span class="ident">fmt</span>, <span class="ident">io</span>, <span class="ident">sync::Arc</span>};
@@ -136,6 +140,7 @@
     },
     <span class="ident">ValueTypeError</span>(<span class="ident">ValueTypeError</span>),
     <span class="ident">UndefinedTypeName</span>(<span class="ident">TypeName</span>),
+    <span class="ident">UndefinedSymbol</span>(<span class="ident">String</span>),
     <span class="ident">ReadUnsizedArray</span>,
     <span class="ident">ReadUnion</span>,
     <span class="ident">WriteExtraField</span>(<span class="ident">String</span>),
@@ -155,6 +160,9 @@
             <span class="ident">MemoryError::ValueTypeError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
             <span class="ident">MemoryError::UndefinedTypeName</span>(<span class="ident">type_name</span>) =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;undefined type name: {}&quot;</span>, <span class="ident">type_name</span>)
+            }
+            <span class="ident">MemoryError::UndefinedSymbol</span>(<span class="ident">name</span>) =&gt; {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;undefined symbol: {}&quot;</span>, <span class="ident">name</span>)
             }
             <span class="ident">MemoryError::ReadUnsizedArray</span> =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;cannot read array with unknown length&quot;</span>)
@@ -239,5 +247,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_memory" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (830880640 2022-06-28)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_memory" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (495b21669 2022-07-03)" ></div>
 </body></html>

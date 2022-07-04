@@ -1,4 +1,5 @@
 var sourcesIndex = {};
+sourcesIndex["fast3d"] = {"name":"","files":["decode.rs","f3d_render_data.rs","interpret.rs","lib.rs","render.rs","util.rs"]};
 sourcesIndex["libsm64_lock"] = {"name":"","files":["main.rs"]};
 sourcesIndex["sm64_layout"] = {"name":"","files":["main.rs"]};
 sourcesIndex["sm64_var_dump"] = {"name":"","files":["main.rs"]};
@@ -10,4 +11,6 @@ sourcesIndex["wafel_data_type"] = {"name":"","files":["data_type.rs","error.rs",
 sourcesIndex["wafel_layout"] = {"name":"","files":["data_layout.rs","dll_layout.rs","error.rs","lib.rs","n64_layout.rs","sm64_extra.rs"]};
 sourcesIndex["wafel_memory"] = {"name":"","files":["dll_memory.rs","dll_slot_impl.rs","emu_memory.rs","error.rs","lib.rs","traits.rs","unique_dll.rs"]};
 sourcesIndex["wafel_timeline"] = {"name":"","files":["controller.rs","lib.rs","slots.rs","timeline.rs"]};
+sourcesIndex["wafel_viz"] = {"name":"","files":["custom_renderer.rs","lib.rs"]};
+sourcesIndex["wafel_viz_tests"] = {"name":"","files":["main.rs"]};
 createSourceSidebar();

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["custom_render_test",""],["prepare_render_data",""],["test",""],["test_dl",""]],"mod":[["custom_renderer",""]]};

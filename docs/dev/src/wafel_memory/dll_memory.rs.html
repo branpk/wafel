@@ -491,6 +491,29 @@
 <span id="485">485</span>
 <span id="486">486</span>
 <span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">mem</span>, <span class="ident">ptr</span>,
     <span class="ident">sync</span>::{
@@ -672,11 +695,15 @@
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">unchecked_pointer_to_address</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">pointer</span>: <span class="kw-2">*const</span> <span class="ident">T</span>) -&gt; <span class="ident">Address</span> {
-        <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> (<span class="ident">pointer</span> <span class="kw">as</span> <span class="ident">usize</span>).<span class="ident">wrapping_sub</span>(<span class="self">self</span>.<span class="ident">base_pointer</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span>);
-        <span class="kw">if</span> <span class="ident">offset</span> <span class="op">&gt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">base_size</span> {
-            <span class="ident">Address</span>(<span class="number">0</span>)
+    <span class="doccomment">/// Translate the pointer in the dll to a relocatable address.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// This does not perform any alignment or bounds checking, but those will be done when the</span>
+    <span class="doccomment">/// address is accessed.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">unchecked_pointer_to_address</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">pointer</span>: <span class="kw-2">*const</span> <span class="ident">T</span>) -&gt; <span class="ident">Address</span> {
+        <span class="kw">if</span> <span class="ident">pointer</span>.<span class="ident">is_null</span>() {
+            <span class="ident">Address::NULL</span>
         } <span class="kw">else</span> {
+            <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> (<span class="ident">pointer</span> <span class="kw">as</span> <span class="ident">usize</span>).<span class="ident">wrapping_sub</span>(<span class="self">self</span>.<span class="ident">base_pointer</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span>);
             <span class="ident">Address</span>(<span class="ident">offset</span>)
         }
     }
@@ -780,6 +807,25 @@
             }
             <span class="ident">ClassifiedAddress::Invalid</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">InvalidAddress</span>),
         }
+    }
+
+    <span class="doccomment">/// Looks up a symbol for the underlying DLL.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// # Safety</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// See [dlopen::Library::symbol]. Also, if the symbol is used to modify the base slot&#39;s</span>
+    <span class="doccomment">/// memory (e.g. calling a function), base_slot should not be used until this is complete.</span>
+    <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">symbol_pointer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">base_slot</span>: <span class="kw-2">&amp;mut</span> <span class="ident">DllSlot</span>,
+        <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">MemoryError</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">validate_base_slot</span>(<span class="ident">base_slot</span>);
+        <span class="kw">let</span> <span class="ident">pointer</span>: <span class="ident">T</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">library</span>
+            .<span class="ident">symbol</span>(<span class="ident">name</span>)
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">UndefinedSymbol</span>(<span class="ident">name</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="ident">pointer</span>)
     }
 }
 
@@ -917,7 +963,7 @@
 <span class="doccomment">/// particular slot.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// See [GameMemory::with_slot].</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DllSlotMemoryView</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="ident">memory</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">DllGameMemory</span>,
     <span class="ident">slot</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">DllSlot</span>,
@@ -979,5 +1025,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_memory" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (830880640 2022-06-28)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_memory" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (495b21669 2022-07-03)" ></div>
 </body></html>

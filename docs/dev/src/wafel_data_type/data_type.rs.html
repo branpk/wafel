@@ -323,9 +323,18 @@
 <span id="317">317</span>
 <span id="318">318</span>
 <span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Types and functions for representing C data types.</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fmt</span>, <span class="ident">sync::Arc</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fmt</span>, <span class="ident">mem</span>, <span class="ident">sync::Arc</span>};
 
 <span class="kw">use</span> <span class="ident">indexmap::IndexMap</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">de::Error</span> <span class="kw">as</span> <span class="kw">_</span>, <span class="ident">Deserialize</span>, <span class="ident">Deserializer</span>, <span class="ident">Serialize</span>, <span class="ident">Serializer</span>};
@@ -415,6 +424,15 @@
 }
 
 <span class="kw">impl</span> <span class="ident">IntType</span> {
+    <span class="doccomment">/// An unsigned IntType with the same size as native usize.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">u_ptr_native</span>() -&gt; <span class="self">Self</span> {
+        <span class="kw">match</span> <span class="ident">mem::size_of</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>() {
+            <span class="number">4</span> =&gt; <span class="ident"><span class="self">Self</span>::U32</span>,
+            <span class="number">8</span> =&gt; <span class="ident"><span class="self">Self</span>::U64</span>,
+            <span class="ident">s</span> =&gt; <span class="macro">unimplemented!</span>(<span class="string">&quot;size_of&lt;usize&gt; = {}&quot;</span>, <span class="ident">s</span>),
+        }
+    }
+
     <span class="doccomment">/// The size of the int in bytes.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">size</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
         <span class="kw">match</span> <span class="self">self</span> {
@@ -643,5 +661,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_data_type" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (830880640 2022-06-28)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_data_type" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (495b21669 2022-07-03)" ></div>
 </body></html>
