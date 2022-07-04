@@ -1,20 +1,26 @@
-use std::{env, fmt::Write, fs};
+mod game_runner;
+mod renderer;
+mod run_tests;
 
-use fast3d::render::F3DRenderer;
-use image::{Pixel, Rgb, RgbImage};
-use wafel_api::{load_m64, Game};
-use wafel_viz::{prepare_render_data, SM64RenderConfig};
+use wafel_viz::SM64RenderConfig;
 
 #[derive(Debug)]
-struct TestCase {
-    name: &'static str,
-    frame: u32,
+pub struct TestCase {
+    pub name: &'static str,
+    pub game_version: &'static str,
+    pub m64: &'static str,
+    pub frame: u32,
+    pub config: SM64RenderConfig,
 }
 
 fn u120_test_cases() -> Vec<TestCase> {
-    // TODO:
-    // 105905 has extra snow particle on mupen
-    let case = |name, frame| TestCase { name, frame };
+    let case = |name, frame| TestCase {
+        name,
+        game_version: "us",
+        m64: "120_u",
+        frame,
+        config: SM64RenderConfig::default(),
+    };
     vec![
         case("u120_000000_power_on", 0),
         case("u120_000052_logo", 52),
@@ -174,311 +180,12 @@ fn u120_test_cases() -> Vec<TestCase> {
     ]
 }
 
+fn all_test_cases() -> Vec<TestCase> {
+    let mut cases = Vec::new();
+    cases.extend(u120_test_cases());
+    cases
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let calc_diffs = env::args().any(|arg| arg == "--diff");
-
-    env_logger::init();
-
-    let _ = fs::remove_dir_all("wafel_viz_tests/output");
-    fs::create_dir_all("wafel_viz_tests/output/all")?;
-    fs::create_dir_all("wafel_viz_tests/output/mismatches")?;
-    if calc_diffs {
-        fs::create_dir_all("wafel_viz_tests/output/diff")?;
-    }
-
-    let mut renderer = futures::executor::block_on(Renderer::new((320, 240)));
-
-    // FIXME: Update to libsm64/sm64_us.dll
-    // TODO: Other game versions
-    // TODO: Other resolution tests
-    let mut game = unsafe { Game::new("../libsm64-build/build/us_lib/sm64_us.dll") };
-    let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
-
-    let mut test_cases = u120_test_cases();
-    test_cases.sort_by_key(|case| case.frame);
-
-    let mut mismatches = Vec::new();
-
-    for (i, case) in test_cases.iter().enumerate() {
-        while game.frame() < case.frame {
-            let input = inputs
-                .get(game.frame() as usize)
-                .copied()
-                .unwrap_or_default();
-            game.set_input(input);
-            game.advance();
-        }
-
-        let actual = renderer.render(
-            &game,
-            &SM64RenderConfig {
-                screen_size: Some((320, 240)),
-            },
-        );
-
-        let expected = image::open(format!(
-            "wafel_viz_tests/{}/{}.png",
-            renderer.device_info, case.name
-        ))
-        .ok()
-        .map(|img| img.to_rgb8());
-
-        actual.save(format!("wafel_viz_tests/output/all/{}.png", case.name))?;
-
-        let matches = Some(&actual) == expected.as_ref();
-        if !matches {
-            actual.save(format!(
-                "wafel_viz_tests/output/mismatches/{}.png",
-                case.name
-            ))?;
-            mismatches.push(case.name);
-
-            if calc_diffs {
-                if let Some(expected) = expected.as_ref() {
-                    let w = expected.width();
-                    let h = expected.height();
-                    if actual.width() == w && actual.height() == h {
-                        let mut diff = RgbImage::new(w, h);
-                        for y in 0..h {
-                            for x in 0..w {
-                                let actual_rgb = *actual.get_pixel(x, y);
-                                let expected_rgb = *expected.get_pixel(x, y);
-                                let diff_rgb = Rgb::from([
-                                    actual_rgb.0[0].abs_diff(expected_rgb.0[0]),
-                                    actual_rgb.0[1].abs_diff(expected_rgb.0[1]),
-                                    actual_rgb.0[2].abs_diff(expected_rgb.0[2]),
-                                ]);
-                                diff.put_pixel(x, y, diff_rgb);
-                            }
-                            diff.save(format!("wafel_viz_tests/output/diff/{}.png", case.name))?;
-                        }
-                    }
-                }
-            }
-        };
-
-        eprintln!(
-            "[{:3}/{}] \x1b[{}m{}\x1b[0m",
-            i + 1,
-            test_cases.len(),
-            if matches { 32 } else { 31 },
-            case.name
-        );
-    }
-
-    eprintln!();
-    if mismatches.is_empty() {
-        eprintln!("\x1b[32mAll cases match!\x1b[0m");
-    } else {
-        eprintln!("\x1b[31m{} mismatches\x1b[0m", mismatches.len());
-    }
-
-    let template = fs::read_to_string("wafel_viz_tests/index.html.template")?;
-    let mut image_html = String::new();
-    for &name in &mismatches {
-        writeln!(
-            image_html,
-            r#"
-                <tr>
-                    <td>{}</td>
-                    <td><img src="{}/{}.png"></td>
-                    <td><img src="output/all/{}.png"></td>
-                    {}
-                </tr>
-            "#,
-            name,
-            renderer.device_info,
-            name,
-            name,
-            if calc_diffs {
-                format!(r#"<td><img src="output/diff/{}.png"></td>"#, name)
-            } else {
-                "".to_string()
-            }
-        )?;
-    }
-    let html = template.replace("[[images]]", &image_html);
-    fs::write("wafel_viz_tests/index.html", html)?;
-
-    Ok(())
-}
-
-#[derive(Debug)]
-struct Renderer {
-    device_info: String,
-    device: wgpu::Device,
-    queue: wgpu::Queue,
-    renderer: F3DRenderer,
-    output_size: (u32, u32),
-    output_format: wgpu::TextureFormat,
-    output_texture: wgpu::Texture,
-    depth_texture: wgpu::Texture,
-    padded_bytes_per_row: u32,
-    output_buffer: wgpu::Buffer,
-}
-
-impl Renderer {
-    async fn new(output_size: (u32, u32)) -> Self {
-        assert!(output_size.0 > 0 && output_size.1 > 0);
-
-        let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
-        let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::HighPerformance,
-                force_fallback_adapter: false,
-                compatible_surface: None,
-            })
-            .await
-            .expect("failed to request GPU adapter");
-        let backend = format!("{:?}", adapter.get_info().backend).to_lowercase();
-        let device_info = format!("win_x64_{}", backend);
-
-        let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: None,
-                    features: wgpu::Features::empty(),
-                    limits: wgpu::Limits::downlevel_defaults(),
-                },
-                None,
-            )
-            .await
-            .expect("failed to request GPU device");
-
-        let output_format = wgpu::TextureFormat::Rgba8Unorm;
-
-        let renderer = F3DRenderer::new(&device);
-
-        let output_texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: None,
-            size: wgpu::Extent3d {
-                width: output_size.0,
-                height: output_size.1,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: output_format,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
-        });
-
-        let unpadded_bytes_per_row = 4 * output_size.0;
-        let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-        let padding = (align - (unpadded_bytes_per_row % align)) % align;
-        let padded_bytes_per_row = unpadded_bytes_per_row + padding;
-
-        let output_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: None,
-            size: (padded_bytes_per_row * output_size.1) as u64,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: None,
-            size: wgpu::Extent3d {
-                width: output_size.0,
-                height: output_size.1,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Depth24Plus,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-        });
-
-        Self {
-            device_info,
-            device,
-            queue,
-            renderer,
-            output_size,
-            output_format,
-            output_texture,
-            depth_texture,
-            padded_bytes_per_row,
-            output_buffer,
-        }
-    }
-
-    fn render(&mut self, game: &Game, config: &SM64RenderConfig) -> RgbImage {
-        let render_data = prepare_render_data(game, config);
-        self.renderer
-            .prepare(&self.device, &self.queue, self.output_format, &render_data);
-
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-        {
-            let output_texture_view = self
-                .output_texture
-                .create_view(&wgpu::TextureViewDescriptor::default());
-            let depth_texture_view = self
-                .depth_texture
-                .create_view(&wgpu::TextureViewDescriptor::default());
-
-            {
-                let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: None,
-                    color_attachments: &[wgpu::RenderPassColorAttachment {
-                        view: &output_texture_view,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                            store: true,
-                        },
-                    }],
-                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                        view: &depth_texture_view,
-                        depth_ops: Some(wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(1.0),
-                            store: true,
-                        }),
-                        stencil_ops: None,
-                    }),
-                });
-                self.renderer.render(&mut rp, self.output_size);
-            }
-
-            encoder.copy_texture_to_buffer(
-                self.output_texture.as_image_copy(),
-                wgpu::ImageCopyBuffer {
-                    buffer: &self.output_buffer,
-                    layout: wgpu::ImageDataLayout {
-                        offset: 0,
-                        bytes_per_row: Some(self.padded_bytes_per_row.try_into().unwrap()),
-                        rows_per_image: None,
-                    },
-                },
-                wgpu::Extent3d {
-                    width: self.output_size.0,
-                    height: self.output_size.1,
-                    depth_or_array_layers: 1,
-                },
-            );
-        }
-        self.queue.submit([encoder.finish()]);
-
-        let buffer_slice = self.output_buffer.slice(..);
-        buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
-        self.device.poll(wgpu::Maintain::Wait);
-
-        let image = {
-            let buffer_view = buffer_slice.get_mapped_range();
-            let mut image = RgbImage::new(self.output_size.0, self.output_size.1);
-            for y in 0..self.output_size.1 {
-                for x in 0..self.output_size.0 {
-                    let i = (y * self.padded_bytes_per_row + 4 * x) as usize;
-                    let rgb = *Rgb::from_slice(&buffer_view[i..i + 3]);
-                    image.put_pixel(x, y, rgb);
-                }
-            }
-            image
-        };
-
-        self.output_buffer.unmap();
-        image
-    }
+    run_tests::run_tests(all_test_cases())
 }
