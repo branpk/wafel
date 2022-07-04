@@ -8,6 +8,8 @@
 //! Since some commands have multiple parts, the former returns a [DecodeResult],
 //! which may require additional raw commands to complete.
 //!
+//! Currently these functions panic on invalid commands.
+//!
 //! Note: this module is not complete and may have errors.
 
 #![allow(missing_docs)]
@@ -1069,7 +1071,7 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
 }
 
 /// Decodes a stream of [RawF3DCommand]s into a stream of [F3DCommand]s.
-pub fn decode_f3d_display_list<Ptr, I: Iterator<Item = RawF3DCommand<Ptr>>>(
+pub fn decode_f3d_display_list<Ptr, E, I: Iterator<Item = Result<RawF3DCommand<Ptr>, E>>>(
     raw_dl: I,
 ) -> F3DCommandIter<I> {
     F3DCommandIter { raw_dl }
@@ -1080,26 +1082,40 @@ pub struct F3DCommandIter<I> {
     raw_dl: I,
 }
 
-impl<Ptr, I> Iterator for F3DCommandIter<I>
+impl<Ptr, E, I> F3DCommandIter<I>
 where
     Ptr: Copy,
-    I: Iterator<Item = RawF3DCommand<Ptr>>,
+    I: Iterator<Item = Result<RawF3DCommand<Ptr>, E>>,
 {
-    type Item = F3DCommand<Ptr>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let raw_command = self.raw_dl.next()?;
+    fn next_impl(
+        &mut self,
+        raw_command: Result<RawF3DCommand<Ptr>, E>,
+    ) -> Result<F3DCommand<Ptr>, E> {
+        let raw_command = raw_command?;
         let mut result = decode_f3d_command(raw_command);
         while !result.is_complete() {
             match self.raw_dl.next() {
                 Some(raw_command_cont) => {
-                    result = result.next(raw_command_cont);
+                    result = result.next(raw_command_cont?);
                 }
                 None => {
-                    return Some(F3DCommand::Unknown(raw_command));
+                    return Ok(F3DCommand::Unknown(raw_command));
                 }
             }
         }
-        Some(result.unwrap())
+        Ok(result.unwrap())
+    }
+}
+
+impl<Ptr, E, I> Iterator for F3DCommandIter<I>
+where
+    Ptr: Copy,
+    I: Iterator<Item = Result<RawF3DCommand<Ptr>, E>>,
+{
+    type Item = Result<F3DCommand<Ptr>, E>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let raw_command = self.raw_dl.next()?;
+        Some(self.next_impl(raw_command))
     }
 }

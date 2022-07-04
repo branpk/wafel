@@ -90,6 +90,9 @@ pub trait MemoryRead {
         }
         Ok(bytes)
     }
+
+    /// Returns the int type corresponding to a pointer (either U32 or U64).
+    fn pointer_int_type(&self) -> IntType;
 }
 
 fn read_value_impl<M: MemoryRead + ?Sized>(
@@ -265,6 +268,9 @@ pub(crate) trait MemoryReadPrimitive {
 
     /// Read an address from memory.
     fn read_address(&self, address: Address) -> Result<Address, MemoryError>;
+
+    /// Returns the int type corresponding to a pointer (either U32 or U64).
+    fn pointer_int_type(&self) -> IntType;
 }
 
 /// A helper trait for implementing [MemoryWrite].
@@ -315,6 +321,10 @@ impl<M: MemoryReadPrimitive> MemoryRead for M {
 
     fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
         MemoryReadPrimitive::read_address(self, address)
+    }
+
+    fn pointer_int_type(&self) -> IntType {
+        MemoryReadPrimitive::pointer_int_type(self)
     }
 }
 

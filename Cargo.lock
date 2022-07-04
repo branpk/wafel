@@ -2654,17 +2654,14 @@ dependencies = [
 name = "wafel_viz"
 version = "0.1.0"
 dependencies = [
- "bitflags",
  "bytemuck",
- "derivative",
  "env_logger",
  "fast3d",
  "futures",
- "num_enum",
- "once_cell",
  "serde",
  "serde_json",
  "wafel_api",
+ "wafel_data_path",
  "wafel_data_type",
  "wafel_layout",
  "wafel_memory",

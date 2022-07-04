@@ -3,7 +3,7 @@ use std::{env, fmt::Write, fs};
 use fast3d::render::F3DRenderer;
 use image::{Pixel, Rgb, RgbImage};
 use wafel_api::{load_m64, Game};
-use wafel_viz::prepare_render_data;
+use wafel_viz::{prepare_render_data, SM64RenderConfig};
 
 #[derive(Debug)]
 struct TestCase {
@@ -209,7 +209,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             game.advance();
         }
 
-        let actual = renderer.render(&game);
+        let actual = renderer.render(
+            &game,
+            &SM64RenderConfig {
+                screen_size: Some((320, 240)),
+            },
+        );
 
         let expected = image::open(format!(
             "wafel_viz_tests/{}/{}.png",
@@ -398,8 +403,8 @@ impl Renderer {
         }
     }
 
-    fn render(&mut self, game: &Game) -> RgbImage {
-        let render_data = prepare_render_data(game, self.output_size);
+    fn render(&mut self, game: &Game, config: &SM64RenderConfig) -> RgbImage {
+        let render_data = prepare_render_data(game, config);
         self.renderer
             .prepare(&self.device, &self.queue, self.output_format, &render_data);
 

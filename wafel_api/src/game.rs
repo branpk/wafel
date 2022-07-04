@@ -46,7 +46,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Game {
     id: Arc<()>,
-    layout: Arc<DataLayout>,
+    pub layout: Arc<DataLayout>,
     pub memory: Arc<DllGameMemory>, // FIXME: Remove pubs
     symbols_by_address: HashMap<Address, String>,
     base_slot_frame: u32,

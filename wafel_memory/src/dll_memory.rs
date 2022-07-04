@@ -9,7 +9,7 @@ use std::{
 
 use dlopen::raw::{AddressInfoObtainer, Library};
 use once_cell::sync::OnceCell;
-use wafel_data_type::Address;
+use wafel_data_type::{Address, IntType};
 use wafel_layout::{read_dll_segments, DllSegment};
 
 use crate::{
@@ -441,6 +441,10 @@ impl MemoryReadPrimitive for DllStaticMemoryView<'_> {
         let pointer = unsafe { self.read_primitive::<usize>(address)? as *const () };
         Ok(self.memory.unchecked_pointer_to_address(pointer))
     }
+
+    fn pointer_int_type(&self) -> IntType {
+        IntType::u_ptr_native()
+    }
 }
 
 /// A read-only view of both static and non-static memory, backed by a
@@ -464,6 +468,10 @@ impl MemoryReadPrimitive for DllSlotMemoryView<'_> {
         let pointer = unsafe { self.read_primitive::<usize>(address)? as *const () };
         Ok(self.memory.unchecked_pointer_to_address(pointer))
     }
+
+    fn pointer_int_type(&self) -> IntType {
+        IntType::u_ptr_native()
+    }
 }
 
 /// A read-write view of both static and non-static memory, backed by a
@@ -486,6 +494,10 @@ impl MemoryReadPrimitive for DllSlotMemoryViewMut<'_> {
     fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
         let pointer = unsafe { self.read_primitive::<usize>(address)? as *const () };
         Ok(self.memory.unchecked_pointer_to_address(pointer))
+    }
+
+    fn pointer_int_type(&self) -> IntType {
+        IntType::u_ptr_native()
     }
 }
 

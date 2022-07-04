@@ -9,7 +9,7 @@ pub struct NotAnArrayOrPointerError;
 
 impl fmt::Display for NotAnArrayOrPointerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "DataType::stride called a non-array/pointer type")
+        write!(f, "DataType::stride called on a non-array/pointer type")
     }
 }
 

@@ -75,6 +75,89 @@ impl Matrixf {
         }
         r
     }
+
+    /// Note: roll is in radians
+    pub fn look_at(from: [f32; 3], to: [f32; 3], roll: f32) -> Self {
+        let mut dx = to[0] - from[0];
+        let mut dz = to[2] - from[2];
+
+        let inv_length = -1.0 / (dx * dx + dz * dz).sqrt();
+        dx *= inv_length;
+        dz *= inv_length;
+
+        let mut y_col_y = roll.cos();
+        let mut x_col_y = roll.sin() * dz;
+        let mut z_col_y = -roll.sin() * dx;
+
+        let mut x_col_z = to[0] - from[0];
+        let mut y_col_z = to[1] - from[1];
+        let mut z_col_z = to[2] - from[2];
+
+        let inv_length = -1.0 / (x_col_z * x_col_z + y_col_z * y_col_z + z_col_z * z_col_z).sqrt();
+        x_col_z *= inv_length;
+        y_col_z *= inv_length;
+        z_col_z *= inv_length;
+
+        let mut x_col_x = y_col_y * z_col_z - z_col_y * y_col_z;
+        let mut y_col_x = z_col_y * x_col_z - x_col_y * z_col_z;
+        let mut z_col_x = x_col_y * y_col_z - y_col_y * x_col_z;
+
+        let inv_length = 1.0 / (x_col_x * x_col_x + y_col_x * y_col_x + z_col_x * z_col_x).sqrt();
+        x_col_x *= inv_length;
+        y_col_x *= inv_length;
+        z_col_x *= inv_length;
+
+        x_col_y = y_col_z * z_col_x - z_col_z * y_col_x;
+        y_col_y = z_col_z * x_col_x - x_col_z * z_col_x;
+        z_col_y = x_col_z * y_col_x - y_col_z * x_col_x;
+
+        let inv_length = 1.0 / (x_col_y * x_col_y + y_col_y * y_col_y + z_col_y * z_col_y).sqrt();
+        x_col_y *= inv_length;
+        y_col_y *= inv_length;
+        z_col_y *= inv_length;
+
+        let mut mtx = [[0.0; 4]; 4];
+
+        mtx[0][0] = x_col_x;
+        mtx[0][1] = y_col_x;
+        mtx[0][2] = z_col_x;
+        mtx[0][3] = -(from[0] * x_col_x + from[1] * y_col_x + from[2] * z_col_x);
+
+        mtx[1][0] = x_col_y;
+        mtx[1][1] = y_col_y;
+        mtx[1][2] = z_col_y;
+        mtx[1][3] = -(from[0] * x_col_y + from[1] * y_col_y + from[2] * z_col_y);
+
+        mtx[2][0] = x_col_z;
+        mtx[2][1] = y_col_z;
+        mtx[2][2] = z_col_z;
+        mtx[2][3] = -(from[0] * x_col_z + from[1] * y_col_z + from[2] * z_col_z);
+
+        mtx[3][0] = 0.0;
+        mtx[3][1] = 0.0;
+        mtx[3][2] = 0.0;
+        mtx[3][3] = 1.0;
+
+        Self(mtx)
+    }
+
+    pub fn invert_isometry(&self) -> Matrixf {
+        let mut rotation = self.clone();
+        rotation.0[0][3] = 0.0;
+        rotation.0[1][3] = 0.0;
+        rotation.0[2][3] = 0.0;
+
+        let inv_rotation = rotation.transpose();
+
+        let translate = [self.0[0][3], self.0[1][3], self.0[2][3], 0.0];
+        let new_translate = scalar_mul(&inv_rotation * translate, -1.0);
+
+        let mut inv = inv_rotation;
+        inv.0[0][3] = new_translate[0];
+        inv.0[1][3] = new_translate[1];
+        inv.0[2][3] = new_translate[2];
+        inv
+    }
 }
 
 impl fmt::Debug for Matrixf {
@@ -87,7 +170,7 @@ impl fmt::Debug for Matrixf {
             }
             writeln!(f, "\t]")?;
         }
-        writeln!(f, "]")?;
+        write!(f, "]")?;
         Ok(())
     }
 }
@@ -122,10 +205,14 @@ impl ops::Mul<[f32; 4]> for &Matrixf {
     }
 }
 
-pub fn read_matrix<M: F3DMemory>(memory: &M, ptr: M::Ptr, offset: usize) -> Vec<i32> {
+pub fn read_matrix<M: F3DMemory>(
+    memory: &M,
+    ptr: M::Ptr,
+    offset: usize,
+) -> Result<Vec<i32>, M::Error> {
     let mut m = vec![0; 16];
-    memory.read_u32(cast_slice_mut(&mut m), ptr, offset);
-    m
+    memory.read_u32(cast_slice_mut(&mut m), ptr, offset)?;
+    Ok(m)
 }
 
 pub fn normalize(v: [f32; 4]) -> [f32; 4] {
@@ -133,12 +220,16 @@ pub fn normalize(v: [f32; 4]) -> [f32; 4] {
     if mag == 0.0 {
         v
     } else {
-        [v[0] / mag, v[1] / mag, v[2] / mag, v[3] / mag]
+        scalar_mul(v, 1.0 / mag)
     }
 }
 
 pub fn dot(v: [f32; 4], w: [f32; 4]) -> f32 {
     v[0] * w[0] + v[1] * w[1] + v[2] * w[2] + v[3] * w[3]
+}
+
+pub fn scalar_mul(v: [f32; 4], s: f32) -> [f32; 4] {
+    [v[0] * s, v[1] * s, v[2] * s, v[3] * s]
 }
 
 #[derive(Debug)]
@@ -178,11 +269,15 @@ pub struct Viewport {
     pub trans: [i16; 4],
 }
 
-pub fn read_viewport<M: F3DMemory>(memory: &M, ptr: M::Ptr, offset: usize) -> Viewport {
+pub fn read_viewport<M: F3DMemory>(
+    memory: &M,
+    ptr: M::Ptr,
+    offset: usize,
+) -> Result<Viewport, M::Error> {
     let mut v = Viewport::default();
-    memory.read_u16(cast_slice_mut(&mut v.scale), ptr, offset);
-    memory.read_u16(cast_slice_mut(&mut v.trans), ptr, offset + 8);
-    v
+    memory.read_u16(cast_slice_mut(&mut v.scale), ptr, offset)?;
+    memory.read_u16(cast_slice_mut(&mut v.trans), ptr, offset + 8)?;
+    Ok(v)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -198,18 +293,18 @@ pub fn read_vertices<M: F3DMemory>(
     ptr: M::Ptr,
     offset: usize,
     count: usize,
-) -> Vec<Vertex> {
+) -> Result<Vec<Vertex>, M::Error> {
     let stride = mem::size_of::<Vertex>();
     let mut vs = Vec::new();
     for i in 0..count {
         let mut v = Vertex::default();
         let voffset = offset + i * stride;
-        memory.read_u16(cast_slice_mut(&mut v.pos), ptr, voffset);
-        memory.read_u16(cast_slice_mut(&mut v.uv), ptr, voffset + 8);
-        memory.read_u8(cast_slice_mut(&mut v.cn), ptr, voffset + 12);
+        memory.read_u16(cast_slice_mut(&mut v.pos), ptr, voffset)?;
+        memory.read_u16(cast_slice_mut(&mut v.uv), ptr, voffset + 8)?;
+        memory.read_u8(cast_slice_mut(&mut v.cn), ptr, voffset + 12)?;
         vs.push(v);
     }
-    vs
+    Ok(vs)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -222,12 +317,12 @@ pub struct Light {
     pub pad3: u8,
 }
 
-pub fn read_light<M: F3DMemory>(memory: &M, ptr: M::Ptr) -> Light {
+pub fn read_light<M: F3DMemory>(memory: &M, ptr: M::Ptr) -> Result<Light, M::Error> {
     let mut light = Light::default();
-    memory.read_u8(&mut light.color, ptr, 0);
-    memory.read_u8(&mut light.color_copy, ptr, 4);
-    memory.read_u8(cast_slice_mut(&mut light.dir), ptr, 8);
-    light
+    memory.read_u8(&mut light.color, ptr, 0)?;
+    memory.read_u8(&mut light.color_copy, ptr, 4)?;
+    memory.read_u8(cast_slice_mut(&mut light.dir), ptr, 8)?;
+    Ok(light)
 }
 
 impl TextureData {
@@ -276,9 +371,9 @@ pub fn read_rgba16<M: F3DMemory>(
     ptr: M::Ptr,
     size_bytes: u32,
     line_size_bytes: u32,
-) -> TextureData {
+) -> Result<TextureData, M::Error> {
     let mut rgba16_data: Vec<u8> = vec![0; size_bytes as usize];
-    memory.read_u8(&mut rgba16_data, ptr, 0);
+    memory.read_u8(&mut rgba16_data, ptr, 0)?;
 
     let mut rgba32_data: Vec<u8> = Vec::with_capacity(2 * size_bytes as usize);
 
@@ -289,11 +384,11 @@ pub fn read_rgba16<M: F3DMemory>(
         rgba32_data.extend(&rgba32);
     }
 
-    TextureData::new(
+    Ok(TextureData::new(
         line_size_bytes / 2,
         size_bytes / line_size_bytes,
         rgba32_data,
-    )
+    ))
 }
 
 pub fn rgba_16_to_32(rgba16: u16) -> [u8; 4] {
@@ -310,9 +405,9 @@ pub fn read_ia16<M: F3DMemory>(
     ptr: M::Ptr,
     size_bytes: u32,
     line_size_bytes: u32,
-) -> TextureData {
+) -> Result<TextureData, M::Error> {
     let mut ia16_data: Vec<u8> = vec![0; size_bytes as usize];
-    memory.read_u8(&mut ia16_data, ptr, 0);
+    memory.read_u8(&mut ia16_data, ptr, 0)?;
 
     let mut rgba32_data: Vec<u8> = Vec::with_capacity(2 * size_bytes as usize);
 
@@ -323,11 +418,11 @@ pub fn read_ia16<M: F3DMemory>(
         rgba32_data.extend(&[intensity, intensity, intensity, alpha]);
     }
 
-    TextureData::new(
+    Ok(TextureData::new(
         line_size_bytes / 2,
         size_bytes / line_size_bytes,
         rgba32_data,
-    )
+    ))
 }
 
 pub fn read_ia8<M: F3DMemory>(
@@ -335,9 +430,9 @@ pub fn read_ia8<M: F3DMemory>(
     ptr: M::Ptr,
     size_bytes: u32,
     line_size_bytes: u32,
-) -> TextureData {
+) -> Result<TextureData, M::Error> {
     let mut ia8_data: Vec<u8> = vec![0; size_bytes as usize];
-    memory.read_u8(&mut ia8_data, ptr, 0);
+    memory.read_u8(&mut ia8_data, ptr, 0)?;
 
     let mut rgba32_data: Vec<u8> = Vec::with_capacity(4 * size_bytes as usize);
 
@@ -348,7 +443,11 @@ pub fn read_ia8<M: F3DMemory>(
         rgba32_data.extend(&[intensity, intensity, intensity, alpha]);
     }
 
-    TextureData::new(line_size_bytes, size_bytes / line_size_bytes, rgba32_data)
+    Ok(TextureData::new(
+        line_size_bytes,
+        size_bytes / line_size_bytes,
+        rgba32_data,
+    ))
 }
 
 pub fn read_ia4<M: F3DMemory>(
@@ -356,9 +455,9 @@ pub fn read_ia4<M: F3DMemory>(
     ptr: M::Ptr,
     size_bytes: u32,
     line_size_bytes: u32,
-) -> TextureData {
+) -> Result<TextureData, M::Error> {
     let mut ia4_data: Vec<u8> = vec![0; size_bytes as usize];
-    memory.read_u8(&mut ia4_data, ptr, 0);
+    memory.read_u8(&mut ia4_data, ptr, 0)?;
 
     let mut rgba32_data: Vec<u8> = Vec::with_capacity(8 * size_bytes as usize);
 
@@ -369,9 +468,9 @@ pub fn read_ia4<M: F3DMemory>(
         rgba32_data.extend(&[intensity, intensity, intensity, alpha * 255]);
     }
 
-    TextureData::new(
+    Ok(TextureData::new(
         line_size_bytes * 2,
         size_bytes / line_size_bytes,
         rgba32_data,
-    )
+    ))
 }

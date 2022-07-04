@@ -198,6 +198,10 @@ impl MemoryRead for EmuMemory {
     fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
         Ok(Address(self.read_u32(address)? as usize))
     }
+
+    fn pointer_int_type(&self) -> IntType {
+        IntType::U32
+    }
 }
 
 impl MemoryWrite for EmuMemory {

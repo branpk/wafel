@@ -4,6 +4,8 @@
 //! After implementing [F3DMemory] for loading vertex/texture/dls/etc data from memory,
 //! [interpret_f3d_display_list] can be called.
 //!
+//! Currently this [interpret_f3d_display_list] panics on invalid display lists.
+//!
 //! Note: this module is not complete and may have errors.
 
 use core::fmt;
@@ -20,38 +22,44 @@ use crate::{decode::*, util::*};
 /// objects from memory (viewports, textures, display lists, etc).
 pub trait F3DMemory {
     /// The pointer type that can be read from a display list command.
+    ///
+    /// PartialEq is only used for checking if the color image is equal to the depth
+    /// image.
     type Ptr: fmt::Debug + Copy + PartialEq;
+    /// Error that can be thrown when reading from memory.
+    type Error;
     /// An iterator over a display list that is read from memory.
-    type DlIter: Iterator<Item = F3DCommand<Self::Ptr>>;
+    type DlIter: Iterator<Item = Result<F3DCommand<Self::Ptr>, Self::Error>>;
 
     /// Returns the top level display list to be interpreted.
-    fn root_dl(&self) -> Self::DlIter;
+    fn root_dl(&self) -> Result<Self::DlIter, Self::Error>;
     /// Reads a child display list from memory at the given address.
-    fn read_dl(&self, ptr: Self::Ptr) -> Self::DlIter;
+    fn read_dl(&self, ptr: Self::Ptr) -> Result<Self::DlIter, Self::Error>;
 
     /// Reads dst.len() u8s from memory, starting at ptr + offset (in bytes).
-    fn read_u8(&self, dst: &mut [u8], ptr: Self::Ptr, offset: usize);
+    fn read_u8(&self, dst: &mut [u8], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error>;
     /// Reads dst.len() u16s from memory, starting at ptr + offset (in bytes).
-    fn read_u16(&self, dst: &mut [u16], ptr: Self::Ptr, offset: usize);
+    fn read_u16(&self, dst: &mut [u16], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error>;
     /// Reads dst.len() u32s from memory, starting at ptr + offset (in bytes).
-    fn read_u32(&self, dst: &mut [u32], ptr: Self::Ptr, offset: usize);
+    fn read_u32(&self, dst: &mut [u32], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error>;
 }
 
 /// Processes `memory.root_dl()` and returns draw data in a simpler to render and
 /// self-contained [F3DRenderData] object.
-pub fn interpret_f3d_display_list(
-    memory: &impl F3DMemory,
+pub fn interpret_f3d_display_list<M: F3DMemory>(
+    memory: &M,
     screen_size: (u32, u32),
     z_is_from_0_to_1: bool,
-) -> F3DRenderData {
+) -> Result<F3DRenderData, M::Error> {
     let mut interpreter = Interpreter {
         memory: Some(memory),
         screen_size,
         z_is_from_0_to_1,
         ..Default::default()
     };
-    interpreter.interpret(memory.root_dl());
-    interpreter.finish()
+    interpreter.interpret(memory.root_dl()?)?;
+    let render_data = interpreter.finish()?;
+    Ok(render_data)
 }
 
 #[derive(Debug, Derivative)]
@@ -108,9 +116,9 @@ struct TextureMemory<Ptr> {
 }
 
 impl<'m, M: F3DMemory> Interpreter<'m, M> {
-    fn finish(mut self) -> F3DRenderData {
-        self.flush();
-        self.result
+    fn finish(mut self) -> Result<F3DRenderData, M::Error> {
+        self.flush()?;
+        Ok(self.result)
     }
 
     fn memory(&self) -> &M {
@@ -136,10 +144,10 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
             .expect("invalid vertex index")
     }
 
-    fn flush(&mut self) {
+    fn flush(&mut self) -> Result<(), M::Error> {
         if self.num_vertices > 0 {
             let pipeline = self.pipeline_state();
-            let textures = self.load_textures(&pipeline);
+            let textures = self.load_textures(&pipeline)?;
             self.flush_with(
                 self.viewport_screen(),
                 self.scissor_screen(),
@@ -147,6 +155,7 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                 textures,
             );
         }
+        Ok(())
     }
 
     fn flush_with(
@@ -291,17 +300,22 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         components
     }
 
-    fn load_textures(&mut self, pipeline: &PipelineInfo) -> [Option<TextureIndex>; 2] {
-        [0, 1].map(|i| {
-            if pipeline.used_textures[i] {
-                Some(self.load_texture(TileIndex(i as u8)))
+    fn load_textures(
+        &mut self,
+        pipeline: &PipelineInfo,
+    ) -> Result<[Option<TextureIndex>; 2], M::Error> {
+        let mut textures = [None, None];
+        for i in 0..2 {
+            textures[i] = if pipeline.used_textures[i] {
+                Some(self.load_texture(TileIndex(i as u8))?)
             } else {
                 None
-            }
-        })
+            };
+        }
+        Ok(textures)
     }
 
-    fn load_texture(&mut self, tile: TileIndex) -> TextureIndex {
+    fn load_texture(&mut self, tile: TileIndex) -> Result<TextureIndex, M::Error> {
         use ComponentSize::*;
         use ImageFormat::*;
 
@@ -316,15 +330,15 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
 
         let fmt = (tile_params.fmt, tile_params.size);
         if let Some(&texture_index) = tmem.loaded.get(&fmt) {
-            return texture_index;
+            return Ok(texture_index);
         }
 
         let ptr = tmem.image.img;
         let data = match fmt {
-            (Rgba, Bits16) => read_rgba16(self.memory(), ptr, size_bytes, line_size_bytes),
-            (Ia, Bits16) => read_ia16(self.memory(), ptr, size_bytes, line_size_bytes),
-            (Ia, Bits8) => read_ia8(self.memory(), ptr, size_bytes, line_size_bytes),
-            (Ia, Bits4) => read_ia4(self.memory(), ptr, size_bytes, line_size_bytes),
+            (Rgba, Bits16) => read_rgba16(self.memory(), ptr, size_bytes, line_size_bytes)?,
+            (Ia, Bits16) => read_ia16(self.memory(), ptr, size_bytes, line_size_bytes)?,
+            (Ia, Bits8) => read_ia8(self.memory(), ptr, size_bytes, line_size_bytes)?,
+            (Ia, Bits4) => read_ia4(self.memory(), ptr, size_bytes, line_size_bytes)?,
             fmt => unimplemented!("texture format: {:?}", fmt),
             // _ => TextureRgba32::dbg_gradient(),
         };
@@ -344,7 +358,7 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         let tmem = self.texture_memory.get_mut(&tile_params.tmem).unwrap();
         tmem.loaded.insert(fmt, texture_index);
 
-        texture_index
+        Ok(texture_index)
     }
 
     fn texture_mut(&mut self, texture_index: TextureIndex) -> &mut TextureState {
@@ -542,16 +556,16 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         }
     }
 
-    fn fill_rectangle(&mut self, mut rect: Rectangle<u32>) {
+    fn fill_rectangle(&mut self, mut rect: Rectangle<u32>) -> Result<(), M::Error> {
         use ColorArg::*;
 
         if let (Some(color), Some(depth)) = (self.color_image, self.depth_image) {
             if color.img == depth {
-                return;
+                return Ok(());
             }
         }
 
-        self.flush();
+        self.flush()?;
 
         if matches!(self.cycle_type, CycleType::Fill | CycleType::Copy) {
             rect.lrx += 1;
@@ -595,21 +609,22 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
             h: self.screen_size.1 as i32,
         };
         let scissor = self.scissor_screen();
-        let textures = self.load_textures(&pipeline);
+        let textures = self.load_textures(&pipeline)?;
 
         self.flush_with(viewport, scissor, pipeline, textures);
+        Ok(())
     }
 
-    fn texture_rectangle(&mut self, tex_rect: TextureRectangle) {
+    fn texture_rectangle(&mut self, tex_rect: TextureRectangle) -> Result<(), M::Error> {
         use ColorArg::*;
 
         if let (Some(color), Some(depth)) = (self.color_image, self.depth_image) {
             if color.img == depth {
-                return;
+                return Ok(());
             }
         }
 
-        self.flush();
+        self.flush()?;
 
         let ulx = tex_rect.rect.ulx as f32 / 4.0;
         let uly = tex_rect.rect.uly as f32 / 4.0;
@@ -620,9 +635,6 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
             lrx += 1.0;
             lry += 1.0;
         }
-
-        let tile = tex_rect.tile;
-        self.load_texture(tile);
 
         let x0 = 2.0 * (ulx / 320.0) - 1.0;
         let x1 = 2.0 * (lrx / 320.0) - 1.0;
@@ -657,7 +669,8 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         ];
 
         if self.cycle_type == CycleType::Copy {
-            let texture_index = self.load_texture(tile);
+            let tile = tex_rect.tile;
+            let texture_index = self.load_texture(tile)?;
 
             // TODO: This should probably be reset after the draw, but need to create a
             // separate sampler/texture for it
@@ -708,12 +721,14 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                 self.num_vertices += 1;
             }
 
-            self.flush();
+            self.flush()?;
         }
+        Ok(())
     }
 
-    fn interpret(&mut self, dl: M::DlIter) {
+    fn interpret(&mut self, dl: M::DlIter) -> Result<(), M::Error> {
         for cmd in dl {
+            let cmd = cmd?;
             // if !matches!(cmd, F3DCommand::Unknown { .. }) {
             //     eprintln!("{}{:?}", indent_str, cmd);
             // }
@@ -726,8 +741,8 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                         op,
                         push,
                     } => {
-                        self.flush();
-                        let fixed = read_matrix(self.memory(), matrix, 0);
+                        self.flush()?;
+                        let fixed = read_matrix(self.memory(), matrix, 0)?;
                         let m = Matrixf::from_fixed(&fixed);
                         match mode {
                             MatrixMode::Proj => self.proj.execute(m, op, push),
@@ -735,62 +750,62 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                         }
                     }
                     SPCommand::Viewport(ptr) => {
-                        let viewport = read_viewport(self.memory(), ptr, 0);
+                        let viewport = read_viewport(self.memory(), ptr, 0)?;
                         if self.viewport != viewport {
-                            self.flush();
+                            self.flush()?;
                             self.viewport = viewport;
                         }
                     }
                     SPCommand::Light { light, n } => {
-                        self.flush();
+                        self.flush()?;
                         let index = (n - 1) as usize;
-                        self.lights[index] = read_light(self.memory(), light);
+                        self.lights[index] = read_light(self.memory(), light)?;
                     }
                     SPCommand::Vertex { v, n, v0 } => {
                         let offset = v0 as usize * mem::size_of::<Vertex>();
-                        self.vertices = read_vertices(self.memory(), v, offset, n as usize);
+                        self.vertices = read_vertices(self.memory(), v, offset, n as usize)?;
                     }
                     SPCommand::DisplayList(ptr) => {
-                        let child_dl = self.memory().read_dl(ptr);
-                        self.interpret(child_dl);
+                        let child_dl = self.memory().read_dl(ptr)?;
+                        self.interpret(child_dl)?;
                     }
                     SPCommand::BranchList(ptr) => {
-                        let child_dl = self.memory().read_dl(ptr);
-                        self.interpret(child_dl);
+                        let child_dl = self.memory().read_dl(ptr)?;
+                        self.interpret(child_dl)?;
                         break;
                     }
                     SPCommand::OneTriangle { v0, v1, v2, .. } => {
                         self.draw_triangle(v0, v1, v2);
                     }
                     SPCommand::PopMatrix(mode) => {
-                        self.flush();
+                        self.flush()?;
                         match mode {
                             MatrixMode::Proj => self.proj.pop(),
                             MatrixMode::ModelView => self.model_view.pop(),
                         }
                     }
                     SPCommand::NumLights(n) => {
-                        self.flush();
+                        self.flush()?;
                         self.num_dir_lights = n;
                     }
                     // SPCommand::Segment { seg, base } => todo!(),
                     SPCommand::FogFactor { mul, offset } => {
-                        self.flush();
+                        self.flush()?;
                         self.fog_mul = mul;
                         self.fog_offset = offset;
                     }
                     SPCommand::Texture { sc, tc, tile, .. } => {
-                        self.flush();
+                        self.flush()?;
                         self.texture_scale[tile as usize] =
                             [sc as f32 / 0x10000 as f32, tc as f32 / 0x10000 as f32];
                     }
                     SPCommand::EndDisplayList => break,
                     SPCommand::SetGeometryMode(mode) => {
-                        self.flush();
+                        self.flush()?;
                         self.geometry_mode |= mode;
                     }
                     SPCommand::ClearGeometryMode(mode) => {
-                        self.flush();
+                        self.flush()?;
                         self.geometry_mode &= !mode;
                     }
                     // _ => unimplemented!("{:?}", cmd),
@@ -799,34 +814,34 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                 F3DCommand::Rdp(cmd) => match cmd {
                     DPCommand::SetTextureFilter(v) => {
                         if self.texture_filter != v {
-                            self.flush();
+                            self.flush()?;
                             self.texture_filter = v;
                         }
                     }
                     DPCommand::SetCycleType(v) => {
                         if self.cycle_type != v {
-                            self.flush();
+                            self.flush()?;
                             self.cycle_type = v;
                         }
                     }
                     DPCommand::SetAlphaCompare(v) => {
                         if self.alpha_compare != v {
-                            self.flush();
+                            self.flush()?;
                             self.alpha_compare = v;
                         }
                     }
                     DPCommand::SetRenderMode(v) => {
                         if self.render_mode != v {
-                            self.flush();
+                            self.flush()?;
                             self.render_mode = v;
                         }
                     }
                     DPCommand::SetColorImage(image) => {
-                        self.flush();
+                        self.flush()?;
                         self.color_image = Some(image);
                     }
                     DPCommand::SetDepthImage(image) => {
-                        self.flush();
+                        self.flush()?;
                         self.depth_image = Some(image);
                     }
                     DPCommand::SetTextureImage(image) => {
@@ -834,7 +849,7 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                     }
                     DPCommand::SetCombineMode(mode) => {
                         if self.combine_mode != mode {
-                            self.flush();
+                            self.flush()?;
                             self.combine_mode = mode;
                         }
                     }
@@ -855,14 +870,14 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                         self.fill_color = fill_color[0];
                     }
                     DPCommand::FillRectangle(rect) => {
-                        self.fill_rectangle(rect);
+                        self.fill_rectangle(rect)?;
                     }
                     DPCommand::SetTile(tile, params) => {
-                        self.flush();
+                        self.flush()?;
                         self.tile_params[tile.0 as usize] = params;
                     }
                     DPCommand::LoadBlock(tile, block) => {
-                        self.flush();
+                        self.flush()?;
 
                         let tile_params = &self.tile_params[tile.0 as usize];
                         let image = self.texture_image.expect("missing call to SetTextureImage");
@@ -877,12 +892,12 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                         );
                     }
                     DPCommand::SetTileSize(tile, size) => {
-                        self.flush();
+                        self.flush()?;
                         self.tile_size[tile.0 as usize] = size;
                     }
                     DPCommand::SetScissor(mode, rect) => {
                         if self.scissor != (mode, rect) {
-                            self.flush();
+                            self.flush()?;
                             self.scissor = (mode, rect);
                         }
                     }
@@ -891,7 +906,7 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                     DPCommand::PipeSync => {}
                     DPCommand::LoadSync => {}
                     DPCommand::TextureRectangle(tex_rect) => {
-                        self.texture_rectangle(tex_rect);
+                        self.texture_rectangle(tex_rect)?;
                     }
                     // _ => unimplemented!("{:?}", cmd),
                     _ => {}
@@ -901,5 +916,6 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                 }
             }
         }
+        Ok(())
     }
 }
