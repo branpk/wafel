@@ -1,3 +1,5 @@
+//! A wgpu renderer for the data produced by [crate::interpret].
+
 use std::{
     collections::HashMap,
     fmt::{self, Write},
@@ -8,6 +10,7 @@ use wgpu::util::DeviceExt;
 
 use crate::f3d_render_data::*;
 
+#[allow(missing_docs)]
 #[derive(Debug)]
 pub struct F3DRenderer {
     texture_bind_group_layout: wgpu::BindGroupLayout,
@@ -80,6 +83,7 @@ fn arg_expr(arg: ColorArg) -> String {
     }
 }
 
+#[allow(missing_docs)]
 impl F3DRenderer {
     pub fn new(device: &wgpu::Device) -> Self {
         let texture_bind_group_layout =
@@ -145,63 +149,58 @@ impl F3DRenderer {
 
         let mut vertex_attributes: Vec<wgpu::VertexAttribute> = Vec::new();
         let vertex_buffer_layout = {
-            let mut current_attribute_offset = 0;
-            let mut current_location = 0;
+            let mut offset = 0;
+            let mut loc = 0;
 
             writeln!(s, "struct VertexData {{")?;
             {
-                writeln!(s, "    @location({}) pos: vec4<f32>,", current_location)?;
+                writeln!(s, "    @location({}) pos: vec4<f32>,", loc)?;
                 vertex_attributes.push(wgpu::VertexAttribute {
                     format: wgpu::VertexFormat::Float32x4,
-                    offset: current_attribute_offset,
-                    shader_location: current_location,
+                    offset,
+                    shader_location: loc,
                 });
-                current_attribute_offset += 16;
-                current_location += 1;
+                offset += 16;
+                loc += 1;
 
                 if p.uses_textures() {
-                    writeln!(s, "    @location({}) uv: vec2<f32>,", current_location)?;
+                    writeln!(s, "    @location({}) uv: vec2<f32>,", loc)?;
                     vertex_attributes.push(wgpu::VertexAttribute {
                         format: wgpu::VertexFormat::Float32x2,
-                        offset: current_attribute_offset,
-                        shader_location: current_location,
+                        offset,
+                        shader_location: loc,
                     });
-                    current_attribute_offset += 8;
-                    current_location += 1;
+                    offset += 8;
+                    loc += 1;
                 }
 
                 if p.fog {
-                    writeln!(s, "    @location({}) fog: vec4<f32>,", current_location)?;
+                    writeln!(s, "    @location({}) fog: vec4<f32>,", loc)?;
                     vertex_attributes.push(wgpu::VertexAttribute {
                         format: wgpu::VertexFormat::Float32x4,
-                        offset: current_attribute_offset,
-                        shader_location: current_location,
+                        offset,
+                        shader_location: loc,
                     });
-                    current_attribute_offset += 16;
-                    current_location += 1;
+                    offset += 16;
+                    loc += 1;
                 }
 
                 for i in 0..p.num_inputs {
-                    let length = if p.blend { 4 } else { 3 };
-                    writeln!(
-                        s,
-                        "    @location({}) input{}: vec{}<f32>,",
-                        current_location, i, length,
-                    )?;
+                    writeln!(s, "    @location({}) input{}: vec4<f32>,", loc, i)?;
                     vertex_attributes.push(wgpu::VertexAttribute {
                         format: wgpu::VertexFormat::Float32x4,
-                        offset: current_attribute_offset,
-                        shader_location: current_location,
+                        offset,
+                        shader_location: loc,
                     });
-                    current_attribute_offset += 4 * length;
-                    current_location += 1;
+                    offset += 16;
+                    loc += 1;
                 }
             }
             writeln!(s, "}}")?;
             writeln!(s)?;
 
             wgpu::VertexBufferLayout {
-                array_stride: current_attribute_offset,
+                array_stride: offset,
                 step_mode: wgpu::VertexStepMode::Vertex,
                 attributes: &vertex_attributes,
             }
@@ -239,11 +238,7 @@ impl F3DRenderer {
                 writeln!(s, "    out.fog = in.fog;")?;
             }
             for i in 0..p.num_inputs {
-                if p.blend {
-                    writeln!(s, "    out.input{} = in.input{};", i, i)?
-                } else {
-                    writeln!(s, "    out.input{} = vec4<f32>(in.input{}, 1.0);", i, i)?
-                }
+                writeln!(s, "    out.input{} = in.input{};", i, i)?
             }
             writeln!(s, "    return out;")?;
             writeln!(s, "}}")?;

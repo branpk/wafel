@@ -15,9 +15,11 @@ use std::{
 };
 
 use custom_renderer::{CustomRenderer, Scene};
-use f3d_decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand};
-use f3d_interpret::{interpret_f3d_display_list, F3DMemory, F3DRenderData};
-use f3d_render::F3DRenderer;
+use fast3d::{
+    decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand},
+    interpret::{interpret_f3d_display_list, F3DMemory, F3DRenderData},
+    render::F3DRenderer,
+};
 use wafel_api::{load_m64, Address, Game, IntType, SaveState};
 use wafel_memory::{DllSlotMemoryView, GameMemory, MemoryRead};
 use winit::{
@@ -27,11 +29,6 @@ use winit::{
 };
 
 pub mod custom_renderer;
-pub mod f3d_decode;
-pub mod f3d_interpret;
-pub mod f3d_render;
-mod f3d_render_data;
-mod util;
 
 pub fn prepare_render_data(game: &Game, screen_size: (u32, u32)) -> F3DRenderData {
     let f3d_source = DllF3DSource { game };

@@ -16,7 +16,7 @@ jobs:
           profile: minimal
           override: true
       - uses: Swatinem/rust-cache@v1
-      - run: cargo doc --no-deps
+      - run: cargo doc --no-deps --all-features
       - uses: JamesIves/github-pages-deploy-action@4.1.4
         with:
           branch: gh-pages

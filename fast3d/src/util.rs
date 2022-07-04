@@ -3,9 +3,9 @@ use std::{mem, ops};
 use bytemuck::cast_slice_mut;
 
 use crate::{
-    f3d_decode::{F3DWrapMode, MatrixOp},
-    f3d_interpret::F3DMemory,
+    decode::{F3DWrapMode, MatrixOp},
     f3d_render_data::{TextureData, WrapMode},
+    interpret::F3DMemory,
 };
 
 impl From<F3DWrapMode> for WrapMode {
@@ -197,7 +197,7 @@ pub fn read_light<M: F3DMemory>(memory: &M, ptr: M::Ptr) -> Light {
 
 impl TextureData {
     #[track_caller]
-    pub fn new(width: u32, height: u32, rgba8: Vec<u8>) -> Self {
+    pub(crate) fn new(width: u32, height: u32, rgba8: Vec<u8>) -> Self {
         assert!(4 * width * height <= rgba8.len() as u32);
         Self {
             width,
@@ -207,7 +207,7 @@ impl TextureData {
     }
 
     #[allow(dead_code)]
-    pub fn dbg_constant(r: u8, g: u8, b: u8, a: u8) -> Self {
+    pub(crate) fn dbg_constant(r: u8, g: u8, b: u8, a: u8) -> Self {
         let width = 32;
         let height = 32;
         let mut data = Vec::new();
@@ -218,7 +218,7 @@ impl TextureData {
     }
 
     #[allow(dead_code)]
-    pub fn dbg_gradient() -> Self {
+    pub(crate) fn dbg_gradient() -> Self {
         let width = 32;
         let height = 32;
         let mut data = Vec::new();

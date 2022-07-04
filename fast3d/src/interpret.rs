@@ -1,10 +1,18 @@
+//! A display list interpreter that produces a self-contained [F3DRenderData] object that is
+//! straightforward to render.
+//!
+//! After implementing [F3DMemory] for loading vertex/texture/dls/etc data from memory,
+//! [interpret_f3d_display_list] can be called.
+//!
+//! Note: this module is not complete and may have errors.
+
 use core::fmt;
 use std::{collections::HashMap, mem};
 
 use derivative::Derivative;
 
 pub use crate::f3d_render_data::*;
-use crate::{f3d_decode::*, util::*};
+use crate::{decode::*, util::*};
 
 /// A trait with methods for reading from game memory.
 ///
@@ -148,9 +156,7 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         pipeline_info: PipelineInfo,
         textures: [Option<TextureIndex>; 2],
     ) {
-        let pipeline = PipelineId {
-            state: pipeline_info,
-        };
+        let pipeline = PipelineId(pipeline_info);
         self.result
             .pipelines
             .entry(pipeline)
@@ -503,6 +509,8 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                     c => unimplemented!("{:?}", c),
                 };
                 self.vertex_buffer.push(a as f32 / 255.0);
+            } else {
+                self.vertex_buffer.push(1.0);
             }
         }
     }

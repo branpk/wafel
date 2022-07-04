@@ -1,3 +1,15 @@
+//! Fast3D command decoding.
+//!
+//! This module provides two methods for decoding commands:
+//! - [decode_f3d_command]
+//! - [decode_f3d_display_list]
+//!
+//! Both of these transform [RawF3DCommand]s into [F3DCommand]s.
+//! Since some commands have multiple parts, the former returns a [DecodeResult],
+//! which may require additional raw commands to complete.
+//!
+//! Note: this module is not complete and may have errors.
+
 #![allow(missing_docs)]
 
 use std::fmt;
@@ -5,6 +17,11 @@ use std::fmt;
 use bitflags::bitflags;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
+/// A raw Fast3D command for decoding.
+///
+/// Normally this consists of two 32 bit words, with the latter sometimes representing a
+/// segmented memory address. To support 64 bit machines, a third `w1_ptr` field is
+/// included.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RawF3DCommand<Ptr> {
     pub w0: u32,
@@ -22,6 +39,7 @@ impl<Ptr> fmt::Debug for RawF3DCommand<Ptr> {
     }
 }
 
+/// A decoded Fast3D command.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum F3DCommand<Ptr> {
     NoOp,
@@ -681,6 +699,12 @@ pub struct TextureRectangle {
     pub dtdy: u16,
 }
 
+/// The result of decoding a raw command.
+///
+/// In most cases, one raw command maps to one output command, so you can call
+/// [DecodeResult::unwrap] to get the final result.
+/// Longer commands can be completed using [DecodeResult::is_complete] and
+/// [DecodeResult::next].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DecodeResult<Ptr> {
     Complete(F3DCommand<Ptr>),
@@ -697,10 +721,15 @@ pub enum DecodeResult<Ptr> {
 }
 
 impl<Ptr> DecodeResult<Ptr> {
+    /// Returns true if the command is fully decoded and [DecodeResult::unwrap] can be called.
     pub fn is_complete(self) -> bool {
         matches!(self, Self::Complete(_))
     }
 
+    /// Returns the decoded command.
+    ///
+    /// # Panics
+    /// Panics if [DecodeResult::is_complete] is false.
     #[track_caller]
     pub fn unwrap(self) -> F3DCommand<Ptr> {
         match self {
@@ -709,6 +738,10 @@ impl<Ptr> DecodeResult<Ptr> {
         }
     }
 
+    /// If the command is not yet complete, continue decoding using the given data.
+    ///
+    /// # Panics
+    /// Panics if [DecodeResult::is_complete] is true.
     #[track_caller]
     pub fn next(self, cmd_cont: RawF3DCommand<Ptr>) -> Self {
         let w1 = cmd_cont.w1;
@@ -740,6 +773,9 @@ impl<Ptr> DecodeResult<Ptr> {
     }
 }
 
+/// Decodes a raw Fast3D command.
+///
+/// This returns a [DecodeResult] since the command may be incomplete.
 pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeResult<Ptr> {
     use DPCommand::*;
     use F3DCommand::*;
@@ -914,68 +950,6 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
                 alpha2: ac2.try_into().unwrap(),
             }))
         }
-        //   0xFC => {
-        // 	   let    cc1 = ((w0 >> 20) & 0xF, (w1 >> 28) & 0xF, (w0 >> 15) & 0x1F, (w1 >> 15) & 0x7);
-        // 	   let    ac1 = ((w0 >> 12) & 0x7, (w1 >> 12) & 0x7, (w0 >> 9) & 0x7, (w1 >> 9) & 0x7);
-        // 	   let    cc2 = ((w0 >> 5) & 0xF, (w1 >> 24) & 0xF, (w0 >> 0) & 0x1F, (w1 >> 6) & 0x7);
-        // 	   let    ac2 = ((w1 >> 21) & 0x7, (w1 >> 3) & 0x7, (w1 >> 18) & 0x7, (w1 >> 0) & 0x7);
-        //
-        //     def get_ccmux(p):
-        //       i, m = p;
-        // 	   let      ccmux = {
-        //         0: "combined",
-        //         1: "texel0",
-        //         2: "texel1",
-        //         3: "primitive",
-        //         4: "shade",
-        //         5: "environment",
-        //       }
-        //       if i == 0 {
-        //         ccmux[6] = "1";
-        //         ccmux[7] = "noise";
-        //       } else if i == 1 {
-        //         ccmux[6] = "center";
-        //         ccmux[7] = "k4";
-        //       } else if i == 2 {
-        //         ccmux.update({
-        //             6: "scale",
-        //             7: "combined_alpha",
-        //             8: "texel0_alpha",
-        //             9: "texel1_alpha",
-        //             10: "primitive_alpha",
-        //             11: "shade_alpha",
-        //             12: "environment_alpha",
-        //             13: "lod_fraction",
-        //             14: "prim_lod_frac",
-        //             15: "k5",
-        //           });
-        //       } else if i == 3 {
-        //         ccmux[6] = "1";
-        //       return ccmux.get(m) or "0";
-        //
-        //     def get_acmux(p):
-        //       i, m = p;
-        // 	   let      acmux = {
-        //         0: "combined_alpha",
-        //         1: "texel0_alpha",
-        //         2: "texel1_alpha",
-        //         3: "primitive_alpha",
-        //         4: "shade_alpha",
-        //         5: "environment_alpha",
-        //         6: "1",
-        //         7: "0",
-        //       }
-        //       if i == 2 {
-        //         acmux[0] = "lod_fraction";
-        //         acmux[6] = "prim_lod_frac";
-        //       return acmux[m];
-        //
-        //     return ("gDPSetCombineMode",
-        //       tuple(map(get_ccmux, enumerate(cc1))),
-        //       tuple(map(get_acmux, enumerate(ac1))),
-        //       tuple(map(get_ccmux, enumerate(cc2))),
-        //       tuple(map(get_acmux, enumerate(ac2))));
-        //  }
         0xFB => Rdp(SetEnvColor(Rgba32 {
             r: (w1 >> 24) as u8,
             g: (w1 >> 16) as u8,
@@ -1094,6 +1068,7 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
     })
 }
 
+/// Decodes a stream of [RawF3DCommand]s into a stream of [F3DCommand]s.
 pub fn decode_f3d_display_list<Ptr, I: Iterator<Item = RawF3DCommand<Ptr>>>(
     raw_dl: I,
 ) -> F3DCommandIter<I> {

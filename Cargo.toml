@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "fast3d",
     "libsm64_lock",
     "sm64_layout",
     "sm64_var_dump",
