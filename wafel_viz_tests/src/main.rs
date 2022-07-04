@@ -2,7 +2,7 @@ mod game_runner;
 mod renderer;
 mod run_tests;
 
-use std::env;
+use std::{collections::HashSet, env};
 
 use wafel_viz::SM64RenderConfig;
 
@@ -291,5 +291,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     reg(&mut cases);
 
+    let selected_tests: HashSet<String> = env::args()
+        .skip(1)
+        .filter(|s| !s.starts_with("--"))
+        .collect();
+    if !selected_tests.is_empty() {
+        cases = cases
+            .into_iter()
+            .filter(|c| selected_tests.contains(&c.name))
+            .collect();
+    }
     run_tests::run_tests(cases)
 }

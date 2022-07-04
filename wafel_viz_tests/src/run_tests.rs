@@ -9,7 +9,9 @@ pub fn run_tests(mut test_cases: Vec<TestCase>) -> Result<(), Box<dyn std::error
 
     env_logger::init();
 
-    let _ = fs::remove_dir_all("wafel_viz_tests/output");
+    if !env::args().any(|arg| arg == "--no-delete") {
+        let _ = fs::remove_dir_all("wafel_viz_tests/output");
+    }
     fs::create_dir_all("wafel_viz_tests/output/all")?;
     fs::create_dir_all("wafel_viz_tests/output/mismatches")?;
     if calc_diffs {
