@@ -6,7 +6,7 @@ use std::env;
 
 use wafel_viz::SM64RenderConfig;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TestCase {
     pub name: String,
     pub game_version: &'static str,
@@ -242,6 +242,46 @@ fn res(cases: &mut Vec<TestCase>) {
     case("u120_149706_thank_you", 149706);
 }
 
+fn reg(cases: &mut Vec<TestCase>) {
+    let mut case = |name: &str, frame| {
+        for version in ["us", "jp", "eu", "sh"] {
+            cases.push(TestCase {
+                name: format!("reg_{}_{}", version, name),
+                game_version: version,
+                m64: "cross_version",
+                frame,
+                config: SM64RenderConfig::default(),
+            });
+        }
+    };
+    case("000030_title", 30);
+    case("000129_mario_head", 129);
+    case("000505_mario_head_lol", 505);
+    case("000975_wf", 975);
+    case("002505_ccm", 2505);
+    case("004245_bbh", 4245);
+    case("005905_jrb", 5905);
+    case("007607_hmc", 7607);
+    case("009507_pss", 9507);
+    case("010209_fade", 10209);
+    case("010242_file_select_1", 10242);
+    case("010555_file_select_2", 10555);
+    case("010822_peach_letter", 10822);
+    case("011240_lakitu_1", 11240);
+    case("011396_lakitu_2", 11396);
+    case("011708_mario", 11708);
+    case("011829_tilted_text", 11829);
+    case("011838_text", 11838);
+    case("012802_pause", 12802);
+    case("013366_lakitu_scroll", 13366);
+    case("013796_enter_castle", 13796);
+    case("014268_castle", 14268);
+    case("014475_ripple", 14475);
+    case("014578_star_select", 14578);
+    case("014757_bob_text", 14757);
+    case("015064_pause", 15064);
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut cases = Vec::new();
 
@@ -249,6 +289,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if !env::args().any(|s| s == "--no-res") {
         res(&mut cases);
     }
+    reg(&mut cases);
 
     run_tests::run_tests(cases)
 }
