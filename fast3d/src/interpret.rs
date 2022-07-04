@@ -659,8 +659,9 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         if self.cycle_type == CycleType::Copy {
             let texture_index = self.load_texture(tile);
 
+            // TODO: This should probably be reset after the draw, but need to create a
+            // separate sampler/texture for it
             let sampler = &mut self.texture_mut(texture_index).sampler;
-            let saved_linear_filter = sampler.linear_filter;
             sampler.linear_filter = false;
 
             let pipeline = PipelineInfo {
@@ -688,9 +689,6 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
             let scissor = self.scissor_screen();
 
             self.flush_with(viewport, scissor, pipeline, [Some(texture_index), None]);
-
-            let sampler = &mut self.texture_mut(texture_index).sampler;
-            sampler.linear_filter = saved_linear_filter;
         } else {
             let pipeline = self.pipeline_state();
             let input_comps = self.get_color_input_components();
