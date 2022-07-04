@@ -3704,15 +3704,11 @@
       "type": "s64",
       "value": 6
     },
-    "F3DEX_GBI": {
-      "type": "void",
-      "value": null
+    "F3D_NEW": {
+      "type": "s64",
+      "value": 1
     },
-    "F3DEX_GBI_2": {
-      "type": "void",
-      "value": null
-    },
-    "F3DEX_GBI_2E": {
+    "F3D_OLD": {
       "type": "s64",
       "value": 1
     },
@@ -3957,10 +3953,6 @@
       "value": 65530
     },
     "GAME_INIT_H": {
-      "type": "void",
-      "value": null
-    },
-    "GBI_FLOATS": {
       "type": "void",
       "value": null
     },
@@ -4328,18 +4320,6 @@
       "type": "s64",
       "value": 1
     },
-    "G_BRANCH_Z": {
-      "type": "s64",
-      "value": 4
-    },
-    "G_BZ_ORTHO": {
-      "type": "s64",
-      "value": 1
-    },
-    "G_BZ_PERSP": {
-      "type": "s64",
-      "value": 0
-    },
     "G_CCMUX_0": {
       "type": "s64",
       "value": 31
@@ -4452,25 +4432,29 @@
       "type": "s64",
       "value": 0
     },
+    "G_CLEARGEOMETRYMODE": {
+      "type": "s64",
+      "value": -74
+    },
     "G_CLIPPING": {
       "type": "s64",
-      "value": 8388608
+      "value": 0
     },
     "G_CULLDL": {
       "type": "s64",
-      "value": 3
+      "value": -66
     },
     "G_CULL_BACK": {
       "type": "s64",
-      "value": 1024
+      "value": 8192
     },
     "G_CULL_BOTH": {
       "type": "s64",
-      "value": 1536
+      "value": 12288
     },
     "G_CULL_FRONT": {
       "type": "s64",
-      "value": 512
+      "value": 4096
     },
     "G_CV_K0": {
       "type": "s64",
@@ -4514,7 +4498,7 @@
     },
     "G_DL": {
       "type": "s64",
-      "value": 222
+      "value": 6
     },
     "G_DL_NOPUSH": {
       "type": "s64",
@@ -4528,13 +4512,9 @@
       "type": "s64",
       "value": 128
     },
-    "G_DMA_IO": {
-      "type": "s64",
-      "value": 214
-    },
     "G_ENDDL": {
       "type": "s64",
-      "value": 223
+      "value": -72
     },
     "G_FILLRECT": {
       "type": "s64",
@@ -4544,13 +4524,13 @@
       "type": "s64",
       "value": 65536
     },
-    "G_GEOMETRYMODE": {
-      "type": "s64",
-      "value": 217
-    },
     "G_IMMCMDSIZ": {
       "type": "s64",
       "value": 64
+    },
+    "G_IMMFIRST": {
+      "type": "s64",
+      "value": -65
     },
     "G_IM_FMT_CI": {
       "type": "s64",
@@ -4694,7 +4674,7 @@
     },
     "G_LINE3D": {
       "type": "s64",
-      "value": 8
+      "value": -75
     },
     "G_LOADBLOCK": {
       "type": "s64",
@@ -4707,10 +4687,6 @@
     "G_LOADTLUT": {
       "type": "s64",
       "value": 240
-    },
-    "G_LOAD_UCODE": {
-      "type": "s64",
-      "value": 221
     },
     "G_LOD": {
       "type": "s64",
@@ -4792,21 +4768,17 @@
       "type": "s64",
       "value": 2
     },
-    "G_MODIFYVTX": {
-      "type": "s64",
-      "value": 2
-    },
     "G_MOVEMEM": {
       "type": "s64",
-      "value": 220
+      "value": 3
     },
     "G_MOVEWORD": {
       "type": "s64",
-      "value": 219
+      "value": -68
     },
     "G_MTX": {
       "type": "s64",
-      "value": 218
+      "value": 1
     },
     "G_MTX_LOAD": {
       "type": "s64",
@@ -4826,35 +4798,75 @@
     },
     "G_MTX_PROJECTION": {
       "type": "s64",
-      "value": 4
+      "value": 1
     },
     "G_MTX_PUSH": {
       "type": "s64",
-      "value": 1
+      "value": 4
     },
-    "G_MV_LIGHT": {
+    "G_MV_L0": {
       "type": "s64",
-      "value": 10
+      "value": 134
     },
-    "G_MV_MATRIX": {
+    "G_MV_L1": {
       "type": "s64",
-      "value": 14
+      "value": 136
     },
-    "G_MV_MMTX": {
+    "G_MV_L2": {
       "type": "s64",
-      "value": 2
+      "value": 138
     },
-    "G_MV_PMTX": {
+    "G_MV_L3": {
       "type": "s64",
-      "value": 6
+      "value": 140
     },
-    "G_MV_POINT": {
+    "G_MV_L4": {
       "type": "s64",
-      "value": 12
+      "value": 142
+    },
+    "G_MV_L5": {
+      "type": "s64",
+      "value": 144
+    },
+    "G_MV_L6": {
+      "type": "s64",
+      "value": 146
+    },
+    "G_MV_L7": {
+      "type": "s64",
+      "value": 148
+    },
+    "G_MV_LOOKATX": {
+      "type": "s64",
+      "value": 132
+    },
+    "G_MV_LOOKATY": {
+      "type": "s64",
+      "value": 130
+    },
+    "G_MV_MATRIX_1": {
+      "type": "s64",
+      "value": 158
+    },
+    "G_MV_MATRIX_2": {
+      "type": "s64",
+      "value": 152
+    },
+    "G_MV_MATRIX_3": {
+      "type": "s64",
+      "value": 154
+    },
+    "G_MV_MATRIX_4": {
+      "type": "s64",
+      "value": 156
+    },
+    "G_MV_TXTATT": {
+      "type": "s64",
+      "value": 150
     },
     "G_MV_VIEWPORT": {
       "type": "s64",
-      "value": 8
+      "value": 128
     },
     "G_MWO_CLIP_RNX": {
       "type": "s64",
@@ -5030,31 +5042,31 @@
     },
     "G_MWO_aLIGHT_2": {
       "type": "s64",
-      "value": 24
+      "value": 32
     },
     "G_MWO_aLIGHT_3": {
       "type": "s64",
-      "value": 48
+      "value": 64
     },
     "G_MWO_aLIGHT_4": {
       "type": "s64",
-      "value": 72
+      "value": 96
     },
     "G_MWO_aLIGHT_5": {
       "type": "s64",
-      "value": 96
+      "value": 128
     },
     "G_MWO_aLIGHT_6": {
       "type": "s64",
-      "value": 120
+      "value": 160
     },
     "G_MWO_aLIGHT_7": {
       "type": "s64",
-      "value": 144
+      "value": 192
     },
     "G_MWO_aLIGHT_8": {
       "type": "s64",
-      "value": 168
+      "value": 224
     },
     "G_MWO_bLIGHT_1": {
       "type": "s64",
@@ -5062,31 +5074,31 @@
     },
     "G_MWO_bLIGHT_2": {
       "type": "s64",
-      "value": 28
+      "value": 36
     },
     "G_MWO_bLIGHT_3": {
       "type": "s64",
-      "value": 52
+      "value": 68
     },
     "G_MWO_bLIGHT_4": {
       "type": "s64",
-      "value": 76
+      "value": 100
     },
     "G_MWO_bLIGHT_5": {
       "type": "s64",
-      "value": 100
+      "value": 132
     },
     "G_MWO_bLIGHT_6": {
       "type": "s64",
-      "value": 124
+      "value": 164
     },
     "G_MWO_bLIGHT_7": {
       "type": "s64",
-      "value": 148
+      "value": 196
     },
     "G_MWO_bLIGHT_8": {
       "type": "s64",
-      "value": 172
+      "value": 228
     },
     "G_MW_CLIP": {
       "type": "s64",
@@ -5095,10 +5107,6 @@
     "G_MW_FOG": {
       "type": "s64",
       "value": 8
-    },
-    "G_MW_FORCEMTX": {
-      "type": "s64",
-      "value": 12
     },
     "G_MW_LIGHTCOL": {
       "type": "s64",
@@ -5116,13 +5124,17 @@
       "type": "s64",
       "value": 14
     },
+    "G_MW_POINTS": {
+      "type": "s64",
+      "value": 12
+    },
     "G_MW_SEGMENT": {
       "type": "s64",
       "value": 6
     },
     "G_NOOP": {
       "type": "s64",
-      "value": 0
+      "value": 192
     },
     "G_OFF": {
       "type": "s64",
@@ -5142,11 +5154,7 @@
     },
     "G_POPMTX": {
       "type": "s64",
-      "value": 216
-    },
-    "G_QUAD": {
-      "type": "s64",
-      "value": 7
+      "value": -67
     },
     "G_RDPCMDSIZ": {
       "type": "s64",
@@ -5158,11 +5166,15 @@
     },
     "G_RDPHALF_1": {
       "type": "s64",
-      "value": 225
+      "value": -76
     },
     "G_RDPHALF_2": {
       "type": "s64",
-      "value": 241
+      "value": -77
+    },
+    "G_RDPHALF_CONT": {
+      "type": "s64",
+      "value": -78
     },
     "G_RDPLOADSYNC": {
       "type": "s64",
@@ -5199,6 +5211,22 @@
     "G_RDP_TRI_ZBUFF_MASK": {
       "type": "s64",
       "value": 1
+    },
+    "G_RESERVED0": {
+      "type": "s64",
+      "value": 2
+    },
+    "G_RESERVED1": {
+      "type": "s64",
+      "value": 5
+    },
+    "G_RESERVED2": {
+      "type": "s64",
+      "value": 7
+    },
+    "G_RESERVED3": {
+      "type": "s64",
+      "value": 8
     },
     "G_RM_AA_DEC_LINE": {
       "type": "s64",
@@ -5628,6 +5656,10 @@
       "type": "s64",
       "value": 248
     },
+    "G_SETGEOMETRYMODE": {
+      "type": "s64",
+      "value": -73
+    },
     "G_SETKEYGB": {
       "type": "s64",
       "value": 234
@@ -5638,11 +5670,11 @@
     },
     "G_SETOTHERMODE_H": {
       "type": "s64",
-      "value": 227
+      "value": -70
     },
     "G_SETOTHERMODE_L": {
       "type": "s64",
-      "value": 226
+      "value": -71
     },
     "G_SETPRIMCOLOR": {
       "type": "s64",
@@ -5678,23 +5710,23 @@
     },
     "G_SHADING_SMOOTH": {
       "type": "s64",
-      "value": 2097152
-    },
-    "G_SPECIAL_1": {
-      "type": "s64",
-      "value": 213
-    },
-    "G_SPECIAL_2": {
-      "type": "s64",
-      "value": 212
-    },
-    "G_SPECIAL_3": {
-      "type": "s64",
-      "value": 211
+      "value": 512
     },
     "G_SPNOOP": {
       "type": "s64",
-      "value": 224
+      "value": 0
+    },
+    "G_SPRITE2D_BASE": {
+      "type": "s64",
+      "value": 9
+    },
+    "G_SPRITE2D_DRAW": {
+      "type": "s64",
+      "value": -67
+    },
+    "G_SPRITE2D_SCALEFLIP": {
+      "type": "s64",
+      "value": -66
     },
     "G_TC_CONV": {
       "type": "s64",
@@ -5730,11 +5762,11 @@
     },
     "G_TEXTURE": {
       "type": "s64",
-      "value": 215
+      "value": -69
     },
     "G_TEXTURE_ENABLE": {
       "type": "s64",
-      "value": 0
+      "value": 2
     },
     "G_TEXTURE_GEN": {
       "type": "s64",
@@ -5782,11 +5814,7 @@
     },
     "G_TRI1": {
       "type": "s64",
-      "value": 5
-    },
-    "G_TRI2": {
-      "type": "s64",
-      "value": 6
+      "value": -65
     },
     "G_TRI_FILL": {
       "type": "s64",
@@ -5874,7 +5902,7 @@
     },
     "G_VTX": {
       "type": "s64",
-      "value": 1
+      "value": 4
     },
     "G_ZBUFFER": {
       "type": "s64",
@@ -13511,10 +13539,6 @@
     "WHOMP_BP_SMALL": {
       "type": "s64",
       "value": 0
-    },
-    "WIDESCREEN": {
-      "type": "s64",
-      "value": 1
     },
     "WIGGLER_ACT_FALL_THROUGH_FLOOR": {
       "type": "s64",
