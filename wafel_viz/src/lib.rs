@@ -16,7 +16,8 @@ use std::{
 
 use custom_renderer::{CustomRenderer, Scene};
 use f3d_decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand};
-use f3d_interpret::{interpret_f3d_display_list, F3DMemory};
+use f3d_interpret::{interpret_f3d_display_list, F3DMemory, F3DRenderData};
+use f3d_render::F3DRenderer;
 use wafel_api::{load_m64, Address, Game, IntType, SaveState};
 use wafel_memory::{DllSlotMemoryView, GameMemory, MemoryRead};
 use winit::{
@@ -25,14 +26,11 @@ use winit::{
     window::WindowBuilder,
 };
 
-pub use f3d_render_data::*;
-pub use f3d_renderer::*;
-
 pub mod custom_renderer;
 pub mod f3d_decode;
-mod f3d_interpret;
+pub mod f3d_interpret;
+pub mod f3d_render;
 mod f3d_render_data;
-mod f3d_renderer;
 mod util;
 
 pub fn prepare_render_data(game: &Game, screen_size: (u32, u32)) -> F3DRenderData {
@@ -106,7 +104,7 @@ impl<'a> F3DMemory for DllF3DSource<'a> {
 }
 
 #[derive(Debug)]
-pub struct RawDlIter<'a> {
+struct RawDlIter<'a> {
     view: DllSlotMemoryView<'a>,
     addr: Option<Address>,
 }

@@ -3,38 +3,52 @@ use std::{collections::HashMap, mem};
 
 use derivative::Derivative;
 
-use crate::{f3d_decode::*, f3d_render_data::*, util::*};
+pub use crate::f3d_render_data::*;
+use crate::{f3d_decode::*, util::*};
 
+/// A trait with methods for reading from game memory.
+///
+/// This needs to be implemented so that [interpret_f3d_display_list] can read
+/// objects from memory (viewports, textures, display lists, etc).
 pub trait F3DMemory {
+    /// The pointer type that can be read from a display list command.
     type Ptr: fmt::Debug + Copy + PartialEq;
+    /// An iterator over a display list that is read from memory.
     type DlIter: Iterator<Item = F3DCommand<Self::Ptr>>;
 
+    /// Returns the top level display list to be interpreted.
     fn root_dl(&self) -> Self::DlIter;
+    /// Reads a child display list from memory at the given address.
     fn read_dl(&self, ptr: Self::Ptr) -> Self::DlIter;
 
+    /// Reads dst.len() u8s from memory, starting at ptr + offset (in bytes).
     fn read_u8(&self, dst: &mut [u8], ptr: Self::Ptr, offset: usize);
+    /// Reads dst.len() u16s from memory, starting at ptr + offset (in bytes).
     fn read_u16(&self, dst: &mut [u16], ptr: Self::Ptr, offset: usize);
+    /// Reads dst.len() u32s from memory, starting at ptr + offset (in bytes).
     fn read_u32(&self, dst: &mut [u32], ptr: Self::Ptr, offset: usize);
 }
 
+/// Processes `memory.root_dl()` and returns draw data in a simpler to render and
+/// self-contained [F3DRenderData] object.
 pub fn interpret_f3d_display_list(
     memory: &impl F3DMemory,
     screen_size: (u32, u32),
     z_is_from_0_to_1: bool,
 ) -> F3DRenderData {
-    let mut state = State {
+    let mut interpreter = Interpreter {
         memory: Some(memory),
         screen_size,
         z_is_from_0_to_1,
         ..Default::default()
     };
-    state.interpret(memory.root_dl());
-    state.finish()
+    interpreter.interpret(memory.root_dl());
+    interpreter.finish()
 }
 
 #[derive(Debug, Derivative)]
 #[derivative(Default(bound = ""))]
-struct State<'m, M: F3DMemory> {
+struct Interpreter<'m, M: F3DMemory> {
     memory: Option<&'m M>,
     screen_size: (u32, u32),
     z_is_from_0_to_1: bool,
@@ -85,7 +99,7 @@ struct TextureMemory<Ptr> {
     loaded: HashMap<(ImageFormat, ComponentSize), TextureIndex>,
 }
 
-impl<'m, M: F3DMemory> State<'m, M> {
+impl<'m, M: F3DMemory> Interpreter<'m, M> {
     fn finish(mut self) -> F3DRenderData {
         self.flush();
         self.result
@@ -515,9 +529,181 @@ impl<'m, M: F3DMemory> State<'m, M> {
             }
 
             self.push_vertex_color_inputs(&pipeline, &input_comps, &vtx, pos);
+
+            self.num_vertices += 1;
+        }
+    }
+
+    fn fill_rectangle(&mut self, mut rect: Rectangle<u32>) {
+        use ColorArg::*;
+
+        if let (Some(color), Some(depth)) = (self.color_image, self.depth_image) {
+            if color.img == depth {
+                return;
+            }
         }
 
-        self.num_vertices += 3;
+        self.flush();
+
+        if matches!(self.cycle_type, CycleType::Fill | CycleType::Copy) {
+            rect.lrx += 1;
+            rect.lry += 1;
+        }
+
+        let pipeline = PipelineInfo {
+            blend: true,
+            num_inputs: 1,
+            output_color: ColorExpr {
+                rgb: [Zero, Zero, Zero, Input(0)],
+                a: [Zero, Zero, Zero, Input(0)],
+            },
+            ..Default::default()
+        };
+
+        let x0 = 2.0 * (rect.ulx as f32 / 320.0) - 1.0;
+        let x1 = 2.0 * (rect.lrx as f32 / 320.0) - 1.0;
+        let y0 = 1.0 - 2.0 * (rect.uly as f32 / 240.0);
+        let y1 = 1.0 - 2.0 * (rect.lry as f32 / 240.0);
+
+        let vertices = [[x0, y1], [x1, y1], [x0, y0], [x1, y0], [x0, y0], [x1, y1]];
+
+        for [x, y] in vertices {
+            self.push_pos([x, y, 0.0, 1.0]);
+
+            let fill_color = rgba_16_to_32(self.fill_color.0);
+            self.vertex_buffer.extend(&[
+                fill_color[0] as f32 / 255.0,
+                fill_color[1] as f32 / 255.0,
+                fill_color[2] as f32 / 255.0,
+                fill_color[3] as f32 / 255.0,
+            ]);
+            self.num_vertices += 1;
+        }
+
+        let viewport = ScreenRectangle {
+            x: 0,
+            y: 0,
+            w: self.screen_size.0 as i32,
+            h: self.screen_size.1 as i32,
+        };
+        let scissor = self.scissor_screen();
+        let textures = self.load_textures(&pipeline);
+
+        self.flush_with(viewport, scissor, pipeline, textures);
+    }
+
+    fn texture_rectangle(&mut self, tex_rect: TextureRectangle) {
+        use ColorArg::*;
+
+        if let (Some(color), Some(depth)) = (self.color_image, self.depth_image) {
+            if color.img == depth {
+                return;
+            }
+        }
+
+        self.flush();
+
+        let ulx = tex_rect.rect.ulx as f32 / 4.0;
+        let uly = tex_rect.rect.uly as f32 / 4.0;
+        let mut lrx = tex_rect.rect.lrx as f32 / 4.0;
+        let mut lry = tex_rect.rect.lry as f32 / 4.0;
+
+        if matches!(self.cycle_type, CycleType::Fill | CycleType::Copy) {
+            lrx += 1.0;
+            lry += 1.0;
+        }
+
+        let tile = tex_rect.tile;
+        self.load_texture(tile);
+
+        let x0 = 2.0 * (ulx / 320.0) - 1.0;
+        let x1 = 2.0 * (lrx / 320.0) - 1.0;
+        let y0 = 1.0 - 2.0 * (uly / 240.0);
+        let y1 = 1.0 - 2.0 * (lry / 240.0);
+
+        let tile_size = &self.tile_size[tex_rect.tile.0 as usize];
+        let texture_width = (tile_size.lrs - tile_size.uls + 4) / 4;
+        let texture_height = (tile_size.lrt - tile_size.ult + 4) / 4;
+
+        let s = tex_rect.s as f32 / 32.0;
+        let t = tex_rect.t as f32 / 32.0;
+        let mut dsdx = tex_rect.dsdx as f32 / 1024.0;
+        let dtdy = tex_rect.dtdy as f32 / 1024.0;
+
+        if self.cycle_type == CycleType::Copy {
+            dsdx /= 4.0;
+        }
+
+        let u0 = s as f32 / 32.0 / texture_width as f32;
+        let v0 = t as f32 / 32.0 / texture_height as f32;
+        let u1 = u0 + dsdx * (lrx - ulx) / texture_width as f32;
+        let v1 = v0 + dtdy * (lry - uly) / texture_height as f32;
+
+        let vertices = [
+            [x0, y1, u0, v1],
+            [x1, y1, u1, v1],
+            [x0, y0, u0, v0],
+            [x1, y0, u1, v0],
+            [x0, y0, u0, v0],
+            [x1, y1, u1, v1],
+        ];
+
+        if self.cycle_type == CycleType::Copy {
+            let texture_index = self.load_texture(tile);
+
+            let sampler = &mut self.texture_mut(texture_index).sampler;
+            let saved_linear_filter = sampler.linear_filter;
+            sampler.linear_filter = false;
+
+            let pipeline = PipelineInfo {
+                blend: true,
+                output_color: ColorExpr {
+                    rgb: [Zero, Zero, Zero, Texel0],
+                    a: [Zero, Zero, Zero, Texel0],
+                },
+                used_textures: [true, false],
+                ..Default::default()
+            };
+
+            for [x, y, u, v] in vertices {
+                self.push_pos([x, y, 0.0, 1.0]);
+                self.vertex_buffer.extend(&[u, v]);
+                self.num_vertices += 1;
+            }
+
+            let viewport = ScreenRectangle {
+                x: 0,
+                y: 0,
+                w: self.screen_size.0 as i32,
+                h: self.screen_size.1 as i32,
+            };
+            let scissor = self.scissor_screen();
+
+            self.flush_with(viewport, scissor, pipeline, [Some(texture_index), None]);
+
+            let sampler = &mut self.texture_mut(texture_index).sampler;
+            sampler.linear_filter = saved_linear_filter;
+        } else {
+            let pipeline = self.pipeline_state();
+            let input_comps = self.get_color_input_components();
+
+            for [x, y, u, v] in vertices {
+                self.push_pos([x, y, 0.0, 1.0]);
+                if pipeline.uses_textures() {
+                    self.vertex_buffer.extend(&[u, v]);
+                }
+                // Assumes that inputs like shade and fog aren't needed (since they depend on pos)
+                self.push_vertex_color_inputs(
+                    &pipeline,
+                    &input_comps,
+                    &Vertex::default(),
+                    Default::default(),
+                );
+                self.num_vertices += 1;
+            }
+
+            self.flush();
+        }
     }
 
     fn interpret(&mut self, dl: M::DlIter) {
@@ -662,68 +848,8 @@ impl<'m, M: F3DMemory> State<'m, M> {
                         );
                         self.fill_color = fill_color[0];
                     }
-                    DPCommand::FillRectangle(mut rect) => {
-                        use ColorArg::*;
-
-                        if let (Some(color), Some(depth)) = (self.color_image, self.depth_image) {
-                            if color.img == depth {
-                                continue;
-                            }
-                        }
-
-                        self.flush();
-
-                        if matches!(self.cycle_type, CycleType::Fill | CycleType::Copy) {
-                            rect.lrx += 1;
-                            rect.lry += 1;
-                        }
-
-                        let pipeline = PipelineInfo {
-                            blend: true,
-                            num_inputs: 1,
-                            output_color: ColorExpr {
-                                rgb: [Zero, Zero, Zero, Input(0)],
-                                a: [Zero, Zero, Zero, Input(0)],
-                            },
-                            ..Default::default()
-                        };
-
-                        let fill_color = rgba_16_to_32(self.fill_color.0);
-
-                        let mut add_vertex = |x, y| {
-                            self.push_pos([x, y, 0.0, 1.0]);
-                            self.vertex_buffer.extend(&[
-                                fill_color[0] as f32 / 255.0,
-                                fill_color[1] as f32 / 255.0,
-                                fill_color[2] as f32 / 255.0,
-                                fill_color[3] as f32 / 255.0,
-                            ]);
-                        };
-
-                        let x0 = 2.0 * (rect.ulx as f32 / 320.0) - 1.0;
-                        let x1 = 2.0 * (rect.lrx as f32 / 320.0) - 1.0;
-                        let y0 = 1.0 - 2.0 * (rect.uly as f32 / 240.0);
-                        let y1 = 1.0 - 2.0 * (rect.lry as f32 / 240.0);
-
-                        add_vertex(x0, y1);
-                        add_vertex(x1, y1);
-                        add_vertex(x0, y0);
-
-                        add_vertex(x1, y0);
-                        add_vertex(x0, y0);
-                        add_vertex(x1, y1);
-
-                        self.num_vertices += 6;
-
-                        let viewport = ScreenRectangle {
-                            x: 0,
-                            y: 0,
-                            w: self.screen_size.0 as i32,
-                            h: self.screen_size.1 as i32,
-                        };
-                        let scissor = self.scissor_screen();
-                        let textures = self.load_textures(&pipeline);
-                        self.flush_with(viewport, scissor, pipeline, textures);
+                    DPCommand::FillRectangle(rect) => {
+                        self.fill_rectangle(rect);
                     }
                     DPCommand::SetTile(tile, params) => {
                         self.flush();
@@ -759,123 +885,7 @@ impl<'m, M: F3DMemory> State<'m, M> {
                     DPCommand::PipeSync => {}
                     DPCommand::LoadSync => {}
                     DPCommand::TextureRectangle(tex_rect) => {
-                        use ColorArg::*;
-
-                        if let (Some(color), Some(depth)) = (self.color_image, self.depth_image) {
-                            if color.img == depth {
-                                continue;
-                            }
-                        }
-
-                        self.flush();
-
-                        let ulx = tex_rect.rect.ulx as f32 / 4.0;
-                        let uly = tex_rect.rect.uly as f32 / 4.0;
-                        let mut lrx = tex_rect.rect.lrx as f32 / 4.0;
-                        let mut lry = tex_rect.rect.lry as f32 / 4.0;
-
-                        if matches!(self.cycle_type, CycleType::Fill | CycleType::Copy) {
-                            lrx += 1.0;
-                            lry += 1.0;
-                        }
-
-                        let tile = tex_rect.tile;
-                        self.load_texture(tile);
-
-                        let x0 = 2.0 * (ulx / 320.0) - 1.0;
-                        let x1 = 2.0 * (lrx / 320.0) - 1.0;
-                        let y0 = 1.0 - 2.0 * (uly / 240.0);
-                        let y1 = 1.0 - 2.0 * (lry / 240.0);
-
-                        let tile_size = &self.tile_size[tex_rect.tile.0 as usize];
-                        let texture_width = (tile_size.lrs - tile_size.uls + 4) / 4;
-                        let texture_height = (tile_size.lrt - tile_size.ult + 4) / 4;
-
-                        let s = tex_rect.s as f32 / 32.0;
-                        let t = tex_rect.t as f32 / 32.0;
-                        let mut dsdx = tex_rect.dsdx as f32 / 1024.0;
-                        let dtdy = tex_rect.dtdy as f32 / 1024.0;
-
-                        if self.cycle_type == CycleType::Copy {
-                            dsdx /= 4.0;
-                        }
-
-                        let u0 = s as f32 / 32.0 / texture_width as f32;
-                        let v0 = t as f32 / 32.0 / texture_height as f32;
-                        let u1 = u0 + dsdx * (lrx - ulx) / texture_width as f32;
-                        let v1 = v0 + dtdy * (lry - uly) / texture_height as f32;
-
-                        let vertices = [
-                            [x0, y1, u0, v1],
-                            [x1, y1, u1, v1],
-                            [x0, y0, u0, v0],
-                            [x1, y0, u1, v0],
-                            [x0, y0, u0, v0],
-                            [x1, y1, u1, v1],
-                        ];
-
-                        if self.cycle_type == CycleType::Copy {
-                            let texture_index = self.load_texture(tile);
-
-                            let sampler = &mut self.texture_mut(texture_index).sampler;
-                            let saved_linear_filter = sampler.linear_filter;
-                            sampler.linear_filter = false;
-
-                            let pipeline = PipelineInfo {
-                                blend: true,
-                                output_color: ColorExpr {
-                                    rgb: [Zero, Zero, Zero, Texel0],
-                                    a: [Zero, Zero, Zero, Texel0],
-                                },
-                                used_textures: [true, false],
-                                ..Default::default()
-                            };
-
-                            for [x, y, u, v] in vertices {
-                                self.push_pos([x, y, 0.0, 1.0]);
-                                self.vertex_buffer.extend(&[u, v]);
-                            }
-
-                            self.num_vertices += 6;
-
-                            let viewport = ScreenRectangle {
-                                x: 0,
-                                y: 0,
-                                w: self.screen_size.0 as i32,
-                                h: self.screen_size.1 as i32,
-                            };
-                            let scissor = self.scissor_screen();
-
-                            self.flush_with(
-                                viewport,
-                                scissor,
-                                pipeline,
-                                [Some(texture_index), None],
-                            );
-
-                            let sampler = &mut self.texture_mut(texture_index).sampler;
-                            sampler.linear_filter = saved_linear_filter;
-                        } else {
-                            let pipeline = self.pipeline_state();
-                            let input_comps = self.get_color_input_components();
-
-                            for [x, y, u, v] in vertices {
-                                self.push_pos([x, y, 0.0, 1.0]);
-                                if pipeline.uses_textures() {
-                                    self.vertex_buffer.extend(&[u, v]);
-                                }
-                                // Assumes that inputs like shade and fog aren't needed
-                                self.push_vertex_color_inputs(
-                                    &pipeline,
-                                    &input_comps,
-                                    &Vertex::default(),
-                                    Default::default(),
-                                );
-                            }
-
-                            self.num_vertices += 6;
-                            self.flush();
-                        }
+                        self.texture_rectangle(tex_rect);
                     }
                     // _ => unimplemented!("{:?}", cmd),
                     _ => {}

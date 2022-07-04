@@ -2,7 +2,7 @@ use std::{env, fmt::Write, fs};
 
 use image::{Pixel, Rgb, RgbImage};
 use wafel_api::{load_m64, Game};
-use wafel_viz::{prepare_render_data, F3DRenderer};
+use wafel_viz::{f3d_render::F3DRenderer, prepare_render_data};
 
 #[derive(Debug)]
 struct TestCase {

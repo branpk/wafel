@@ -5,8 +5,7 @@ use bytemuck::cast_slice_mut;
 use crate::{
     f3d_decode::{F3DWrapMode, MatrixOp},
     f3d_interpret::F3DMemory,
-    f3d_render_data::WrapMode,
-    TextureData,
+    f3d_render_data::{TextureData, WrapMode},
 };
 
 impl From<F3DWrapMode> for WrapMode {
