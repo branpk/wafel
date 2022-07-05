@@ -254,9 +254,10 @@ fn reg(cases: &mut Vec<TestCase>) {
             });
         }
     };
+    // TODO: Broken texture/text on SH
     case("000030_title", 30);
-    case("000129_mario_head", 129);
-    case("000505_mario_head_lol", 505);
+    case("000129_mario_head", 129); // Broken texture on SH
+    case("000505_mario_head_lol", 505); // Broken texture on SH
     case("000975_wf", 975);
     case("002505_ccm", 2505);
     case("004245_bbh", 4245);
@@ -265,21 +266,21 @@ fn reg(cases: &mut Vec<TestCase>) {
     case("009507_pss", 9507);
     case("010209_fade", 10209);
     case("010242_file_select_1", 10242);
-    case("010555_file_select_2", 10555);
+    case("010555_file_select_2", 10555); // Broken text on SH
     case("010822_peach_letter", 10822);
     case("011240_lakitu_1", 11240);
     case("011396_lakitu_2", 11396);
-    case("011708_mario", 11708);
+    case("011708_mario", 11708); // Broken text on SH
     case("011829_tilted_text", 11829);
     case("011838_text", 11838);
-    case("012802_pause", 12802);
-    case("013366_lakitu_scroll", 13366);
+    case("012802_pause", 12802); // Broken text on SH
+    case("013366_lakitu_scroll", 13366); // Broken text on SH
     case("013796_enter_castle", 13796);
     case("014268_castle", 14268);
     case("014475_ripple", 14475);
-    case("014578_star_select", 14578);
-    case("014757_bob_text", 14757);
-    case("015064_pause", 15064);
+    case("014578_star_select", 14578); // Broken text on SH
+    case("014757_bob_text", 14757); // Broken text on SH
+    case("015064_pause", 15064); // Broken text on SH
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

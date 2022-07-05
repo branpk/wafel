@@ -264,7 +264,8 @@ pub fn test(frame0: u32) -> Result<(), Box<dyn Error>> {
 }
 
 async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn Error>> {
-    let mut game = unsafe { Game::new("libsm64/sm64_eu.dll") };
+    let frame0 = 14578;
+    let mut game = unsafe { Game::new("libsm64/sm64_sh.dll") };
     // let (_, inputs) = load_m64("../sm64-bot/bad_bot.m64");
     let (_, inputs) = load_m64("wafel_viz_tests/input/cross_version.m64");
     // let (_, inputs) = load_m64("test_files/lod-test.m64");
