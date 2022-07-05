@@ -615,7 +615,11 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         Ok(())
     }
 
-    fn texture_rectangle(&mut self, tex_rect: TextureRectangle) -> Result<(), M::Error> {
+    fn texture_rectangle(
+        &mut self,
+        tex_rect: TextureRectangle,
+        flip: bool,
+    ) -> Result<(), M::Error> {
         use ColorArg::*;
 
         if let (Some(color), Some(depth)) = (self.color_image, self.depth_image) {
@@ -641,10 +645,6 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         let y0 = 1.0 - 2.0 * (uly / 240.0);
         let y1 = 1.0 - 2.0 * (lry / 240.0);
 
-        let tile_size = &self.tile_size[tex_rect.tile.0 as usize];
-        let texture_width = (tile_size.lrs - tile_size.uls + 4) / 4;
-        let texture_height = (tile_size.lrt - tile_size.ult + 4) / 4;
-
         let s = tex_rect.s as f32 / 32.0;
         let t = tex_rect.t as f32 / 32.0;
         let mut dsdx = tex_rect.dsdx as f32 / 1024.0;
@@ -654,19 +654,38 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
             dsdx /= 4.0;
         }
 
+        let tile_size = &self.tile_size[tex_rect.tile.0 as usize];
+        let mut texture_width = (tile_size.lrs - tile_size.uls + 4) / 4;
+        let mut texture_height = (tile_size.lrt - tile_size.ult + 4) / 4;
+
+        if flip {
+            mem::swap(&mut texture_width, &mut texture_height);
+        }
+
         let u0 = s as f32 / 32.0 / texture_width as f32;
         let v0 = t as f32 / 32.0 / texture_height as f32;
         let u1 = u0 + dsdx * (lrx - ulx) / texture_width as f32;
         let v1 = v0 + dtdy * (lry - uly) / texture_height as f32;
 
-        let vertices = [
-            [x0, y1, u0, v1],
-            [x1, y1, u1, v1],
-            [x0, y0, u0, v0],
-            [x1, y0, u1, v0],
-            [x0, y0, u0, v0],
-            [x1, y1, u1, v1],
-        ];
+        let vertices = if flip {
+            [
+                [x0, y1, u0, v1],
+                [x1, y1, u0, v0],
+                [x0, y0, u1, v1],
+                [x1, y0, u1, v0],
+                [x0, y0, u1, v1],
+                [x1, y1, u0, v0],
+            ]
+        } else {
+            [
+                [x0, y1, u0, v1],
+                [x1, y1, u1, v1],
+                [x0, y0, u0, v0],
+                [x1, y0, u1, v0],
+                [x0, y0, u0, v0],
+                [x1, y1, u1, v1],
+            ]
+        };
 
         if self.cycle_type == CycleType::Copy {
             let tile = tex_rect.tile;
@@ -730,7 +749,7 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         for cmd in dl {
             let cmd = cmd?;
             // if !matches!(cmd, F3DCommand::Unknown { .. }) {
-            //     eprintln!("{}{:?}", indent_str, cmd);
+            // println!("{:?}", cmd);
             // }
             match cmd {
                 F3DCommand::NoOp => {}
@@ -905,8 +924,11 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                     DPCommand::TileSync => {}
                     DPCommand::PipeSync => {}
                     DPCommand::LoadSync => {}
+                    DPCommand::TextureRectangleFlip(tex_rect) => {
+                        self.texture_rectangle(tex_rect, true)?;
+                    }
                     DPCommand::TextureRectangle(tex_rect) => {
-                        self.texture_rectangle(tex_rect)?;
+                        self.texture_rectangle(tex_rect, false)?;
                     }
                     // _ => unimplemented!("{:?}", cmd),
                     _ => {}

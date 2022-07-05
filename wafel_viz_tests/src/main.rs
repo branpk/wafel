@@ -293,7 +293,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let selected_tests: HashSet<String> = env::args()
         .skip(1)
-        .filter(|s| !s.starts_with("--"))
+        .filter(|s| !s.starts_with("-"))
         .collect();
     if !selected_tests.is_empty() {
         cases = cases

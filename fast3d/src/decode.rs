@@ -193,7 +193,7 @@ pub enum DPCommand<Ptr> {
     TileSync,
     PipeSync,
     LoadSync,
-    TextureRectangleFlip(Unimplemented),
+    TextureRectangleFlip(TextureRectangle),
     TextureRectangle(TextureRectangle),
 }
 
@@ -711,10 +711,12 @@ pub struct TextureRectangle {
 pub enum DecodeResult<Ptr> {
     Complete(F3DCommand<Ptr>),
     TextureRectangle1 {
+        flip: bool,
         rect: Rectangle<u32>,
         tile: TileIndex,
     },
     TextureRectangle2 {
+        flip: bool,
         rect: Rectangle<u32>,
         tile: TileIndex,
         s: u16,
@@ -749,28 +751,41 @@ impl<Ptr> DecodeResult<Ptr> {
         let w1 = cmd_cont.w1;
         let cmd = cmd_cont.w0 >> 24;
 
-        if ![0xB3, 0xB2, 0xB1].contains(&cmd) {
+        if ![0xB4, 0xB3, 0xB2, 0xB1].contains(&cmd) {
             return Self::Complete(F3DCommand::Unknown(cmd_cont));
         }
 
         match self {
             Self::Complete(_) => panic!("next() called on complete result"),
-            Self::TextureRectangle1 { rect, tile } => Self::TextureRectangle2 {
+            Self::TextureRectangle1 { flip, rect, tile } => Self::TextureRectangle2 {
+                flip,
                 rect,
                 tile,
                 s: (w1 >> 16) as u16,
                 t: w1 as u16,
             },
-            Self::TextureRectangle2 { rect, tile, s, t } => Self::Complete(F3DCommand::Rdp(
-                DPCommand::TextureRectangle(TextureRectangle {
+            Self::TextureRectangle2 {
+                flip,
+                rect,
+                tile,
+                s,
+                t,
+            } => {
+                let tex_rect = TextureRectangle {
                     rect,
                     tile,
                     s,
                     t,
                     dsdx: (w1 >> 16) as u16,
                     dtdy: w1 as u16,
-                }),
-            )),
+                };
+                let cmd = if flip {
+                    DPCommand::TextureRectangleFlip(tex_rect)
+                } else {
+                    DPCommand::TextureRectangle(tex_rect)
+                };
+                Self::Complete(F3DCommand::Rdp(cmd))
+            }
         }
     }
 }
@@ -1054,9 +1069,21 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
         0xE8 => Rdp(TileSync),
         0xE7 => Rdp(PipeSync),
         0xE6 => Rdp(LoadSync),
-        0xE5 => Rdp(TextureRectangleFlip(Unimplemented { w0, w1 })),
+        0xE5 => {
+            return DecodeResult::TextureRectangle1 {
+                flip: true,
+                rect: Rectangle {
+                    ulx: (w1 >> 12) & 0xFFF,
+                    uly: w1 & 0xFFF,
+                    lrx: (w0 >> 12) & 0xFFF,
+                    lry: w0 & 0xFFF,
+                },
+                tile: TileIndex(((w1 >> 24) & 0x7) as u8),
+            };
+        }
         0xE4 => {
             return DecodeResult::TextureRectangle1 {
+                flip: false,
                 rect: Rectangle {
                     ulx: (w1 >> 12) & 0xFFF,
                     uly: w1 & 0xFFF,
