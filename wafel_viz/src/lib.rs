@@ -3,22 +3,24 @@
 #![allow(
     clippy::map_entry,
     clippy::needless_range_loop,
-    clippy::too_many_arguments
+    clippy::too_many_arguments,
+    clippy::needless_update
 )]
 #![allow(missing_docs)] // FIXME: remove
 
 use std::{
     collections::{HashMap, HashSet},
     error::Error,
+    f32::consts::PI,
     rc::Rc,
     sync::Arc,
     time::{Duration, Instant},
 };
 
 use custom_renderer::{CustomRenderer, Scene};
-use f3d_transform::process_display_list;
-pub use f3d_transform::SM64RenderConfig;
 use fast3d::{interpret::F3DRenderData, render::F3DRenderer};
+pub use sm64_render_mod::SM64RenderConfig;
+use sm64_render_mod::{render_sm64_with_config, Camera};
 use wafel_api::{load_m64, Game, SaveState};
 use wafel_data_path::GlobalDataPath;
 use wafel_memory::GameMemory;
@@ -29,7 +31,7 @@ use winit::{
 };
 
 pub mod custom_renderer;
-mod f3d_transform;
+mod sm64_render_mod;
 
 pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderData {
     let memory = game.memory.with_slot(&game.base_slot);
@@ -39,7 +41,7 @@ pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderD
             .map_err(Into::into)
     };
 
-    process_display_list(&memory, get_path, config).expect("failed to process display list")
+    render_sm64_with_config(&memory, get_path, config).expect("failed to process display list")
 }
 
 // #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -264,10 +266,9 @@ pub fn test(frame0: u32) -> Result<(), Box<dyn Error>> {
 }
 
 async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn Error>> {
-    let frame0 = 14578;
-    let mut game = unsafe { Game::new("libsm64/sm64_sh.dll") };
+    let mut game = unsafe { Game::new("libsm64/sm64_us.dll") };
     // let (_, inputs) = load_m64("../sm64-bot/bad_bot.m64");
-    let (_, inputs) = load_m64("wafel_viz_tests/input/cross_version.m64");
+    let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
     // let (_, inputs) = load_m64("test_files/lod-test.m64");
 
     let mut save_states: HashMap<u32, Rc<SaveState>> = HashMap::new();
@@ -342,6 +343,8 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
     let mut held = HashSet::new();
     let mut last_update = Instant::now();
 
+    let mut fixed_camera_pos = None;
+
     event_loop.run(move |event, _, control_flow| {
         let _ = (&instance, &adapter, &renderer);
 
@@ -366,6 +369,13 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                                 if key == VirtualKeyCode::Return {
                                     eprintln!("frame = {}", game.frame());
                                 }
+                                if key == VirtualKeyCode::Space {
+                                    if held.contains(&VirtualKeyCode::Right) {
+                                        held.remove(&VirtualKeyCode::Right);
+                                    } else {
+                                        held.insert(VirtualKeyCode::Right);
+                                    }
+                                }
                                 if key == VirtualKeyCode::Left {
                                     let frame = game.frame().saturating_sub(1) / save_state_freq
                                         * save_state_freq;
@@ -373,9 +383,16 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                                         game.load_state(state);
                                     }
                                 }
+                                if key == VirtualKeyCode::C && !held.contains(&VirtualKeyCode::C) {
+                                    fixed_camera_pos =
+                                        Some(game.read("gLakituState.pos").as_f32_3());
+                                }
                                 held.insert(key);
                             }
                             ElementState::Released => {
+                                if key == VirtualKeyCode::C && held.contains(&VirtualKeyCode::C) {
+                                    fixed_camera_pos = None;
+                                }
                                 held.remove(&key);
                             }
                         }
@@ -446,7 +463,17 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                             prepare_render_data(
                                 &game,
                                 &SM64RenderConfig {
-                                    screen_size: Some((config.width, config.height)),
+                                    screen_size: (config.width, config.height),
+                                    camera: fixed_camera_pos
+                                        .map(|pos| Camera::LookAt {
+                                            pos,
+                                            focus: game.read("gLakituState.focus").as_f32_3(),
+                                            roll: game.read("gLakituState.roll").as_int() as f32
+                                                * PI
+                                                / 0x8000 as f32,
+                                        })
+                                        .unwrap_or_default(),
+                                    ..Default::default()
                                 },
                             )
                         });

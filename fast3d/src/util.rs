@@ -39,6 +39,7 @@ impl Matrixf {
     }
 
     pub fn from_fixed(m: &[i32]) -> Self {
+        assert_eq!(m.len(), 16, "incorrect fixed point matrix size");
         let mut r = Self::default();
         for i in [0, 2] {
             for j in 0..4 {

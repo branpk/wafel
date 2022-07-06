@@ -190,7 +190,8 @@ fn res(cases: &mut Vec<TestCase>) {
             m64: "120_u",
             frame,
             config: SM64RenderConfig {
-                screen_size: Some((800, 500)),
+                screen_size: (800, 500),
+                ..Default::default()
             },
         });
         cases.push(TestCase {
@@ -199,7 +200,8 @@ fn res(cases: &mut Vec<TestCase>) {
             m64: "120_u",
             frame,
             config: SM64RenderConfig {
-                screen_size: Some((400, 600)),
+                screen_size: (400, 600),
+                ..Default::default()
             },
         });
         cases.push(TestCase {
@@ -208,7 +210,8 @@ fn res(cases: &mut Vec<TestCase>) {
             m64: "120_u",
             frame,
             config: SM64RenderConfig {
-                screen_size: Some((160, 120)),
+                screen_size: (160, 120),
+                ..Default::default()
             },
         });
     };

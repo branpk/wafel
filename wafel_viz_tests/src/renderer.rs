@@ -54,13 +54,12 @@ impl Renderer {
     }
 
     pub fn render(&mut self, game: &Game, config: &SM64RenderConfig) -> RgbImage {
-        let screen_size = config.screen_size.unwrap_or((320, 240));
-        if self.sized.as_ref().map(|r| r.output_size) != Some(screen_size) {
+        if self.sized.as_ref().map(|r| r.output_size) != Some(config.screen_size) {
             self.sized = None;
         }
         let sized_renderer = self
             .sized
-            .get_or_insert_with(|| SizedRenderer::new(&self.device, screen_size));
+            .get_or_insert_with(|| SizedRenderer::new(&self.device, config.screen_size));
         sized_renderer.render(&self.device, &self.queue, game, config)
     }
 }
