@@ -5,4 +5,4 @@ edition = "2018"
 
 [dependencies]
 indexmap = { version = "1.9.1", features = ["serde"] }
-serde = { version = "1.0.126", features = ["derive", "rc"] }
+serde = { version = "1.0.137", features = ["derive", "rc"] }

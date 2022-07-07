@@ -19,6 +19,7 @@ use std::{
 
 use custom_renderer::{CustomRenderer, Scene};
 use fast3d::{interpret::F3DRenderData, render::F3DRenderer};
+use sm64_gfx_tree::get_gfx_node_reader;
 pub use sm64_render_mod::SM64RenderConfig;
 use sm64_render_mod::{render_sm64_with_config, Camera};
 use wafel_api::{load_m64, Game, SaveState};
@@ -31,6 +32,7 @@ use winit::{
 };
 
 pub mod custom_renderer;
+mod sm64_gfx_tree;
 mod sm64_render_mod;
 
 pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderData {
@@ -44,217 +46,30 @@ pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderD
     render_sm64_with_config(&memory, get_path, config).expect("failed to process display list")
 }
 
-// #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-// enum OverridePtr {
-//     Ptr(*const ()),
-//     MtxOverride([i32; 16]),
-// }
-//
-// impl OverridePtr {
-//     fn ptr(&self) -> *const () {
-//         if let Self::Ptr(ptr) = self {
-//             *ptr
-//         } else {
-//             panic!();
-//         }
-//     }
-// }
-//
-// #[derive(Debug)]
-// struct DllF3DSource<'a> {
-//     game: &'a Game,
-// }
-//
-// impl<'a> DllF3DSource<'a> {
-//     fn view(&self) -> DllSlotMemoryView<'a> {
-//         self.game.memory.with_slot(&self.game.base_slot)
-//     }
-//
-//     fn read_dl_from_addr(&self, addr: Option<Address>, is_root: bool) -> ProcessingDlIter<'a> {
-//         ProcessingDlIter::new(
-//             self.game,
-//             decode_f3d_display_list(RawDlIter {
-//                 view: self.view(),
-//                 addr,
-//             }),
-//             is_root,
-//         )
-//     }
-// }
-//
-// impl<'a> F3DMemory for DllF3DSource<'a> {
-//     type Ptr = OverridePtr;
-//     type DlIter = ProcessingDlIter<'a>;
-//
-//     fn root_dl(&self) -> Self::DlIter {
-//         let root_addr = self
-//             .game
-//             .read("sDisplayListTask?.task.t.data_ptr")
-//             .option()
-//             .map(|a| a.as_address());
-//         self.read_dl_from_addr(root_addr, true)
-//     }
-//
-//     fn read_dl(&self, ptr: Self::Ptr) -> Self::DlIter {
-//         let addr = self.game.memory.unchecked_pointer_to_address(ptr.ptr());
-//         self.read_dl_from_addr(Some(addr), false)
-//     }
-//
-//     fn read_u8(&self, dst: &mut [u8], ptr: Self::Ptr, offset: usize) {
-//         let view = self.view();
-//         let addr = self.game.memory.unchecked_pointer_to_address(ptr.ptr()) + offset;
-//         for i in 0..dst.len() {
-//             dst[i] = view.read_int(addr + i, IntType::U8).unwrap_or_default() as u8;
-//         }
-//     }
-//
-//     fn read_u16(&self, dst: &mut [u16], ptr: Self::Ptr, offset: usize) {
-//         let view = self.view();
-//         let addr = self.game.memory.unchecked_pointer_to_address(ptr.ptr()) + offset;
-//         for i in 0..dst.len() {
-//             dst[i] = view
-//                 .read_int(addr + 2 * i, IntType::U16)
-//                 .unwrap_or_default() as u16;
-//         }
-//     }
-//
-//     fn read_u32(&self, dst: &mut [u32], ptr: Self::Ptr, offset: usize) {
-//         match ptr {
-//             OverridePtr::Ptr(ptr) => {
-//                 let view = self.view();
-//                 let addr = self.game.memory.unchecked_pointer_to_address(ptr) + offset;
-//                 for i in 0..dst.len() {
-//                     dst[i] = view
-//                         .read_int(addr + 4 * i, IntType::U32)
-//                         .unwrap_or_default() as u32;
-//                 }
-//             }
-//             OverridePtr::MtxOverride(mtx) => {
-//                 assert!(offset == 0);
-//                 assert!(dst.len() == mtx.len());
-//                 dst.copy_from_slice(cast_slice(&mtx));
-//             }
-//         }
-//     }
-// }
-//
-// #[derive(Debug)]
-// struct RawDlIter<'a> {
-//     view: DllSlotMemoryView<'a>,
-//     addr: Option<Address>,
-// }
-//
-// impl<'a> Iterator for RawDlIter<'a> {
-//     type Item = RawF3DCommand<OverridePtr>;
-//
-//     fn next(&mut self) -> Option<Self::Item> {
-//         self.addr.as_mut().map(|addr| {
-//             let w_type = IntType::u_ptr_native();
-//             let w_size = w_type.size();
-//
-//             let w0 = self.view.read_int(*addr, w_type).unwrap() as usize;
-//             *addr += w_size;
-//             let w1 = self.view.read_int(*addr, w_type).unwrap() as usize;
-//             *addr += w_size;
-//
-//             RawF3DCommand {
-//                 w0: w0 as u32,
-//                 w1: w1 as u32,
-//                 w1_ptr: OverridePtr::Ptr(w1 as *const ()),
-//             }
-//         })
-//     }
-// }
-//
-// #[derive(Debug)]
-// struct ProcessingDlIter<'a> {
-//     game: &'a Game,
-//     iter: F3DCommandIter<RawDlIter<'a>>,
-//     is_root: bool,
-//     z_buffer: bool,
-//     view_transform: Option<Matrixf>,
-// }
-//
-// impl<'a> ProcessingDlIter<'a> {
-//     fn new(game: &'a Game, iter: F3DCommandIter<RawDlIter<'a>>, is_root: bool) -> Self {
-//         // TODO: zoom_out_if_paused_and_outside
-//
-//         let view_transform = if is_root {
-//             let pos = game.read("gLakituState.pos").as_f32_3();
-//             let focus = game.read("gLakituState.focus").as_f32_3();
-//             let roll = game.read("gLakituState.roll").as_int() as f32 / 0x8000 as f32 * PI;
-//
-//             let new_pos = [
-//                 pos[0] + 2.0 * (focus[0] - pos[0]),
-//                 pos[1],
-//                 pos[2] + 2.0 * (focus[2] - pos[2]),
-//             ];
-//
-//             let view_mtx = Matrixf::look_at(pos, focus, roll);
-//             let new_view_mtx = Matrixf::look_at(new_pos, focus, roll);
-//             let view_mtx_inv = view_mtx.invert_isometry();
-//             Some(&new_view_mtx * &view_mtx_inv)
-//         } else {
-//             None
-//         };
-//
-//         Self {
-//             game,
-//             iter,
-//             is_root,
-//             z_buffer: false,
-//             view_transform,
-//         }
-//     }
-// }
-//
-// impl<'a> Iterator for ProcessingDlIter<'a> {
-//     type Item = F3DCommand<OverridePtr>;
-//
-//     fn next(&mut self) -> Option<Self::Item> {
-//         self.iter.next().map(|mut cmd| {
-//             if self.is_root {
-//                 if let F3DCommand::Rsp(cmd) = &mut cmd {
-//                     match cmd {
-//                         SPCommand::Matrix {
-//                             matrix, mode, op, ..
-//                         } => {
-//                             if self.z_buffer
-//                                 && *mode == MatrixMode::ModelView
-//                                 && *op == MatrixOp::Load
-//                             {
-//                                 let memory = DllF3DSource { game: self.game };
-//                                 let mtx_fixed = fast3d::util::read_matrix(&memory, *matrix, 0);
-//                                 let mtx = Matrixf::from_fixed(&mtx_fixed);
-//
-//                                 let new_mtx = self.view_transform.as_ref().unwrap() * &mtx;
-//
-//                                 let new_mtx_fixed = new_mtx.to_fixed();
-//                                 *matrix = OverridePtr::MtxOverride(new_mtx_fixed);
-//                             }
-//                         }
-//                         SPCommand::SetGeometryMode(m) => {
-//                             if m.contains(GeometryModes::ZBUFFER) {
-//                                 self.z_buffer = true;
-//                             }
-//                         }
-//                         SPCommand::ClearGeometryMode(m) => {
-//                             if m.contains(GeometryModes::ZBUFFER) {
-//                                 self.z_buffer = false;
-//                             }
-//                         }
-//                         _ => {}
-//                     }
-//                 }
-//             }
-//
-//             // TODO
-//             cmd
-//         })
-//     }
-// }
-
 pub fn test_dl() -> Result<(), Box<dyn Error>> {
+    let mut game = unsafe { Game::new("libsm64/sm64_us.dll") };
+    let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
+
+    while game.frame() < 1624 {
+        game.set_input(inputs[game.frame() as usize]);
+        game.advance();
+    }
+
+    let memory = game.memory.with_slot(&game.base_slot);
+    let node_reader = get_gfx_node_reader(&memory, &game.layout)?;
+
+    if let Some(root_addr) = game
+        .read("gCurrentArea?.unk04")
+        .option()
+        .map(|v| v.try_as_address())
+        .transpose()?
+    {
+        let node = node_reader.read(root_addr)?;
+        eprintln!("{:?}", node);
+    }
+
+    return Ok(());
+
     env_logger::init();
     futures::executor::block_on(run(0, None)).unwrap();
     Ok(())

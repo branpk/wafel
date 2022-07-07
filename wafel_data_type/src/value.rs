@@ -9,7 +9,10 @@ use std::{
 };
 
 use indexmap::IndexMap;
-use serde::{Deserialize, Serialize};
+use serde::{
+    ser::{SerializeMap, SerializeSeq},
+    Deserialize, Serialize,
+};
 
 use crate::error::ValueTypeError;
 
@@ -45,7 +48,7 @@ impl Address {
 }
 
 /// A dynamically typed value.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Value {
     /// Represents the lack of a value.
     ///
@@ -297,6 +300,24 @@ impl Value {
                 actual: self.clone(),
             })
         }
+    }
+
+    /// Convert the value to a struct and look up the field with the given name, panicking
+    /// on failure.
+    pub fn field(&self, name: &str) -> &Value {
+        match self.try_field(name) {
+            Ok(value) => value,
+            Err(error) => panic!("{}", error),
+        }
+    }
+
+    /// Convert the value to a struct and look up the field with the given name.
+    pub fn try_field(&self, name: &str) -> Result<&Value, ValueTypeError> {
+        let fields = self.try_as_struct()?;
+        fields.get(name).ok_or_else(|| ValueTypeError {
+            expected: format!("struct with field {}", name).into(),
+            actual: self.clone(),
+        })
     }
 
     /// Convert the value to an array and return its elements, panicking on failure.
@@ -563,5 +584,45 @@ impl<T: Into<Value> + Clone> From<&[T]> for Value {
 impl<T: Into<Value>> From<Vec<T>> for Value {
     fn from(v: Vec<T>) -> Self {
         Self::Array(v.into_iter().map(|v| v.into()).collect())
+    }
+}
+
+// TODO: Implement IntoDeserializer for Value? To optimize Value -> json -> Rust type conversion
+
+/// A wrapper around Value that provides a different implementation of `Serialize`.
+///
+/// Instead of converting to a format that can be deserialized back into a Value, this
+/// does not include the Value variant name. This format is easier to deserialize back
+/// into a native Rust type.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ValueSerializeWrapper<'a>(pub &'a Value);
+
+impl<'a> Serialize for ValueSerializeWrapper<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self.0 {
+            Value::None => serializer.serialize_unit(),
+            Value::Int(n) => serializer.serialize_i128(*n),
+            Value::Float(f) => serializer.serialize_f64(*f),
+            Value::String(s) => serializer.serialize_str(s),
+            Value::Address(addr) => addr.serialize(serializer),
+            Value::Struct(fields) => {
+                let mut map = serializer.serialize_map(Some(fields.len()))?;
+                for (key, value) in fields.iter() {
+                    map.serialize_key(key)?;
+                    map.serialize_value(&Self(value))?;
+                }
+                map.end()
+            }
+            Value::Array(items) => {
+                let mut array = serializer.serialize_seq(Some(items.len()))?;
+                for item in items {
+                    array.serialize_element(&Self(item))?;
+                }
+                array.end()
+            }
+        }
     }
 }
