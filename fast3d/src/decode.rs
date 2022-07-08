@@ -347,6 +347,17 @@ pub struct RenderMode {
     pub blend_cycle2: BlendMode,
 }
 
+macro_rules! defn_render_mode {
+    ($name:ident, $value:literal) => {
+        #[allow(non_snake_case)]
+        pub fn $name() -> Self {
+            let mut mode = Self::try_from($value).unwrap();
+            mode.blend_cycle2 = mode.blend_cycle1;
+            mode
+        }
+    };
+}
+
 impl RenderMode {
     pub const NO_OP: Self = Self {
         flags: RenderModeFlags::empty(),
@@ -365,11 +376,81 @@ impl RenderMode {
             alpha2: BlendAlpha2::OneMinusAlpha,
         },
     };
+
+    defn_render_mode!(RM_AA_ZB_OPA_SURF, 4464760);
+    defn_render_mode!(RM_RA_ZB_OPA_SURF, 4464696);
+    defn_render_mode!(RM_AA_ZB_XLU_SURF, 4213208);
+    defn_render_mode!(RM_AA_ZB_OPA_DECAL, 4468056);
+    defn_render_mode!(RM_RA_ZB_OPA_DECAL, 4467992);
+    defn_render_mode!(RM_AA_ZB_XLU_DECAL, 4214232);
+    defn_render_mode!(RM_AA_ZB_OPA_INTER, 4465784);
+    defn_render_mode!(RM_AA_ZB_XLU_INTER, 4212184);
+    defn_render_mode!(RM_AA_ZB_XLU_LINE, 4225112);
+    defn_render_mode!(RM_AA_ZB_DEC_LINE, 4226904);
+    defn_render_mode!(RM_AA_ZB_TEX_EDGE, 4468856);
+    defn_render_mode!(RM_AA_ZB_TEX_INTER, 4469880);
+    defn_render_mode!(RM_AA_ZB_SUB_SURF, 4465272);
+    defn_render_mode!(RM_AA_ZB_PCL_SURF, 4194427);
+    defn_render_mode!(RM_AA_ZB_OPA_TERR, 4202616);
+    defn_render_mode!(RM_AA_ZB_TEX_TERR, 4206712);
+    defn_render_mode!(RM_AA_ZB_SUB_TERR, 4203128);
+    defn_render_mode!(RM_AA_OPA_SURF, 4464712);
+    defn_render_mode!(RM_RA_OPA_SURF, 4464648);
+    defn_render_mode!(RM_AA_XLU_SURF, 4211144);
+    defn_render_mode!(RM_AA_XLU_LINE, 4223048);
+    defn_render_mode!(RM_AA_DEC_LINE, 4223560);
+    defn_render_mode!(RM_AA_TEX_EDGE, 4468808);
+    defn_render_mode!(RM_AA_SUB_SURF, 4465224);
+    defn_render_mode!(RM_AA_PCL_SURF, 4194379);
+    defn_render_mode!(RM_AA_OPA_TERR, 4202568);
+    defn_render_mode!(RM_AA_TEX_TERR, 4206664);
+    defn_render_mode!(RM_AA_SUB_TERR, 4203080);
+    defn_render_mode!(RM_ZB_OPA_SURF, 4465200);
+    defn_render_mode!(RM_ZB_XLU_SURF, 4213328);
+    defn_render_mode!(RM_ZB_OPA_DECAL, 4468240);
+    defn_render_mode!(RM_ZB_XLU_DECAL, 4214352);
+    defn_render_mode!(RM_ZB_CLD_SURF, 4213584);
+    defn_render_mode!(RM_ZB_OVL_SURF, 4214608);
+    defn_render_mode!(RM_ZB_PCL_SURF, 201851443);
+    defn_render_mode!(RM_OPA_SURF, 201867264);
+    defn_render_mode!(RM_XLU_SURF, 4211264);
+    defn_render_mode!(RM_TEX_EDGE, 201879560);
+    defn_render_mode!(RM_CLD_SURF, 4211520);
+    defn_render_mode!(RM_PCL_SURF, 201867779);
+    defn_render_mode!(RM_ADD, 71844672);
+    defn_render_mode!(RM_NOOP, 0);
+    defn_render_mode!(RM_VISCVG, 209993792);
+    defn_render_mode!(RM_OPA_CI, 201850880);
+    defn_render_mode!(RM_CUSTOM_AA_ZB_XLU_SURF, 4213240);
 }
 
 impl Default for RenderMode {
     fn default() -> Self {
         Self::NO_OP
+    }
+}
+
+impl TryFrom<u32> for RenderMode {
+    type Error = ();
+
+    fn try_from(w1: u32) -> Result<Self, Self::Error> {
+        Ok(Self {
+            flags: RenderModeFlags::from_bits_truncate(w1 as u16),
+            cvg_dst: (((w1 >> 8) & 0x3) as u8).try_into().map_err(|_| {})?,
+            z_mode: (((w1 >> 10) & 0x3) as u8).try_into().map_err(|_| {})?,
+            blend_cycle1: BlendMode {
+                color1: (((w1 >> 30) & 0x3) as u8).try_into().map_err(|_| {})?,
+                alpha1: (((w1 >> 26) & 0x3) as u8).try_into().map_err(|_| {})?,
+                color2: (((w1 >> 22) & 0x3) as u8).try_into().map_err(|_| {})?,
+                alpha2: (((w1 >> 18) & 0x3) as u8).try_into().map_err(|_| {})?,
+            },
+            blend_cycle2: BlendMode {
+                color1: (((w1 >> 28) & 0x3) as u8).try_into().map_err(|_| {})?,
+                alpha1: (((w1 >> 24) & 0x3) as u8).try_into().map_err(|_| {})?,
+                color2: (((w1 >> 20) & 0x3) as u8).try_into().map_err(|_| {})?,
+                alpha2: (((w1 >> 16) & 0x3) as u8).try_into().map_err(|_| {})?,
+            },
+        })
     }
 }
 
@@ -894,23 +975,7 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
             match shift {
                 0 => Rdp(SetAlphaCompare(((w1 >> shift) as u8).try_into().unwrap())),
                 2 => Rdp(SetDepthSource(((w1 >> shift) as u8).try_into().unwrap())),
-                3 => Rdp(SetRenderMode(RenderMode {
-                    flags: RenderModeFlags::from_bits_truncate(w1 as u16),
-                    cvg_dst: (((w1 >> 8) & 0x3) as u8).try_into().unwrap(),
-                    z_mode: (((w1 >> 10) & 0x3) as u8).try_into().unwrap(),
-                    blend_cycle1: BlendMode {
-                        color1: (((w1 >> 30) & 0x3) as u8).try_into().unwrap(),
-                        alpha1: (((w1 >> 26) & 0x3) as u8).try_into().unwrap(),
-                        color2: (((w1 >> 22) & 0x3) as u8).try_into().unwrap(),
-                        alpha2: (((w1 >> 18) & 0x3) as u8).try_into().unwrap(),
-                    },
-                    blend_cycle2: BlendMode {
-                        color1: (((w1 >> 28) & 0x3) as u8).try_into().unwrap(),
-                        alpha1: (((w1 >> 24) & 0x3) as u8).try_into().unwrap(),
-                        color2: (((w1 >> 20) & 0x3) as u8).try_into().unwrap(),
-                        alpha2: (((w1 >> 16) & 0x3) as u8).try_into().unwrap(),
-                    },
-                })),
+                3 => Rdp(SetRenderMode(w1.try_into().unwrap())),
                 _ => Unknown(raw_command),
             }
         }

@@ -9,6 +9,8 @@
 //!
 //! Note: this module is not currently intended to be a complete and accurate implementation.
 //! Several commands are unimplemented in both [decode] and [interpret].
+//!
+//! This crate requires nightly to compile.
 
 #![feature(stmt_expr_attributes)]
 #![feature(doc_cfg)]

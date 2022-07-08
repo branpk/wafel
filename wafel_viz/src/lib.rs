@@ -60,26 +60,11 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
     let memory = game.memory.with_slot(&game.base_slot);
 
     let render_data = sm64_gfx_render::test_render(&memory, &game.layout, penguin_addr)?;
-    eprintln!(
-        "{:?}",
-        render_data
-            .commands
-            .iter()
-            .map(|c| format!("{:?} {:?}", c.viewport, c.scissor))
-            .collect::<Vec<_>>()
-    );
 
-    // if let Some(root_addr) = game
-    //     .read("gCurrentArea?.unk04")
-    //     .option()
-    //     .map(|v| v.try_as_address())
-    //     .transpose()?
-    // {
-    //     let node = node_reader.read(root_addr)?;
-    //     eprintln!("{:?}", node);
+    // for cmd in &render_data.commands {
+    //     let pipeline = &render_data.pipelines[&cmd.pipeline];
+    //     eprintln!("{:?}", pipeline);
     // }
-
-    // return Ok(());
 
     env_logger::init();
     futures::executor::block_on(run(0, Some(render_data))).unwrap();

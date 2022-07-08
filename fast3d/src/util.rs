@@ -38,45 +38,6 @@ impl Matrixf {
         ])
     }
 
-    pub fn from_fixed(m: &[i32]) -> Self {
-        assert_eq!(m.len(), 16, "incorrect fixed point matrix size");
-        let mut r = Self::default();
-        for i in [0, 2] {
-            for j in 0..4 {
-                let int_part = m[j * 2 + i / 2] as u32;
-                let frac_part = m[8 + j * 2 + i / 2] as u32;
-                r.0[i][j] = ((int_part & 0xFFFF0000) | (frac_part >> 16)) as i32 as f32 / 65536.0;
-                r.0[i + 1][j] = ((int_part << 16) | (frac_part & 0xFFFF)) as i32 as f32 / 65536.0;
-            }
-        }
-        r
-    }
-
-    pub fn to_fixed(&self) -> Vec<i32> {
-        let mut r = vec![0; 16];
-        for i in [0, 2] {
-            for j in 0..4 {
-                let v1 = (self.0[i][j] * 65536.0) as i32 as u32;
-                let v2 = (self.0[i + 1][j] * 65536.0) as i32 as u32;
-                let frac_part = (v1 << 16) | (v2 & 0xFFFF);
-                let int_part = (v1 & 0xFFFF0000) | (v2 >> 16);
-                r[j * 2 + i / 2] = int_part as i32;
-                r[8 + j * 2 + i / 2] = frac_part as i32;
-            }
-        }
-        r
-    }
-
-    pub fn transpose(&self) -> Self {
-        let mut r = Self::default();
-        for i in 0..4 {
-            for j in 0..4 {
-                r.0[i][j] = self.0[j][i];
-            }
-        }
-        r
-    }
-
     /// Note: roll is in radians
     pub fn look_at(from: [f32; 3], to: [f32; 3], roll: f32) -> Self {
         let mut dx = to[0] - from[0];
@@ -140,6 +101,96 @@ impl Matrixf {
         mtx[3][3] = 1.0;
 
         Self(mtx)
+    }
+
+    /// fov_y is in radians
+    pub fn perspective(fov_y: f32, aspect: f32, near: f32, far: f32) -> Self {
+        let mut mtx = Self::identity();
+
+        let y_scale = (fov_y / 2.0).cos() / (fov_y / 2.0).sin();
+        mtx.0[0][0] = y_scale / aspect;
+        mtx.0[1][1] = y_scale;
+        mtx.0[2][2] = (near + far) / (near - far);
+        mtx.0[3][2] = -1.0;
+        mtx.0[2][3] = 2.0 * near * far / (near - far);
+        mtx.0[3][3] = 0.0;
+
+        mtx
+    }
+
+    /// Rotate xyz by c in radians and translate by b.
+    pub fn rotate_xyz_and_translate(b: [f32; 3], c: [f32; 3]) -> Self {
+        let sx = c[0].sin();
+        let cx = c[0].cos();
+
+        let sy = c[1].sin();
+        let cy = c[1].cos();
+
+        let sz = c[2].sin();
+        let cz = c[2].cos();
+
+        let mut mtx = Matrixf::default();
+
+        mtx.0[0][0] = cy * cz;
+        mtx.0[1][0] = cy * sz;
+        mtx.0[2][0] = -sy;
+        mtx.0[3][0] = 0.0;
+
+        mtx.0[0][1] = sx * sy * cz - cx * sz;
+        mtx.0[1][1] = sx * sy * sz + cx * cz;
+        mtx.0[2][1] = sx * cy;
+        mtx.0[3][1] = 0.0;
+
+        mtx.0[0][2] = cx * sy * cz + sx * sz;
+        mtx.0[1][2] = cx * sy * sz - sx * cz;
+        mtx.0[2][2] = cx * cy;
+        mtx.0[3][2] = 0.0;
+
+        mtx.0[0][3] = b[0];
+        mtx.0[1][3] = b[1];
+        mtx.0[2][3] = b[2];
+        mtx.0[3][3] = 1.0;
+
+        mtx
+    }
+
+    pub fn from_fixed(m: &[i32]) -> Self {
+        assert_eq!(m.len(), 16, "incorrect fixed point matrix size");
+        let mut r = Self::default();
+        for i in [0, 2] {
+            for j in 0..4 {
+                let int_part = m[j * 2 + i / 2] as u32;
+                let frac_part = m[8 + j * 2 + i / 2] as u32;
+                r.0[i][j] = ((int_part & 0xFFFF0000) | (frac_part >> 16)) as i32 as f32 / 65536.0;
+                r.0[i + 1][j] = ((int_part << 16) | (frac_part & 0xFFFF)) as i32 as f32 / 65536.0;
+            }
+        }
+        r
+    }
+
+    pub fn to_fixed(&self) -> Vec<i32> {
+        let mut r = vec![0; 16];
+        for i in [0, 2] {
+            for j in 0..4 {
+                let v1 = (self.0[i][j] * 65536.0) as i32 as u32;
+                let v2 = (self.0[i + 1][j] * 65536.0) as i32 as u32;
+                let frac_part = (v1 << 16) | (v2 & 0xFFFF);
+                let int_part = (v1 & 0xFFFF0000) | (v2 >> 16);
+                r[j * 2 + i / 2] = int_part as i32;
+                r[8 + j * 2 + i / 2] = frac_part as i32;
+            }
+        }
+        r
+    }
+
+    pub fn transpose(&self) -> Self {
+        let mut r = Self::default();
+        for i in 0..4 {
+            for j in 0..4 {
+                r.0[i][j] = self.0[j][i];
+            }
+        }
+        r
     }
 
     pub fn invert_isometry(&self) -> Matrixf {
@@ -257,6 +308,10 @@ impl MatrixState {
             MatrixOp::Load => self.cur = m,
             MatrixOp::Mul => self.cur = &self.cur * &m,
         }
+    }
+
+    pub fn push_mul(&mut self, m: Matrixf) {
+        self.execute(m, MatrixOp::Mul, true);
     }
 
     pub fn pop(&mut self) {

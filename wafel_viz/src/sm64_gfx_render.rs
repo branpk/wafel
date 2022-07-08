@@ -1,8 +1,14 @@
+use std::f32::consts::PI;
+
 use bytemuck::cast_slice;
 use fast3d::{
-    decode::{F3DCommand, MatrixMode, MatrixOp, SPCommand},
+    decode::{
+        BlendAlpha1, BlendAlpha2, BlendColor, BlendMode, ColorCombineComponent, ColorCombineMode,
+        CombineMode, CvgDst, DPCommand, F3DCommand, GeometryModes, MatrixMode, MatrixOp,
+        RenderMode, RenderModeFlags, SPCommand, ZMode,
+    },
     interpret::{interpret_f3d_display_list, F3DRenderData},
-    util::Matrixf,
+    util::{MatrixState, Matrixf},
 };
 use wafel_api::{Address, Error, IntType};
 use wafel_layout::DataLayout;
@@ -22,12 +28,38 @@ pub fn test_render(
     addr: Address,
 ) -> Result<F3DRenderData, Error> {
     let mut renderer = NodeRenderer::new(memory, layout)?;
+
+    renderer.u32_buffer.extend(cast_slice(
+        &Matrixf::perspective(45.0 * PI / 180.0, 320.0 / 240.0, 100.0, 12800.0).to_fixed(),
+    ));
+    renderer
+        .display_list
+        .push(F3DCommand::Rsp(SPCommand::Matrix {
+            matrix: Pointer::BufferOffset(0),
+            mode: MatrixMode::Proj,
+            op: MatrixOp::Load,
+            push: false,
+        }));
+    renderer
+        .display_list
+        .push(F3DCommand::Rsp(SPCommand::SetGeometryMode(
+            GeometryModes::LIGHTING,
+        )));
+    renderer
+        .display_list
+        .push(F3DCommand::Rdp(DPCommand::SetCombineMode(
+            CombineMode::one_cycle(
+                ColorCombineComponent::Shade.into(),
+                ColorCombineComponent::Shade.into(),
+            ),
+        )));
+
     renderer.process_node(addr, false)?;
-    renderer.submit_master_lists();
+    renderer.submit_master_lists(true);
 
     let mut f3d_memory = F3DMemoryImpl::new(memory, Pointer::BufferOffset(0));
     f3d_memory.set_view_transform(Some(Matrixf::look_at(
-        [1000.0, 0.0, 0.0],
+        [0.0, 0.0, 1000.0],
         [0.0, 0.0, 0.0],
         0.0,
     )));
@@ -44,6 +76,7 @@ struct NodeRenderer<'m, M> {
     memory: &'m M,
     layout: &'m DataLayout,
     reader: GfxNodeReader<'m>,
+    mtx_stack: MatrixState,
     master_lists: [Vec<DisplayListNode>; 8],
     display_list: Vec<F3DCommand<Pointer>>,
     u32_buffer: Vec<u32>,
@@ -62,6 +95,7 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
             memory,
             layout,
             reader,
+            mtx_stack: MatrixState::default(),
             master_lists: Default::default(),
             display_list: Vec::new(),
             u32_buffer: Vec::new(),
@@ -72,16 +106,49 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
         if !display_list.is_null() {
             // TODO: Set transform
             self.master_lists[layer as usize].push(DisplayListNode {
-                transform: Matrixf::identity().to_fixed(),
+                transform: self.mtx_stack.cur.to_fixed(),
                 display_list,
             });
         }
     }
 
-    fn submit_master_lists(&mut self) {
+    fn get_render_mode(&self, layer: i16, z_buffer: bool) -> RenderMode {
+        match (z_buffer, layer) {
+            (false, 0) => RenderMode::RM_OPA_SURF(),
+            (false, 1) => RenderMode::RM_AA_OPA_SURF(),
+            (false, 2) => RenderMode::RM_AA_OPA_SURF(),
+            (false, 3) => RenderMode::RM_AA_OPA_SURF(),
+            (false, 4) => RenderMode::RM_AA_TEX_EDGE(),
+            (false, 5) => RenderMode::RM_AA_XLU_SURF(),
+            (false, 6) => RenderMode::RM_AA_XLU_SURF(),
+            (false, 7) => RenderMode::RM_AA_XLU_SURF(),
+            (true, 0) => RenderMode::RM_ZB_OPA_SURF(),
+            (true, 1) => RenderMode::RM_AA_ZB_OPA_SURF(),
+            (true, 2) => RenderMode::RM_AA_ZB_OPA_DECAL(),
+            (true, 3) => RenderMode::RM_AA_ZB_OPA_INTER(),
+            (true, 4) => RenderMode::RM_AA_ZB_TEX_EDGE(),
+            (true, 5) => RenderMode::RM_AA_ZB_XLU_SURF(),
+            (true, 6) => RenderMode::RM_AA_ZB_XLU_DECAL(),
+            (true, 7) => RenderMode::RM_AA_ZB_XLU_INTER(),
+            _ => unimplemented!("z_buffer={}, layer={}", z_buffer, layer),
+        }
+    }
+
+    fn submit_master_lists(&mut self, z_buffer: bool) {
         // TODO: z buffer, render modes
 
-        for (i, lists) in self.master_lists.iter().enumerate() {
+        if z_buffer {
+            self.display_list
+                .push(F3DCommand::Rsp(SPCommand::SetGeometryMode(
+                    GeometryModes::ZBUFFER,
+                )));
+        }
+
+        for (layer, lists) in self.master_lists.iter().enumerate() {
+            let render_mode = self.get_render_mode(layer as i16, z_buffer);
+            self.display_list
+                .push(F3DCommand::Rdp(DPCommand::SetRenderMode(render_mode)));
+
             for list in lists {
                 let offset = self.u32_buffer.len();
                 self.u32_buffer.extend(cast_slice(&list.transform));
@@ -97,6 +164,13 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
                         list.display_list.into(),
                     )));
             }
+        }
+
+        if z_buffer {
+            self.display_list
+                .push(F3DCommand::Rsp(SPCommand::ClearGeometryMode(
+                    GeometryModes::ZBUFFER,
+                )));
         }
     }
 
@@ -216,10 +290,18 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
     }
 
     fn process_animated_part(&mut self, node: &GraphNodeAnimatedPart) -> Result<(), Error> {
-        // TODO
+        let rotation = [0.0, 0.0, 0.0];
+        let translation = node.translation.map(|x| x as f32);
 
+        // TODO: Calculate rotation and translation
+
+        let transform = Matrixf::rotate_xyz_and_translate(translation, rotation);
+
+        self.mtx_stack.push_mul(transform);
         self.append_display_list(node.display_list, node.node.flags.bits() >> 8);
         self.process_node_and_siblings(node.node.children)?;
+        self.mtx_stack.pop();
+
         Ok(())
     }
 
