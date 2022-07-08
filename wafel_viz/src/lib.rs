@@ -32,6 +32,7 @@ use winit::{
 };
 
 pub mod custom_renderer;
+mod sm64_gfx_render;
 mod sm64_gfx_tree;
 mod sm64_render_mod;
 
@@ -50,28 +51,38 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
     let mut game = unsafe { Game::new("libsm64/sm64_us.dll") };
     let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
 
-    while game.frame() < 1624 {
+    while game.frame() < 2227 {
         game.set_input(inputs[game.frame() as usize]);
         game.advance();
     }
+    let penguin_addr = game.address("gObjectPool[64]").unwrap();
 
     let memory = game.memory.with_slot(&game.base_slot);
-    let node_reader = get_gfx_node_reader(&memory, &game.layout)?;
 
-    if let Some(root_addr) = game
-        .read("gCurrentArea?.unk04")
-        .option()
-        .map(|v| v.try_as_address())
-        .transpose()?
-    {
-        let node = node_reader.read(root_addr)?;
-        eprintln!("{:?}", node);
-    }
+    let render_data = sm64_gfx_render::test_render(&memory, &game.layout, penguin_addr)?;
+    eprintln!(
+        "{:?}",
+        render_data
+            .commands
+            .iter()
+            .map(|c| format!("{:?} {:?}", c.viewport, c.scissor))
+            .collect::<Vec<_>>()
+    );
 
-    return Ok(());
+    // if let Some(root_addr) = game
+    //     .read("gCurrentArea?.unk04")
+    //     .option()
+    //     .map(|v| v.try_as_address())
+    //     .transpose()?
+    // {
+    //     let node = node_reader.read(root_addr)?;
+    //     eprintln!("{:?}", node);
+    // }
+
+    // return Ok(());
 
     env_logger::init();
-    futures::executor::block_on(run(0, None)).unwrap();
+    futures::executor::block_on(run(0, Some(render_data))).unwrap();
     Ok(())
 }
 

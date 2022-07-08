@@ -1,5 +1,7 @@
+use core::fmt;
 use std::{collections::HashMap, sync::Arc};
 
+use bitflags::bitflags;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use wafel_api::{Address, Error, IntType};
 use wafel_data_type::{DataType, DataTypeRef, Field, Namespace, TypeName, ValueSerializeWrapper};
@@ -78,11 +80,24 @@ impl GfxTreeNode {
 pub struct GraphNode {
     #[serde(rename = "type")]
     pub ty: i16,
-    pub flags: i16,
+    pub flags: GraphRenderFlags,
     pub prev: Address,
     pub next: Address,
     pub parent: Address,
     pub children: Address,
+}
+
+bitflags! {
+    #[derive(Serialize, Deserialize)]
+    #[serde(transparent)]
+    pub struct GraphRenderFlags: i16 {
+        const ACTIVE         = 1 << 0;
+        const CHILDREN_FIRST = 1 << 1;
+        const BILLBOARD      = 1 << 2;
+        const Z_BUFFER       = 1 << 3;
+        const INVISIBLE      = 1 << 4;
+        const HAS_ANIMATION  = 1 << 5;
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -192,6 +207,7 @@ pub struct GraphNodeRotation {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnimInfo {
+    #[serde(rename = "animID")]
     pub anim_id: i16,
     pub anim_y_trans: i16,
     pub cur_anim: Address,
@@ -212,6 +228,7 @@ pub struct GraphNodeObject {
     pub pos: [f32; 3],
     pub scale: [f32; 3],
     pub anim_info: AnimInfo,
+    #[serde(rename = "unk4C")]
     pub unk_4c: Address,
     pub throw_matrix: Address,
     pub camera_to_object: [f32; 3],
@@ -295,6 +312,12 @@ pub struct GraphNodeCullingRadius {
 }
 
 pub struct GfxNodeReader<'m>(Box<dyn Fn(Address) -> Result<GfxTreeNode, Error> + 'm>);
+
+impl<'m> fmt::Debug for GfxNodeReader<'m> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("GfxNodeReader").finish_non_exhaustive()
+    }
+}
 
 impl<'m> GfxNodeReader<'m> {
     pub fn read(&self, addr: Address) -> Result<GfxTreeNode, Error> {

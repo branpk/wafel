@@ -1,4 +1,4 @@
-use std::{f32::consts::PI, sync::Arc};
+use std::{f32::consts::PI, sync::Arc, vec};
 
 use bytemuck::cast_slice;
 use fast3d::{
@@ -92,24 +92,23 @@ pub fn render_sm64_with_config(
         }
     };
 
-    let f3d_memory = F3DMemoryImpl {
-        memory,
-        root_addr: dl_addr,
-        view_transform,
-    };
+    let mut f3d_memory = F3DMemoryImpl::new(memory, dl_addr.into());
+    f3d_memory.view_transform = view_transform;
     let render_data = interpret_f3d_display_list(&f3d_memory, config.screen_size, true)?;
 
     Ok(render_data)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum Pointer {
+pub enum Pointer {
     Address(Address),
-    ViewMatrix(Address),
+    ViewMatrix(SimplePointer),
+    BufferOffset(usize),
 }
 
 impl Pointer {
-    fn exact_address(self) -> Address {
+    #[track_caller]
+    pub fn exact_address(self) -> Address {
         if let Self::Address(addr) = self {
             addr
         } else {
@@ -117,43 +116,128 @@ impl Pointer {
         }
     }
 
-    fn address(self) -> Address {
+    #[track_caller]
+    pub fn address(self) -> Address {
         match self {
             Pointer::Address(addr) => addr,
-            Pointer::ViewMatrix(addr) => addr,
+            Pointer::ViewMatrix(ptr) => ptr.address(),
+            _ => panic!("no address: {:?}", self),
+        }
+    }
+
+    #[track_caller]
+    fn simple(self) -> SimplePointer {
+        match self {
+            Pointer::Address(addr) => SimplePointer::Address(addr),
+            Pointer::BufferOffset(offset) => SimplePointer::BufferOffset(offset),
+            _ => panic!("not a simple pointer: {:?}", self),
+        }
+    }
+}
+
+impl From<Address> for Pointer {
+    fn from(addr: Address) -> Self {
+        Self::Address(addr)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum SimplePointer {
+    Address(Address),
+    BufferOffset(usize),
+}
+
+impl SimplePointer {
+    #[track_caller]
+    pub fn address(self) -> Address {
+        match self {
+            Self::Address(addr) => addr,
+            _ => panic!("no address: {:?}", self),
         }
     }
 }
 
 #[derive(Debug)]
-struct F3DMemoryImpl<'m, M> {
+pub struct F3DMemoryImpl<'m, M> {
     memory: &'m M,
-    root_addr: Address,
+    root_ptr: Pointer,
     view_transform: Option<Matrixf>,
+    dl_buffer: Vec<Vec<F3DCommand<Pointer>>>,
+    u32_buffer: Vec<u32>,
 }
 
 impl<'m, M: MemoryRead> F3DMemoryImpl<'m, M> {
-    fn read_dl_impl(&self, addr: Address, is_root: bool) -> <Self as F3DMemory>::DlIter {
-        let raw = RawDlIter {
-            memory: self.memory,
-            addr,
+    pub fn new(memory: &'m M, root_ptr: Pointer) -> Self {
+        Self {
+            memory,
+            root_ptr,
+            view_transform: None,
+            dl_buffer: Vec::new(),
+            u32_buffer: Vec::new(),
+        }
+    }
+
+    pub fn set_view_transform(&mut self, transform: Option<Matrixf>) {
+        self.view_transform = transform;
+    }
+
+    pub fn set_dl_buffer(&mut self, buffer: Vec<Vec<F3DCommand<Pointer>>>) {
+        self.dl_buffer = buffer;
+    }
+
+    pub fn set_u32_buffer(&mut self, buffer: Vec<u32>) {
+        self.u32_buffer = buffer;
+    }
+
+    fn read_dl_impl(&self, ptr: Pointer, is_root: bool) -> <Self as F3DMemory>::DlIter {
+        let cmd_iter = match ptr {
+            Pointer::Address(addr) => {
+                let raw = RawDlIter {
+                    memory: self.memory,
+                    addr,
+                };
+                DlIter::FromRaw(decode_f3d_display_list(raw))
+            }
+            Pointer::BufferOffset(offset) => {
+                DlIter::FromVec(self.dl_buffer[offset].clone().into_iter())
+            }
+            _ => unimplemented!("{:?}", ptr),
         };
-        let decoded = decode_f3d_display_list(raw);
-        DlTransformer::new(decoded, is_root)
+        DlTransformer::new(cmd_iter, is_root)
+    }
+
+    fn read_u32_simple(
+        &self,
+        dst: &mut [u32],
+        ptr: SimplePointer,
+        offset: usize,
+    ) -> Result<(), MemoryError> {
+        match ptr {
+            SimplePointer::Address(addr) => {
+                let addr = addr + offset;
+                for i in 0..dst.len() {
+                    dst[i] = self.memory.read_int(addr + 4 * i, IntType::U32)? as u32;
+                }
+            }
+            SimplePointer::BufferOffset(offset) => {
+                dst.copy_from_slice(&self.u32_buffer[offset..offset + dst.len()]);
+            }
+        }
+        Ok(())
     }
 }
 
 impl<'m, M: MemoryRead> F3DMemory for F3DMemoryImpl<'m, M> {
     type Ptr = Pointer;
     type Error = MemoryError;
-    type DlIter = DlTransformer<F3DCommandIter<RawDlIter<'m, M>>>;
+    type DlIter = DlTransformer<DlIter<'m, M>>;
 
     fn root_dl(&self) -> Result<Self::DlIter, Self::Error> {
-        Ok(self.read_dl_impl(self.root_addr, true))
+        Ok(self.read_dl_impl(self.root_ptr, true))
     }
 
     fn read_dl(&self, ptr: Self::Ptr) -> Result<Self::DlIter, Self::Error> {
-        Ok(self.read_dl_impl(ptr.exact_address(), false))
+        Ok(self.read_dl_impl(ptr, false))
     }
 
     // TODO: Optimize buffer reads?
@@ -175,25 +259,22 @@ impl<'m, M: MemoryRead> F3DMemory for F3DMemoryImpl<'m, M> {
     }
 
     fn read_u32(&self, dst: &mut [u32], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error> {
-        let addr = ptr.address() + offset;
-        for i in 0..dst.len() {
-            dst[i] = self.memory.read_int(addr + 4 * i, IntType::U32)? as u32;
-        }
-
-        if matches!(ptr, Pointer::ViewMatrix(_)) {
+        if let Pointer::ViewMatrix(ptr) = ptr {
+            self.read_u32_simple(dst, ptr, offset)?;
             if let Some(view_transform) = self.view_transform.as_ref() {
                 let mtx = Matrixf::from_fixed(cast_slice(dst));
                 let mtx_new = view_transform * &mtx;
                 dst.copy_from_slice(cast_slice(mtx_new.to_fixed().as_slice()));
             }
+        } else {
+            self.read_u32_simple(dst, ptr.simple(), offset)?;
         }
-
         Ok(())
     }
 }
 
 #[derive(Debug)]
-struct DlTransformer<I> {
+pub struct DlTransformer<I> {
     inner: I,
     is_root: bool,
     z_buffer: bool,
@@ -215,8 +296,9 @@ impl<I> DlTransformer<I> {
                     SPCommand::Matrix {
                         matrix, mode, op, ..
                     } => {
+                        // TODO: Check z buffer
                         if *mode == MatrixMode::ModelView && *op == MatrixOp::Load {
-                            *matrix = Pointer::ViewMatrix(matrix.exact_address());
+                            *matrix = Pointer::ViewMatrix(matrix.simple());
                         }
                     }
                     SPCommand::SetGeometryMode(mode) => {
@@ -251,7 +333,24 @@ where
 }
 
 #[derive(Debug)]
-struct RawDlIter<'m, M> {
+pub enum DlIter<'m, M> {
+    FromVec(vec::IntoIter<F3DCommand<Pointer>>),
+    FromRaw(F3DCommandIter<RawDlIter<'m, M>>),
+}
+
+impl<'m, M: MemoryRead> Iterator for DlIter<'m, M> {
+    type Item = Result<F3DCommand<Pointer>, MemoryError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            DlIter::FromVec(iter) => iter.next().map(Ok),
+            DlIter::FromRaw(iter) => iter.next(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct RawDlIter<'m, M> {
     memory: &'m M,
     addr: Address,
 }

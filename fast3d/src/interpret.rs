@@ -73,8 +73,8 @@ struct Interpreter<'m, M: F3DMemory> {
     color_image: Option<Image<M::Ptr>>,
     depth_image: Option<M::Ptr>,
 
-    viewport: Viewport,
-    scissor: (ScissorMode, Rectangle<u16>),
+    viewport: Option<Viewport>,
+    scissor: Option<(ScissorMode, Rectangle<u16>)>,
     model_view: MatrixState,
     proj: MatrixState,
 
@@ -184,32 +184,52 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
     }
 
     fn viewport_screen(&self) -> ScreenRectangle {
-        let w = 2.0 * self.viewport.scale[0] as f32 / 4.0;
-        let h = 2.0 * self.viewport.scale[1] as f32 / 4.0;
-        let x = (self.viewport.trans[0] as f32 / 4.0) - w / 2.0;
-        let y = (self.viewport.trans[1] as f32 / 4.0) - h / 2.0;
+        match self.viewport {
+            Some(viewport) => {
+                let w = 2.0 * viewport.scale[0] as f32 / 4.0;
+                let h = 2.0 * viewport.scale[1] as f32 / 4.0;
+                let x = (viewport.trans[0] as f32 / 4.0) - w / 2.0;
+                let y = (viewport.trans[1] as f32 / 4.0) - h / 2.0;
 
-        ScreenRectangle {
-            x: (x * self.screen_scale_x()) as i32,
-            y: (y * self.screen_scale_y()) as i32,
-            w: (w * self.screen_scale_x()) as i32,
-            h: (h * self.screen_scale_y()) as i32,
+                ScreenRectangle {
+                    x: (x * self.screen_scale_x()) as i32,
+                    y: (y * self.screen_scale_y()) as i32,
+                    w: (w * self.screen_scale_x()) as i32,
+                    h: (h * self.screen_scale_y()) as i32,
+                }
+            }
+            None => ScreenRectangle {
+                x: 0,
+                y: 0,
+                w: self.screen_size.0 as i32,
+                h: self.screen_size.1 as i32,
+            },
         }
     }
 
     fn scissor_screen(&self) -> ScreenRectangle {
-        let rect = self.scissor.1;
+        match self.scissor {
+            Some(scissor) => {
+                let rect = scissor.1;
 
-        let ulx = rect.ulx as f32 / 4.0;
-        let uly = rect.uly as f32 / 4.0;
-        let lrx = rect.lrx as f32 / 4.0;
-        let lry = rect.lry as f32 / 4.0;
+                let ulx = rect.ulx as f32 / 4.0;
+                let uly = rect.uly as f32 / 4.0;
+                let lrx = rect.lrx as f32 / 4.0;
+                let lry = rect.lry as f32 / 4.0;
 
-        ScreenRectangle {
-            x: (ulx * self.screen_scale_x()) as i32,
-            y: (uly * self.screen_scale_y()) as i32,
-            w: ((lrx - ulx) * self.screen_scale_x()) as i32,
-            h: ((lry - uly) * self.screen_scale_y()) as i32,
+                ScreenRectangle {
+                    x: (ulx * self.screen_scale_x()) as i32,
+                    y: (uly * self.screen_scale_y()) as i32,
+                    w: ((lrx - ulx) * self.screen_scale_x()) as i32,
+                    h: ((lry - uly) * self.screen_scale_y()) as i32,
+                }
+            }
+            None => ScreenRectangle {
+                x: 0,
+                y: 0,
+                w: self.screen_size.0 as i32,
+                h: self.screen_size.1 as i32,
+            },
         }
     }
 
@@ -770,9 +790,9 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                     }
                     SPCommand::Viewport(ptr) => {
                         let viewport = read_viewport(self.memory(), ptr, 0)?;
-                        if self.viewport != viewport {
+                        if self.viewport != Some(viewport) {
                             self.flush()?;
-                            self.viewport = viewport;
+                            self.viewport = Some(viewport);
                         }
                     }
                     SPCommand::Light { light, n } => {
@@ -915,9 +935,9 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                         self.tile_size[tile.0 as usize] = size;
                     }
                     DPCommand::SetScissor(mode, rect) => {
-                        if self.scissor != (mode, rect) {
+                        if self.scissor != Some((mode, rect)) {
                             self.flush()?;
-                            self.scissor = (mode, rect);
+                            self.scissor = Some((mode, rect));
                         }
                     }
                     DPCommand::FullSync => {}

@@ -2660,6 +2660,7 @@ dependencies = [
 name = "wafel_viz"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
  "bytemuck",
  "env_logger",
  "fast3d",
