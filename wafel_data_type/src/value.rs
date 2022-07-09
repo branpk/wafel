@@ -5,7 +5,7 @@ use std::{
     collections::HashMap,
     convert::TryFrom,
     fmt,
-    ops::{Add, AddAssign},
+    ops::{Add, AddAssign, Sub, SubAssign},
 };
 
 use indexmap::IndexMap;
@@ -34,6 +34,20 @@ impl Add<usize> for Address {
 impl AddAssign<usize> for Address {
     fn add_assign(&mut self, rhs: usize) {
         *self = *self + rhs;
+    }
+}
+
+impl Sub<usize> for Address {
+    type Output = Self;
+
+    fn sub(self, rhs: usize) -> Self::Output {
+        Self(self.0.wrapping_sub(rhs))
+    }
+}
+
+impl SubAssign<usize> for Address {
+    fn sub_assign(&mut self, rhs: usize) {
+        *self = *self - rhs;
     }
 }
 

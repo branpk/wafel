@@ -11,13 +11,14 @@ use fast3d::{
     util::{MatrixState, Matrixf},
 };
 use wafel_api::{Address, Error, IntType};
+use wafel_data_type::{Namespace, TypeName};
 use wafel_layout::DataLayout;
 use wafel_memory::MemoryRead;
 
 use crate::{
     sm64_gfx_tree::{
-        get_gfx_node_reader, GfxNodeReader, GfxTreeNode, GraphNodeAnimatedPart, GraphNodeObject,
-        GraphNodeScale, GraphNodeShadow, GraphNodeSwitchCase, GraphRenderFlags,
+        get_gfx_node_reader, AnimInfo, GfxNodeReader, GfxTreeNode, GraphNodeAnimatedPart,
+        GraphNodeObject, GraphNodeScale, GraphNodeShadow, GraphNodeSwitchCase, GraphRenderFlags,
     },
     sm64_render_mod::{F3DMemoryImpl, Pointer},
 };
@@ -80,12 +81,55 @@ struct NodeRenderer<'m, M> {
     master_lists: [Vec<DisplayListNode>; 8],
     display_list: Vec<F3DCommand<Pointer>>,
     u32_buffer: Vec<u32>,
+    anim: Option<AnimState>,
 }
 
 #[derive(Debug)]
 struct DisplayListNode {
     transform: Vec<i32>,
     display_list: Address,
+}
+
+#[derive(Debug, Clone)]
+struct AnimState {
+    ty: AnimType,
+    enabled: bool,
+    frame: i16,
+    translation_multiplier: f32,
+    attribute: Address,
+    data: Address,
+}
+
+impl AnimState {
+    fn index(&mut self, memory: &impl MemoryRead) -> Result<i32, Error> {
+        let frame = self.frame as i32;
+        let attr0 = memory.read_int(self.attribute, IntType::U16)? as u16;
+        let attr1 = memory.read_int(self.attribute + 2, IntType::U16)? as u16;
+
+        let result = if frame < attr0 as i32 {
+            attr1 as i32 + frame
+        } else {
+            (attr1 + attr0 - 1) as i32
+        };
+
+        self.attribute += 4;
+        Ok(result)
+    }
+
+    fn next(&mut self, memory: &impl MemoryRead) -> Result<i16, Error> {
+        let index = self.index(memory)?;
+        let result = memory.read_int(self.data + 2 * index as isize as usize, IntType::S16)? as i16;
+        Ok(result)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum AnimType {
+    Translation,
+    VerticalTranslation,
+    LateralTranslation,
+    NoTranslation,
+    Rotation,
 }
 
 impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
@@ -99,6 +143,7 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
             master_lists: Default::default(),
             display_list: Vec::new(),
             u32_buffer: Vec::new(),
+            anim: None,
         })
     }
 
@@ -174,6 +219,58 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
         }
     }
 
+    // #define ANIM_FLAG_NOLOOP     (1 << 0) // 0x01
+    // #define ANIM_FLAG_FORWARD    (1 << 1) // 0x02
+    // #define ANIM_FLAG_2          (1 << 2) // 0x04
+    // #define ANIM_FLAG_HOR_TRANS  (1 << 3) // 0x08
+    // #define ANIM_FLAG_VERT_TRANS (1 << 4) // 0x10
+    // #define ANIM_FLAG_5          (1 << 5) // 0x20
+    // #define ANIM_FLAG_6          (1 << 6) // 0x40
+    // #define ANIM_FLAG_7          (1 << 7) // 0x80
+
+    fn set_animation_globals(&mut self, node: &AnimInfo) -> Result<(), Error> {
+        let animation_struct = self.layout.data_type(&TypeName {
+            namespace: Namespace::Struct,
+            name: "Animation".to_string(),
+        })?;
+        let resolve_type = |type_name: &TypeName| self.layout.data_type(type_name).ok().cloned();
+        let anim = self
+            .memory
+            .read_value(node.cur_anim, animation_struct, resolve_type)?;
+
+        let flags = anim.try_field("flags")?.try_as_int()? as i16;
+
+        let ty;
+        if flags & (1 << 3) != 0 {
+            ty = AnimType::VerticalTranslation;
+        } else if flags & (1 << 4) != 0 {
+            ty = AnimType::LateralTranslation;
+        } else if flags & (1 << 6) != 0 {
+            ty = AnimType::NoTranslation;
+        } else {
+            ty = AnimType::Translation;
+        }
+
+        let y_trans = node.anim_y_trans;
+        let y_trans_divisor = anim.try_field("animYTransDivisor")?.try_as_int()? as i16;
+        let translation_multiplier = if y_trans_divisor == 0 {
+            1.0
+        } else {
+            y_trans as f32 / y_trans_divisor as f32
+        };
+
+        self.anim = Some(AnimState {
+            ty,
+            enabled: flags & (1 << 5) != 0,
+            frame: node.anim_frame,
+            translation_multiplier,
+            attribute: anim.try_field("index")?.try_as_address()?, // TODO: Seg to virt
+            data: anim.try_field("values")?.try_as_address()?,     // TODO: Seg to virt
+        });
+
+        Ok(())
+    }
+
     fn process_node_and_siblings(&mut self, first_addr: Address) -> Result<(), Error> {
         self.process_node(first_addr, true)
     }
@@ -185,7 +282,6 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
         let first_node = self.reader.read(first_addr)?;
 
         let mut iterate_siblings = siblings;
-        let mut cur_addr = first_addr;
         let mut cur_node = first_node;
 
         if !cur_node.node().parent.is_null() {
@@ -201,7 +297,6 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
                 if flags.contains(GraphRenderFlags::CHILDREN_FIRST) {
                     self.process_node_and_siblings(cur_node.node().children)?;
                 } else {
-                    eprintln!("{:?}: {:?}", cur_addr, cur_node);
                     match &cur_node {
                         GfxTreeNode::Root(_) => todo!(),
                         GfxTreeNode::OrthoProjection(_) => todo!(),
@@ -236,7 +331,6 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
             if next_addr == first_addr {
                 break;
             }
-            cur_addr = next_addr;
             cur_node = self.reader.read(next_addr)?;
         }
 
@@ -247,15 +341,12 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
         // TODO
 
         let selected_child = node.fn_node.node.children;
-        self.process_node_and_siblings(selected_child);
+        self.process_node_and_siblings(selected_child)?;
         Ok(())
     }
 
     fn process_object(&mut self, node: &GraphNodeObject) -> Result<(), Error> {
-        let has_animation = node.node.flags.contains(GraphRenderFlags::HAS_ANIMATION);
-
         // TODO: if (node->header.gfx.areaIndex == gCurGraphNodeRoot->areaIndex) {
-
         {
             if !node.throw_matrix.is_null() {
                 todo!()
@@ -268,7 +359,7 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
             // TODO: Calculate throwMatrix and cameraToObject
 
             if !node.anim_info.cur_anim.is_null() {
-                // TODO: Set animation globals
+                self.set_animation_globals(&node.anim_info)?;
             }
             // TODO: if (obj_is_in_view(&node->header.gfx, gMatStack[gMatStackIndex])) {
             {
@@ -282,7 +373,7 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
             }
 
             // TODO: Pop matrix
-            // TODO: Reset gCurrAnimType
+            self.anim = None;
             // TODO: Reset object throw matrix
         }
 
@@ -290,11 +381,43 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
     }
 
     fn process_animated_part(&mut self, node: &GraphNodeAnimatedPart) -> Result<(), Error> {
-        let rotation = [0.0, 0.0, 0.0];
-        let translation = node.translation.map(|x| x as f32);
+        let mut rotation = [0.0, 0.0, 0.0];
+        let mut translation = node.translation.map(|x| x as f32);
 
-        // TODO: Calculate rotation and translation
+        if let Some(anim) = &mut self.anim {
+            match anim.ty {
+                AnimType::Translation => {
+                    translation[0] += anim.next(self.memory)? as f32 * anim.translation_multiplier;
+                    translation[1] += anim.next(self.memory)? as f32 * anim.translation_multiplier;
+                    translation[2] += anim.next(self.memory)? as f32 * anim.translation_multiplier;
+                    anim.ty = AnimType::Rotation;
+                }
+                AnimType::LateralTranslation => {
+                    translation[0] += anim.next(self.memory)? as f32 * anim.translation_multiplier;
+                    anim.attribute += 4;
+                    translation[2] += anim.next(self.memory)? as f32 * anim.translation_multiplier;
+                    anim.ty = AnimType::Rotation;
+                }
+                AnimType::VerticalTranslation => {
+                    anim.attribute += 4;
+                    translation[1] += anim.next(self.memory)? as f32 * anim.translation_multiplier;
+                    anim.attribute += 4;
+                    anim.ty = AnimType::Rotation;
+                }
+                AnimType::NoTranslation => {
+                    anim.attribute += 12;
+                    anim.ty = AnimType::Rotation;
+                }
+                _ => {}
+            }
+            if anim.ty == AnimType::Rotation {
+                rotation[0] = anim.next(self.memory)? as f32 / 0x8000 as f32 * PI;
+                rotation[1] = anim.next(self.memory)? as f32 / 0x8000 as f32 * PI;
+                rotation[2] = anim.next(self.memory)? as f32 / 0x8000 as f32 * PI;
+            }
+        }
 
+        eprintln!("{:?} {:?}", translation, rotation);
         let transform = Matrixf::rotate_xyz_and_translate(translation, rotation);
 
         self.mtx_stack.push_mul(transform);
@@ -314,6 +437,21 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
 
     fn process_shadow(&mut self, node: &GraphNodeShadow) -> Result<(), Error> {
         // TODO
+
+        if let Some(anim) = &mut self.anim {
+            if anim.enabled
+                && matches!(
+                    anim.ty,
+                    AnimType::Translation | AnimType::LateralTranslation
+                )
+            {
+                // TODO
+                anim.next(self.memory)?;
+                anim.attribute += 4;
+                anim.next(self.memory)?;
+                anim.attribute -= 12;
+            }
+        }
 
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
