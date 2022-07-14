@@ -77,7 +77,7 @@ pub fn test(frame0: u32) -> Result<(), Box<dyn Error>> {
 }
 
 async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn Error>> {
-    let mut game = unsafe { Game::new("libsm64/sm64_us.dll") };
+    let mut game = unsafe { Game::new("libsm64/sm64_us") };
     // let (_, inputs) = load_m64("../sm64-bot/bad_bot.m64");
     let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
     // let (_, inputs) = load_m64("test_files/lod-test.m64");
@@ -103,9 +103,19 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
     }
 
     let event_loop = EventLoop::new();
+    let max_screen_dim = event_loop
+        .available_monitors()
+        .flat_map(|m| [m.size().width, m.size().height])
+        .max()
+        .unwrap_or_default();
+
     let window = WindowBuilder::new()
         .with_title("Wafel Viz")
         .with_visible(false)
+        .with_max_inner_size(winit::dpi::PhysicalSize::new(
+            max_screen_dim,
+            max_screen_dim,
+        ))
         .build(&event_loop)
         .expect("failed to create window");
     let init_window_size = window.inner_size();
@@ -126,9 +136,11 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
         .request_device(
             &wgpu::DeviceDescriptor {
                 label: None,
-                // features: wgpu::Features::empty(),
-                features: wgpu::Features::POLYGON_MODE_LINE,
-                limits: wgpu::Limits::downlevel_defaults(),
+                features: wgpu::Features::empty(),
+                limits: wgpu::Limits {
+                    max_texture_dimension_2d: max_screen_dim,
+                    ..wgpu::Limits::downlevel_defaults()
+                },
             },
             None,
         )
@@ -245,9 +257,9 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
 
                             let num_frames = if held.contains(&VirtualKeyCode::Right) {
                                 1
-                            } else if held.contains(&VirtualKeyCode::PageDown) {
+                            } else if held.contains(&VirtualKeyCode::Down) {
                                 10
-                            } else if held.contains(&VirtualKeyCode::PageUp) {
+                            } else if held.contains(&VirtualKeyCode::Up) {
                                 100
                             } else {
                                 0
