@@ -48,7 +48,7 @@ pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderD
 }
 
 pub fn test_dl() -> Result<(), Box<dyn Error>> {
-    let mut game = unsafe { Game::new("libsm64/sm64_us.dll") };
+    let mut game = unsafe { Game::new("libsm64/sm64_us") };
     let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
 
     while game.frame() < 2227 {
