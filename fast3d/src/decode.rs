@@ -422,12 +422,16 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
 pub fn decode_f3d_display_list<Ptr, E, I: Iterator<Item = Result<RawF3DCommand<Ptr>, E>>>(
     raw_dl: I,
 ) -> F3DCommandIter<I> {
-    F3DCommandIter { raw_dl }
+    F3DCommandIter {
+        raw_dl,
+        ended: false,
+    }
 }
 
 #[derive(Debug)]
 pub struct F3DCommandIter<I> {
     raw_dl: I,
+    ended: bool,
 }
 
 impl<Ptr, E, I> F3DCommandIter<I>
@@ -463,7 +467,20 @@ where
     type Item = Result<F3DCommand<Ptr>, E>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let raw_command = self.raw_dl.next()?;
-        Some(self.next_impl(raw_command))
+        if self.ended {
+            return None;
+        }
+
+        let raw_cmd = self.raw_dl.next()?;
+        let cmd = self.next_impl(raw_cmd);
+
+        if matches!(
+            cmd,
+            Ok(F3DCommand::SPEndDisplayList | F3DCommand::SPBranchList(..))
+        ) {
+            self.ended = true;
+        }
+
+        Some(cmd)
     }
 }

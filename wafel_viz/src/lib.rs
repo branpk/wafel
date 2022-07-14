@@ -43,30 +43,40 @@ pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderD
             .map_err(Into::into)
     };
 
-    render_sm64_with_config(&memory, get_path, config).expect("failed to process display list")
+    // render_sm64_with_config(&memory, get_path, config).expect("failed to process display list")
+    sm64_gfx_render::test_render(&memory, &game.layout, get_path, config)
+        .expect("failed to process display list")
 }
 
 pub fn test_dl() -> Result<(), Box<dyn Error>> {
-    let mut game = unsafe { Game::new("libsm64/sm64_us") };
-    let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
+    //     let mut game = unsafe { Game::new("libsm64/sm64_us") };
+    //     let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
+    //
+    //     while game.frame() < 2227 {
+    //         game.set_input(inputs[game.frame() as usize]);
+    //         game.advance();
+    //     }
+    //
+    //     if let Value::Address(root_addr) = game.read("gCurrentArea?.unk04") {
+    //         let memory = game.memory.with_slot(&game.base_slot);
+    //         let get_path = |source: &str| {
+    //             GlobalDataPath::compile(&game.layout, &game.memory, source)
+    //                 .map(Arc::new)
+    //                 .map_err(Into::into)
+    //         };
+    //         let render_data = sm64_gfx_render::test_render(&memory, &game.layout, get_path)?;
+    //
+    //         env_logger::init();
+    //         futures::executor::block_on(run(2227, None)).unwrap();
+    //     }
+    //
+    //     // for cmd in &render_data.commands {
+    //     //     let pipeline = &render_data.pipelines[&cmd.pipeline];
+    //     //     eprintln!("{:?}", pipeline);
+    //     // }
 
-    while game.frame() < 2227 {
-        game.set_input(inputs[game.frame() as usize]);
-        game.advance();
-    }
-
-    if let Value::Address(root_addr) = game.read("gCurrentArea?.unk04") {
-        let memory = game.memory.with_slot(&game.base_slot);
-        let render_data = sm64_gfx_render::test_render(&memory, &game.layout, root_addr)?;
-
-        env_logger::init();
-        futures::executor::block_on(run(0, Some(render_data))).unwrap();
-    }
-
-    // for cmd in &render_data.commands {
-    //     let pipeline = &render_data.pipelines[&cmd.pipeline];
-    //     eprintln!("{:?}", pipeline);
-    // }
+    env_logger::init();
+    futures::executor::block_on(run(2227, None)).unwrap();
 
     Ok(())
 }

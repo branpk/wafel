@@ -48,6 +48,41 @@ pub fn render_sm64_with_config(
     mut get_path: impl FnMut(&str) -> Result<Arc<GlobalDataPath>, Error>,
     config: &SM64RenderConfig,
 ) -> Result<F3DRenderData, Error> {
+    if let Some(dl_addr) = get_dl_addr(memory, &mut get_path)? {
+        let view_transform = match config.camera {
+            Camera::InGame => None,
+            Camera::LookAt { pos, focus, roll } => {
+                let lakitu_pos = get_path("gLakituState.pos")?.read(memory)?.try_as_f32_3()?;
+                let lakitu_focus = get_path("gLakituState.focus")?
+                    .read(memory)?
+                    .try_as_f32_3()?;
+                let lakitu_roll = get_path("gLakituState.roll")?.read(memory)?.try_as_int()?;
+                let lakitu_roll = lakitu_roll as f32 * PI / 0x8000 as f32;
+
+                if pos != focus && lakitu_pos != lakitu_focus {
+                    let lakitu_view_mtx = Matrixf::look_at(lakitu_pos, lakitu_focus, lakitu_roll);
+                    let new_view_mtx = Matrixf::look_at(pos, focus, roll);
+                    Some(&new_view_mtx * &lakitu_view_mtx.invert_isometry())
+                } else {
+                    None
+                }
+            }
+        };
+
+        let mut f3d_memory = F3DMemoryImpl::new(memory, dl_addr.into());
+        f3d_memory.view_transform = view_transform;
+        let render_data = interpret_f3d_display_list(&f3d_memory, config.screen_size, true)?;
+
+        Ok(render_data)
+    } else {
+        Ok(F3DRenderData::default())
+    }
+}
+
+pub fn get_dl_addr(
+    memory: &impl MemoryRead,
+    mut get_path: impl FnMut(&str) -> Result<Arc<GlobalDataPath>, Error>,
+) -> Result<Option<Address>, Error> {
     let pool_array_type = get_path("gGfxPools")?.concrete_type();
     let pool_length = if let DataType::Array {
         length: Some(length),
@@ -58,43 +93,16 @@ pub fn render_sm64_with_config(
     } else {
         2
     };
-
     let global_timer = get_path("gGlobalTimer")?.read(memory)?.as_int();
     if global_timer == 1 {
         // libsm64 doesn't render in init
-        return Ok(F3DRenderData::default());
+        return Ok(None);
     }
-
     let dl_buffer_index = (global_timer as usize + 1) % pool_length;
     let dl_addr = get_path(&format!("gGfxPools[{}].buffer", dl_buffer_index))?
         .address(memory)?
         .unwrap();
-
-    let view_transform = match config.camera {
-        Camera::InGame => None,
-        Camera::LookAt { pos, focus, roll } => {
-            let lakitu_pos = get_path("gLakituState.pos")?.read(memory)?.try_as_f32_3()?;
-            let lakitu_focus = get_path("gLakituState.focus")?
-                .read(memory)?
-                .try_as_f32_3()?;
-            let lakitu_roll = get_path("gLakituState.roll")?.read(memory)?.try_as_int()?;
-            let lakitu_roll = lakitu_roll as f32 * PI / 0x8000 as f32;
-
-            if pos != focus && lakitu_pos != lakitu_focus {
-                let lakitu_view_mtx = Matrixf::look_at(lakitu_pos, lakitu_focus, lakitu_roll);
-                let new_view_mtx = Matrixf::look_at(pos, focus, roll);
-                Some(&new_view_mtx * &lakitu_view_mtx.invert_isometry())
-            } else {
-                None
-            }
-        }
-    };
-
-    let mut f3d_memory = F3DMemoryImpl::new(memory, dl_addr.into());
-    f3d_memory.view_transform = view_transform;
-    let render_data = interpret_f3d_display_list(&f3d_memory, config.screen_size, true)?;
-
-    Ok(render_data)
+    Ok(Some(dl_addr))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -347,8 +355,8 @@ impl<'m, M: MemoryRead> Iterator for DlIter<'m, M> {
 
 #[derive(Debug)]
 pub struct RawDlIter<'m, M> {
-    memory: &'m M,
-    addr: Address,
+    pub memory: &'m M,
+    pub addr: Address,
 }
 
 impl<'m, M: MemoryRead> RawDlIter<'m, M> {

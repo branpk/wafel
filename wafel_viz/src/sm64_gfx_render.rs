@@ -1,66 +1,89 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, iter::Peekable, sync::Arc};
 
 use bytemuck::cast_slice;
 use fast3d::{
     cmd::*,
+    decode::decode_f3d_display_list,
     interpret::{interpret_f3d_display_list, F3DRenderData},
     util::{MatrixState, Matrixf},
 };
-use wafel_api::{Address, Error, IntType};
+use wafel_api::{Address, Error, IntType, Value};
+use wafel_data_path::GlobalDataPath;
 use wafel_data_type::{Namespace, TypeName};
 use wafel_layout::DataLayout;
 use wafel_memory::MemoryRead;
 
 use crate::{
     sm64_gfx_tree::*,
-    sm64_render_mod::{F3DMemoryImpl, Pointer},
+    sm64_render_mod::{get_dl_addr, F3DMemoryImpl, Pointer, RawDlIter},
+    SM64RenderConfig,
 };
 
 pub fn test_render(
     memory: &impl MemoryRead,
     layout: &DataLayout,
-    root_addr: Address,
+    mut get_path: impl FnMut(&str) -> Result<Arc<GlobalDataPath>, Error>,
+    config: &SM64RenderConfig,
 ) -> Result<F3DRenderData, Error> {
-    let mut renderer = NodeRenderer::new(memory, layout)?;
+    let dl_addr = get_dl_addr(memory, &mut get_path)?;
+    let dl_addr = match dl_addr {
+        Some(addr) => addr,
+        None => return Ok(F3DRenderData::default()),
+    };
 
-    renderer.u32_buffer.extend(cast_slice(
-        &Matrixf::perspective(45.0 * PI / 180.0, 320.0 / 240.0, 100.0, 12800.0).to_fixed(),
-    ));
-    renderer.display_list.push(F3DCommand::SPMatrix {
-        matrix: Pointer::BufferOffset(0),
-        mode: MatrixMode::Proj,
-        op: MatrixOp::Load,
-        push: false,
-    });
-    renderer
-        .display_list
-        .push(F3DCommand::SPSetGeometryMode(GeometryModes::LIGHTING));
-    renderer
-        .display_list
-        .push(F3DCommand::DPSetCombineMode(CombineMode::one_cycle(
-            ColorCombineComponent::Shade.into(),
-            ColorCombineComponent::Shade.into(),
-        )));
+    let raw_input_dl = RawDlIter {
+        memory,
+        addr: dl_addr,
+    }
+    .map(|cmd| cmd.map_err(Error::from));
+    let input_dl = decode_f3d_display_list(raw_input_dl);
 
-    renderer.process_node(root_addr, false)?;
+    let mut renderer = NodeRenderer::new(input_dl, memory, layout)?;
+
+    // renderer.u32_buffer.extend(cast_slice(
+    //     &Matrixf::perspective(45.0 * PI / 180.0, 320.0 / 240.0, 100.0, 12800.0).to_fixed(),
+    // ));
+    // renderer.display_list.push(F3DCommand::SPMatrix {
+    //     matrix: Pointer::BufferOffset(0),
+    //     mode: MatrixMode::Proj,
+    //     op: MatrixOp::Load,
+    //     push: false,
+    // });
+    // renderer
+    //     .display_list
+    //     .push(F3DCommand::SPSetGeometryMode(GeometryModes::LIGHTING));
+    // renderer
+    //     .display_list
+    //     .push(F3DCommand::DPSetCombineMode(CombineMode::one_cycle(
+    //         ColorCombineComponent::Shade.into(),
+    //         ColorCombineComponent::Shade.into(),
+    //     )));
+
+    if let Value::Address(root_addr) = get_path("gCurrentArea?.unk04")?.read(memory)? {
+        renderer.process_node(root_addr, false)?;
+    }
     renderer.submit_master_lists(true);
 
     let mut f3d_memory = F3DMemoryImpl::new(memory, Pointer::BufferOffset(0));
-    f3d_memory.set_view_transform(Some(Matrixf::look_at(
-        [0.0, 0.0, 1000.0],
-        [0.0, 0.0, 0.0],
-        0.0,
-    )));
+    // f3d_memory.set_view_transform(Some(Matrixf::look_at(
+    //     [0.0, 0.0, 1000.0],
+    //     [0.0, 0.0, 0.0],
+    //     0.0,
+    // )));
     f3d_memory.set_dl_buffer(vec![renderer.display_list]);
     f3d_memory.set_u32_buffer(renderer.u32_buffer);
 
-    let render_data = interpret_f3d_display_list(&f3d_memory, (320, 240), true)?;
+    let render_data = interpret_f3d_display_list(&f3d_memory, config.screen_size, true)?;
 
     Ok(render_data)
 }
 
 #[derive(Debug)]
-struct NodeRenderer<'m, M> {
+struct NodeRenderer<'m, M, I>
+where
+    I: Iterator<Item = Result<F3DCommand<Pointer>, Error>>,
+{
+    input_display_list: Peekable<I>,
     memory: &'m M,
     layout: &'m DataLayout,
     reader: GfxNodeReader<'m>,
@@ -119,10 +142,15 @@ enum AnimType {
     Rotation,
 }
 
-impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
-    fn new(memory: &'m M, layout: &'m DataLayout) -> Result<Self, Error> {
+impl<'m, M, I> NodeRenderer<'m, M, I>
+where
+    M: MemoryRead,
+    I: Iterator<Item = Result<F3DCommand<Pointer>, Error>>,
+{
+    fn new(input_display_list: I, memory: &'m M, layout: &'m DataLayout) -> Result<Self, Error> {
         let reader = get_gfx_node_reader(memory, layout)?;
         Ok(Self {
+            input_display_list: input_display_list.peekable(),
             memory,
             layout,
             reader,
@@ -199,15 +227,6 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
                 .push(F3DCommand::SPClearGeometryMode(GeometryModes::ZBUFFER));
         }
     }
-
-    // #define ANIM_FLAG_NOLOOP     (1 << 0) // 0x01
-    // #define ANIM_FLAG_FORWARD    (1 << 1) // 0x02
-    // #define ANIM_FLAG_2          (1 << 2) // 0x04
-    // #define ANIM_FLAG_HOR_TRANS  (1 << 3) // 0x08
-    // #define ANIM_FLAG_VERT_TRANS (1 << 4) // 0x10
-    // #define ANIM_FLAG_5          (1 << 5) // 0x20
-    // #define ANIM_FLAG_6          (1 << 6) // 0x40
-    // #define ANIM_FLAG_7          (1 << 7) // 0x80
 
     fn set_animation_globals(&mut self, node: &AnimInfo) -> Result<(), Error> {
         let animation_struct = self.layout.data_type(&TypeName {
@@ -323,6 +342,11 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
     }
 
     fn process_root(&mut self, node: &GraphNodeRoot) -> Result<(), Error> {
+        for cmd in &mut self.input_display_list {
+            self.display_list.push(cmd?);
+        }
+        return Ok(());
+
         todo!()
     }
 
