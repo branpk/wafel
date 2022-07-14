@@ -8,7 +8,7 @@ use std::{mem, ops};
 use bytemuck::cast_slice_mut;
 
 use crate::{
-    decode::{F3DWrapMode, MatrixOp},
+    cmd::{F3DWrapMode, MatrixOp},
     f3d_render_data::{TextureData, WrapMode},
     interpret::F3DMemory,
 };

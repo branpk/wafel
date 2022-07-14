@@ -2,10 +2,8 @@ use std::{f32::consts::PI, sync::Arc, vec};
 
 use bytemuck::cast_slice;
 use fast3d::{
-    decode::{
-        decode_f3d_display_list, F3DCommand, F3DCommandIter, GeometryModes, MatrixMode, MatrixOp,
-        RawF3DCommand, SPCommand,
-    },
+    cmd::{F3DCommand, GeometryModes, MatrixMode, MatrixOp},
+    decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand},
     interpret::{interpret_f3d_display_list, F3DMemory, F3DRenderData},
     util::Matrixf,
 };
@@ -291,28 +289,26 @@ impl<I> DlTransformer<I> {
 
     fn transform(&mut self, mut cmd: F3DCommand<Pointer>) -> F3DCommand<Pointer> {
         if self.is_root {
-            if let F3DCommand::Rsp(cmd) = &mut cmd {
-                match cmd {
-                    SPCommand::Matrix {
-                        matrix, mode, op, ..
-                    } => {
-                        // TODO: Check z buffer
-                        if *mode == MatrixMode::ModelView && *op == MatrixOp::Load {
-                            *matrix = Pointer::ViewMatrix(matrix.simple());
-                        }
+            match &mut cmd {
+                F3DCommand::SPMatrix {
+                    matrix, mode, op, ..
+                } => {
+                    // TODO: Check z buffer
+                    if *mode == MatrixMode::ModelView && *op == MatrixOp::Load {
+                        *matrix = Pointer::ViewMatrix(matrix.simple());
                     }
-                    SPCommand::SetGeometryMode(mode) => {
-                        if mode.contains(GeometryModes::ZBUFFER) {
-                            self.z_buffer = true;
-                        }
-                    }
-                    SPCommand::ClearGeometryMode(mode) => {
-                        if mode.contains(GeometryModes::ZBUFFER) {
-                            self.z_buffer = false;
-                        }
-                    }
-                    _ => {}
                 }
+                F3DCommand::SPSetGeometryMode(mode) => {
+                    if mode.contains(GeometryModes::ZBUFFER) {
+                        self.z_buffer = true;
+                    }
+                }
+                F3DCommand::SPClearGeometryMode(mode) => {
+                    if mode.contains(GeometryModes::ZBUFFER) {
+                        self.z_buffer = false;
+                    }
+                }
+                _ => {}
             }
         }
         cmd

@@ -14,7 +14,7 @@ use std::{collections::HashMap, mem};
 use derivative::Derivative;
 
 pub use crate::f3d_render_data::*;
-use crate::{decode::*, util::*};
+use crate::{cmd::*, util::*};
 
 /// A trait with methods for reading from game memory.
 ///
@@ -766,196 +766,192 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
     }
 
     fn interpret(&mut self, dl: M::DlIter) -> Result<(), M::Error> {
+        use F3DCommand::*;
+
         for cmd in dl {
             let cmd = cmd?;
             // if !matches!(cmd, F3DCommand::Unknown { .. }) {
             // println!("{:?}", cmd);
             // }
             match cmd {
-                F3DCommand::NoOp => {}
-                F3DCommand::Rsp(cmd) => match cmd {
-                    SPCommand::Matrix {
-                        matrix,
-                        mode,
-                        op,
-                        push,
-                    } => {
-                        self.flush()?;
-                        let fixed = read_matrix(self.memory(), matrix, 0)?;
-                        let m = Matrixf::from_fixed(&fixed);
-                        match mode {
-                            MatrixMode::Proj => self.proj.execute(m, op, push),
-                            MatrixMode::ModelView => self.model_view.execute(m, op, push),
-                        }
-                    }
-                    SPCommand::Viewport(ptr) => {
-                        let viewport = read_viewport(self.memory(), ptr, 0)?;
-                        if self.viewport != Some(viewport) {
-                            self.flush()?;
-                            self.viewport = Some(viewport);
-                        }
-                    }
-                    SPCommand::Light { light, n } => {
-                        self.flush()?;
-                        let index = (n - 1) as usize;
-                        self.lights[index] = read_light(self.memory(), light)?;
-                    }
-                    SPCommand::Vertex { v, n, v0 } => {
-                        let offset = v0 as usize * mem::size_of::<Vertex>();
-                        self.vertices = read_vertices(self.memory(), v, offset, n as usize)?;
-                    }
-                    SPCommand::DisplayList(ptr) => {
-                        let child_dl = self.memory().read_dl(ptr)?;
-                        self.interpret(child_dl)?;
-                    }
-                    SPCommand::BranchList(ptr) => {
-                        let child_dl = self.memory().read_dl(ptr)?;
-                        self.interpret(child_dl)?;
-                        break;
-                    }
-                    SPCommand::OneTriangle { v0, v1, v2, .. } => {
-                        self.draw_triangle(v0, v1, v2);
-                    }
-                    SPCommand::PopMatrix(mode) => {
-                        self.flush()?;
-                        match mode {
-                            MatrixMode::Proj => self.proj.pop(),
-                            MatrixMode::ModelView => self.model_view.pop(),
-                        }
-                    }
-                    SPCommand::NumLights(n) => {
-                        self.flush()?;
-                        self.num_dir_lights = n;
-                    }
-                    // SPCommand::Segment { seg, base } => todo!(),
-                    SPCommand::FogFactor { mul, offset } => {
-                        self.flush()?;
-                        self.fog_mul = mul;
-                        self.fog_offset = offset;
-                    }
-                    SPCommand::Texture { sc, tc, tile, .. } => {
-                        self.flush()?;
-                        self.texture_scale[tile as usize] =
-                            [sc as f32 / 0x10000 as f32, tc as f32 / 0x10000 as f32];
-                    }
-                    SPCommand::EndDisplayList => break,
-                    SPCommand::SetGeometryMode(mode) => {
-                        self.flush()?;
-                        self.geometry_mode |= mode;
-                    }
-                    SPCommand::ClearGeometryMode(mode) => {
-                        self.flush()?;
-                        self.geometry_mode &= !mode;
-                    }
-                    // _ => unimplemented!("{:?}", cmd),
-                    _ => {}
-                },
-                F3DCommand::Rdp(cmd) => match cmd {
-                    DPCommand::SetTextureFilter(v) => {
-                        if self.texture_filter != v {
-                            self.flush()?;
-                            self.texture_filter = v;
-                        }
-                    }
-                    DPCommand::SetCycleType(v) => {
-                        if self.cycle_type != v {
-                            self.flush()?;
-                            self.cycle_type = v;
-                        }
-                    }
-                    DPCommand::SetAlphaCompare(v) => {
-                        if self.alpha_compare != v {
-                            self.flush()?;
-                            self.alpha_compare = v;
-                        }
-                    }
-                    DPCommand::SetRenderMode(v) => {
-                        if self.render_mode != v {
-                            self.flush()?;
-                            self.render_mode = v;
-                        }
-                    }
-                    DPCommand::SetColorImage(image) => {
-                        self.flush()?;
-                        self.color_image = Some(image);
-                    }
-                    DPCommand::SetDepthImage(image) => {
-                        self.flush()?;
-                        self.depth_image = Some(image);
-                    }
-                    DPCommand::SetTextureImage(image) => {
-                        self.texture_image = Some(image);
-                    }
-                    DPCommand::SetCombineMode(mode) => {
-                        if self.combine_mode != mode {
-                            self.flush()?;
-                            self.combine_mode = mode;
-                        }
-                    }
-                    DPCommand::SetEnvColor(color) => {
-                        self.env_color = color;
-                    }
-                    DPCommand::SetPrimColor(color) => {
-                        self.prim_color = color;
-                    }
-                    DPCommand::SetFogColor(color) => {
-                        self.fog_color = color;
-                    }
-                    DPCommand::SetFillColor(fill_color) => {
-                        assert_eq!(
-                            fill_color[0], fill_color[1],
-                            "multiple fill colors not implemented"
-                        );
-                        self.fill_color = fill_color[0];
-                    }
-                    DPCommand::FillRectangle(rect) => {
-                        self.fill_rectangle(rect)?;
-                    }
-                    DPCommand::SetTile(tile, params) => {
-                        self.flush()?;
-                        self.tile_params[tile.0 as usize] = params;
-                    }
-                    DPCommand::LoadBlock(tile, block) => {
-                        self.flush()?;
-
-                        let tile_params = &self.tile_params[tile.0 as usize];
-                        let image = self.texture_image.expect("missing call to SetTextureImage");
-
-                        self.texture_memory.insert(
-                            tile_params.tmem,
-                            TextureMemory {
-                                image,
-                                block,
-                                loaded: HashMap::new(),
-                            },
-                        );
-                    }
-                    DPCommand::SetTileSize(tile, size) => {
-                        self.flush()?;
-                        self.tile_size[tile.0 as usize] = size;
-                    }
-                    DPCommand::SetScissor(mode, rect) => {
-                        if self.scissor != Some((mode, rect)) {
-                            self.flush()?;
-                            self.scissor = Some((mode, rect));
-                        }
-                    }
-                    DPCommand::FullSync => {}
-                    DPCommand::TileSync => {}
-                    DPCommand::PipeSync => {}
-                    DPCommand::LoadSync => {}
-                    DPCommand::TextureRectangleFlip(tex_rect) => {
-                        self.texture_rectangle(tex_rect, true)?;
-                    }
-                    DPCommand::TextureRectangle(tex_rect) => {
-                        self.texture_rectangle(tex_rect, false)?;
-                    }
-                    // _ => unimplemented!("{:?}", cmd),
-                    _ => {}
-                },
-                F3DCommand::Unknown(_) => {
+                NoOp => {}
+                Unknown(_) => {
                     // unimplemented!("{:?}", cmd)
                 }
+                SPMatrix {
+                    matrix,
+                    mode,
+                    op,
+                    push,
+                } => {
+                    self.flush()?;
+                    let fixed = read_matrix(self.memory(), matrix, 0)?;
+                    let m = Matrixf::from_fixed(&fixed);
+                    match mode {
+                        MatrixMode::Proj => self.proj.execute(m, op, push),
+                        MatrixMode::ModelView => self.model_view.execute(m, op, push),
+                    }
+                }
+                SPViewport(ptr) => {
+                    let viewport = read_viewport(self.memory(), ptr, 0)?;
+                    if self.viewport != Some(viewport) {
+                        self.flush()?;
+                        self.viewport = Some(viewport);
+                    }
+                }
+                SPLight { light, n } => {
+                    self.flush()?;
+                    let index = (n - 1) as usize;
+                    self.lights[index] = read_light(self.memory(), light)?;
+                }
+                SPVertex { v, n, v0 } => {
+                    let offset = v0 as usize * mem::size_of::<Vertex>();
+                    self.vertices = read_vertices(self.memory(), v, offset, n as usize)?;
+                }
+                SPDisplayList(ptr) => {
+                    let child_dl = self.memory().read_dl(ptr)?;
+                    self.interpret(child_dl)?;
+                }
+                SPBranchList(ptr) => {
+                    let child_dl = self.memory().read_dl(ptr)?;
+                    self.interpret(child_dl)?;
+                    break;
+                }
+                SPOneTriangle { v0, v1, v2, .. } => {
+                    self.draw_triangle(v0, v1, v2);
+                }
+                SPPopMatrix(mode) => {
+                    self.flush()?;
+                    match mode {
+                        MatrixMode::Proj => self.proj.pop(),
+                        MatrixMode::ModelView => self.model_view.pop(),
+                    }
+                }
+                SPNumLights(n) => {
+                    self.flush()?;
+                    self.num_dir_lights = n;
+                }
+                // SPSegment { seg, base } => todo!(),
+                SPFogFactor { mul, offset } => {
+                    self.flush()?;
+                    self.fog_mul = mul;
+                    self.fog_offset = offset;
+                }
+                SPTexture { sc, tc, tile, .. } => {
+                    self.flush()?;
+                    self.texture_scale[tile as usize] =
+                        [sc as f32 / 0x10000 as f32, tc as f32 / 0x10000 as f32];
+                }
+                SPEndDisplayList => break,
+                SPSetGeometryMode(mode) => {
+                    self.flush()?;
+                    self.geometry_mode |= mode;
+                }
+                SPClearGeometryMode(mode) => {
+                    self.flush()?;
+                    self.geometry_mode &= !mode;
+                }
+                DPSetTextureFilter(v) => {
+                    if self.texture_filter != v {
+                        self.flush()?;
+                        self.texture_filter = v;
+                    }
+                }
+                DPSetCycleType(v) => {
+                    if self.cycle_type != v {
+                        self.flush()?;
+                        self.cycle_type = v;
+                    }
+                }
+                DPSetAlphaCompare(v) => {
+                    if self.alpha_compare != v {
+                        self.flush()?;
+                        self.alpha_compare = v;
+                    }
+                }
+                DPSetRenderMode(v) => {
+                    if self.render_mode != v {
+                        self.flush()?;
+                        self.render_mode = v;
+                    }
+                }
+                DPSetColorImage(image) => {
+                    self.flush()?;
+                    self.color_image = Some(image);
+                }
+                DPSetDepthImage(image) => {
+                    self.flush()?;
+                    self.depth_image = Some(image);
+                }
+                DPSetTextureImage(image) => {
+                    self.texture_image = Some(image);
+                }
+                DPSetCombineMode(mode) => {
+                    if self.combine_mode != mode {
+                        self.flush()?;
+                        self.combine_mode = mode;
+                    }
+                }
+                DPSetEnvColor(color) => {
+                    self.env_color = color;
+                }
+                DPSetPrimColor(color) => {
+                    self.prim_color = color;
+                }
+                DPSetFogColor(color) => {
+                    self.fog_color = color;
+                }
+                DPSetFillColor(fill_color) => {
+                    assert_eq!(
+                        fill_color[0], fill_color[1],
+                        "multiple fill colors not implemented"
+                    );
+                    self.fill_color = fill_color[0];
+                }
+                DPFillRectangle(rect) => {
+                    self.fill_rectangle(rect)?;
+                }
+                DPSetTile(tile, params) => {
+                    self.flush()?;
+                    self.tile_params[tile.0 as usize] = params;
+                }
+                DPLoadBlock(tile, block) => {
+                    self.flush()?;
+
+                    let tile_params = &self.tile_params[tile.0 as usize];
+                    let image = self.texture_image.expect("missing call to SetTextureImage");
+
+                    self.texture_memory.insert(
+                        tile_params.tmem,
+                        TextureMemory {
+                            image,
+                            block,
+                            loaded: HashMap::new(),
+                        },
+                    );
+                }
+                DPSetTileSize(tile, size) => {
+                    self.flush()?;
+                    self.tile_size[tile.0 as usize] = size;
+                }
+                DPSetScissor(mode, rect) => {
+                    if self.scissor != Some((mode, rect)) {
+                        self.flush()?;
+                        self.scissor = Some((mode, rect));
+                    }
+                }
+                DPFullSync => {}
+                DPTileSync => {}
+                DPPipeSync => {}
+                DPLoadSync => {}
+                DPTextureRectangleFlip(tex_rect) => {
+                    self.texture_rectangle(tex_rect, true)?;
+                }
+                DPTextureRectangle(tex_rect) => {
+                    self.texture_rectangle(tex_rect, false)?;
+                }
+                // _ => unimplemented!("{:?}", cmd),
+                _ => {}
             }
         }
         Ok(())

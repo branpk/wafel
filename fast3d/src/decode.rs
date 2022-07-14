@@ -16,8 +16,7 @@
 
 use std::fmt;
 
-use bitflags::bitflags;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
+use crate::cmd::*;
 
 /// A raw Fast3D command for decoding.
 ///
@@ -39,747 +38,6 @@ impl<Ptr> fmt::Debug for RawF3DCommand<Ptr> {
             self.w0, self.w1
         )
     }
-}
-
-/// A decoded Fast3D command.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum F3DCommand<Ptr> {
-    NoOp,
-    Rsp(SPCommand<Ptr>),
-    Rdp(DPCommand<Ptr>),
-    Unknown(RawF3DCommand<Ptr>),
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Unimplemented {
-    pub w0: u32,
-    pub w1: u32,
-}
-
-impl fmt::Debug for Unimplemented {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Unimplemented {{ w0: {:#010X}, w1: {:#010X} }}",
-            self.w0, self.w1
-        )
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum SPCommand<Ptr> {
-    Matrix {
-        matrix: Ptr,
-        mode: MatrixMode,
-        op: MatrixOp,
-        push: bool,
-    },
-    Viewport(Ptr),
-    Light {
-        light: Ptr,
-        n: u32,
-    },
-    Vertex {
-        v: Ptr,
-        n: u32,
-        v0: u32,
-    },
-    DisplayList(Ptr),
-    BranchList(Ptr),
-    OneTriangle {
-        v0: u32,
-        v1: u32,
-        v2: u32,
-        flag: u32,
-    },
-    PopMatrix(MatrixMode),
-    NumLights(u32),
-    Segment {
-        seg: u32,
-        base: Ptr,
-    },
-    FogFactor {
-        mul: i16,
-        offset: i16,
-    },
-    Texture {
-        sc: u32,
-        tc: u32,
-        level: u32,
-        tile: u32,
-        on: bool,
-    },
-    EndDisplayList,
-    SetGeometryMode(GeometryModes),
-    ClearGeometryMode(GeometryModes),
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum MatrixMode {
-    Proj = 1,
-    ModelView = 0,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum MatrixOp {
-    Load = 2,
-    Mul = 0,
-}
-
-bitflags! {
-    pub struct GeometryModes: u32 {
-        const ZBUFFER             = 0x00000001;
-        const TEXTURE_ENABLE      = 0x00000002;
-        const SHADE               = 0x00000004;
-        const SHADING_SMOOTH      = 0x00000200;
-        const CULL_FRONT          = 0x00001000;
-        const CULL_BACK           = 0x00002000;
-        const FOG                 = 0x00010000;
-        const LIGHTING            = 0x00020000;
-        const TEXTURE_GEN         = 0x00040000;
-        const TEXTURE_GEN_LINEAR  = 0x00080000;
-        const LOD                 = 0x00100000;
-        const CLIPPING            = 0x00800000;
-    }
-}
-
-impl Default for GeometryModes {
-    fn default() -> Self {
-        Self::empty()
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum DPCommand<Ptr> {
-    SetAlphaDither(AlphaDither),
-    SetColorDither(ColorDither),
-    SetCombineKey(bool),
-    SetTextureConvert(TextureConvert),
-    SetTextureFilter(TextureFilter),
-    SetTextureLUT(TextureLUT),
-    SetTextureLOD(bool),
-    SetTextureDetail(TextureDetail),
-    SetTexturePersp(bool),
-    SetCycleType(CycleType),
-    PipelineMode(PipelineMode),
-    SetAlphaCompare(AlphaCompare),
-    SetDepthSource(DepthSource),
-    SetRenderMode(RenderMode),
-    PerspNormalize(u16),
-    SetColorImage(Image<Ptr>),
-    SetDepthImage(Ptr),
-    SetTextureImage(Image<Ptr>),
-    SetCombineMode(CombineMode),
-    SetEnvColor(Rgba32),
-    SetPrimColor(Rgba32),
-    SetBlendColor(Rgba32),
-    SetFogColor(Rgba32),
-    SetFillColor([FillColor; 2]),
-    FillRectangle(Rectangle<u32>),
-    SetTile(TileIndex, TileParams),
-    LoadTile(TileIndex, TileSize),
-    LoadBlock(TileIndex, TextureBlock),
-    SetTileSize(TileIndex, TileSize),
-    LoadTLUTCmd(TileIndex, u32),
-    SetOtherMode(Unimplemented),
-    SetPrimDepth(PrimDepth),
-    SetScissor(ScissorMode, Rectangle<u16>),
-    SetConvert(Unimplemented),
-    SetKeyR(Unimplemented),
-    SetKeyGB(Unimplemented),
-    FullSync,
-    TileSync,
-    PipeSync,
-    LoadSync,
-    TextureRectangleFlip(TextureRectangle),
-    TextureRectangle(TextureRectangle),
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum AlphaDither {
-    Pattern = 0,
-    NotPattern = 1,
-    Noise = 2,
-    Disable = 3,
-}
-
-impl Default for AlphaDither {
-    fn default() -> Self {
-        Self::Disable
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum ColorDither {
-    MagicSq = 0,
-    Bayer = 1,
-    Noise = 2,
-    Disable = 3,
-}
-
-impl Default for ColorDither {
-    fn default() -> Self {
-        Self::Disable
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum TextureConvert {
-    Conv = 0,
-    FiltConv = 5,
-    Filt = 6,
-}
-
-impl Default for TextureConvert {
-    fn default() -> Self {
-        Self::Conv
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum TextureFilter {
-    Point = 0,
-    Average = 3,
-    Bilerp = 2,
-}
-
-impl Default for TextureFilter {
-    fn default() -> Self {
-        Self::Point
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum TextureLUT {
-    None = 0,
-    Rgba16 = 2,
-    Ia16 = 3,
-}
-
-impl Default for TextureLUT {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum TextureDetail {
-    Clamp = 0,
-    Sharpen = 1,
-    Detail = 2,
-}
-
-impl Default for TextureDetail {
-    fn default() -> Self {
-        Self::Clamp
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum CycleType {
-    OneCycle = 0,
-    TwoCycle = 1,
-    Copy = 2,
-    Fill = 3,
-}
-
-impl Default for CycleType {
-    fn default() -> Self {
-        Self::OneCycle
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum PipelineMode {
-    OnePrimitive = 1,
-    NPrimitive = 0,
-}
-
-impl Default for PipelineMode {
-    fn default() -> Self {
-        Self::OnePrimitive
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum AlphaCompare {
-    None = 0,
-    Threshold = 1,
-    Dither = 3,
-}
-
-impl Default for AlphaCompare {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum DepthSource {
-    Pixel = 0,
-    Prim = 1,
-}
-
-impl Default for DepthSource {
-    fn default() -> Self {
-        Self::Pixel
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct RenderMode {
-    pub flags: RenderModeFlags,
-    pub cvg_dst: CvgDst,
-    pub z_mode: ZMode,
-    pub blend_cycle1: BlendMode,
-    pub blend_cycle2: BlendMode,
-}
-
-macro_rules! defn_render_mode {
-    ($name:ident, $value:literal) => {
-        #[allow(non_snake_case)]
-        pub fn $name() -> Self {
-            let mut mode = Self::try_from($value).unwrap();
-            mode.blend_cycle2 = mode.blend_cycle1;
-            mode
-        }
-    };
-}
-
-impl RenderMode {
-    pub const NO_OP: Self = Self {
-        flags: RenderModeFlags::empty(),
-        cvg_dst: CvgDst::Clamp,
-        z_mode: ZMode::Opaque,
-        blend_cycle1: BlendMode {
-            color1: BlendColor::Input,
-            alpha1: BlendAlpha1::Input,
-            color2: BlendColor::Input,
-            alpha2: BlendAlpha2::OneMinusAlpha,
-        },
-        blend_cycle2: BlendMode {
-            color1: BlendColor::Input,
-            alpha1: BlendAlpha1::Input,
-            color2: BlendColor::Input,
-            alpha2: BlendAlpha2::OneMinusAlpha,
-        },
-    };
-
-    defn_render_mode!(RM_AA_ZB_OPA_SURF, 4464760);
-    defn_render_mode!(RM_RA_ZB_OPA_SURF, 4464696);
-    defn_render_mode!(RM_AA_ZB_XLU_SURF, 4213208);
-    defn_render_mode!(RM_AA_ZB_OPA_DECAL, 4468056);
-    defn_render_mode!(RM_RA_ZB_OPA_DECAL, 4467992);
-    defn_render_mode!(RM_AA_ZB_XLU_DECAL, 4214232);
-    defn_render_mode!(RM_AA_ZB_OPA_INTER, 4465784);
-    defn_render_mode!(RM_AA_ZB_XLU_INTER, 4212184);
-    defn_render_mode!(RM_AA_ZB_XLU_LINE, 4225112);
-    defn_render_mode!(RM_AA_ZB_DEC_LINE, 4226904);
-    defn_render_mode!(RM_AA_ZB_TEX_EDGE, 4468856);
-    defn_render_mode!(RM_AA_ZB_TEX_INTER, 4469880);
-    defn_render_mode!(RM_AA_ZB_SUB_SURF, 4465272);
-    defn_render_mode!(RM_AA_ZB_PCL_SURF, 4194427);
-    defn_render_mode!(RM_AA_ZB_OPA_TERR, 4202616);
-    defn_render_mode!(RM_AA_ZB_TEX_TERR, 4206712);
-    defn_render_mode!(RM_AA_ZB_SUB_TERR, 4203128);
-    defn_render_mode!(RM_AA_OPA_SURF, 4464712);
-    defn_render_mode!(RM_RA_OPA_SURF, 4464648);
-    defn_render_mode!(RM_AA_XLU_SURF, 4211144);
-    defn_render_mode!(RM_AA_XLU_LINE, 4223048);
-    defn_render_mode!(RM_AA_DEC_LINE, 4223560);
-    defn_render_mode!(RM_AA_TEX_EDGE, 4468808);
-    defn_render_mode!(RM_AA_SUB_SURF, 4465224);
-    defn_render_mode!(RM_AA_PCL_SURF, 4194379);
-    defn_render_mode!(RM_AA_OPA_TERR, 4202568);
-    defn_render_mode!(RM_AA_TEX_TERR, 4206664);
-    defn_render_mode!(RM_AA_SUB_TERR, 4203080);
-    defn_render_mode!(RM_ZB_OPA_SURF, 4465200);
-    defn_render_mode!(RM_ZB_XLU_SURF, 4213328);
-    defn_render_mode!(RM_ZB_OPA_DECAL, 4468240);
-    defn_render_mode!(RM_ZB_XLU_DECAL, 4214352);
-    defn_render_mode!(RM_ZB_CLD_SURF, 4213584);
-    defn_render_mode!(RM_ZB_OVL_SURF, 4214608);
-    defn_render_mode!(RM_ZB_PCL_SURF, 201851443);
-    defn_render_mode!(RM_OPA_SURF, 201867264);
-    defn_render_mode!(RM_XLU_SURF, 4211264);
-    defn_render_mode!(RM_TEX_EDGE, 201879560);
-    defn_render_mode!(RM_CLD_SURF, 4211520);
-    defn_render_mode!(RM_PCL_SURF, 201867779);
-    defn_render_mode!(RM_ADD, 71844672);
-    defn_render_mode!(RM_NOOP, 0);
-    defn_render_mode!(RM_VISCVG, 209993792);
-    defn_render_mode!(RM_OPA_CI, 201850880);
-    defn_render_mode!(RM_CUSTOM_AA_ZB_XLU_SURF, 4213240);
-}
-
-impl Default for RenderMode {
-    fn default() -> Self {
-        Self::NO_OP
-    }
-}
-
-impl TryFrom<u32> for RenderMode {
-    type Error = ();
-
-    fn try_from(w1: u32) -> Result<Self, Self::Error> {
-        Ok(Self {
-            flags: RenderModeFlags::from_bits_truncate(w1 as u16),
-            cvg_dst: (((w1 >> 8) & 0x3) as u8).try_into().map_err(|_| {})?,
-            z_mode: (((w1 >> 10) & 0x3) as u8).try_into().map_err(|_| {})?,
-            blend_cycle1: BlendMode {
-                color1: (((w1 >> 30) & 0x3) as u8).try_into().map_err(|_| {})?,
-                alpha1: (((w1 >> 26) & 0x3) as u8).try_into().map_err(|_| {})?,
-                color2: (((w1 >> 22) & 0x3) as u8).try_into().map_err(|_| {})?,
-                alpha2: (((w1 >> 18) & 0x3) as u8).try_into().map_err(|_| {})?,
-            },
-            blend_cycle2: BlendMode {
-                color1: (((w1 >> 28) & 0x3) as u8).try_into().map_err(|_| {})?,
-                alpha1: (((w1 >> 24) & 0x3) as u8).try_into().map_err(|_| {})?,
-                color2: (((w1 >> 20) & 0x3) as u8).try_into().map_err(|_| {})?,
-                alpha2: (((w1 >> 16) & 0x3) as u8).try_into().map_err(|_| {})?,
-            },
-        })
-    }
-}
-
-bitflags! {
-    pub struct RenderModeFlags: u16 {
-        const ANTI_ALIASING = 0x0008;
-        const Z_COMPARE     = 0x0010;
-        const Z_UPDATE      = 0x0020;
-        const IMAGE_READ    = 0x0040;
-        const CLEAR_ON_CVG  = 0x0080;
-        const CVG_X_ALPHA   = 0x1000;
-        const ALPHA_CVG_SEL = 0x2000;
-        const FORCE_BLEND   = 0x4000;
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum CvgDst {
-    Clamp = 0,
-    Wrap = 1,
-    Full = 2,
-    Save = 3,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum ZMode {
-    Opaque = 0,
-    Interpenetrating = 1,
-    Translucent = 2,
-    Decal = 3,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct BlendMode {
-    pub color1: BlendColor,
-    pub alpha1: BlendAlpha1,
-    pub color2: BlendColor,
-    pub alpha2: BlendAlpha2,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum BlendColor {
-    Input = 0,
-    Memory = 1,
-    Blend = 2,
-    Fog = 3,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum BlendAlpha1 {
-    Input = 0,
-    Fog = 1,
-    Shade = 2,
-    Zero = 3,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum BlendAlpha2 {
-    OneMinusAlpha = 0,
-    Memory = 1,
-    One = 2,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Image<Ptr> {
-    pub fmt: ImageFormat,
-    pub size: ComponentSize,
-    pub width: u32,
-    pub img: Ptr,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum ImageFormat {
-    Rgba = 0,
-    Yuv = 1,
-    Ci = 2,
-    Ia = 3,
-    I = 4,
-}
-
-impl Default for ImageFormat {
-    fn default() -> Self {
-        Self::Rgba
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-pub enum ComponentSize {
-    Bits4 = 0,
-    Bits8 = 1,
-    Bits16 = 2,
-    Bits32 = 3,
-    DD = 5,
-}
-
-impl Default for ComponentSize {
-    fn default() -> Self {
-        Self::Bits4
-    }
-}
-
-impl ComponentSize {
-    pub fn num_bits(self) -> u32 {
-        match self {
-            ComponentSize::Bits4 => 4,
-            ComponentSize::Bits8 => 8,
-            ComponentSize::Bits16 => 16,
-            ComponentSize::Bits32 => 32,
-            ComponentSize::DD => unimplemented!("DD"),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct CombineMode {
-    pub color1: ColorCombineMode,
-    pub alpha1: ColorCombineMode,
-    pub color2: ColorCombineMode,
-    pub alpha2: ColorCombineMode,
-}
-
-impl CombineMode {
-    pub fn one_cycle(color: ColorCombineMode, alpha: ColorCombineMode) -> Self {
-        Self {
-            color1: color,
-            alpha1: alpha,
-            color2: color,
-            alpha2: alpha,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct ColorCombineMode {
-    /// [A, B, C, D]  ->  (A - B) * C + D
-    pub args: [ColorCombineComponent; 4],
-}
-
-impl From<[u8; 4]> for ColorCombineMode {
-    fn from(v: [u8; 4]) -> Self {
-        Self {
-            args: [
-                ColorCombineComponent::from_u8(v[0]),
-                ColorCombineComponent::from_u8(v[1]),
-                ColorCombineComponent::from_u8(v[2]),
-                ColorCombineComponent::from_u8(v[3]),
-            ],
-        }
-    }
-}
-
-impl From<ColorCombineComponent> for ColorCombineMode {
-    fn from(v: ColorCombineComponent) -> Self {
-        Self {
-            args: [
-                ColorCombineComponent::Zero,
-                ColorCombineComponent::Zero,
-                ColorCombineComponent::Zero,
-                v,
-            ],
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive, IntoPrimitive)]
-#[repr(u8)]
-pub enum ColorCombineComponent {
-    CombinedOrPrimLodFraction = 0,
-    Texel0 = 1,
-    Texel1 = 2,
-    Prim = 3,
-    Shade = 4,
-    Env = 5,
-    CenterOrScaleOrOne = 6,
-    CombinedAlphaOrNoiseOrK4OrZero = 7,
-    Texel0Alpha = 8,
-    Texel1Alpha = 9,
-    PrimAlpha = 10,
-    ShadeAlpha = 11,
-    EnvAlpha = 12,
-    LodFraction = 13,
-    PrimLodFraction = 14,
-    K5 = 15,
-    Zero = 31,
-}
-
-impl Default for ColorCombineComponent {
-    fn default() -> Self {
-        Self::Zero
-    }
-}
-
-impl ColorCombineComponent {
-    fn from_u8(v: u8) -> Self {
-        v.try_into().unwrap_or_else(|_| {
-            eprintln!("  color comp: {}", v);
-            Self::Zero
-        })
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct Rgba32 {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
-}
-
-impl Rgba32 {
-    pub fn rgb(self) -> [u8; 3] {
-        [self.r, self.g, self.b]
-    }
-
-    pub fn from_rgb_a([r, g, b]: [u8; 3], a: u8) -> Self {
-        Self { r, g, b, a }
-    }
-}
-
-/// Either rgba5551 or zdz (z = 14 bits, dz = 2 bits)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct FillColor(pub u16);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct Rectangle<T> {
-    pub ulx: T,
-    pub uly: T,
-    pub lrx: T,
-    pub lry: T,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct TileParams {
-    pub fmt: ImageFormat,
-    pub size: ComponentSize,
-    pub line: u32,
-    pub tmem: u32,
-    pub palette: u32,
-    pub cmt: F3DWrapMode,
-    pub maskt: u32,
-    pub shiftt: u32,
-    pub cms: F3DWrapMode,
-    pub masks: u32,
-    pub shifts: u32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct F3DWrapMode {
-    pub mirror: bool,
-    pub clamp: bool,
-}
-
-impl From<u8> for F3DWrapMode {
-    fn from(v: u8) -> Self {
-        Self {
-            mirror: v & 0x1 != 0,
-            clamp: v & 0x2 != 0,
-        }
-    }
-}
-
-impl From<F3DWrapMode> for u8 {
-    fn from(m: F3DWrapMode) -> Self {
-        let mut v = 0;
-        if m.mirror {
-            v |= 0x1;
-        }
-        if m.clamp {
-            v |= 0x2;
-        }
-        v
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TextureBlock {
-    pub uls: u32,
-    pub ult: u32,
-    pub lrs: u32,
-    pub dxt: u32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct TileSize {
-    pub uls: u32,
-    pub ult: u32,
-    pub lrs: u32,
-    pub lrt: u32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TileIndex(pub u8);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct PrimDepth {
-    pub z: u16,
-    pub dz: u16,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TryFromPrimitive)]
-#[repr(u8)]
-#[allow(clippy::enum_variant_names)]
-pub enum ScissorMode {
-    NonInterlace = 0,
-    OddInterlace = 3,
-    EvenInterlace = 2,
-}
-
-impl Default for ScissorMode {
-    fn default() -> Self {
-        Self::NonInterlace
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TextureRectangle {
-    pub rect: Rectangle<u32>,
-    pub tile: TileIndex,
-    pub s: u16,
-    pub t: u16,
-    pub dsdx: u16,
-    pub dtdy: u16,
 }
 
 /// The result of decoding a raw command.
@@ -861,11 +119,11 @@ impl<Ptr> DecodeResult<Ptr> {
                     dtdy: w1 as u16,
                 };
                 let cmd = if flip {
-                    DPCommand::TextureRectangleFlip(tex_rect)
+                    F3DCommand::DPTextureRectangleFlip(tex_rect)
                 } else {
-                    DPCommand::TextureRectangle(tex_rect)
+                    F3DCommand::DPTextureRectangle(tex_rect)
                 };
-                Self::Complete(F3DCommand::Rdp(cmd))
+                Self::Complete(cmd)
             }
         }
     }
@@ -875,9 +133,7 @@ impl<Ptr> DecodeResult<Ptr> {
 ///
 /// This returns a [DecodeResult] since the command may be incomplete.
 pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeResult<Ptr> {
-    use DPCommand::*;
     use F3DCommand::*;
-    use SPCommand::*;
 
     let w0 = raw_command.w0;
     let w1 = raw_command.w1;
@@ -890,116 +146,116 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
         // DMA commands
         0x01 => {
             let p = ((w0 >> 16) & 0xFF) as u8;
-            Rsp(Matrix {
+            SPMatrix {
                 matrix: w1p,
                 mode: (p & 0x01).try_into().unwrap(),
                 op: (p & 0x02).try_into().unwrap(),
                 push: p & 0x04 != 0,
-            })
+            }
         }
         0x03 => {
             let p = (w0 >> 16) & 0xFF;
             match p {
-                0x80 => Rsp(Viewport(w1p)),
-                0x86..=0x94 => Rsp(Light {
+                0x80 => SPViewport(w1p),
+                0x86..=0x94 => SPLight {
                     light: w1p,
                     n: (p - 0x86) / 2 + 1,
-                }),
+                },
                 _ => Unknown(raw_command),
             }
         }
-        0x04 => Rsp(Vertex {
+        0x04 => SPVertex {
             v: w1p,
             n: ((w0 >> 20) & 0xF) + 1,
             v0: (w0 >> 16) & 0xF,
-        }),
+        },
         0x06 => {
             let p = (w0 >> 16) & 0xFF;
             match p {
-                0 => Rsp(DisplayList(w1p)),
-                1 => Rsp(BranchList(w1p)),
+                0 => SPDisplayList(w1p),
+                1 => SPBranchList(w1p),
                 _ => Unknown(raw_command),
             }
         }
 
         // IMMEDIATE commands
-        0xBF => Rsp(OneTriangle {
+        0xBF => SPOneTriangle {
             v0: ((w1 >> 16) & 0xFF) / 10,
             v1: ((w1 >> 8) & 0xFF) / 10,
             v2: (w1 & 0xFF) / 10,
             flag: w1 >> 24,
-        }),
-        0xBD => Rsp(PopMatrix(((w1 & 0x01) as u8).try_into().unwrap())),
+        },
+        0xBD => SPPopMatrix(((w1 & 0x01) as u8).try_into().unwrap()),
         0xBC => {
             let index = w0 & 0xFF;
             match index {
-                2 => Rsp(NumLights((w1 - 0x80000000) / 0x20 - 1)),
-                6 => Rsp(Segment {
+                2 => SPNumLights((w1 - 0x80000000) / 0x20 - 1),
+                6 => SPSegment {
                     seg: ((w0 >> 8) & 0xFFFF) / 4,
                     base: w1p,
-                }),
-                8 => Rsp(FogFactor {
+                },
+                8 => SPFogFactor {
                     mul: ((w1 >> 16) & 0xFFFF) as i16,
                     offset: (w1 & 0xFFFF) as i16,
-                }),
+                },
                 _ => Unknown(raw_command),
             }
         }
-        0xBB => Rsp(Texture {
+        0xBB => SPTexture {
             sc: (w1 >> 16) & 0xFFFF,
             tc: w1 & 0xFFFF,
             level: (w0 >> 11) & 0x7,
             tile: (w0 >> 8) & 0x7,
             on: (w0 & 0xFF) != 0,
-        }),
+        },
         0xBA => {
             let shift = (w0 >> 8) & 0xFF;
             let data = (w1 >> shift) as u8;
             match shift {
-                4 => Rdp(SetAlphaDither(data.try_into().unwrap())),
-                6 => Rdp(SetColorDither(data.try_into().unwrap())),
-                8 => Rdp(SetCombineKey(data != 0)),
-                9 => Rdp(SetTextureConvert(data.try_into().unwrap())),
-                12 => Rdp(SetTextureFilter(data.try_into().unwrap())),
-                14 => Rdp(SetTextureLUT(data.try_into().unwrap())),
-                16 => Rdp(SetTextureLOD(data != 0)),
-                17 => Rdp(SetTextureDetail(data.try_into().unwrap())),
-                19 => Rdp(SetTexturePersp(data != 0)),
-                20 => Rdp(SetCycleType(data.try_into().unwrap())),
-                23 => Rdp(PipelineMode(data.try_into().unwrap())),
+                4 => DPSetAlphaDither(data.try_into().unwrap()),
+                6 => DPSetColorDither(data.try_into().unwrap()),
+                8 => DPSetCombineKey(data != 0),
+                9 => DPSetTextureConvert(data.try_into().unwrap()),
+                12 => DPSetTextureFilter(data.try_into().unwrap()),
+                14 => DPSetTextureLUT(data.try_into().unwrap()),
+                16 => DPSetTextureLOD(data != 0),
+                17 => DPSetTextureDetail(data.try_into().unwrap()),
+                19 => DPSetTexturePersp(data != 0),
+                20 => DPSetCycleType(data.try_into().unwrap()),
+                23 => DPPipelineMode(data.try_into().unwrap()),
                 _ => Unknown(raw_command),
             }
         }
         0xB9 => {
             let shift = (w0 >> 8) & 0xFF;
             match shift {
-                0 => Rdp(SetAlphaCompare(((w1 >> shift) as u8).try_into().unwrap())),
-                2 => Rdp(SetDepthSource(((w1 >> shift) as u8).try_into().unwrap())),
-                3 => Rdp(SetRenderMode(w1.try_into().unwrap())),
+                0 => DPSetAlphaCompare(((w1 >> shift) as u8).try_into().unwrap()),
+                2 => DPSetDepthSource(((w1 >> shift) as u8).try_into().unwrap()),
+                3 => DPSetRenderMode(w1.try_into().unwrap()),
                 _ => Unknown(raw_command),
             }
         }
-        0xB8 => Rsp(EndDisplayList),
-        0xB7 => Rsp(SetGeometryMode(GeometryModes::from_bits_truncate(w1))),
-        0xB6 => Rsp(ClearGeometryMode(GeometryModes::from_bits_truncate(w1))),
-        0xB4 => Rdp(PerspNormalize(w1 as u16)),
+        0xB8 => SPEndDisplayList,
+        0xB7 => SPSetGeometryMode(GeometryModes::from_bits_truncate(w1)),
+        0xB6 => SPClearGeometryMode(GeometryModes::from_bits_truncate(w1)),
+        0xB4 => DPPerspNormalize(w1 as u16),
         // RDPHALF_X, not expected here
         0xB3 | 0xB2 | 0xB1 => Unknown(raw_command),
 
         // RDP commands
-        0xFF => Rdp(SetColorImage(Image {
+        0xFF => DPSetColorImage(Image {
             fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
             size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
             width: (w0 & 0xFFF) + 1,
             img: w1p,
-        })),
-        0xFE => Rdp(SetDepthImage(w1p)),
-        0xFD => Rdp(SetTextureImage(Image {
+        }),
+        0xFE => DPSetDepthImage(w1p),
+        0xFD => DPSetTextureImage(Image {
             fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
             size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
             width: (w0 & 0xFFF) + 1,
             img: w1p,
-        })),
+        }),
         0xFC => {
             let cc1 = [
                 ((w0 >> 20) & 0xF) as u8,
@@ -1025,48 +281,48 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
                 ((w1 >> 18) & 0x7) as u8,
                 (w1 & 0x7) as u8,
             ];
-            Rdp(SetCombineMode(CombineMode {
+            DPSetCombineMode(CombineMode {
                 color1: cc1.try_into().unwrap(),
                 alpha1: ac1.try_into().unwrap(),
                 color2: cc2.try_into().unwrap(),
                 alpha2: ac2.try_into().unwrap(),
-            }))
+            })
         }
-        0xFB => Rdp(SetEnvColor(Rgba32 {
+        0xFB => DPSetEnvColor(Rgba32 {
             r: (w1 >> 24) as u8,
             g: (w1 >> 16) as u8,
             b: (w1 >> 8) as u8,
             a: w1 as u8,
-        })),
-        0xFA => Rdp(SetPrimColor(Rgba32 {
+        }),
+        0xFA => DPSetPrimColor(Rgba32 {
             r: (w1 >> 24) as u8,
             g: (w1 >> 16) as u8,
             b: (w1 >> 8) as u8,
             a: w1 as u8,
-        })),
-        0xF9 => Rdp(SetBlendColor(Rgba32 {
+        }),
+        0xF9 => DPSetBlendColor(Rgba32 {
             r: (w1 >> 24) as u8,
             g: (w1 >> 16) as u8,
             b: (w1 >> 8) as u8,
             a: w1 as u8,
-        })),
-        0xF8 => Rdp(SetFogColor(Rgba32 {
+        }),
+        0xF8 => DPSetFogColor(Rgba32 {
             r: (w1 >> 24) as u8,
             g: (w1 >> 16) as u8,
             b: (w1 >> 8) as u8,
             a: w1 as u8,
-        })),
-        0xF7 => Rdp(SetFillColor([
+        }),
+        0xF7 => DPSetFillColor([
             FillColor((w1 >> 16) as u16),
             FillColor((w1 & 0xFFFF) as u16),
-        ])),
-        0xF6 => Rdp(FillRectangle(Rectangle {
+        ]),
+        0xF6 => DPFillRectangle(Rectangle {
             ulx: (w1 >> 14) & 0x3FF,
             uly: (w1 >> 2) & 0x3FF,
             lrx: (w0 >> 14) & 0x3FF,
             lry: (w0 >> 2) & 0x3FF,
-        })),
-        0xF5 => Rdp(SetTile(
+        }),
+        0xF5 => DPSetTile(
             TileIndex(((w1 >> 24) & 0x7) as u8),
             TileParams {
                 fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
@@ -1081,8 +337,8 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
                 masks: (w1 >> 4) & 0xF,
                 shifts: w1 & 0xF,
             },
-        )),
-        0xF4 => Rdp(LoadTile(
+        ),
+        0xF4 => DPLoadTile(
             TileIndex(((w1 >> 24) & 0x7) as u8),
             TileSize {
                 uls: (w0 >> 12) & 0xFFF,
@@ -1090,8 +346,8 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
                 lrs: (w1 >> 12) & 0xFFF,
                 lrt: w1 & 0xFFF,
             },
-        )),
-        0xF3 => Rdp(LoadBlock(
+        ),
+        0xF3 => DPLoadBlock(
             TileIndex(((w1 >> 24) & 0x7) as u8),
             TextureBlock {
                 uls: (w0 >> 12) & 0xFFF,
@@ -1099,8 +355,8 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
                 lrs: (w1 >> 12) & 0xFFF,
                 dxt: w1 & 0xFFF,
             },
-        )),
-        0xF2 => Rdp(SetTileSize(
+        ),
+        0xF2 => DPSetTileSize(
             TileIndex(((w1 >> 24) & 0x7) as u8),
             TileSize {
                 uls: (w0 >> 12) & 0xFFF,
@@ -1108,17 +364,17 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
                 lrs: (w1 >> 12) & 0xFFF,
                 lrt: w1 & 0xFFF,
             },
-        )),
-        0xF0 => Rdp(LoadTLUTCmd(
+        ),
+        0xF0 => DPLoadTLUTCmd(
             TileIndex(((w1 >> 24) & 0x7) as u8),
             ((w1 >> 14) & 0x3FF) as u32,
-        )),
-        0xEF => Rdp(SetOtherMode(Unimplemented { w0, w1 })),
-        0xEE => Rdp(SetPrimDepth(PrimDepth {
+        ),
+        0xEF => DPSetOtherMode(Unimplemented { w0, w1 }),
+        0xEE => DPSetPrimDepth(PrimDepth {
             z: (w1 >> 16) as u16,
             dz: (w1 & 0xFFFF) as u16,
-        })),
-        0xED => Rdp(SetScissor(
+        }),
+        0xED => DPSetScissor(
             (((w1 >> 24) & 0xFF) as u8).try_into().unwrap(),
             Rectangle {
                 ulx: ((w0 >> 12) & 0xFFF) as u16,
@@ -1126,14 +382,14 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
                 lrx: ((w1 >> 12) & 0xFFF) as u16,
                 lry: (w1 & 0xFFF) as u16,
             },
-        )),
-        0xEC => Rdp(SetConvert(Unimplemented { w0, w1 })),
-        0xEB => Rdp(SetKeyR(Unimplemented { w0, w1 })),
-        0xEA => Rdp(SetKeyGB(Unimplemented { w0, w1 })),
-        0xE9 => Rdp(FullSync),
-        0xE8 => Rdp(TileSync),
-        0xE7 => Rdp(PipeSync),
-        0xE6 => Rdp(LoadSync),
+        ),
+        0xEC => DPSetConvert(Unimplemented { w0, w1 }),
+        0xEB => DPSetKeyR(Unimplemented { w0, w1 }),
+        0xEA => DPSetKeyGB(Unimplemented { w0, w1 }),
+        0xE9 => DPFullSync,
+        0xE8 => DPTileSync,
+        0xE7 => DPPipeSync,
+        0xE6 => DPLoadSync,
         0xE5 => {
             return DecodeResult::TextureRectangle1 {
                 flip: true,

@@ -2,11 +2,7 @@ use std::f32::consts::PI;
 
 use bytemuck::cast_slice;
 use fast3d::{
-    decode::{
-        BlendAlpha1, BlendAlpha2, BlendColor, BlendMode, ColorCombineComponent, ColorCombineMode,
-        CombineMode, CvgDst, DPCommand, F3DCommand, GeometryModes, MatrixMode, MatrixOp,
-        RenderMode, RenderModeFlags, SPCommand, ZMode,
-    },
+    cmd::*,
     interpret::{interpret_f3d_display_list, F3DRenderData},
     util::{MatrixState, Matrixf},
 };
@@ -33,26 +29,20 @@ pub fn test_render(
     renderer.u32_buffer.extend(cast_slice(
         &Matrixf::perspective(45.0 * PI / 180.0, 320.0 / 240.0, 100.0, 12800.0).to_fixed(),
     ));
+    renderer.display_list.push(F3DCommand::SPMatrix {
+        matrix: Pointer::BufferOffset(0),
+        mode: MatrixMode::Proj,
+        op: MatrixOp::Load,
+        push: false,
+    });
     renderer
         .display_list
-        .push(F3DCommand::Rsp(SPCommand::Matrix {
-            matrix: Pointer::BufferOffset(0),
-            mode: MatrixMode::Proj,
-            op: MatrixOp::Load,
-            push: false,
-        }));
+        .push(F3DCommand::SPSetGeometryMode(GeometryModes::LIGHTING));
     renderer
         .display_list
-        .push(F3DCommand::Rsp(SPCommand::SetGeometryMode(
-            GeometryModes::LIGHTING,
-        )));
-    renderer
-        .display_list
-        .push(F3DCommand::Rdp(DPCommand::SetCombineMode(
-            CombineMode::one_cycle(
-                ColorCombineComponent::Shade.into(),
-                ColorCombineComponent::Shade.into(),
-            ),
+        .push(F3DCommand::DPSetCombineMode(CombineMode::one_cycle(
+            ColorCombineComponent::Shade.into(),
+            ColorCombineComponent::Shade.into(),
         )));
 
     renderer.process_node(addr, false)?;
@@ -184,38 +174,32 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
 
         if z_buffer {
             self.display_list
-                .push(F3DCommand::Rsp(SPCommand::SetGeometryMode(
-                    GeometryModes::ZBUFFER,
-                )));
+                .push(F3DCommand::SPSetGeometryMode(GeometryModes::ZBUFFER));
         }
 
         for (layer, lists) in self.master_lists.iter().enumerate() {
             let render_mode = self.get_render_mode(layer as i16, z_buffer);
             self.display_list
-                .push(F3DCommand::Rdp(DPCommand::SetRenderMode(render_mode)));
+                .push(F3DCommand::DPSetRenderMode(render_mode));
 
             for list in lists {
                 let offset = self.u32_buffer.len();
                 self.u32_buffer.extend(cast_slice(&list.transform));
-                self.display_list.push(F3DCommand::Rsp(SPCommand::Matrix {
+                self.display_list.push(F3DCommand::SPMatrix {
                     matrix: Pointer::BufferOffset(offset),
                     mode: MatrixMode::ModelView,
                     op: MatrixOp::Load,
                     push: false,
-                }));
+                });
 
                 self.display_list
-                    .push(F3DCommand::Rsp(SPCommand::DisplayList(
-                        list.display_list.into(),
-                    )));
+                    .push(F3DCommand::SPDisplayList(list.display_list.into()));
             }
         }
 
         if z_buffer {
             self.display_list
-                .push(F3DCommand::Rsp(SPCommand::ClearGeometryMode(
-                    GeometryModes::ZBUFFER,
-                )));
+                .push(F3DCommand::SPClearGeometryMode(GeometryModes::ZBUFFER));
         }
     }
 
