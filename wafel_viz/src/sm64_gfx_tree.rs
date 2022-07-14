@@ -335,7 +335,7 @@ pub fn get_gfx_node_reader<'m>(
         let type_id = memory.read_int(addr, IntType::S16)? as i16;
         let reader = readers
             .get(&type_id)
-            .unwrap_or_else(|| unimplemented!("gfx node type: {}", type_id));
+            .unwrap_or_else(|| unimplemented!("gfx node type: {:#06X}", type_id));
         reader.read(addr)
     };
     Ok(GfxNodeReader(Box::new(func)))

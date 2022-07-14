@@ -19,10 +19,9 @@ use std::{
 
 use custom_renderer::{CustomRenderer, Scene};
 use fast3d::{interpret::F3DRenderData, render::F3DRenderer};
-use sm64_gfx_tree::get_gfx_node_reader;
 pub use sm64_render_mod::SM64RenderConfig;
 use sm64_render_mod::{render_sm64_with_config, Camera};
-use wafel_api::{load_m64, Game, SaveState};
+use wafel_api::{load_m64, Game, SaveState, Value};
 use wafel_data_path::GlobalDataPath;
 use wafel_memory::GameMemory;
 use winit::{
@@ -55,19 +54,20 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
         game.set_input(inputs[game.frame() as usize]);
         game.advance();
     }
-    let penguin_addr = game.address("gObjectPool[64]").unwrap();
 
-    let memory = game.memory.with_slot(&game.base_slot);
+    if let Value::Address(root_addr) = game.read("gCurrentArea?.unk04") {
+        let memory = game.memory.with_slot(&game.base_slot);
+        let render_data = sm64_gfx_render::test_render(&memory, &game.layout, root_addr)?;
 
-    let render_data = sm64_gfx_render::test_render(&memory, &game.layout, penguin_addr)?;
+        env_logger::init();
+        futures::executor::block_on(run(0, Some(render_data))).unwrap();
+    }
 
     // for cmd in &render_data.commands {
     //     let pipeline = &render_data.pipelines[&cmd.pipeline];
     //     eprintln!("{:?}", pipeline);
     // }
 
-    env_logger::init();
-    futures::executor::block_on(run(0, Some(render_data))).unwrap();
     Ok(())
 }
 

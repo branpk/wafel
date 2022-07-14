@@ -12,17 +12,14 @@ use wafel_layout::DataLayout;
 use wafel_memory::MemoryRead;
 
 use crate::{
-    sm64_gfx_tree::{
-        get_gfx_node_reader, AnimInfo, GfxNodeReader, GfxTreeNode, GraphNodeAnimatedPart,
-        GraphNodeObject, GraphNodeScale, GraphNodeShadow, GraphNodeSwitchCase, GraphRenderFlags,
-    },
+    sm64_gfx_tree::*,
     sm64_render_mod::{F3DMemoryImpl, Pointer},
 };
 
 pub fn test_render(
     memory: &impl MemoryRead,
     layout: &DataLayout,
-    addr: Address,
+    root_addr: Address,
 ) -> Result<F3DRenderData, Error> {
     let mut renderer = NodeRenderer::new(memory, layout)?;
 
@@ -45,7 +42,7 @@ pub fn test_render(
             ColorCombineComponent::Shade.into(),
         )));
 
-    renderer.process_node(addr, false)?;
+    renderer.process_node(root_addr, false)?;
     renderer.submit_master_lists(true);
 
     let mut f3d_memory = F3DMemoryImpl::new(memory, Pointer::BufferOffset(0));
@@ -282,28 +279,32 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
                     self.process_node_and_siblings(cur_node.node().children)?;
                 } else {
                     match &cur_node {
-                        GfxTreeNode::Root(_) => todo!(),
-                        GfxTreeNode::OrthoProjection(_) => todo!(),
-                        GfxTreeNode::Perspective(_) => todo!(),
-                        GfxTreeNode::MasterList(_) => todo!(),
-                        GfxTreeNode::Start(_) => todo!(),
-                        GfxTreeNode::LevelOfDetail(_) => todo!(),
-                        GfxTreeNode::SwitchCase(node) => self.process_switch(node)?,
-                        GfxTreeNode::Camera(_) => todo!(),
-                        GfxTreeNode::TranslationRotation(_) => todo!(),
-                        GfxTreeNode::Translation(_) => todo!(),
-                        GfxTreeNode::Rotation(_) => todo!(),
+                        GfxTreeNode::Root(node) => self.process_root(node)?,
+                        GfxTreeNode::OrthoProjection(node) => {
+                            self.process_ortho_projection(node)?
+                        }
+                        GfxTreeNode::Perspective(node) => self.process_perspective(node)?,
+                        GfxTreeNode::MasterList(node) => self.process_master_list(node)?,
+                        GfxTreeNode::Start(node) => self.process_start(node)?,
+                        GfxTreeNode::LevelOfDetail(node) => self.process_level_of_detail(node)?,
+                        GfxTreeNode::SwitchCase(node) => self.process_switch_case(node)?,
+                        GfxTreeNode::Camera(node) => self.process_camera(node)?,
+                        GfxTreeNode::TranslationRotation(node) => {
+                            self.process_translation_rotation(node)?
+                        }
+                        GfxTreeNode::Translation(node) => self.process_translation(node)?,
+                        GfxTreeNode::Rotation(node) => self.process_rotation(node)?,
                         GfxTreeNode::Object(node) => self.process_object(node)?,
                         GfxTreeNode::AnimatedPart(node) => self.process_animated_part(node)?,
-                        GfxTreeNode::Billboard(_) => todo!(),
-                        GfxTreeNode::DisplayList(_) => todo!(),
+                        GfxTreeNode::Billboard(node) => self.process_billboard(node)?,
+                        GfxTreeNode::DisplayList(node) => self.process_display_list(node)?,
                         GfxTreeNode::Scale(node) => self.process_scale(node)?,
                         GfxTreeNode::Shadow(node) => self.process_shadow(node)?,
-                        GfxTreeNode::ObjectParent(_) => todo!(),
-                        GfxTreeNode::Generated(_) => todo!(),
-                        GfxTreeNode::Background(_) => todo!(),
-                        GfxTreeNode::HeldObject(_) => todo!(),
-                        GfxTreeNode::CullingRadius(_) => todo!(),
+                        GfxTreeNode::ObjectParent(node) => self.process_object_parent(node)?,
+                        GfxTreeNode::Generated(node) => self.process_generated(node)?,
+                        GfxTreeNode::Background(node) => self.process_background(node)?,
+                        GfxTreeNode::HeldObject(node) => self.process_held_object(node)?,
+                        GfxTreeNode::CullingRadius(node) => self.process_culling_radius(node)?,
                     }
                 }
             }
@@ -321,12 +322,55 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
         Ok(())
     }
 
-    fn process_switch(&mut self, node: &GraphNodeSwitchCase) -> Result<(), Error> {
+    fn process_root(&mut self, node: &GraphNodeRoot) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn process_ortho_projection(&mut self, node: &GraphNodeOrthoProjection) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn process_perspective(&mut self, node: &GraphNodePerspective) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn process_master_list(&mut self, node: &GraphNodeMasterList) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn process_start(&mut self, node: &GraphNodeStart) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn process_level_of_detail(&mut self, node: &GraphNodeLevelOfDetail) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn process_switch_case(&mut self, node: &GraphNodeSwitchCase) -> Result<(), Error> {
         // TODO
 
         let selected_child = node.fn_node.node.children;
         self.process_node_and_siblings(selected_child)?;
         Ok(())
+    }
+
+    fn process_camera(&mut self, node: &GraphNodeCamera) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn process_translation_rotation(
+        &mut self,
+        node: &GraphNodeTranslationRotation,
+    ) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn process_translation(&mut self, node: &GraphNodeTranslation) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn process_rotation(&mut self, node: &GraphNodeRotation) -> Result<(), Error> {
+        todo!()
     }
 
     fn process_object(&mut self, node: &GraphNodeObject) -> Result<(), Error> {
@@ -412,6 +456,14 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
         Ok(())
     }
 
+    fn process_billboard(&mut self, node: &GraphNodeBillboard) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn process_display_list(&mut self, node: &GraphNodeDisplayList) -> Result<(), Error> {
+        todo!()
+    }
+
     fn process_scale(&mut self, node: &GraphNodeScale) -> Result<(), Error> {
         // TODO
 
@@ -439,5 +491,25 @@ impl<'m, M: MemoryRead> NodeRenderer<'m, M> {
 
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
+    }
+
+    fn process_object_parent(&mut self, node: &GraphNodeObjectParent) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn process_generated(&mut self, node: &GraphNodeGenerated) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn process_background(&mut self, node: &GraphNodeBackground) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn process_held_object(&mut self, node: &GraphNodeHeldObject) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn process_culling_radius(&mut self, node: &GraphNodeCullingRadius) -> Result<(), Error> {
+        todo!()
     }
 }
