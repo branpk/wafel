@@ -10,7 +10,7 @@ use std::{
 use dlopen::raw::{AddressInfoObtainer, Library};
 use once_cell::sync::OnceCell;
 use wafel_data_type::{Address, IntType};
-use wafel_layout::{read_dll_segments, DllSegment};
+use wafel_layout::{append_dll_extension, read_dll_segments, DllSegment};
 
 use crate::{
     dll_slot_impl::{BasePointer, BaseSlot, BufferSlot, SlotImpl},
@@ -91,7 +91,9 @@ impl DllGameMemory {
         init_function_name: &str,
         update_function_name: &str,
     ) -> Result<(Self, DllSlot), MemoryInitError> {
-        let all_segments = read_dll_segments(dll_path)?;
+        let dll_path = append_dll_extension(dll_path);
+
+        let all_segments = read_dll_segments(&dll_path)?;
         let data_segments = dll_data_segments(&all_segments)?;
 
         let base_size = all_segments
@@ -100,7 +102,7 @@ impl DllGameMemory {
             .max()
             .unwrap_or(0);
 
-        let library = UniqueLibrary::open(dll_path)?;
+        let library = UniqueLibrary::open(&dll_path)?;
 
         let init_function: unsafe extern "C" fn() = library
             .symbol(init_function_name)
@@ -400,7 +402,7 @@ fn dll_data_segments(all_segments: &[DllSegment]) -> Result<Vec<DllSegment>, Mem
 unsafe fn dll_base_pointer(
     arbitrary_symbol_pointer: *const (),
 ) -> Result<BasePointer, dlopen::Error> {
-    #[cfg(windows)]
+    #[cfg(target_os = "windows")]
     {
         use winapi::um::{dbghelp::SymCleanup, processthreadsapi::GetCurrentProcess};
 

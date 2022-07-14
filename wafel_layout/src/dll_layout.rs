@@ -3,7 +3,7 @@
 use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
-    ffi::OsString,
+    ffi::{OsStr, OsString},
     fmt, fs, iter,
     path::{Path, PathBuf},
 };
@@ -69,7 +69,7 @@ impl fmt::Display for DllSegment {
 impl DllLayout {
     /// Construct a DllLayout from the DWARF debugging information in a DLL.
     pub fn read(dll_path: impl AsRef<Path>) -> Result<Self, DllLayoutError> {
-        let dll_path = get_dwarf_dll_path(dll_path);
+        let dll_path = get_dwarf_dll_path(append_dll_extension(dll_path));
 
         // Read object file
         let buffer = fs::read(&dll_path)?;
@@ -96,6 +96,44 @@ impl DllLayout {
             data_layout,
         })
     }
+}
+
+/// Returns the DLL path, adding lib prefix or .so/.dll suffix if needed.
+pub fn append_dll_extension(path: impl AsRef<Path>) -> PathBuf {
+    let path: &Path = path.as_ref();
+
+    let mut new_path = PathBuf::new();
+    if let Some(parent) = path.parent() {
+        new_path.push(parent);
+    }
+    if let Some(filename) = path.file_name() {
+        let mut filename = filename.to_string_lossy().into_owned();
+
+        // This allows opening a DLL on a different platform
+        if filename.ends_with(".dll") || filename.ends_with(".so") {
+            return path.to_path_buf();
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            if !filename.ends_with(".dll") {
+                filename = format!("{}.dll", filename);
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            if !filename.starts_with("lib") {
+                filename = format!("lib{}", filename);
+            }
+            if !filename.ends_with(".so") {
+                filename = format!("{}.so", filename);
+            }
+        }
+
+        new_path.push(filename);
+    }
+
+    new_path
 }
 
 fn get_dwarf_dll_path(dll_path: impl AsRef<Path>) -> PathBuf {
