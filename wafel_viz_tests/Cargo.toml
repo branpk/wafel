@@ -11,3 +11,4 @@ wafel_api = { path = "../wafel_api" }
 wafel_viz = { path = "../wafel_viz" }
 wgpu = { git = "https://github.com/gfx-rs/wgpu" }
 pollster = "0.2.5"
+itertools = "0.10.3"

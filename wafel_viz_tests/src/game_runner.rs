@@ -16,7 +16,7 @@ impl GameRunner {
             self.ctx = None;
         }
         let ctx = self.ctx.get_or_insert_with(|| {
-            let game = unsafe { Game::new(&format!("libsm64/sm64_{}.dll", game_version)) };
+            let game = unsafe { Game::new(&format!("libsm64/sm64_{}", game_version)) };
             let power_on = game.save_state();
             let (_, inputs) = load_m64(&format!("wafel_viz_tests/input/{}.m64", m64));
             Context {

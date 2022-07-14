@@ -1,11 +1,16 @@
 use std::{env, fmt::Write, fs};
 
 use image::{Rgb, RgbImage};
+use itertools::Itertools;
 
 use crate::{game_runner::GameRunner, renderer::Renderer, TestCase};
 
 pub fn run_tests(mut test_cases: Vec<TestCase>) -> Result<(), Box<dyn std::error::Error>> {
     let calc_diffs = env::args().any(|arg| arg == "--diff");
+    let target = env::args()
+        .tuple_windows()
+        .find(|(flag, _)| flag == "--target")
+        .map(|(_, target)| target);
 
     env_logger::init();
 
@@ -32,7 +37,7 @@ pub fn run_tests(mut test_cases: Vec<TestCase>) -> Result<(), Box<dyn std::error
 
         let expected = image::open(format!(
             "wafel_viz_tests/{}/{}.png",
-            renderer.device_info(),
+            target.as_deref().unwrap_or_else(|| renderer.device_info()),
             case.name
         ))
         .ok()
@@ -102,7 +107,7 @@ pub fn run_tests(mut test_cases: Vec<TestCase>) -> Result<(), Box<dyn std::error
                 </tr>
             "#,
             name,
-            renderer.device_info(),
+            target.as_deref().unwrap_or_else(|| renderer.device_info()),
             name,
             name,
             if calc_diffs {

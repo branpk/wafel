@@ -296,14 +296,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     reg(&mut cases);
 
     let selected_tests: HashSet<String> = env::args()
+        .skip_while(|arg| arg != "--test")
         .skip(1)
-        .filter(|s| !s.starts_with('-'))
+        .take_while(|arg| !arg.starts_with('-'))
         .collect();
     if !selected_tests.is_empty() {
-        cases = cases
-            .into_iter()
-            .filter(|c| selected_tests.contains(&c.name))
-            .collect();
+        cases.retain(|c| selected_tests.contains(&c.name));
     }
     run_tests::run_tests(cases)
 }

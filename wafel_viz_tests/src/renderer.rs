@@ -1,3 +1,5 @@
+use std::env;
+
 use fast3d::render::F3DRenderer;
 use image::{Pixel, Rgb, RgbImage};
 use wafel_api::Game;
@@ -31,7 +33,8 @@ impl Renderer {
             .await
             .expect("failed to request GPU adapter");
         let backend = format!("{:?}", adapter.get_info().backend).to_lowercase();
-        let device_info = format!("win_x64_{}", backend);
+
+        let device_info = format!("{}_{}_{}", env::consts::OS, env::consts::ARCH, backend);
 
         let (device, queue) = adapter
             .request_device(
