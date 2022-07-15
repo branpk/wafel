@@ -663,6 +663,9 @@ where
                 self.mtx_stack.push_mul(transform);
             }
 
+            self.mtx_stack
+                .execute(Matrixf::scale_vec3f(node.scale), MatrixOp::Mul, false);
+
             // TODO: Calculate throwMatrix and cameraToObject
 
             if !node.anim_info.cur_anim.is_null() {

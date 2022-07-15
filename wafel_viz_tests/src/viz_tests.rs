@@ -39,6 +39,8 @@ fn u120(cases: &mut Vec<TestCase>) {
     case("u120_002418_star_grab", 2418);
     case("u120_002628_continue1", 2628);
     case("u120_002632_continue2", 2632);
+    case("u120_003079_high_poly", 3079);
+    case("u120_003080_low_poly", 3080);
     case("u120_003363_exit_slide", 3363);
     case("u120_003422_slide_star", 3422);
     case("u120_003603_slide_star_grab", 3603); // TODO: Mupen shows an extra snow particle
