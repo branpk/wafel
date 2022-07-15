@@ -2674,6 +2674,7 @@ dependencies = [
  "env_logger",
  "fast3d",
  "futures",
+ "itertools",
  "serde",
  "serde_json",
  "wafel_api",

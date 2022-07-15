@@ -12,6 +12,7 @@ use fast3d::{
     interpret::{interpret_f3d_display_list, F3DRenderData},
     util::{MatrixState, Matrixf},
 };
+use itertools::Itertools;
 use wafel_api::{Address, Error, IntType, Value};
 use wafel_data_path::GlobalDataPath;
 use wafel_data_type::{Namespace, TypeName};
@@ -23,6 +24,8 @@ use crate::{
     sm64_render_mod::{get_dl_addr, F3DMemoryImpl, Pointer, RawDlIter},
     SM64RenderConfig,
 };
+
+const DEBUG_PRINT: bool = false;
 
 pub fn test_render(
     memory: &impl MemoryRead,
@@ -42,9 +45,16 @@ pub fn test_render(
     }
     .map(|cmd| cmd.map_err(Error::from));
 
-    let input_dl: Result<Vec<F3DCommand<Pointer>>, Error> =
-        decode_f3d_display_list(raw_input_dl).collect();
-    let input_dl = input_dl?;
+    let input_dl: Vec<F3DCommand<Pointer>> =
+        decode_f3d_display_list(raw_input_dl).collect::<Result<_, Error>>()?;
+
+    if DEBUG_PRINT {
+        println!("\n\n------- FRAME -------");
+        for cmd in &input_dl {
+            println!("  {:?}", cmd);
+        }
+        println!("\n\n");
+    }
 
     let mut renderer = NodeRenderer::new(input_dl.into_iter(), memory, layout)?;
 
@@ -68,9 +78,12 @@ pub fn test_render(
     //     )));
 
     if let Value::Address(root_addr) = get_path("gCurrentArea?.unk04")?.read(memory)? {
-        renderer.process_node(root_addr, false)?;
+        let pause_rendering = get_path("gWarpTransition.pauseRendering")?
+            .read(memory)?
+            .try_as_int()?
+            != 0;
+        renderer.render_game(root_addr, pause_rendering)?;
     }
-    renderer.finish();
 
     let mut f3d_memory = F3DMemoryImpl::new(memory, Pointer::BufferOffset(0));
     // f3d_memory.set_view_transform(Some(Matrixf::look_at(
@@ -129,7 +142,7 @@ impl AnimState {
         let result = if frame < attr0 as i32 {
             attr1 as i32 + frame
         } else {
-            (attr1 + attr0 - 1) as i32
+            attr1.wrapping_add(attr0).wrapping_sub(1) as i32
         };
 
         self.attribute += 4;
@@ -174,12 +187,19 @@ where
         })
     }
 
+    fn push_cmd(&mut self, cmd: F3DCommand<Pointer>) {
+        if DEBUG_PRINT {
+            println!("  {:?}", cmd);
+        }
+        self.display_list.push(cmd);
+    }
+
     fn dl_push_until(&mut self, mut f: impl FnMut(F3DCommand<Pointer>) -> bool) -> bool {
         loop {
-            match self.input_display_list.peek() {
-                Some(cmd) if f(*cmd) => return true,
+            match self.input_display_list.peek().copied() {
+                Some(cmd) if f(cmd) => return true,
                 Some(cmd) => {
-                    self.display_list.push(*cmd);
+                    self.push_cmd(cmd);
                     self.input_display_list.next();
                 }
                 None => return false,
@@ -187,6 +207,7 @@ where
         }
     }
 
+    #[track_caller]
     fn dl_expect(&mut self, mut f: impl FnMut(F3DCommand<Pointer>) -> bool) -> F3DCommand<Pointer> {
         if let Some(&cmd) = self.input_display_list.peek() {
             if f(cmd) {
@@ -201,9 +222,10 @@ where
         );
     }
 
+    #[track_caller]
     fn dl_push_expect(&mut self, f: impl FnMut(F3DCommand<Pointer>) -> bool) {
         let cmd = self.dl_expect(f);
-        self.display_list.push(cmd);
+        self.push_cmd(cmd);
     }
 
     fn append_display_list(&mut self, layer: i16) {
@@ -246,37 +268,30 @@ where
         // TODO: z buffer, render modes
 
         if z_buffer {
-            self.display_list
-                .push(SPSetGeometryMode(GeometryModes::ZBUFFER));
+            self.push_cmd(SPSetGeometryMode(GeometryModes::ZBUFFER));
         }
 
-        for (layer, lists) in self.master_lists.iter().enumerate() {
+        for (layer, lists) in mem::take(&mut self.master_lists).iter().enumerate() {
             let render_mode = self.get_render_mode(layer as i16, z_buffer);
-            self.display_list.push(DPSetRenderMode(render_mode));
+            self.push_cmd(DPSetRenderMode(render_mode));
 
             for list in lists {
                 let offset = self.u32_buffer.len();
                 self.u32_buffer.extend(cast_slice(&list.transform));
-                self.display_list.push(SPMatrix {
+                self.push_cmd(SPMatrix {
                     matrix: Pointer::BufferOffset(offset),
                     mode: MatrixMode::ModelView,
                     op: MatrixOp::Load,
                     push: false,
                 });
 
-                self.display_list
-                    .push(SPDisplayList(list.display_list.into()));
+                self.push_cmd(SPDisplayList(list.display_list.into()));
             }
         }
 
         if z_buffer {
-            self.display_list
-                .push(SPClearGeometryMode(GeometryModes::ZBUFFER));
+            self.push_cmd(SPClearGeometryMode(GeometryModes::ZBUFFER));
         }
-    }
-
-    fn finish(&mut self) {
-        self.display_list.extend(&mut self.input_display_list);
     }
 
     fn set_animation_globals(&mut self, node: &AnimInfo) -> Result<(), Error> {
@@ -322,6 +337,22 @@ where
         Ok(())
     }
 
+    fn render_game(&mut self, root_addr: Address, pause_rendering: bool) -> Result<(), Error> {
+        // Skip init_rcp and viewport/scissor override
+        self.dl_push_until(|cmd| matches!(cmd, SPViewport(_)));
+
+        if !pause_rendering {
+            self.process_node(root_addr, false)?;
+        }
+
+        // Skip hud, in-game menu etc
+        while let Some(cmd) = self.input_display_list.next() {
+            self.push_cmd(cmd);
+        }
+
+        Ok(())
+    }
+
     fn process_node_and_siblings(&mut self, first_addr: Address) -> Result<(), Error> {
         self.process_node(first_addr, true)
     }
@@ -348,6 +379,10 @@ where
                 if flags.contains(GraphRenderFlags::CHILDREN_FIRST) {
                     self.process_node_and_siblings(cur_node.node().children)?;
                 } else {
+                    if DEBUG_PRINT {
+                        println!("{:?}", cur_node);
+                    }
+
                     match &cur_node {
                         GfxTreeNode::Root(node) => self.process_root(node)?,
                         GfxTreeNode::OrthoProjection(node) => {
@@ -393,7 +428,7 @@ where
     }
 
     fn process_root(&mut self, node: &GraphNodeRoot) -> Result<(), Error> {
-        // Skip init_rcp and viewport/scissor override
+        // Skip viewport/scissor override
         self.dl_push_until(|cmd| matches!(cmd, SPViewport(_)));
 
         self.dl_push_expect(|cmd| matches!(cmd, SPViewport(_)));
@@ -402,7 +437,6 @@ where
         self.cur_root = Some(node.clone());
         self.process_node_and_siblings(node.node.children)?;
         self.cur_root = None;
-
         Ok(())
     }
 
@@ -454,15 +488,14 @@ where
         //
         //                     //                     let offset = self.u32_buffer.len();
         //                     //                     self.u32_buffer.extend(cast_slice(&list.transform));
-        //                     //                     self.display_list.push(SPMatrix {
+        //                     //                     self.push_cmd(SPMatrix {
         //                     //                         matrix: Pointer::BufferOffset(offset),
         //                     //                         mode: MatrixMode::ModelView,
         //                     //                         op: MatrixOp::Load,
         //                     //                         push: false,
         //                     //                     });
         //                     //
-        //                     //                     self.display_list
-        //                     //                         .push(SPDisplayList(list.display_list.into()));
+        //                     //                     self.push_cmd(SPDisplayList(list.display_list.into()));
         //                 }
         //             }
         //         }
@@ -489,7 +522,9 @@ where
     }
 
     fn process_level_of_detail(&mut self, node: &GraphNodeLevelOfDetail) -> Result<(), Error> {
-        todo!()
+        // TODO: Level of detail
+        self.process_node_and_siblings(node.node.children)?;
+        Ok(())
     }
 
     fn process_switch_case(&mut self, node: &GraphNodeSwitchCase) -> Result<(), Error> {
@@ -544,9 +579,9 @@ where
         // TODO: if (node->header.gfx.areaIndex == gCurGraphNodeRoot->areaIndex) {
         {
             if !node.throw_matrix.is_null() {
-                todo!()
+                // TODO
             } else if node.node.flags.contains(GraphRenderFlags::BILLBOARD) {
-                todo!()
+                // TODO
             } else {
                 // TODO: Calculate matrix
             }
