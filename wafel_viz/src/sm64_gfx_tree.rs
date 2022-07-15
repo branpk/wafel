@@ -2,6 +2,7 @@ use core::fmt;
 use std::{collections::HashMap, sync::Arc};
 
 use bitflags::bitflags;
+use fast3d::util::Angle;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use wafel_api::{Address, Error, IntType};
 use wafel_data_type::{DataType, DataTypeRef, Field, Namespace, TypeName, ValueSerializeWrapper};
@@ -175,8 +176,8 @@ pub struct GraphNodeCamera {
     pub pos: [f32; 3],
     pub focus: [f32; 3],
     pub matrix_ptr: Address,
-    pub roll: i16,
-    pub roll_screen: i16,
+    pub roll: Angle,
+    pub roll_screen: Angle,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -185,7 +186,7 @@ pub struct GraphNodeTranslationRotation {
     pub node: GraphNode,
     pub display_list: Address,
     pub translation: [i16; 3],
-    pub rotation: [i16; 3],
+    pub rotation: [Angle; 3],
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -201,7 +202,7 @@ pub struct GraphNodeTranslation {
 pub struct GraphNodeRotation {
     pub node: GraphNode,
     pub display_list: Address,
-    pub rotation: [i16; 3],
+    pub rotation: [Angle; 3],
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -224,7 +225,7 @@ pub struct GraphNodeObject {
     pub shared_child: Address,
     pub area_index: i8,
     pub active_area_index: i8,
-    pub angle: [i16; 3],
+    pub angle: [Angle; 3],
     pub pos: [f32; 3],
     pub scale: [f32; 3],
     pub anim_info: AnimInfo,

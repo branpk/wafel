@@ -1,8 +1,8 @@
 use std::{
     collections::HashMap,
-    f32::consts::PI,
     iter::{self, Peekable},
     mem,
+    num::Wrapping,
     sync::Arc,
 };
 
@@ -582,8 +582,7 @@ where
     }
 
     fn process_camera(&mut self, node: &GraphNodeCamera) -> Result<(), Error> {
-        let camera_transform =
-            Matrixf::look_at(node.pos, node.focus, node.roll as f32 * PI / 0x8000 as f32);
+        let camera_transform = Matrixf::look_at(node.pos, node.focus, node.roll);
         self.mtx_stack.push_mul(camera_transform);
 
         self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
@@ -605,12 +604,7 @@ where
             node.translation[1] as f32,
             node.translation[2] as f32,
         ];
-        let rotation = [
-            node.rotation[0] as f32 * PI / 0x8000 as f32,
-            node.rotation[1] as f32 * PI / 0x8000 as f32,
-            node.rotation[2] as f32 * PI / 0x8000 as f32,
-        ];
-        let mtx = Matrixf::rotate_zxy_and_translate(translation, rotation);
+        let mtx = Matrixf::rotate_zxy_and_translate(translation, node.rotation);
         self.mtx_stack.push_mul(mtx);
 
         if !node.display_list.is_null() {
@@ -628,8 +622,7 @@ where
             node.translation[1] as f32,
             node.translation[2] as f32,
         ];
-        let rotation = [0.0, 0.0, 0.0];
-        let mtx = Matrixf::rotate_zxy_and_translate(translation, rotation);
+        let mtx = Matrixf::rotate_zxy_and_translate(translation, Default::default());
         self.mtx_stack.push_mul(mtx);
 
         if !node.display_list.is_null() {
@@ -643,12 +636,7 @@ where
 
     fn process_rotation(&mut self, node: &GraphNodeRotation) -> Result<(), Error> {
         let translation = [0.0, 0.0, 0.0];
-        let rotation = [
-            node.rotation[0] as f32 * PI / 0x8000 as f32,
-            node.rotation[1] as f32 * PI / 0x8000 as f32,
-            node.rotation[2] as f32 * PI / 0x8000 as f32,
-        ];
-        let mtx = Matrixf::rotate_zxy_and_translate(translation, rotation);
+        let mtx = Matrixf::rotate_zxy_and_translate(translation, node.rotation);
         self.mtx_stack.push_mul(mtx);
 
         if !node.display_list.is_null() {
@@ -671,12 +659,7 @@ where
                 // TODO
                 self.mtx_stack.push_mul(Matrixf::identity());
             } else {
-                let angle = [
-                    node.angle[0] as f32 * PI / 0x8000 as f32,
-                    node.angle[1] as f32 * PI / 0x8000 as f32,
-                    node.angle[2] as f32 * PI / 0x8000 as f32,
-                ];
-                let transform = Matrixf::rotate_zxy_and_translate(node.pos, angle);
+                let transform = Matrixf::rotate_zxy_and_translate(node.pos, node.angle);
                 self.mtx_stack.push_mul(transform);
             }
 
@@ -706,7 +689,7 @@ where
     }
 
     fn process_animated_part(&mut self, node: &GraphNodeAnimatedPart) -> Result<(), Error> {
-        let mut rotation = [0.0, 0.0, 0.0];
+        let mut rotation = [Wrapping(0), Wrapping(0), Wrapping(0)];
         let mut translation = node.translation.map(|x| x as f32);
 
         // println!("{}{:?}", "  ".repeat(self.indent), translation);
@@ -738,9 +721,9 @@ where
                 _ => {}
             }
             if anim.ty == AnimType::Rotation {
-                rotation[0] = anim.next(self.memory)? as f32 / 0x8000 as f32 * PI;
-                rotation[1] = anim.next(self.memory)? as f32 / 0x8000 as f32 * PI;
-                rotation[2] = anim.next(self.memory)? as f32 / 0x8000 as f32 * PI;
+                rotation[0] = Wrapping(anim.next(self.memory)?);
+                rotation[1] = Wrapping(anim.next(self.memory)?);
+                rotation[2] = Wrapping(anim.next(self.memory)?);
             }
         }
 

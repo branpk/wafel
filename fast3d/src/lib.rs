@@ -17,4 +17,5 @@ pub mod interpret;
 #[cfg(any(feature = "wgpu", doc))]
 #[doc(cfg(feature = "wgpu"))]
 pub mod render;
+mod trig_tables;
 pub mod util;

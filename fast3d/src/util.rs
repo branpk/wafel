@@ -3,7 +3,7 @@
 #![allow(missing_docs)]
 
 use core::fmt;
-use std::{mem, ops};
+use std::{mem, num::Wrapping, ops};
 
 use bytemuck::cast_slice_mut;
 
@@ -11,6 +11,7 @@ use crate::{
     cmd::{F3DWrapMode, MatrixOp},
     f3d_render_data::{TextureData, WrapMode},
     interpret::F3DMemory,
+    trig_tables::{ARCTAN_TABLE, SINE_TABLE},
 };
 
 impl From<F3DWrapMode> for WrapMode {
@@ -23,6 +24,68 @@ impl From<F3DWrapMode> for WrapMode {
             WrapMode::Repeat
         }
     }
+}
+
+#[allow(clippy::excessive_precision)]
+pub const M_PI_32: f32 = 3.14159265358979323846264338327950288;
+#[allow(clippy::excessive_precision)]
+pub const M_PI_64: f64 = 3.14159265358979323846264338327950288;
+
+// TODO: sinf, cosf, sqrtf?
+
+pub type Angle = Wrapping<i16>;
+
+pub fn sins(x: Angle) -> f32 {
+    SINE_TABLE[(x.0 as u16 >> 4) as usize]
+}
+
+pub fn coss(x: Angle) -> f32 {
+    SINE_TABLE[(x.0 as u16 >> 4) as usize + 0x400]
+}
+
+fn atan2_lookup(y: f32, x: f32) -> Angle {
+    if x == 0.0 {
+        Wrapping(ARCTAN_TABLE[0])
+    } else {
+        Wrapping(ARCTAN_TABLE[(y / x * 1024.0 + 0.5) as i32 as usize])
+    }
+}
+
+pub fn atan2s(mut x: f32, mut y: f32) -> Angle {
+    if y >= 0.0 {
+        if x >= 0.0 {
+            if x >= y {
+                atan2_lookup(y, x)
+            } else {
+                Wrapping(0x4000) - atan2_lookup(x, y)
+            }
+        } else {
+            x = -x;
+            if x < y {
+                Wrapping(0x4000) + atan2_lookup(x, y)
+            } else {
+                Wrapping(-0x8000) - atan2_lookup(y, x)
+            }
+        }
+    } else {
+        y = -y;
+        if x < 0.0 {
+            x = -x;
+            if x >= y {
+                Wrapping(-0x8000) + atan2_lookup(y, x)
+            } else {
+                Wrapping(-0x4000) - atan2_lookup(x, y)
+            }
+        } else if x < y {
+            Wrapping(-0x4000) + atan2_lookup(x, y)
+        } else {
+            -atan2_lookup(y, x)
+        }
+    }
+}
+
+pub fn atan2f(x: f32, y: f32) -> f32 {
+    atan2s(x, y).0 as f32 * M_PI_32 / 0x8000 as f32
 }
 
 #[derive(Clone, Default)]
@@ -38,10 +101,7 @@ impl Matrixf {
         ])
     }
 
-    // TODO: Use 16 bit angles
-
-    /// Note: roll is in radians
-    pub fn look_at(from: [f32; 3], to: [f32; 3], roll: f32) -> Self {
+    pub fn look_at(from: [f32; 3], to: [f32; 3], roll: Angle) -> Self {
         let mut dx = to[0] - from[0];
         let mut dz = to[2] - from[2];
 
@@ -49,9 +109,9 @@ impl Matrixf {
         dx *= inv_length;
         dz *= inv_length;
 
-        let mut y_col_y = roll.cos();
-        let mut x_col_y = roll.sin() * dz;
-        let mut z_col_y = -roll.sin() * dx;
+        let mut y_col_y = coss(roll);
+        let mut x_col_y = sins(roll) * dz;
+        let mut z_col_y = -sins(roll) * dx;
 
         let mut x_col_z = to[0] - from[0];
         let mut y_col_z = to[1] - from[1];
@@ -120,16 +180,15 @@ impl Matrixf {
         mtx
     }
 
-    /// Rotate xyz by c in radians and translate by b.
-    pub fn rotate_xyz_and_translate(b: [f32; 3], c: [f32; 3]) -> Self {
-        let sx = c[0].sin();
-        let cx = c[0].cos();
+    pub fn rotate_xyz_and_translate(b: [f32; 3], c: [Angle; 3]) -> Self {
+        let sx = sins(c[0]);
+        let cx = coss(c[0]);
 
-        let sy = c[1].sin();
-        let cy = c[1].cos();
+        let sy = sins(c[1]);
+        let cy = coss(c[1]);
 
-        let sz = c[2].sin();
-        let cz = c[2].cos();
+        let sz = sins(c[2]);
+        let cz = coss(c[2]);
 
         let mut mtx = Matrixf::default();
 
@@ -156,16 +215,15 @@ impl Matrixf {
         mtx
     }
 
-    /// Rotate zxy by c in radians and translate by b.
-    pub fn rotate_zxy_and_translate(b: [f32; 3], c: [f32; 3]) -> Self {
-        let sx = c[0].sin();
-        let cx = c[0].cos();
+    pub fn rotate_zxy_and_translate(b: [f32; 3], c: [Angle; 3]) -> Self {
+        let sx = sins(c[0]);
+        let cx = coss(c[0]);
 
-        let sy = c[1].sin();
-        let cy = c[1].cos();
+        let sy = sins(c[1]);
+        let cy = coss(c[1]);
 
-        let sz = c[2].sin();
-        let cz = c[2].cos();
+        let sz = sins(c[2]);
+        let cz = coss(c[2]);
 
         let mut mtx = Matrixf::default();
 

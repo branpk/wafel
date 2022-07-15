@@ -1,11 +1,11 @@
-use std::{f32::consts::PI, sync::Arc, vec};
+use std::{f32::consts::PI, num::Wrapping, sync::Arc, vec};
 
 use bytemuck::cast_slice;
 use fast3d::{
     cmd::{F3DCommand, GeometryModes, MatrixMode, MatrixOp},
     decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand},
     interpret::{interpret_f3d_display_list, F3DMemory, F3DRenderData},
-    util::Matrixf,
+    util::{Angle, Matrixf},
 };
 use wafel_api::{Address, Error, IntType};
 use wafel_data_path::GlobalDataPath;
@@ -33,7 +33,7 @@ pub enum Camera {
     LookAt {
         pos: [f32; 3],
         focus: [f32; 3],
-        roll: f32,
+        roll: Angle,
     },
 }
 
@@ -56,8 +56,8 @@ pub fn render_sm64_with_config(
                 let lakitu_focus = get_path("gLakituState.focus")?
                     .read(memory)?
                     .try_as_f32_3()?;
-                let lakitu_roll = get_path("gLakituState.roll")?.read(memory)?.try_as_int()?;
-                let lakitu_roll = lakitu_roll as f32 * PI / 0x8000 as f32;
+                let lakitu_roll =
+                    Wrapping(get_path("gLakituState.roll")?.read(memory)?.try_as_int()? as i16);
 
                 if pos != focus && lakitu_pos != lakitu_focus {
                     let lakitu_view_mtx = Matrixf::look_at(lakitu_pos, lakitu_focus, lakitu_roll);

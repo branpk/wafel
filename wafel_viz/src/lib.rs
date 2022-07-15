@@ -12,6 +12,7 @@ use std::{
     collections::{HashMap, HashSet},
     error::Error,
     f32::consts::PI,
+    num::Wrapping,
     process,
     rc::Rc,
     sync::Arc,
@@ -302,9 +303,9 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                                         .map(|pos| Camera::LookAt {
                                             pos,
                                             focus: game.read("gLakituState.focus").as_f32_3(),
-                                            roll: game.read("gLakituState.roll").as_int() as f32
-                                                * PI
-                                                / 0x8000 as f32,
+                                            roll: Wrapping(
+                                                game.read("gLakituState.roll").as_int() as i16
+                                            ),
                                         })
                                         .unwrap_or_default(),
                                     ..Default::default()
