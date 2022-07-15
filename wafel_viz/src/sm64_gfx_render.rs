@@ -119,6 +119,7 @@ where
     cur_perspective: Option<GraphNodePerspective>,
     cur_camera: Option<GraphNodeCamera>,
     cur_object: Option<GraphNodeObject>,
+    indent: usize,
 }
 
 #[derive(Debug)]
@@ -142,6 +143,8 @@ impl AnimState {
         let frame = self.frame as i32;
         let attr0 = memory.read_int(self.attribute, IntType::U16)? as u16;
         let attr1 = memory.read_int(self.attribute + 2, IntType::U16)? as u16;
+
+        // println!("    {:04X} {:04X}", attr0, attr1);
 
         let result = if frame < attr0 as i32 {
             attr1 as i32 + frame
@@ -191,12 +194,13 @@ where
             cur_perspective: None,
             cur_camera: None,
             cur_object: None,
+            indent: 0,
         })
     }
 
     fn push_cmd(&mut self, cmd: F3DCommand<Pointer>) {
         if DEBUG_PRINT {
-            println!("  {:?}", cmd);
+            println!("{}{:?}", "  ".repeat(self.indent), cmd);
         }
         self.display_list.push(cmd);
     }
@@ -334,12 +338,13 @@ where
 
         self.anim = Some(AnimState {
             ty,
-            enabled: flags & (1 << 5) != 0,
+            enabled: flags & (1 << 5) == 0,
             frame: node.anim_frame,
             translation_multiplier,
             attribute: anim.try_field("index")?.try_as_address()?, // TODO: Seg to virt
             data: anim.try_field("values")?.try_as_address()?,     // TODO: Seg to virt
         });
+        // println!("{:02X} {:?}", node.anim_id, self.anim);
 
         Ok(())
     }
@@ -371,6 +376,7 @@ where
         let first_node = self.reader.read(first_addr)?;
 
         let mut iterate_siblings = siblings;
+        let mut cur_addr = first_addr;
         let mut cur_node = first_node;
 
         if !cur_node.node().parent.is_null() {
@@ -387,9 +393,11 @@ where
                     self.process_node_and_siblings(cur_node.node().children)?;
                 } else {
                     if DEBUG_PRINT {
-                        println!("{:?}", cur_node);
+                        let indent_str = "  ".repeat(self.indent);
+                        println!("{}{:?} {:?} {{", indent_str, cur_addr, cur_node);
                     }
 
+                    self.indent += 1;
                     match &cur_node {
                         GfxTreeNode::Root(node) => self.process_root(node)?,
                         GfxTreeNode::OrthoProjection(node) => {
@@ -418,6 +426,12 @@ where
                         GfxTreeNode::HeldObject(node) => self.process_held_object(node)?,
                         GfxTreeNode::CullingRadius(node) => self.process_culling_radius(node)?,
                     }
+                    self.indent -= 1;
+
+                    if DEBUG_PRINT {
+                        let indent_str = "  ".repeat(self.indent);
+                        println!("{}}}", indent_str);
+                    }
                 }
             }
 
@@ -428,6 +442,7 @@ where
             if next_addr == first_addr {
                 break;
             }
+            cur_addr = next_addr;
             cur_node = self.reader.read(next_addr)?;
         }
 
@@ -542,8 +557,12 @@ where
     }
 
     fn process_level_of_detail(&mut self, node: &GraphNodeLevelOfDetail) -> Result<(), Error> {
-        // TODO: Level of detail
-        self.process_node_and_siblings(node.node.children)?;
+        let mtx = self.mtx_stack.cur.to_fixed();
+        let dist_from_cam = (mtx[7] >> 16) as i16;
+
+        if node.min_distance <= dist_from_cam && dist_from_cam < node.max_distance {
+            self.process_node_and_siblings(node.node.children)?;
+        }
         Ok(())
     }
 
@@ -690,6 +709,8 @@ where
         let mut rotation = [0.0, 0.0, 0.0];
         let mut translation = node.translation.map(|x| x as f32);
 
+        // println!("{}{:?}", "  ".repeat(self.indent), translation);
+
         if let Some(anim) = &mut self.anim {
             match anim.ty {
                 AnimType::Translation => {
@@ -722,6 +743,8 @@ where
                 rotation[2] = anim.next(self.memory)? as f32 / 0x8000 as f32 * PI;
             }
         }
+
+        // eprintln!("    -> {:?} {:?}", translation, rotation);
 
         let transform = Matrixf::rotate_xyz_and_translate(translation, rotation);
         self.mtx_stack.push_mul(transform);
