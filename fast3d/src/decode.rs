@@ -198,6 +198,7 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
                     mul: ((w1 >> 16) & 0xFFFF) as i16,
                     offset: (w1 & 0xFFFF) as i16,
                 },
+                14 => SPPerspNormalize((w1 & 0xFFFF) as u16),
                 _ => Unknown(raw_command),
             }
         }

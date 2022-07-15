@@ -3,7 +3,7 @@ use std::{env, fmt::Write, fs};
 use image::{Rgb, RgbImage};
 use itertools::Itertools;
 
-use crate::{game_runner::GameRunner, renderer::Renderer, TestCase};
+use crate::{game_runner::GameRunner, renderer::Renderer, viz_tests::TestCase};
 
 pub fn run_tests(mut test_cases: Vec<TestCase>) -> Result<(), Box<dyn std::error::Error>> {
     let calc_diffs = env::args().any(|arg| arg == "--diff");
