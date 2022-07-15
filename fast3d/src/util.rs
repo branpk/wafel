@@ -38,6 +38,8 @@ impl Matrixf {
         ])
     }
 
+    // TODO: Use 16 bit angles
+
     /// Note: roll is in radians
     pub fn look_at(from: [f32; 3], to: [f32; 3], roll: f32) -> Self {
         let mut dx = to[0] - from[0];
@@ -151,6 +153,50 @@ impl Matrixf {
         mtx.0[2][3] = b[2];
         mtx.0[3][3] = 1.0;
 
+        mtx
+    }
+
+    /// Rotate zxy by c in radians and translate by b.
+    pub fn rotate_zxy_and_translate(b: [f32; 3], c: [f32; 3]) -> Self {
+        let sx = c[0].sin();
+        let cx = c[0].cos();
+
+        let sy = c[1].sin();
+        let cy = c[1].cos();
+
+        let sz = c[2].sin();
+        let cz = c[2].cos();
+
+        let mut mtx = Matrixf::default();
+
+        mtx.0[0][0] = cy * cz + sx * sy * sz;
+        mtx.0[0][1] = -cy * sz + sx * sy * cz;
+        mtx.0[0][2] = cx * sy;
+        mtx.0[0][3] = b[0];
+
+        mtx.0[1][0] = cx * sz;
+        mtx.0[1][1] = cx * cz;
+        mtx.0[1][2] = -sx;
+        mtx.0[1][3] = b[1];
+
+        mtx.0[2][0] = -sy * cz + sx * cy * sz;
+        mtx.0[2][1] = sy * sz + sx * cy * cz;
+        mtx.0[2][2] = cx * cy;
+        mtx.0[2][3] = b[2];
+
+        mtx.0[3][0] = 0.0;
+        mtx.0[3][1] = 0.0;
+        mtx.0[3][2] = 0.0;
+        mtx.0[3][3] = 1.0;
+
+        mtx
+    }
+
+    pub fn scale_vec3f(s: [f32; 3]) -> Self {
+        let mut mtx = Self::identity();
+        mtx.0[0][0] = s[0];
+        mtx.0[1][1] = s[1];
+        mtx.0[2][2] = s[2];
         mtx
     }
 

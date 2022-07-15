@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     f32::consts::PI,
     iter::{self, Peekable},
     mem,
@@ -110,11 +111,14 @@ where
     reader: GfxNodeReader<'m>,
     mtx_stack: MatrixState,
     master_lists: [Vec<DisplayListNode>; 8],
+    display_list_mtx_override: HashMap<Address, Vec<i32>>,
     display_list: Vec<F3DCommand<Pointer>>,
     u32_buffer: Vec<u32>,
     anim: Option<AnimState>,
     cur_root: Option<GraphNodeRoot>,
     cur_perspective: Option<GraphNodePerspective>,
+    cur_camera: Option<GraphNodeCamera>,
+    cur_object: Option<GraphNodeObject>,
 }
 
 #[derive(Debug)]
@@ -179,11 +183,14 @@ where
             reader,
             mtx_stack: MatrixState::default(),
             master_lists: Default::default(),
+            display_list_mtx_override: HashMap::new(),
             display_list: Vec::new(),
             u32_buffer: Vec::new(),
             anim: None,
             cur_root: None,
             cur_perspective: None,
+            cur_camera: None,
+            cur_object: None,
         })
     }
 
@@ -473,8 +480,21 @@ where
         while matches!(self.input_display_list.peek(), Some(DPSetRenderMode(_))) {
             self.dl_push_expect(|cmd| matches!(cmd, DPSetRenderMode(_)));
             while matches!(self.input_display_list.peek(), Some(SPMatrix { .. })) {
-                self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
-                self.dl_push_expect(|cmd| matches!(cmd, SPDisplayList(_)));
+                let mut mtx_cmd = self.dl_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+                let dl_cmd = self.dl_expect(|cmd| matches!(cmd, SPDisplayList(_)));
+
+                if let SPMatrix { matrix, .. } = &mut mtx_cmd {
+                    if let SPDisplayList(Pointer::Address(addr)) = dl_cmd {
+                        if let Some(new_mtx) = self.display_list_mtx_override.get(&addr) {
+                            let offset = self.u32_buffer.len();
+                            self.u32_buffer.extend(cast_slice(new_mtx));
+                            *matrix = Pointer::BufferOffset(offset);
+                        }
+                    }
+                }
+
+                self.push_cmd(mtx_cmd);
+                self.push_cmd(dl_cmd);
             }
         }
 
@@ -543,8 +563,17 @@ where
     }
 
     fn process_camera(&mut self, node: &GraphNodeCamera) -> Result<(), Error> {
+        let camera_transform =
+            Matrixf::look_at(node.pos, node.focus, node.roll as f32 * PI / 0x8000 as f32);
+        self.mtx_stack.push_mul(camera_transform);
+
         self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+
+        self.cur_camera = Some(node.clone());
         self.process_node_and_siblings(node.fn_node.node.children)?;
+        self.cur_camera = None;
+
+        self.mtx_stack.pop();
         Ok(())
     }
 
@@ -552,38 +581,84 @@ where
         &mut self,
         node: &GraphNodeTranslationRotation,
     ) -> Result<(), Error> {
+        let translation = [
+            node.translation[0] as f32,
+            node.translation[1] as f32,
+            node.translation[2] as f32,
+        ];
+        let rotation = [
+            node.rotation[0] as f32 * PI / 0x8000 as f32,
+            node.rotation[1] as f32 * PI / 0x8000 as f32,
+            node.rotation[2] as f32 * PI / 0x8000 as f32,
+        ];
+        let mtx = Matrixf::rotate_zxy_and_translate(translation, rotation);
+        self.mtx_stack.push_mul(mtx);
+
         if !node.display_list.is_null() {
             self.append_display_list(node.node.flags.bits() >> 8);
         }
         self.process_node_and_siblings(node.node.children)?;
+
+        self.mtx_stack.pop();
         Ok(())
     }
 
     fn process_translation(&mut self, node: &GraphNodeTranslation) -> Result<(), Error> {
+        let translation = [
+            node.translation[0] as f32,
+            node.translation[1] as f32,
+            node.translation[2] as f32,
+        ];
+        let rotation = [0.0, 0.0, 0.0];
+        let mtx = Matrixf::rotate_zxy_and_translate(translation, rotation);
+        self.mtx_stack.push_mul(mtx);
+
         if !node.display_list.is_null() {
             self.append_display_list(node.node.flags.bits() >> 8);
         }
         self.process_node_and_siblings(node.node.children)?;
+
+        self.mtx_stack.pop();
         Ok(())
     }
 
     fn process_rotation(&mut self, node: &GraphNodeRotation) -> Result<(), Error> {
+        let translation = [0.0, 0.0, 0.0];
+        let rotation = [
+            node.rotation[0] as f32 * PI / 0x8000 as f32,
+            node.rotation[1] as f32 * PI / 0x8000 as f32,
+            node.rotation[2] as f32 * PI / 0x8000 as f32,
+        ];
+        let mtx = Matrixf::rotate_zxy_and_translate(translation, rotation);
+        self.mtx_stack.push_mul(mtx);
+
         if !node.display_list.is_null() {
             self.append_display_list(node.node.flags.bits() >> 8);
         }
         self.process_node_and_siblings(node.node.children)?;
+
+        self.mtx_stack.pop();
         Ok(())
     }
 
     fn process_object(&mut self, node: &GraphNodeObject) -> Result<(), Error> {
         // TODO: if (node->header.gfx.areaIndex == gCurGraphNodeRoot->areaIndex) {
         {
+            // TODO: Matrix transform
             if !node.throw_matrix.is_null() {
                 // TODO
+                self.mtx_stack.push_mul(Matrixf::identity());
             } else if node.node.flags.contains(GraphRenderFlags::BILLBOARD) {
                 // TODO
+                self.mtx_stack.push_mul(Matrixf::identity());
             } else {
-                // TODO: Calculate matrix
+                let angle = [
+                    node.angle[0] as f32 * PI / 0x8000 as f32,
+                    node.angle[1] as f32 * PI / 0x8000 as f32,
+                    node.angle[2] as f32 * PI / 0x8000 as f32,
+                ];
+                let transform = Matrixf::rotate_zxy_and_translate(node.pos, angle);
+                self.mtx_stack.push_mul(transform);
             }
 
             // TODO: Calculate throwMatrix and cameraToObject
@@ -595,14 +670,15 @@ where
             {
                 // TODO: Calculate matrix
                 if !node.shared_child.is_null() {
-                    // TODO: Set & unset gCurGraphNodeObject
                     // TODO: Set & unset shared_child parent
+                    self.cur_object = Some(node.clone());
                     self.process_node_and_siblings(node.shared_child)?;
+                    self.cur_object = None;
                 }
                 self.process_node_and_siblings(node.node.children)?;
             }
 
-            // TODO: Pop matrix
+            self.mtx_stack.pop();
             self.anim = None;
             // TODO: Reset object throw matrix
         }
@@ -648,19 +724,23 @@ where
         }
 
         let transform = Matrixf::rotate_xyz_and_translate(translation, rotation);
-
         self.mtx_stack.push_mul(transform);
+
         if !node.display_list.is_null() {
             // self.append_display_list_with(node.display_list, node.node.flags.bits() >> 8);
             self.append_display_list(node.node.flags.bits() >> 8);
+            self.display_list_mtx_override
+                .insert(node.display_list, self.mtx_stack.cur.to_fixed());
         }
         self.process_node_and_siblings(node.node.children)?;
-        self.mtx_stack.pop();
 
+        self.mtx_stack.pop();
         Ok(())
     }
 
     fn process_billboard(&mut self, node: &GraphNodeBillboard) -> Result<(), Error> {
+        // TODO: Matrix transform
+
         if !node.display_list.is_null() {
             self.append_display_list(node.node.flags.bits() >> 8);
         }
@@ -677,15 +757,21 @@ where
     }
 
     fn process_scale(&mut self, node: &GraphNodeScale) -> Result<(), Error> {
+        let mtx = Matrixf::scale_vec3f([node.scale, node.scale, node.scale]);
+        self.mtx_stack.push_mul(mtx);
+
         if !node.display_list.is_null() {
             self.append_display_list(node.node.flags.bits() >> 8);
         }
         self.process_node_and_siblings(node.node.children)?;
+
+        self.mtx_stack.pop();
         Ok(())
     }
 
     fn process_shadow(&mut self, node: &GraphNodeShadow) -> Result<(), Error> {
         // TODO: extra objects + maybe append_display_list
+        // TODO: matrix transform
 
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
@@ -718,6 +804,7 @@ where
 
     fn process_held_object(&mut self, node: &GraphNodeHeldObject) -> Result<(), Error> {
         // TODO: Animation globals?
+        // TODO: Matrix transform
         self.process_node_and_siblings(node.fn_node.node.children)?;
         Ok(())
     }
