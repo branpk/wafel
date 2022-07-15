@@ -433,28 +433,39 @@ where
             self.dl_push_expect(|cmd| matches!(cmd, SPSetGeometryMode(_)));
         }
 
-        for (layer, lists) in mem::take(&mut self.master_lists).into_iter().enumerate() {
-            if !lists.is_empty() {
-                self.dl_push_expect(|cmd| matches!(cmd, DPSetRenderMode(_)));
+        // TODO: Need to set render mode and splice custom display lists in
+        // TODO: Probably can remove calls to append_display_list
 
-                for list in lists {
-                    self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
-                    self.dl_push_expect(|cmd| matches!(cmd, SPDisplayList(_)));
-
-                    //                     let offset = self.u32_buffer.len();
-                    //                     self.u32_buffer.extend(cast_slice(&list.transform));
-                    //                     self.display_list.push(SPMatrix {
-                    //                         matrix: Pointer::BufferOffset(offset),
-                    //                         mode: MatrixMode::ModelView,
-                    //                         op: MatrixOp::Load,
-                    //                         push: false,
-                    //                     });
-                    //
-                    //                     self.display_list
-                    //                         .push(SPDisplayList(list.display_list.into()));
-                }
+        while matches!(self.input_display_list.peek(), Some(DPSetRenderMode(_))) {
+            self.dl_push_expect(|cmd| matches!(cmd, DPSetRenderMode(_)));
+            while matches!(self.input_display_list.peek(), Some(SPMatrix { .. })) {
+                self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+                self.dl_push_expect(|cmd| matches!(cmd, SPDisplayList(_)));
             }
         }
+
+        //         for (layer, lists) in mem::take(&mut self.master_lists).into_iter().enumerate() {
+        //             if !lists.is_empty() {
+        //                 self.dl_push_expect(|cmd| matches!(cmd, DPSetRenderMode(_)));
+        //
+        //                 for list in lists {
+        //                     self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+        //                     self.dl_push_expect(|cmd| matches!(cmd, SPDisplayList(_)));
+        //
+        //                     //                     let offset = self.u32_buffer.len();
+        //                     //                     self.u32_buffer.extend(cast_slice(&list.transform));
+        //                     //                     self.display_list.push(SPMatrix {
+        //                     //                         matrix: Pointer::BufferOffset(offset),
+        //                     //                         mode: MatrixMode::ModelView,
+        //                     //                         op: MatrixOp::Load,
+        //                     //                         push: false,
+        //                     //                     });
+        //                     //
+        //                     //                     self.display_list
+        //                     //                         .push(SPDisplayList(list.display_list.into()));
+        //                 }
+        //             }
+        //         }
 
         if node.node.flags.contains(GraphRenderFlags::Z_BUFFER) {
             self.dl_push_expect(|cmd| matches!(cmd, DPPipeSync));
@@ -473,7 +484,8 @@ where
     }
 
     fn process_start(&mut self, node: &GraphNodeStart) -> Result<(), Error> {
-        todo!()
+        self.process_node_and_siblings(node.node.children)?;
+        Ok(())
     }
 
     fn process_level_of_detail(&mut self, node: &GraphNodeLevelOfDetail) -> Result<(), Error> {
@@ -481,30 +493,51 @@ where
     }
 
     fn process_switch_case(&mut self, node: &GraphNodeSwitchCase) -> Result<(), Error> {
-        // TODO
+        // TODO: selected case not set if rendering a culled object
 
-        let selected_child = node.fn_node.node.children;
+        let mut selected_child = node.fn_node.node.children;
+        let mut i = 0;
+
+        while !selected_child.is_null() && node.selected_case > i {
+            selected_child = self.reader.read(selected_child)?.node().next;
+            i += 1;
+        }
+
         self.process_node_and_siblings(selected_child)?;
         Ok(())
     }
 
     fn process_camera(&mut self, node: &GraphNodeCamera) -> Result<(), Error> {
-        todo!()
+        self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+        self.process_node_and_siblings(node.fn_node.node.children)?;
+        Ok(())
     }
 
     fn process_translation_rotation(
         &mut self,
         node: &GraphNodeTranslationRotation,
     ) -> Result<(), Error> {
-        todo!()
+        if !node.display_list.is_null() {
+            self.append_display_list(node.node.flags.bits() >> 8);
+        }
+        self.process_node_and_siblings(node.node.children)?;
+        Ok(())
     }
 
     fn process_translation(&mut self, node: &GraphNodeTranslation) -> Result<(), Error> {
-        todo!()
+        if !node.display_list.is_null() {
+            self.append_display_list(node.node.flags.bits() >> 8);
+        }
+        self.process_node_and_siblings(node.node.children)?;
+        Ok(())
     }
 
     fn process_rotation(&mut self, node: &GraphNodeRotation) -> Result<(), Error> {
-        todo!()
+        if !node.display_list.is_null() {
+            self.append_display_list(node.node.flags.bits() >> 8);
+        }
+        self.process_node_and_siblings(node.node.children)?;
+        Ok(())
     }
 
     fn process_object(&mut self, node: &GraphNodeObject) -> Result<(), Error> {
@@ -579,12 +612,12 @@ where
             }
         }
 
-        eprintln!("{:?} {:?}", translation, rotation);
         let transform = Matrixf::rotate_xyz_and_translate(translation, rotation);
 
         self.mtx_stack.push_mul(transform);
         if !node.display_list.is_null() {
-            self.append_display_list_with(node.display_list, node.node.flags.bits() >> 8);
+            // self.append_display_list_with(node.display_list, node.node.flags.bits() >> 8);
+            self.append_display_list(node.node.flags.bits() >> 8);
         }
         self.process_node_and_siblings(node.node.children)?;
         self.mtx_stack.pop();
@@ -593,48 +626,49 @@ where
     }
 
     fn process_billboard(&mut self, node: &GraphNodeBillboard) -> Result<(), Error> {
-        todo!()
+        if !node.display_list.is_null() {
+            self.append_display_list(node.node.flags.bits() >> 8);
+        }
+        self.process_node_and_siblings(node.node.children)?;
+        Ok(())
     }
 
     fn process_display_list(&mut self, node: &GraphNodeDisplayList) -> Result<(), Error> {
-        todo!()
+        if !node.display_list.is_null() {
+            self.append_display_list(node.node.flags.bits() >> 8);
+        }
+        self.process_node_and_siblings(node.node.children)?;
+        Ok(())
     }
 
     fn process_scale(&mut self, node: &GraphNodeScale) -> Result<(), Error> {
-        // TODO
-
+        if !node.display_list.is_null() {
+            self.append_display_list(node.node.flags.bits() >> 8);
+        }
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
     }
 
     fn process_shadow(&mut self, node: &GraphNodeShadow) -> Result<(), Error> {
-        // TODO
-
-        if let Some(anim) = &mut self.anim {
-            if anim.enabled
-                && matches!(
-                    anim.ty,
-                    AnimType::Translation | AnimType::LateralTranslation
-                )
-            {
-                // TODO
-                anim.next(self.memory)?;
-                anim.attribute += 4;
-                anim.next(self.memory)?;
-                anim.attribute -= 12;
-            }
-        }
+        // TODO: extra objects + maybe append_display_list
 
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
     }
 
     fn process_object_parent(&mut self, node: &GraphNodeObjectParent) -> Result<(), Error> {
-        todo!()
+        // TODO: Do we need to set parent?
+        if !node.shared_child.is_null() {
+            self.process_node_and_siblings(node.shared_child)?;
+        }
+        self.process_node_and_siblings(node.node.children)?;
+        Ok(())
     }
 
     fn process_generated(&mut self, node: &GraphNodeGenerated) -> Result<(), Error> {
-        todo!()
+        // TODO: append_display_list?
+        self.process_node_and_siblings(node.fn_node.node.children)?;
+        Ok(())
     }
 
     fn process_background(&mut self, node: &GraphNodeBackground) -> Result<(), Error> {
@@ -648,10 +682,13 @@ where
     }
 
     fn process_held_object(&mut self, node: &GraphNodeHeldObject) -> Result<(), Error> {
-        todo!()
+        // TODO: Animation globals?
+        self.process_node_and_siblings(node.fn_node.node.children)?;
+        Ok(())
     }
 
     fn process_culling_radius(&mut self, node: &GraphNodeCullingRadius) -> Result<(), Error> {
-        todo!()
+        self.process_node_and_siblings(node.node.children)?;
+        Ok(())
     }
 }
