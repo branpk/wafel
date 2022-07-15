@@ -62,6 +62,7 @@ pub enum F3DCommand<Ptr> {
     SPEndDisplayList,
     SPSetGeometryMode(GeometryModes),
     SPClearGeometryMode(GeometryModes),
+    SPPerspNormalize(u16),
 
     // DP commands
     DPSetAlphaDither(AlphaDither),
@@ -78,7 +79,6 @@ pub enum F3DCommand<Ptr> {
     DPSetAlphaCompare(AlphaCompare),
     DPSetDepthSource(DepthSource),
     DPSetRenderMode(RenderMode),
-    DPPerspNormalize(u16),
     DPSetColorImage(Image<Ptr>),
     DPSetDepthImage(Ptr),
     DPSetTextureImage(Image<Ptr>),

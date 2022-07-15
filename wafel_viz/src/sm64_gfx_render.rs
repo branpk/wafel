@@ -1,8 +1,13 @@
-use std::{f32::consts::PI, iter::Peekable, sync::Arc};
+use std::{
+    f32::consts::PI,
+    iter::{self, Peekable},
+    mem,
+    sync::Arc,
+};
 
 use bytemuck::cast_slice;
 use fast3d::{
-    cmd::*,
+    cmd::{F3DCommand::*, *},
     decode::decode_f3d_display_list,
     interpret::{interpret_f3d_display_list, F3DRenderData},
     util::{MatrixState, Matrixf},
@@ -36,14 +41,17 @@ pub fn test_render(
         addr: dl_addr,
     }
     .map(|cmd| cmd.map_err(Error::from));
-    let input_dl = decode_f3d_display_list(raw_input_dl);
 
-    let mut renderer = NodeRenderer::new(input_dl, memory, layout)?;
+    let input_dl: Result<Vec<F3DCommand<Pointer>>, Error> =
+        decode_f3d_display_list(raw_input_dl).collect();
+    let input_dl = input_dl?;
+
+    let mut renderer = NodeRenderer::new(input_dl.into_iter(), memory, layout)?;
 
     // renderer.u32_buffer.extend(cast_slice(
     //     &Matrixf::perspective(45.0 * PI / 180.0, 320.0 / 240.0, 100.0, 12800.0).to_fixed(),
     // ));
-    // renderer.display_list.push(F3DCommand::SPMatrix {
+    // renderer.display_list.push(SPMatrix {
     //     matrix: Pointer::BufferOffset(0),
     //     mode: MatrixMode::Proj,
     //     op: MatrixOp::Load,
@@ -51,10 +59,10 @@ pub fn test_render(
     // });
     // renderer
     //     .display_list
-    //     .push(F3DCommand::SPSetGeometryMode(GeometryModes::LIGHTING));
+    //     .push(SPSetGeometryMode(GeometryModes::LIGHTING));
     // renderer
     //     .display_list
-    //     .push(F3DCommand::DPSetCombineMode(CombineMode::one_cycle(
+    //     .push(DPSetCombineMode(CombineMode::one_cycle(
     //         ColorCombineComponent::Shade.into(),
     //         ColorCombineComponent::Shade.into(),
     //     )));
@@ -62,7 +70,7 @@ pub fn test_render(
     if let Value::Address(root_addr) = get_path("gCurrentArea?.unk04")?.read(memory)? {
         renderer.process_node(root_addr, false)?;
     }
-    renderer.submit_master_lists(true);
+    renderer.finish();
 
     let mut f3d_memory = F3DMemoryImpl::new(memory, Pointer::BufferOffset(0));
     // f3d_memory.set_view_transform(Some(Matrixf::look_at(
@@ -81,7 +89,7 @@ pub fn test_render(
 #[derive(Debug)]
 struct NodeRenderer<'m, M, I>
 where
-    I: Iterator<Item = Result<F3DCommand<Pointer>, Error>>,
+    I: Iterator<Item = F3DCommand<Pointer>>,
 {
     input_display_list: Peekable<I>,
     memory: &'m M,
@@ -92,6 +100,8 @@ where
     display_list: Vec<F3DCommand<Pointer>>,
     u32_buffer: Vec<u32>,
     anim: Option<AnimState>,
+    cur_root: Option<GraphNodeRoot>,
+    cur_perspective: Option<GraphNodePerspective>,
 }
 
 #[derive(Debug)]
@@ -145,7 +155,7 @@ enum AnimType {
 impl<'m, M, I> NodeRenderer<'m, M, I>
 where
     M: MemoryRead,
-    I: Iterator<Item = Result<F3DCommand<Pointer>, Error>>,
+    I: Iterator<Item = F3DCommand<Pointer>>,
 {
     fn new(input_display_list: I, memory: &'m M, layout: &'m DataLayout) -> Result<Self, Error> {
         let reader = get_gfx_node_reader(memory, layout)?;
@@ -159,17 +169,55 @@ where
             display_list: Vec::new(),
             u32_buffer: Vec::new(),
             anim: None,
+            cur_root: None,
+            cur_perspective: None,
         })
     }
 
-    fn append_display_list(&mut self, display_list: Address, layer: i16) {
-        if !display_list.is_null() {
-            // TODO: Set transform
-            self.master_lists[layer as usize].push(DisplayListNode {
-                transform: self.mtx_stack.cur.to_fixed(),
-                display_list,
-            });
+    fn dl_push_until(&mut self, mut f: impl FnMut(F3DCommand<Pointer>) -> bool) -> bool {
+        loop {
+            match self.input_display_list.peek() {
+                Some(cmd) if f(*cmd) => return true,
+                Some(cmd) => {
+                    self.display_list.push(*cmd);
+                    self.input_display_list.next();
+                }
+                None => return false,
+            }
         }
+    }
+
+    fn dl_expect(&mut self, mut f: impl FnMut(F3DCommand<Pointer>) -> bool) -> F3DCommand<Pointer> {
+        if let Some(&cmd) = self.input_display_list.peek() {
+            if f(cmd) {
+                self.input_display_list.next();
+                return cmd;
+            }
+        }
+        // TODO: Error handling
+        panic!(
+            "unexpected display list cmd: {:?}",
+            self.input_display_list.peek()
+        );
+    }
+
+    fn dl_push_expect(&mut self, f: impl FnMut(F3DCommand<Pointer>) -> bool) {
+        let cmd = self.dl_expect(f);
+        self.display_list.push(cmd);
+    }
+
+    fn append_display_list(&mut self, layer: i16) {
+        self.master_lists[layer as usize].push(DisplayListNode {
+            transform: self.mtx_stack.cur.to_fixed(),
+            display_list: Address::NULL,
+        });
+    }
+
+    fn append_display_list_with(&mut self, display_list: Address, layer: i16) {
+        self.master_lists[layer as usize].push(DisplayListNode {
+            transform: self.mtx_stack.cur.to_fixed(),
+            display_list,
+        });
     }
 
     fn get_render_mode(&self, layer: i16, z_buffer: bool) -> RenderMode {
@@ -199,18 +247,17 @@ where
 
         if z_buffer {
             self.display_list
-                .push(F3DCommand::SPSetGeometryMode(GeometryModes::ZBUFFER));
+                .push(SPSetGeometryMode(GeometryModes::ZBUFFER));
         }
 
         for (layer, lists) in self.master_lists.iter().enumerate() {
             let render_mode = self.get_render_mode(layer as i16, z_buffer);
-            self.display_list
-                .push(F3DCommand::DPSetRenderMode(render_mode));
+            self.display_list.push(DPSetRenderMode(render_mode));
 
             for list in lists {
                 let offset = self.u32_buffer.len();
                 self.u32_buffer.extend(cast_slice(&list.transform));
-                self.display_list.push(F3DCommand::SPMatrix {
+                self.display_list.push(SPMatrix {
                     matrix: Pointer::BufferOffset(offset),
                     mode: MatrixMode::ModelView,
                     op: MatrixOp::Load,
@@ -218,14 +265,18 @@ where
                 });
 
                 self.display_list
-                    .push(F3DCommand::SPDisplayList(list.display_list.into()));
+                    .push(SPDisplayList(list.display_list.into()));
             }
         }
 
         if z_buffer {
             self.display_list
-                .push(F3DCommand::SPClearGeometryMode(GeometryModes::ZBUFFER));
+                .push(SPClearGeometryMode(GeometryModes::ZBUFFER));
         }
+    }
+
+    fn finish(&mut self) {
+        self.display_list.extend(&mut self.input_display_list);
     }
 
     fn set_animation_globals(&mut self, node: &AnimInfo) -> Result<(), Error> {
@@ -342,24 +393,83 @@ where
     }
 
     fn process_root(&mut self, node: &GraphNodeRoot) -> Result<(), Error> {
-        for cmd in &mut self.input_display_list {
-            self.display_list.push(cmd?);
-        }
-        return Ok(());
+        // Skip init_rcp and viewport/scissor override
+        self.dl_push_until(|cmd| matches!(cmd, SPViewport(_)));
 
-        todo!()
+        self.dl_push_expect(|cmd| matches!(cmd, SPViewport(_)));
+        self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+
+        self.cur_root = Some(node.clone());
+        self.process_node_and_siblings(node.node.children)?;
+        self.cur_root = None;
+
+        Ok(())
     }
 
     fn process_ortho_projection(&mut self, node: &GraphNodeOrthoProjection) -> Result<(), Error> {
-        todo!()
+        if !node.node.children.is_null() {
+            self.dl_push_expect(|cmd| matches!(cmd, SPPerspNormalize(_)));
+            self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+            self.process_node_and_siblings(node.node.children)?;
+        }
+        Ok(())
     }
 
     fn process_perspective(&mut self, node: &GraphNodePerspective) -> Result<(), Error> {
-        todo!()
+        if !node.fn_node.node.children.is_null() {
+            self.dl_push_expect(|cmd| matches!(cmd, SPPerspNormalize(_)));
+            self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+
+            self.cur_perspective = Some(node.clone());
+            self.process_node_and_siblings(node.fn_node.node.children)?;
+            self.cur_perspective = None;
+        }
+        Ok(())
+    }
+
+    fn process_master_list_sub(&mut self, node: &GraphNodeMasterList) -> Result<(), Error> {
+        if node.node.flags.contains(GraphRenderFlags::Z_BUFFER) {
+            self.dl_push_expect(|cmd| matches!(cmd, DPPipeSync));
+            self.dl_push_expect(|cmd| matches!(cmd, SPSetGeometryMode(_)));
+        }
+
+        for (layer, lists) in mem::take(&mut self.master_lists).into_iter().enumerate() {
+            if !lists.is_empty() {
+                self.dl_push_expect(|cmd| matches!(cmd, DPSetRenderMode(_)));
+
+                for list in lists {
+                    self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+                    self.dl_push_expect(|cmd| matches!(cmd, SPDisplayList(_)));
+
+                    //                     let offset = self.u32_buffer.len();
+                    //                     self.u32_buffer.extend(cast_slice(&list.transform));
+                    //                     self.display_list.push(SPMatrix {
+                    //                         matrix: Pointer::BufferOffset(offset),
+                    //                         mode: MatrixMode::ModelView,
+                    //                         op: MatrixOp::Load,
+                    //                         push: false,
+                    //                     });
+                    //
+                    //                     self.display_list
+                    //                         .push(SPDisplayList(list.display_list.into()));
+                }
+            }
+        }
+
+        if node.node.flags.contains(GraphRenderFlags::Z_BUFFER) {
+            self.dl_push_expect(|cmd| matches!(cmd, DPPipeSync));
+            self.dl_push_expect(|cmd| matches!(cmd, SPClearGeometryMode(_)));
+        }
+
+        Ok(())
     }
 
     fn process_master_list(&mut self, node: &GraphNodeMasterList) -> Result<(), Error> {
-        todo!()
+        if !node.node.children.is_null() {
+            self.process_node_and_siblings(node.node.children)?;
+            self.process_master_list_sub(node)?;
+        }
+        Ok(())
     }
 
     fn process_start(&mut self, node: &GraphNodeStart) -> Result<(), Error> {
@@ -473,7 +583,9 @@ where
         let transform = Matrixf::rotate_xyz_and_translate(translation, rotation);
 
         self.mtx_stack.push_mul(transform);
-        self.append_display_list(node.display_list, node.node.flags.bits() >> 8);
+        if !node.display_list.is_null() {
+            self.append_display_list_with(node.display_list, node.node.flags.bits() >> 8);
+        }
         self.process_node_and_siblings(node.node.children)?;
         self.mtx_stack.pop();
 
@@ -526,7 +638,13 @@ where
     }
 
     fn process_background(&mut self, node: &GraphNodeBackground) -> Result<(), Error> {
-        todo!()
+        if !node.fn_node.func.is_null() {
+            self.append_display_list(node.fn_node.node.flags.bits() >> 8);
+        } else {
+            self.append_display_list(0);
+        }
+        self.process_node_and_siblings(node.fn_node.node.children)?;
+        Ok(())
     }
 
     fn process_held_object(&mut self, node: &GraphNodeHeldObject) -> Result<(), Error> {

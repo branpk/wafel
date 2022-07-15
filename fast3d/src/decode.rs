@@ -238,7 +238,7 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
         0xB8 => SPEndDisplayList,
         0xB7 => SPSetGeometryMode(GeometryModes::from_bits_truncate(w1)),
         0xB6 => SPClearGeometryMode(GeometryModes::from_bits_truncate(w1)),
-        0xB4 => DPPerspNormalize(w1 as u16),
+        0xB4 => SPPerspNormalize(w1 as u16),
         // RDPHALF_X, not expected here
         0xB3 | 0xB2 | 0xB1 => Unknown(raw_command),
 
