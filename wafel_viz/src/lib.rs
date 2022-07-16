@@ -7,6 +7,7 @@
     clippy::needless_update
 )]
 #![allow(missing_docs)] // FIXME: remove
+#![allow(clippy::if_same_then_else)]
 
 use std::{
     collections::{HashMap, HashSet},
@@ -78,7 +79,7 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
     //     // }
 
     env_logger::init();
-    futures::executor::block_on(run(975, None)).unwrap();
+    futures::executor::block_on(run(8282, None)).unwrap();
 
     Ok(())
 }

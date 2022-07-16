@@ -258,6 +258,41 @@ impl Matrixf {
         mtx
     }
 
+    pub fn billboard(mtx: &Self, position: [f32; 3], angle: Angle) -> Self {
+        let mut dest = Self::default();
+
+        dest.0[0][0] = coss(angle);
+        dest.0[1][0] = sins(angle);
+        dest.0[2][0] = 0.0;
+        dest.0[3][0] = 0.0;
+
+        dest.0[0][1] = -dest.0[1][0];
+        dest.0[1][1] = dest.0[0][0];
+        dest.0[2][1] = 0.0;
+        dest.0[3][1] = 0.0;
+
+        dest.0[0][2] = 0.0;
+        dest.0[1][2] = 0.0;
+        dest.0[2][2] = 1.0;
+        dest.0[3][2] = 0.0;
+
+        dest.0[0][3] = mtx.0[0][0] * position[0]
+            + mtx.0[0][1] * position[1]
+            + mtx.0[0][2] * position[2]
+            + mtx.0[0][3];
+        dest.0[1][3] = mtx.0[1][0] * position[0]
+            + mtx.0[1][1] * position[1]
+            + mtx.0[1][2] * position[2]
+            + mtx.0[1][3];
+        dest.0[2][3] = mtx.0[2][0] * position[0]
+            + mtx.0[2][1] * position[1]
+            + mtx.0[2][2] * position[2]
+            + mtx.0[2][3];
+        dest.0[3][3] = 1.0;
+
+        dest
+    }
+
     pub fn from_fixed(m: &[i32]) -> Self {
         assert_eq!(m.len(), 16, "incorrect fixed point matrix size");
         let mut r = Self::default();

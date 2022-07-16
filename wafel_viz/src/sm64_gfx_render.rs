@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     iter::{self, Peekable},
     mem,
     num::Wrapping,
@@ -11,12 +11,12 @@ use fast3d::{
     cmd::{F3DCommand::*, *},
     decode::decode_f3d_display_list,
     interpret::{interpret_f3d_display_list, F3DRenderData},
-    util::{MatrixState, Matrixf},
+    util::{coss, sins, MatrixState, Matrixf},
 };
 use itertools::Itertools;
 use wafel_api::{Address, Error, IntType, Value};
 use wafel_data_path::GlobalDataPath;
-use wafel_data_type::{Namespace, TypeName};
+use wafel_data_type::{DataType, Namespace, TypeName};
 use wafel_layout::DataLayout;
 use wafel_memory::MemoryRead;
 
@@ -57,7 +57,11 @@ pub fn test_render(
         println!("\n\n");
     }
 
-    let mut renderer = NodeRenderer::new(input_dl.into_iter(), memory, layout)?;
+    let pause_rendering = get_path("gWarpTransition.pauseRendering")?
+        .read(memory)?
+        .try_as_int()?
+        != 0;
+    let root_addr = get_path("gCurrentArea?.unk04")?.read(memory)?;
 
     // renderer.u32_buffer.extend(cast_slice(
     //     &Matrixf::perspective(45.0 * PI / 180.0, 320.0 / 240.0, 100.0, 12800.0).to_fixed(),
@@ -78,22 +82,21 @@ pub fn test_render(
     //         ColorCombineComponent::Shade.into(),
     //     )));
 
-    if let Value::Address(root_addr) = get_path("gCurrentArea?.unk04")?.read(memory)? {
-        let pause_rendering = get_path("gWarpTransition.pauseRendering")?
-            .read(memory)?
-            .try_as_int()?
-            != 0;
+    let mut renderer = NodeRenderer::new(input_dl.into_iter(), memory, layout, &mut get_path)?;
+
+    if let Value::Address(root_addr) = root_addr {
         renderer.render_game(root_addr, pause_rendering)?;
     }
 
     let mut f3d_memory = F3DMemoryImpl::new(memory, Pointer::BufferOffset(0));
+    f3d_memory.set_dl_buffer(vec![renderer.display_list]);
+    f3d_memory.set_u32_buffer(renderer.u32_buffer);
+
     // f3d_memory.set_view_transform(Some(Matrixf::look_at(
     //     [0.0, 0.0, 1000.0],
     //     [0.0, 0.0, 0.0],
     //     0.0,
     // )));
-    f3d_memory.set_dl_buffer(vec![renderer.display_list]);
-    f3d_memory.set_u32_buffer(renderer.u32_buffer);
 
     let render_data = interpret_f3d_display_list(&f3d_memory, config.screen_size, true)?;
 
@@ -101,17 +104,17 @@ pub fn test_render(
 }
 
 #[derive(Debug)]
-struct NodeRenderer<'m, M, I>
+struct NodeRenderer<'m, M, I, F>
 where
     I: Iterator<Item = F3DCommand<Pointer>>,
 {
     input_display_list: Peekable<I>,
     memory: &'m M,
     layout: &'m DataLayout,
+    get_path: F,
     reader: GfxNodeReader<'m>,
     mtx_stack: MatrixState,
-    master_lists: [Vec<DisplayListNode>; 8],
-    display_list_mtx_override: HashMap<Address, Vec<i32>>,
+    master_lists: [Vec<MasterListEdit>; 8],
     display_list: Vec<F3DCommand<Pointer>>,
     u32_buffer: Vec<u32>,
     anim: Option<AnimState>,
@@ -119,10 +122,21 @@ where
     cur_perspective: Option<GraphNodePerspective>,
     cur_camera: Option<GraphNodeCamera>,
     cur_object: Option<GraphNodeObject>,
+    cur_object_addr: Option<Address>,
+    cur_node_addr: Option<Address>,
     indent: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+enum MasterListEdit {
+    Skip(Address),
+    Insert {
+        transform: Vec<i32>,
+        display_list: Address,
+    },
+}
+
+#[derive(Debug, Clone)]
 struct DisplayListNode {
     transform: Vec<i32>,
     display_list: Address,
@@ -172,21 +186,27 @@ enum AnimType {
     Rotation,
 }
 
-impl<'m, M, I> NodeRenderer<'m, M, I>
+impl<'m, M, I, F> NodeRenderer<'m, M, I, F>
 where
     M: MemoryRead,
     I: Iterator<Item = F3DCommand<Pointer>>,
+    F: FnMut(&str) -> Result<Arc<GlobalDataPath>, Error>,
 {
-    fn new(input_display_list: I, memory: &'m M, layout: &'m DataLayout) -> Result<Self, Error> {
+    fn new(
+        input_display_list: I,
+        memory: &'m M,
+        layout: &'m DataLayout,
+        get_path: F,
+    ) -> Result<Self, Error> {
         let reader = get_gfx_node_reader(memory, layout)?;
         Ok(Self {
             input_display_list: input_display_list.peekable(),
             memory,
             layout,
+            get_path,
             reader,
             mtx_stack: MatrixState::default(),
             master_lists: Default::default(),
-            display_list_mtx_override: HashMap::new(),
             display_list: Vec::new(),
             u32_buffer: Vec::new(),
             anim: None,
@@ -194,6 +214,8 @@ where
             cur_perspective: None,
             cur_camera: None,
             cur_object: None,
+            cur_object_addr: None,
+            cur_node_addr: None,
             indent: 0,
         })
     }
@@ -239,18 +261,8 @@ where
         self.push_cmd(cmd);
     }
 
-    fn append_display_list(&mut self, layer: i16) {
-        self.master_lists[layer as usize].push(DisplayListNode {
-            transform: self.mtx_stack.cur.to_fixed(),
-            display_list: Address::NULL,
-        });
-    }
-
-    fn append_display_list_with(&mut self, display_list: Address, layer: i16) {
-        self.master_lists[layer as usize].push(DisplayListNode {
-            transform: self.mtx_stack.cur.to_fixed(),
-            display_list,
-        });
+    fn edit_master_list(&mut self, layer: i16, edit: MasterListEdit) {
+        self.master_lists[layer as usize].push(edit);
     }
 
     fn get_render_mode(&self, layer: i16, z_buffer: bool) -> RenderMode {
@@ -275,35 +287,35 @@ where
         }
     }
 
-    fn submit_master_lists(&mut self, z_buffer: bool) {
-        // TODO: z buffer, render modes
-
-        if z_buffer {
-            self.push_cmd(SPSetGeometryMode(GeometryModes::ZBUFFER));
-        }
-
-        for (layer, lists) in mem::take(&mut self.master_lists).iter().enumerate() {
-            let render_mode = self.get_render_mode(layer as i16, z_buffer);
-            self.push_cmd(DPSetRenderMode(render_mode));
-
-            for list in lists {
-                let offset = self.u32_buffer.len();
-                self.u32_buffer.extend(cast_slice(&list.transform));
-                self.push_cmd(SPMatrix {
-                    matrix: Pointer::BufferOffset(offset),
-                    mode: MatrixMode::ModelView,
-                    op: MatrixOp::Load,
-                    push: false,
-                });
-
-                self.push_cmd(SPDisplayList(list.display_list.into()));
-            }
-        }
-
-        if z_buffer {
-            self.push_cmd(SPClearGeometryMode(GeometryModes::ZBUFFER));
-        }
-    }
+    //     fn submit_master_lists(&mut self, z_buffer: bool) {
+    //         // TODO: z buffer, render modes
+    //
+    //         if z_buffer {
+    //             self.push_cmd(SPSetGeometryMode(GeometryModes::ZBUFFER));
+    //         }
+    //
+    //         for (layer, lists) in mem::take(&mut self.master_lists).iter().enumerate() {
+    //             let render_mode = self.get_render_mode(layer as i16, z_buffer);
+    //             self.push_cmd(DPSetRenderMode(render_mode));
+    //
+    //             for list in lists {
+    //                 let offset = self.u32_buffer.len();
+    //                 self.u32_buffer.extend(cast_slice(&list.transform));
+    //                 self.push_cmd(SPMatrix {
+    //                     matrix: Pointer::BufferOffset(offset),
+    //                     mode: MatrixMode::ModelView,
+    //                     op: MatrixOp::Load,
+    //                     push: false,
+    //                 });
+    //
+    //                 self.push_cmd(SPDisplayList(list.display_list.into()));
+    //             }
+    //         }
+    //
+    //         if z_buffer {
+    //             self.push_cmd(SPClearGeometryMode(GeometryModes::ZBUFFER));
+    //         }
+    //     }
 
     fn set_animation_globals(&mut self, node: &AnimInfo) -> Result<(), Error> {
         let animation_struct = self.layout.data_type(&TypeName {
@@ -398,6 +410,7 @@ where
                     }
 
                     self.indent += 1;
+                    self.cur_node_addr = Some(cur_addr);
                     match &cur_node {
                         GfxTreeNode::Root(node) => self.process_root(node)?,
                         GfxTreeNode::OrthoProjection(node) => {
@@ -414,7 +427,11 @@ where
                         }
                         GfxTreeNode::Translation(node) => self.process_translation(node)?,
                         GfxTreeNode::Rotation(node) => self.process_rotation(node)?,
-                        GfxTreeNode::Object(node) => self.process_object(node)?,
+                        GfxTreeNode::Object(node) => {
+                            self.cur_object_addr = Some(cur_addr);
+                            self.process_object(node)?;
+                            self.cur_object_addr = None;
+                        }
                         GfxTreeNode::AnimatedPart(node) => self.process_animated_part(node)?,
                         GfxTreeNode::Billboard(node) => self.process_billboard(node)?,
                         GfxTreeNode::DisplayList(node) => self.process_display_list(node)?,
@@ -426,6 +443,7 @@ where
                         GfxTreeNode::HeldObject(node) => self.process_held_object(node)?,
                         GfxTreeNode::CullingRadius(node) => self.process_culling_radius(node)?,
                     }
+                    self.cur_node_addr = None;
                     self.indent -= 1;
 
                     if DEBUG_PRINT {
@@ -489,21 +507,31 @@ where
             self.dl_push_expect(|cmd| matches!(cmd, SPSetGeometryMode(_)));
         }
 
-        // TODO: Need to set render mode and splice custom display lists in
-        // TODO: Probably can remove calls to append_display_list
+        // TODO: Assumes that each display list address is in at most one layer
+        // TODO: Reorders layers and display lists
+
+        let edits = mem::take(&mut self.master_lists);
+
+        let mut skips: HashMap<Address, usize> = HashMap::new();
+        for layer_edits in &edits {
+            for edit in layer_edits {
+                if let MasterListEdit::Skip(addr) = edit {
+                    *skips.entry(*addr).or_default() += 1;
+                }
+            }
+        }
 
         while matches!(self.input_display_list.peek(), Some(DPSetRenderMode(_))) {
             self.dl_push_expect(|cmd| matches!(cmd, DPSetRenderMode(_)));
             while matches!(self.input_display_list.peek(), Some(SPMatrix { .. })) {
-                let mut mtx_cmd = self.dl_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+                let mtx_cmd = self.dl_expect(|cmd| matches!(cmd, SPMatrix { .. }));
                 let dl_cmd = self.dl_expect(|cmd| matches!(cmd, SPDisplayList(_)));
 
-                if let SPMatrix { matrix, .. } = &mut mtx_cmd {
-                    if let SPDisplayList(Pointer::Address(addr)) = dl_cmd {
-                        if let Some(new_mtx) = self.display_list_mtx_override.get(&addr) {
-                            let offset = self.u32_buffer.len();
-                            self.u32_buffer.extend(cast_slice(new_mtx));
-                            *matrix = Pointer::BufferOffset(offset);
+                if let SPDisplayList(Pointer::Address(addr)) = dl_cmd {
+                    if let Some(count) = skips.get_mut(&addr) {
+                        if *count > 0 {
+                            *count -= 1;
+                            continue;
                         }
                     }
                 }
@@ -558,7 +586,7 @@ where
 
     fn process_level_of_detail(&mut self, node: &GraphNodeLevelOfDetail) -> Result<(), Error> {
         let mtx = self.mtx_stack.cur.to_fixed();
-        let dist_from_cam = (mtx[7] >> 16) as i16;
+        let dist_from_cam = -(mtx[7] >> 16) as i16;
 
         if node.min_distance <= dist_from_cam && dist_from_cam < node.max_distance {
             self.process_node_and_siblings(node.node.children)?;
@@ -567,12 +595,48 @@ where
     }
 
     fn process_switch_case(&mut self, node: &GraphNodeSwitchCase) -> Result<(), Error> {
-        // TODO: selected case not set if rendering a culled object
+        let mut selected_case = node.selected_case;
+
+        if !node.fn_node.func.is_null() {
+            // TODO: selected case not set if rendering a culled object
+            // TODO: Model shared between different objects
+
+            if !node.fn_node.func.is_null() {
+                let geo_switch_anim_state = (self.get_path)("geo_switch_anim_state")?
+                    .address(self.memory)?
+                    .unwrap();
+
+                // Since different objects can use the same model, we need to calculate the switch
+                // case manually in some cases
+                if node.fn_node.func == geo_switch_anim_state {
+                    // TODO: or current held object node
+
+                    if let Some(obj_addr) = self.cur_object_addr {
+                        let object_struct = self.layout.data_type(&TypeName {
+                            namespace: Namespace::Struct,
+                            name: "Object".to_string(),
+                        })?;
+                        if let DataType::Struct { fields } = object_struct.as_ref() {
+                            if let Some(field) = fields.get("oAnimState") {
+                                let anim_state_offset = field.offset;
+
+                                let anim_state = self
+                                    .memory
+                                    .read_int(obj_addr + anim_state_offset, IntType::S32)?
+                                    as i32;
+
+                                selected_case = anim_state as i16;
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         let mut selected_child = node.fn_node.node.children;
         let mut i = 0;
 
-        while !selected_child.is_null() && node.selected_case > i {
+        while !selected_child.is_null() && selected_case > i {
             selected_child = self.reader.read(selected_child)?.node().next;
             i += 1;
         }
@@ -608,7 +672,15 @@ where
         self.mtx_stack.push_mul(mtx);
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags.bits() >> 8);
+            let layer = node.node.flags.bits() >> 8;
+            self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Insert {
+                    transform: self.mtx_stack.cur.to_fixed(),
+                    display_list: node.display_list,
+                },
+            );
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -626,7 +698,15 @@ where
         self.mtx_stack.push_mul(mtx);
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags.bits() >> 8);
+            let layer = node.node.flags.bits() >> 8;
+            self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Insert {
+                    transform: self.mtx_stack.cur.to_fixed(),
+                    display_list: node.display_list,
+                },
+            );
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -640,7 +720,15 @@ where
         self.mtx_stack.push_mul(mtx);
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags.bits() >> 8);
+            let layer = node.node.flags.bits() >> 8;
+            self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Insert {
+                    transform: self.mtx_stack.cur.to_fixed(),
+                    display_list: node.display_list,
+                },
+            );
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -648,16 +736,64 @@ where
         Ok(())
     }
 
+    fn obj_is_in_view(&self, node: &GraphNodeObject, matrix: &Matrixf) -> Result<bool, Error> {
+        return Ok(true);
+
+        if node.node.flags.contains(GraphRenderFlags::INVISIBLE) {
+            return Ok(false);
+        }
+
+        let geo = node.shared_child;
+
+        let fov = self
+            .cur_perspective
+            .as_ref()
+            .expect("no perspective set")
+            .fov;
+        let half_fov = Wrapping(((fov / 2.0 + 1.0) * 32768.0 / 180.0 + 0.5) as i16);
+
+        let h_screen_edge = -matrix.0[2][3] * sins(half_fov) / coss(half_fov);
+
+        let mut culling_radius = 300;
+        if !geo.is_null() {
+            if let GfxTreeNode::CullingRadius(node) = self.reader.read(geo)? {
+                culling_radius = node.culling_radius;
+            }
+        }
+
+        if matrix.0[2][3] > -100.0 + culling_radius as f32 {
+            return Ok(false);
+        }
+        if matrix.0[2][3] < -20000.0 - culling_radius as f32 {
+            return Ok(false);
+        }
+
+        if matrix.0[0][3] > h_screen_edge + culling_radius as f32 {
+            return Ok(false);
+        }
+        if matrix.0[0][3] < -h_screen_edge - culling_radius as f32 {
+            return Ok(false);
+        }
+
+        Ok(true)
+    }
+
     fn process_object(&mut self, node: &GraphNodeObject) -> Result<(), Error> {
         // TODO: if (node->header.gfx.areaIndex == gCurGraphNodeRoot->areaIndex) {
         {
             // TODO: Matrix transform
             if !node.throw_matrix.is_null() {
+                eprintln!("throw matrix");
                 // TODO
                 self.mtx_stack.push_mul(Matrixf::identity());
             } else if node.node.flags.contains(GraphRenderFlags::BILLBOARD) {
                 // TODO
-                self.mtx_stack.push_mul(Matrixf::identity());
+                let mtx = Matrixf::billboard(
+                    &self.mtx_stack.cur,
+                    node.pos,
+                    self.cur_camera.as_ref().expect("no current camera").roll,
+                );
+                self.mtx_stack.execute(mtx, MatrixOp::Load, true);
             } else {
                 let transform = Matrixf::rotate_zxy_and_translate(node.pos, node.angle);
                 self.mtx_stack.push_mul(transform);
@@ -671,8 +807,7 @@ where
             if !node.anim_info.cur_anim.is_null() {
                 self.set_animation_globals(&node.anim_info)?;
             }
-            // TODO: if (obj_is_in_view(&node->header.gfx, gMatStack[gMatStackIndex])) {
-            {
+            if self.obj_is_in_view(node, &self.mtx_stack.cur)? {
                 // TODO: Calculate matrix
                 if !node.shared_child.is_null() {
                     // TODO: Set & unset shared_child parent
@@ -736,10 +871,15 @@ where
         self.mtx_stack.push_mul(transform);
 
         if !node.display_list.is_null() {
-            // self.append_display_list_with(node.display_list, node.node.flags.bits() >> 8);
-            self.append_display_list(node.node.flags.bits() >> 8);
-            self.display_list_mtx_override
-                .insert(node.display_list, self.mtx_stack.cur.to_fixed());
+            let layer = node.node.flags.bits() >> 8;
+            self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Insert {
+                    transform: self.mtx_stack.cur.to_fixed(),
+                    display_list: node.display_list,
+                },
+            );
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -751,7 +891,15 @@ where
         // TODO: Matrix transform
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags.bits() >> 8);
+            let layer = node.node.flags.bits() >> 8;
+            self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Insert {
+                    transform: self.mtx_stack.cur.to_fixed(),
+                    display_list: node.display_list,
+                },
+            );
         }
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
@@ -759,7 +907,15 @@ where
 
     fn process_display_list(&mut self, node: &GraphNodeDisplayList) -> Result<(), Error> {
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags.bits() >> 8);
+            let layer = node.node.flags.bits() >> 8;
+            self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Insert {
+                    transform: self.mtx_stack.cur.to_fixed(),
+                    display_list: node.display_list,
+                },
+            );
         }
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
@@ -770,7 +926,15 @@ where
         self.mtx_stack.push_mul(mtx);
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags.bits() >> 8);
+            let layer = node.node.flags.bits() >> 8;
+            self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Insert {
+                    transform: self.mtx_stack.cur.to_fixed(),
+                    display_list: node.display_list,
+                },
+            );
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -803,9 +967,9 @@ where
 
     fn process_background(&mut self, node: &GraphNodeBackground) -> Result<(), Error> {
         if !node.fn_node.func.is_null() {
-            self.append_display_list(node.fn_node.node.flags.bits() >> 8);
+            // self.append_display_list(node.fn_node.node.flags.bits() >> 8);
         } else {
-            self.append_display_list(0);
+            // self.append_display_list(0);
         }
         self.process_node_and_siblings(node.fn_node.node.children)?;
         Ok(())
