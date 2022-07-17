@@ -139,8 +139,9 @@ enum MasterListEdit {
 
 #[derive(Debug, Clone)]
 struct DisplayListNode {
-    transform: Vec<i32>,
+    transform: Address,
     display_list: Address,
+    next: Address,
 }
 
 #[derive(Debug, Clone)]
@@ -503,69 +504,91 @@ where
         Ok(())
     }
 
+    fn read_display_list_node(&mut self, addr: Address) -> Result<DisplayListNode, Error> {
+        let ptr_size = self.memory.pointer_int_type().size();
+
+        Ok(DisplayListNode {
+            transform: self.memory.read_address(addr)?,
+            display_list: self.memory.read_address(addr + ptr_size)?,
+            next: self.memory.read_address(addr + 2 * ptr_size)?,
+        })
+    }
+
     fn process_master_list_sub(&mut self, node: &GraphNodeMasterList) -> Result<(), Error> {
-        if node.node.flags.contains(GraphRenderFlags::Z_BUFFER) {
+        let z_buffer = node.node.flags.contains(GraphRenderFlags::Z_BUFFER);
+        if z_buffer {
             self.dl_push_expect(|cmd| matches!(cmd, DPPipeSync));
             self.dl_push_expect(|cmd| matches!(cmd, SPSetGeometryMode(_)));
         }
 
-        // TODO: Assumes that each display list address is in at most one layer
-        // TODO: Reorders layers and display lists
+        // TODO: Could detect generated display lists for more accuracy
+
+        let mtx_cmd = |mtx: Pointer| SPMatrix {
+            matrix: mtx,
+            mode: MatrixMode::ModelView,
+            op: MatrixOp::Load,
+            push: false,
+        };
+
+        let mut actual_lists: [Vec<(Pointer, Pointer)>; 8] = Default::default();
+
+        for layer in 0..8 {
+            let mut dl_node_addr = node.list_heads[layer as usize];
+            if !dl_node_addr.is_null() {
+                let render_mode = self.get_render_mode(layer, z_buffer);
+                self.dl_expect(|cmd| cmd == DPSetRenderMode(render_mode));
+
+                while !dl_node_addr.is_null() {
+                    let dl_node = self.read_display_list_node(dl_node_addr)?;
+                    self.dl_expect(|cmd| cmd == mtx_cmd(dl_node.transform.into()));
+                    self.dl_expect(|cmd| cmd == SPDisplayList(dl_node.display_list.into()));
+
+                    actual_lists[layer as usize]
+                        .push((dl_node.transform.into(), dl_node.display_list.into()));
+
+                    dl_node_addr = dl_node.next;
+                }
+            }
+        }
 
         let edits = mem::take(&mut self.master_lists);
 
-        let mut skips: HashMap<Address, usize> = HashMap::new();
-        for layer_edits in &edits {
+        for (layer, layer_edits) in edits.iter().enumerate() {
+            let mut actual_nodes = actual_lists[layer].iter();
+
+            let render_mode = self.get_render_mode(layer as i16, z_buffer);
+            self.push_cmd(DPSetRenderMode(render_mode));
+
             for edit in layer_edits {
-                if let MasterListEdit::Skip(addr) = edit {
-                    *skips.entry(*addr).or_default() += 1;
-                }
-            }
-        }
-
-        while matches!(self.input_display_list.peek(), Some(DPSetRenderMode(_))) {
-            self.dl_push_expect(|cmd| matches!(cmd, DPSetRenderMode(_)));
-            while matches!(self.input_display_list.peek(), Some(SPMatrix { .. })) {
-                let mtx_cmd = self.dl_expect(|cmd| matches!(cmd, SPMatrix { .. }));
-                let dl_cmd = self.dl_expect(|cmd| matches!(cmd, SPDisplayList(_)));
-
-                if let SPDisplayList(Pointer::Address(addr)) = dl_cmd {
-                    if let Some(count) = skips.get_mut(&addr) {
-                        if *count > 0 {
-                            *count -= 1;
-                            continue;
+                match edit {
+                    MasterListEdit::Skip(addr) => {
+                        for (mtx, dl) in actual_nodes.by_ref().cloned() {
+                            if dl == (*addr).into() {
+                                break;
+                            }
+                            self.push_cmd(mtx_cmd(mtx));
+                            self.push_cmd(SPDisplayList(dl));
                         }
                     }
+                    MasterListEdit::Insert {
+                        transform,
+                        display_list,
+                    } => {
+                        let offset = self.u32_buffer.len();
+                        self.u32_buffer.extend(cast_slice(transform));
+                        self.push_cmd(mtx_cmd(Pointer::BufferOffset(offset)));
+                        self.push_cmd(SPDisplayList((*display_list).into()));
+                    }
                 }
+            }
 
-                self.push_cmd(mtx_cmd);
-                self.push_cmd(dl_cmd);
+            for (mtx, dl) in actual_nodes.cloned() {
+                self.push_cmd(mtx_cmd(mtx));
+                self.push_cmd(SPDisplayList(dl));
             }
         }
 
-        //         for (layer, lists) in mem::take(&mut self.master_lists).into_iter().enumerate() {
-        //             if !lists.is_empty() {
-        //                 self.dl_push_expect(|cmd| matches!(cmd, DPSetRenderMode(_)));
-        //
-        //                 for list in lists {
-        //                     self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
-        //                     self.dl_push_expect(|cmd| matches!(cmd, SPDisplayList(_)));
-        //
-        //                     //                     let offset = self.u32_buffer.len();
-        //                     //                     self.u32_buffer.extend(cast_slice(&list.transform));
-        //                     //                     self.push_cmd(SPMatrix {
-        //                     //                         matrix: Pointer::BufferOffset(offset),
-        //                     //                         mode: MatrixMode::ModelView,
-        //                     //                         op: MatrixOp::Load,
-        //                     //                         push: false,
-        //                     //                     });
-        //                     //
-        //                     //                     self.push_cmd(SPDisplayList(list.display_list.into()));
-        //                 }
-        //             }
-        //         }
-
-        if node.node.flags.contains(GraphRenderFlags::Z_BUFFER) {
+        if z_buffer {
             self.dl_push_expect(|cmd| matches!(cmd, DPPipeSync));
             self.dl_push_expect(|cmd| matches!(cmd, SPClearGeometryMode(_)));
         }
