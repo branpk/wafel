@@ -20,7 +20,7 @@ use crate::error::ValueTypeError;
 ///
 /// Having a single numeric type is convenient so that `Value` doesn't have to be generic
 /// on a `Memory` implementation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Address(pub usize);
 
 impl Add<usize> for Address {
@@ -421,7 +421,7 @@ impl fmt::Display for Address {
         if self.is_null() {
             write!(f, "null")
         } else {
-            write!(f, "@{:#X}", self.0)
+            write!(f, "@{:#010X}", self.0)
         }
     }
 }

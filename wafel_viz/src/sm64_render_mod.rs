@@ -83,26 +83,38 @@ pub fn get_dl_addr(
     memory: &impl MemoryRead,
     mut get_path: impl FnMut(&str) -> Result<Arc<GlobalDataPath>, Error>,
 ) -> Result<Option<Address>, Error> {
-    let pool_array_type = get_path("gGfxPools")?.concrete_type();
-    let pool_length = if let DataType::Array {
-        length: Some(length),
-        ..
-    } = pool_array_type.as_ref()
-    {
-        *length
+    let addr = get_path("gGfxPool?")?.read(memory)?;
+    if addr.is_none() {
+        Ok(None)
     } else {
-        2
-    };
-    let global_timer = get_path("gGlobalTimer")?.read(memory)?.as_int();
-    if global_timer == 1 {
-        // libsm64 doesn't render in init
-        return Ok(None);
+        Ok(Some(addr.try_as_address()?))
     }
-    let dl_buffer_index = (global_timer as usize + 1) % pool_length;
-    let dl_addr = get_path(&format!("gGfxPools[{}].buffer", dl_buffer_index))?
-        .address(memory)?
-        .unwrap();
-    Ok(Some(dl_addr))
+
+    // let pool_array_type = get_path("gGfxPools")?.concrete_type();
+    // let pool_length = if let DataType::Array {
+    //     length: Some(length),
+    //     ..
+    // } = pool_array_type.as_ref()
+    // {
+    //     *length
+    // } else {
+    //     2
+    // };
+    // let global_timer = get_path("gGlobalTimer")?.read(memory)?.as_int();
+    // if global_timer == 1 {
+    //     // libsm64 doesn't render in init
+    //     return Ok(None);
+    // }
+    // let dl_buffer_index = (global_timer as usize + 1) % pool_length;
+    // let dl_addr = get_path(&format!("gGfxPools[{}].buffer", dl_buffer_index))?
+    //     .address(memory)?
+    //     .unwrap();
+    // eprintln!("selected pool = {}", dl_addr);
+    // eprintln!(
+    //     "gfxpool       = {}",
+    //     get_path("gGfxPool")?.read(memory)?.try_as_address()?
+    // );
+    // Ok(Some(dl_addr))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

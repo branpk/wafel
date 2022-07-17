@@ -1,4 +1,9 @@
-use std::{env, fmt::Write, fs};
+use std::{
+    env,
+    fmt::Write,
+    fs,
+    io::{stderr, Write as _},
+};
 
 use image::{Rgb, RgbImage};
 use itertools::Itertools;
@@ -31,6 +36,9 @@ pub fn run_tests(mut test_cases: Vec<TestCase>) -> Result<(), Box<dyn std::error
     let mut mismatches = Vec::new();
 
     for (i, case) in test_cases.iter().enumerate() {
+        eprint!("[{:3}/{}] {}... ", i + 1, test_cases.len(), case.name);
+        stderr().lock().flush()?;
+
         let game = runner.get_frame(case.game_version, case.m64, case.frame);
 
         let actual = renderer.render(game, &case.config);
@@ -78,7 +86,7 @@ pub fn run_tests(mut test_cases: Vec<TestCase>) -> Result<(), Box<dyn std::error
         };
 
         eprintln!(
-            "[{:3}/{}] \x1b[{}m{}\x1b[0m",
+            "\r[{:3}/{}] \x1b[{}m{}\x1b[0m    ",
             i + 1,
             test_cases.len(),
             if matches { 32 } else { 31 },
