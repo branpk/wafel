@@ -3,10 +3,11 @@ use std::{
     iter::{self, Peekable},
     mem,
     num::Wrapping,
+    process,
     sync::Arc,
 };
 
-use bytemuck::cast_slice;
+use bytemuck::{cast_slice, cast_slice_mut};
 use fast3d::{
     cmd::{F3DCommand::*, *},
     decode::decode_f3d_display_list,
@@ -18,15 +19,16 @@ use wafel_api::{Address, Error, IntType, Value};
 use wafel_data_path::GlobalDataPath;
 use wafel_data_type::{DataType, Namespace, TypeName};
 use wafel_layout::DataLayout;
-use wafel_memory::MemoryRead;
+use wafel_memory::{MemoryError, MemoryRead};
 
 use crate::{
     sm64_gfx_tree::*,
-    sm64_render_mod::{get_dl_addr, F3DMemoryImpl, Pointer, RawDlIter},
+    sm64_render_mod::{get_dl_addr, F3DMemoryImpl, Pointer, RawDlIter, SimplePointer},
     SM64RenderConfig,
 };
 
 const DEBUG_PRINT: bool = false;
+const ONE_FRAME: bool = false;
 
 pub fn test_render(
     memory: &impl MemoryRead,
@@ -100,6 +102,9 @@ pub fn test_render(
 
     let render_data = interpret_f3d_display_list(&f3d_memory, config.screen_size, true)?;
 
+    if ONE_FRAME {
+        process::exit(0);
+    }
     Ok(render_data)
 }
 
@@ -530,7 +535,7 @@ where
             push: false,
         };
 
-        let mut actual_lists: [Vec<(Pointer, Pointer)>; 8] = Default::default();
+        let mut original_lists: [Vec<(Pointer, Pointer)>; 8] = Default::default();
 
         for layer in 0..8 {
             let mut dl_node_addr = node.list_heads[layer as usize];
@@ -543,7 +548,7 @@ where
                     self.dl_expect(|cmd| cmd == mtx_cmd(dl_node.transform.into()));
                     self.dl_expect(|cmd| cmd == SPDisplayList(dl_node.display_list.into()));
 
-                    actual_lists[layer as usize]
+                    original_lists[layer as usize]
                         .push((dl_node.transform.into(), dl_node.display_list.into()));
 
                     dl_node_addr = dl_node.next;
@@ -553,11 +558,11 @@ where
 
         let edits = mem::take(&mut self.master_lists);
 
-        for (layer, layer_edits) in edits.iter().enumerate() {
-            let mut actual_nodes = actual_lists[layer].iter();
+        let mut new_lists: [Vec<(Pointer, Pointer)>; 8] = Default::default();
 
-            let render_mode = self.get_render_mode(layer as i16, z_buffer);
-            self.push_cmd(DPSetRenderMode(render_mode));
+        for (layer, layer_edits) in edits.iter().enumerate() {
+            let mut actual_nodes = original_lists[layer].iter();
+            let new_nodes = &mut new_lists[layer];
 
             for edit in layer_edits {
                 match edit {
@@ -566,8 +571,7 @@ where
                             if dl == (*addr).into() {
                                 break;
                             }
-                            self.push_cmd(mtx_cmd(mtx));
-                            self.push_cmd(SPDisplayList(dl));
+                            new_nodes.push((mtx, dl));
                         }
                     }
                     MasterListEdit::Insert {
@@ -576,15 +580,68 @@ where
                     } => {
                         let offset = self.u32_buffer.len();
                         self.u32_buffer.extend(cast_slice(transform));
-                        self.push_cmd(mtx_cmd(Pointer::BufferOffset(offset)));
-                        self.push_cmd(SPDisplayList((*display_list).into()));
+                        new_nodes.push((Pointer::BufferOffset(offset), (*display_list).into()));
                     }
                 }
             }
 
-            for (mtx, dl) in actual_nodes.cloned() {
-                self.push_cmd(mtx_cmd(mtx));
-                self.push_cmd(SPDisplayList(dl));
+            new_nodes.extend(actual_nodes);
+            // new_nodes.extend(actual_nodes.filter(|(_, dl)| {
+            //     self.symbol_name(dl.address())
+            //         .filter(|n| n == "chilly_chief_seg6_dl_06002EF0")
+            //         .is_none()
+            // }));
+        }
+
+        // TODO: Exact matrix calculations
+        //         for layer in 0..8 {
+        //             let old_list = &original_lists[layer];
+        //             let new_list = &new_lists[layer];
+        //
+        //             if old_list.len() != new_list.len() {
+        //                 eprintln!("{}: len {} -> {}", layer, old_list.len(), new_list.len());
+        //             }
+        //             for (old_node, new_node) in old_list.iter().zip(new_list.iter()) {
+        //                 if old_node.1 != new_node.1 {
+        //                     eprintln!("{}: dl {:?} -> {:?}", layer, old_node.1, new_node.1);
+        //                 }
+        //                 let old_mtx = self.read_fixed(old_node.0)?;
+        //                 let new_mtx = self.read_fixed(old_node.1)?;
+        //                 if old_mtx != new_mtx {
+        //                     eprintln!(
+        //                         "{}: mtx ({:?})",
+        //                         layer,
+        //                         self.symbol_name(old_node.1.address())
+        //                     );
+        //                 }
+        //             }
+        //         }
+
+        // eprintln!(
+        //     "o: {:?}",
+        //     original_lists.iter().map(|l| l.len()).collect_vec()
+        // );
+        // eprintln!("n: {:?}", new_lists.iter().map(|l| l.len()).collect_vec());
+        // eprintln!(
+        //     "e: {:?}",
+        //     edits
+        //         .iter()
+        //         .map(|es| es
+        //             .iter()
+        //             .filter(|e| matches!(e, MasterListEdit::Skip(_)))
+        //             .count())
+        //         .collect_vec()
+        // );
+
+        for (layer, list) in new_lists.iter().enumerate() {
+            if !list.is_empty() {
+                let render_mode = self.get_render_mode(layer as i16, z_buffer);
+                self.push_cmd(DPSetRenderMode(render_mode));
+
+                for (mtx, dl) in list.iter().copied() {
+                    self.push_cmd(mtx_cmd(mtx));
+                    self.push_cmd(SPDisplayList(dl));
+                }
             }
         }
 
@@ -593,6 +650,36 @@ where
             self.dl_push_expect(|cmd| matches!(cmd, SPClearGeometryMode(_)));
         }
 
+        Ok(())
+    }
+
+    fn symbol_name(&self, addr: Address) -> Option<String> {
+        self.layout
+            .globals
+            .iter()
+            .find(|global| global.1.address == Some(addr.0 as u64))
+            .map(|global| global.0.clone())
+    }
+
+    fn read_fixed(&self, ptr: Pointer) -> Result<Vec<i32>, MemoryError> {
+        let mut data = vec![0; 16];
+        self.read_u32(cast_slice_mut(data.as_mut_slice()), ptr, 0)?;
+        Ok(data)
+    }
+
+    fn read_u32(&self, dst: &mut [u32], ptr: Pointer, offset: usize) -> Result<(), MemoryError> {
+        match ptr {
+            Pointer::Address(addr) => {
+                let addr = addr + offset;
+                for i in 0..dst.len() {
+                    dst[i] = self.memory.read_int(addr + 4 * i, IntType::U32)? as u32;
+                }
+            }
+            Pointer::BufferOffset(offset) => {
+                dst.copy_from_slice(&self.u32_buffer[offset..offset + dst.len()]);
+            }
+            _ => unimplemented!(),
+        }
         Ok(())
     }
 
@@ -765,8 +852,6 @@ where
     }
 
     fn obj_is_in_view(&self, node: &GraphNodeObject, matrix: &Matrixf) -> Result<bool, Error> {
-        return Ok(true);
-
         if node.node.flags.contains(GraphRenderFlags::INVISIBLE) {
             return Ok(false);
         }
@@ -916,7 +1001,28 @@ where
     }
 
     fn process_billboard(&mut self, node: &GraphNodeBillboard) -> Result<(), Error> {
-        // TODO: Matrix transform
+        let translation = [
+            node.translation[0] as f32,
+            node.translation[1] as f32,
+            node.translation[2] as f32,
+        ];
+        let mtx = Matrixf::billboard(
+            &self.mtx_stack.cur,
+            translation,
+            self.cur_camera.as_ref().expect("no current camera").roll,
+        );
+        self.mtx_stack.execute(mtx, MatrixOp::Load, true);
+
+        let mut cur_obj = self.cur_object.clone();
+        if let Some(node) = self.cur_held_object.as_ref() {
+            if let GfxTreeNode::Object(node) = self.reader.read(node.obj_node)? {
+                cur_obj = Some(node);
+            }
+        }
+        if let Some(obj) = cur_obj {
+            self.mtx_stack
+                .execute(Matrixf::scale_vec3f(obj.scale), MatrixOp::Mul, false);
+        }
 
         if !node.display_list.is_null() {
             let layer = node.node.flags.bits() >> 8;
@@ -930,6 +1036,8 @@ where
             );
         }
         self.process_node_and_siblings(node.node.children)?;
+
+        self.mtx_stack.pop();
         Ok(())
     }
 

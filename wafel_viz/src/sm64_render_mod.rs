@@ -132,7 +132,7 @@ impl Pointer {
     }
 
     #[track_caller]
-    fn simple(self) -> SimplePointer {
+    pub fn simple(self) -> SimplePointer {
         match self {
             Pointer::Address(addr) => SimplePointer::Address(addr),
             Pointer::BufferOffset(offset) => SimplePointer::BufferOffset(offset),
@@ -148,7 +148,7 @@ impl From<Address> for Pointer {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum SimplePointer {
+pub enum SimplePointer {
     Address(Address),
     BufferOffset(usize),
 }
