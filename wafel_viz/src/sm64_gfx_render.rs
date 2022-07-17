@@ -1,11 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    iter::{self, Peekable},
-    mem,
-    num::Wrapping,
-    process,
-    sync::Arc,
-};
+use std::{collections::HashSet, iter::Peekable, mem, num::Wrapping, process, sync::Arc};
 
 use bytemuck::{cast_slice, cast_slice_mut};
 use fast3d::{
@@ -14,7 +7,6 @@ use fast3d::{
     interpret::{interpret_f3d_display_list, F3DRenderData},
     util::{coss, sins, MatrixState, Matrixf},
 };
-use itertools::Itertools;
 use wafel_api::{Address, Error, IntType, Value};
 use wafel_data_path::GlobalDataPath;
 use wafel_data_type::{DataType, Namespace, TypeName};
@@ -23,7 +15,7 @@ use wafel_memory::{MemoryError, MemoryRead};
 
 use crate::{
     sm64_gfx_tree::*,
-    sm64_render_mod::{get_dl_addr, F3DMemoryImpl, Pointer, RawDlIter, SimplePointer},
+    sm64_render_mod::{get_dl_addr, F3DMemoryImpl, Pointer, RawDlIter},
     SM64RenderConfig,
 };
 
@@ -65,25 +57,6 @@ pub fn test_render(
         != 0;
     let root_addr = get_path("gCurrentArea?.unk04")?.read(memory)?;
 
-    // renderer.u32_buffer.extend(cast_slice(
-    //     &Matrixf::perspective(45.0 * PI / 180.0, 320.0 / 240.0, 100.0, 12800.0).to_fixed(),
-    // ));
-    // renderer.display_list.push(SPMatrix {
-    //     matrix: Pointer::BufferOffset(0),
-    //     mode: MatrixMode::Proj,
-    //     op: MatrixOp::Load,
-    //     push: false,
-    // });
-    // renderer
-    //     .display_list
-    //     .push(SPSetGeometryMode(GeometryModes::LIGHTING));
-    // renderer
-    //     .display_list
-    //     .push(DPSetCombineMode(CombineMode::one_cycle(
-    //         ColorCombineComponent::Shade.into(),
-    //         ColorCombineComponent::Shade.into(),
-    //     )));
-
     let mut renderer = NodeRenderer::new(input_dl.into_iter(), memory, layout, &mut get_path)?;
 
     if let Value::Address(root_addr) = root_addr {
@@ -93,12 +66,6 @@ pub fn test_render(
     let mut f3d_memory = F3DMemoryImpl::new(memory, Pointer::BufferOffset(0));
     f3d_memory.set_dl_buffer(vec![renderer.display_list]);
     f3d_memory.set_u32_buffer(renderer.u32_buffer);
-
-    // f3d_memory.set_view_transform(Some(Matrixf::look_at(
-    //     [0.0, 0.0, 1000.0],
-    //     [0.0, 0.0, 0.0],
-    //     0.0,
-    // )));
 
     let render_data = interpret_f3d_display_list(&f3d_memory, config.screen_size, true)?;
 
@@ -153,6 +120,7 @@ struct DisplayListNode {
 #[derive(Debug, Clone)]
 struct AnimState {
     ty: AnimType,
+    #[allow(dead_code)]
     enabled: bool,
     frame: i16,
     translation_multiplier: f32,
@@ -165,8 +133,6 @@ impl AnimState {
         let frame = self.frame as i32;
         let attr0 = memory.read_int(self.attribute, IntType::U16)? as u16;
         let attr1 = memory.read_int(self.attribute + 2, IntType::U16)? as u16;
-
-        // println!("    {:04X} {:04X}", attr0, attr1);
 
         let result = if frame < attr0 as i32 {
             attr1 as i32 + frame
@@ -297,36 +263,6 @@ where
         }
     }
 
-    //     fn submit_master_lists(&mut self, z_buffer: bool) {
-    //         // TODO: z buffer, render modes
-    //
-    //         if z_buffer {
-    //             self.push_cmd(SPSetGeometryMode(GeometryModes::ZBUFFER));
-    //         }
-    //
-    //         for (layer, lists) in mem::take(&mut self.master_lists).iter().enumerate() {
-    //             let render_mode = self.get_render_mode(layer as i16, z_buffer);
-    //             self.push_cmd(DPSetRenderMode(render_mode));
-    //
-    //             for list in lists {
-    //                 let offset = self.u32_buffer.len();
-    //                 self.u32_buffer.extend(cast_slice(&list.transform));
-    //                 self.push_cmd(SPMatrix {
-    //                     matrix: Pointer::BufferOffset(offset),
-    //                     mode: MatrixMode::ModelView,
-    //                     op: MatrixOp::Load,
-    //                     push: false,
-    //                 });
-    //
-    //                 self.push_cmd(SPDisplayList(list.display_list.into()));
-    //             }
-    //         }
-    //
-    //         if z_buffer {
-    //             self.push_cmd(SPClearGeometryMode(GeometryModes::ZBUFFER));
-    //         }
-    //     }
-
     fn set_animation_globals(&mut self, node: &AnimInfo) -> Result<(), Error> {
         let animation_struct = self.layout.data_type(&TypeName {
             namespace: Namespace::Struct,
@@ -366,7 +302,6 @@ where
             attribute: anim.try_field("index")?.try_as_address()?, // TODO: Seg to virt
             data: anim.try_field("values")?.try_as_address()?,     // TODO: Seg to virt
         });
-        // println!("{:02X} {:?}", node.anim_id, self.anim);
 
         Ok(())
     }
@@ -655,6 +590,7 @@ where
         Ok(())
     }
 
+    #[allow(dead_code)]
     fn symbol_name(&self, addr: Address) -> Option<String> {
         self.layout
             .globals
@@ -663,6 +599,7 @@ where
             .map(|global| global.0.clone())
     }
 
+    #[allow(dead_code)]
     fn read_fixed(&self, ptr: Pointer) -> Result<Vec<i32>, MemoryError> {
         let mut data = vec![0; 16];
         self.read_u32(cast_slice_mut(data.as_mut_slice()), ptr, 0)?;
@@ -713,7 +650,7 @@ where
 
         if !node.fn_node.func.is_null() {
             // TODO: selected case not set if rendering a culled object
-            // TODO: Model shared between different objects
+            // TODO: Model shared between different objects (when not using geo_switch_anim_state)
 
             if !node.fn_node.func.is_null() {
                 let geo_switch_anim_state = (self.get_path)("geo_switch_anim_state")?
@@ -788,17 +725,17 @@ where
         let mtx = Matrixf::rotate_zxy_and_translate(translation, node.rotation);
         self.mtx_stack.push_mul(mtx);
 
-        if !node.display_list.is_null() {
-            let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
-            self.edit_master_list(
-                layer,
-                MasterListEdit::Insert {
-                    transform: self.mtx_stack.cur.to_fixed(),
-                    display_list: node.display_list,
-                },
-            );
-        }
+        // if !node.display_list.is_null() {
+        //     let layer = node.node.flags.bits() >> 8;
+        //     self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
+        //     self.edit_master_list(
+        //         layer,
+        //         MasterListEdit::Insert {
+        //             transform: self.mtx_stack.cur.to_fixed(),
+        //             display_list: node.display_list,
+        //         },
+        //     );
+        // }
         self.process_node_and_siblings(node.node.children)?;
 
         self.mtx_stack.pop();
@@ -814,17 +751,17 @@ where
         let mtx = Matrixf::rotate_zxy_and_translate(translation, Default::default());
         self.mtx_stack.push_mul(mtx);
 
-        if !node.display_list.is_null() {
-            let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
-            self.edit_master_list(
-                layer,
-                MasterListEdit::Insert {
-                    transform: self.mtx_stack.cur.to_fixed(),
-                    display_list: node.display_list,
-                },
-            );
-        }
+        // if !node.display_list.is_null() {
+        //     let layer = node.node.flags.bits() >> 8;
+        //     self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
+        //     self.edit_master_list(
+        //         layer,
+        //         MasterListEdit::Insert {
+        //             transform: self.mtx_stack.cur.to_fixed(),
+        //             display_list: node.display_list,
+        //         },
+        //     );
+        // }
         self.process_node_and_siblings(node.node.children)?;
 
         self.mtx_stack.pop();
@@ -836,17 +773,17 @@ where
         let mtx = Matrixf::rotate_zxy_and_translate(translation, node.rotation);
         self.mtx_stack.push_mul(mtx);
 
-        if !node.display_list.is_null() {
-            let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
-            self.edit_master_list(
-                layer,
-                MasterListEdit::Insert {
-                    transform: self.mtx_stack.cur.to_fixed(),
-                    display_list: node.display_list,
-                },
-            );
-        }
+        // if !node.display_list.is_null() {
+        //     let layer = node.node.flags.bits() >> 8;
+        //     self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
+        //     self.edit_master_list(
+        //         layer,
+        //         MasterListEdit::Insert {
+        //             transform: self.mtx_stack.cur.to_fixed(),
+        //             display_list: node.display_list,
+        //         },
+        //     );
+        // }
         self.process_node_and_siblings(node.node.children)?;
 
         self.mtx_stack.pop();
@@ -978,8 +915,6 @@ where
         let mut rotation = [Wrapping(0), Wrapping(0), Wrapping(0)];
         let mut translation = node.translation.map(|x| x as f32);
 
-        // println!("{}{:?}", "  ".repeat(self.indent), translation);
-
         if let Some(anim) = &mut self.anim {
             match anim.ty {
                 AnimType::Translation => {
@@ -1013,22 +948,20 @@ where
             }
         }
 
-        // eprintln!("    -> {:?} {:?}", translation, rotation);
-
         let transform = Matrixf::rotate_xyz_and_translate(translation, rotation);
         self.mtx_stack.push_mul(transform);
 
-        if !node.display_list.is_null() {
-            let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
-            self.edit_master_list(
-                layer,
-                MasterListEdit::Insert {
-                    transform: self.mtx_stack.cur.to_fixed(),
-                    display_list: node.display_list,
-                },
-            );
-        }
+        // if !node.display_list.is_null() {
+        //     let layer = node.node.flags.bits() >> 8;
+        //     self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
+        //     self.edit_master_list(
+        //         layer,
+        //         MasterListEdit::Insert {
+        //             transform: self.mtx_stack.cur.to_fixed(),
+        //             display_list: node.display_list,
+        //         },
+        //     );
+        // }
         self.process_node_and_siblings(node.node.children)?;
 
         self.mtx_stack.pop();
@@ -1059,17 +992,17 @@ where
                 .execute(Matrixf::scale_vec3f(obj.scale), MatrixOp::Mul, false);
         }
 
-        if !node.display_list.is_null() {
-            let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
-            self.edit_master_list(
-                layer,
-                MasterListEdit::Insert {
-                    transform: self.mtx_stack.cur.to_fixed(),
-                    display_list: node.display_list,
-                },
-            );
-        }
+        // if !node.display_list.is_null() {
+        //     let layer = node.node.flags.bits() >> 8;
+        //     self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
+        //     self.edit_master_list(
+        //         layer,
+        //         MasterListEdit::Insert {
+        //             transform: self.mtx_stack.cur.to_fixed(),
+        //             display_list: node.display_list,
+        //         },
+        //     );
+        // }
         self.process_node_and_siblings(node.node.children)?;
 
         self.mtx_stack.pop();
@@ -1077,17 +1010,17 @@ where
     }
 
     fn process_display_list(&mut self, node: &GraphNodeDisplayList) -> Result<(), Error> {
-        if !node.display_list.is_null() {
-            let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
-            self.edit_master_list(
-                layer,
-                MasterListEdit::Insert {
-                    transform: self.mtx_stack.cur.to_fixed(),
-                    display_list: node.display_list,
-                },
-            );
-        }
+        // if !node.display_list.is_null() {
+        //     let layer = node.node.flags.bits() >> 8;
+        //     self.edit_master_list(layer, MasterListEdit::Skip(node.display_list));
+        //     self.edit_master_list(
+        //         layer,
+        //         MasterListEdit::Insert {
+        //             transform: self.mtx_stack.cur.to_fixed(),
+        //             display_list: node.display_list,
+        //         },
+        //     );
+        // }
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
     }
@@ -1114,15 +1047,12 @@ where
     }
 
     fn process_shadow(&mut self, node: &GraphNodeShadow) -> Result<(), Error> {
-        // TODO: extra objects + maybe append_display_list
-        // TODO: matrix transform
-
+        // TODO: append display list?
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
     }
 
     fn process_object_parent(&mut self, node: &GraphNodeObjectParent) -> Result<(), Error> {
-        // TODO: Do we need to set parent?
         if !node.shared_child.is_null() {
             self.process_node_and_siblings(node.shared_child)?;
         }
