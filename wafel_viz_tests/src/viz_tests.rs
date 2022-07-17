@@ -49,6 +49,7 @@ fn u120(cases: &mut Vec<TestCase>) {
     case("u120_005577_slide_ice", 5577);
     case("u120_006122_dust_butt", 6122);
     case("u120_006180_star_head", 6180);
+    case("u120_008282_hold_penguin", 8282);
     case("u120_009044_star_select", 9044);
     case("u120_009738_ice", 9738);
     case("u120_010543_caught_in_the_undertoad", 10543);

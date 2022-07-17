@@ -123,6 +123,7 @@ where
     cur_camera: Option<GraphNodeCamera>,
     cur_object: Option<GraphNodeObject>,
     cur_object_addr: Option<Address>,
+    cur_held_object: Option<GraphNodeHeldObject>,
     cur_node_addr: Option<Address>,
     indent: usize,
 }
@@ -215,6 +216,7 @@ where
             cur_camera: None,
             cur_object: None,
             cur_object_addr: None,
+            cur_held_object: None,
             cur_node_addr: None,
             indent: 0,
         })
@@ -609,9 +611,12 @@ where
                 // Since different objects can use the same model, we need to calculate the switch
                 // case manually in some cases
                 if node.fn_node.func == geo_switch_anim_state {
-                    // TODO: or current held object node
+                    let mut obj_addr = self.cur_object_addr;
+                    if let Some(held_obj) = &self.cur_held_object {
+                        obj_addr = Some(held_obj.obj_node);
+                    }
 
-                    if let Some(obj_addr) = self.cur_object_addr {
+                    if let Some(obj_addr) = obj_addr {
                         let object_struct = self.layout.data_type(&TypeName {
                             namespace: Namespace::Struct,
                             name: "Object".to_string(),
@@ -978,6 +983,52 @@ where
     fn process_held_object(&mut self, node: &GraphNodeHeldObject) -> Result<(), Error> {
         // TODO: Animation globals?
         // TODO: Matrix transform
+
+        if !node.fn_node.func.is_null() {
+            // TODO: Func?
+        }
+
+        if !node.obj_node.is_null() {
+            if let GfxTreeNode::Object(obj_node) = self.reader.read(node.obj_node)? {
+                if !obj_node.shared_child.is_null() {
+                    let translation = [
+                        node.translation[0] as f32 / 4.0,
+                        node.translation[1] as f32 / 4.0,
+                        node.translation[2] as f32 / 4.0,
+                    ];
+
+                    let mut mtx =
+                        Matrixf::rotate_xyz_and_translate(translation, Default::default());
+
+                    // TODO: Throw matrix
+                    // mtxf_copy(gMatStack[gMatStackIndex + 1], *gCurGraphNodeObject->throwMatrix);
+                    // gMatStack[gMatStackIndex + 1][3][0] = gMatStack[gMatStackIndex][3][0];
+                    // gMatStack[gMatStackIndex + 1][3][1] = gMatStack[gMatStackIndex][3][1];
+                    // gMatStack[gMatStackIndex + 1][3][2] = gMatStack[gMatStackIndex][3][2];
+
+                    mtx = &Matrixf::scale_vec3f(obj_node.scale) * &mtx;
+                    self.mtx_stack.push_mul(mtx);
+
+                    if !node.fn_node.func.is_null() {
+                        // TODO: Func?
+                    }
+
+                    let temp_anim_state = mem::take(&mut self.anim);
+                    self.cur_held_object = Some(node.clone());
+                    if !obj_node.anim_info.cur_anim.is_null() {
+                        self.set_animation_globals(&obj_node.anim_info)?;
+                    }
+
+                    self.process_node_and_siblings(obj_node.shared_child)?;
+
+                    self.cur_held_object = None;
+                    self.anim = temp_anim_state;
+
+                    self.mtx_stack.pop();
+                }
+            }
+        }
+
         self.process_node_and_siblings(node.fn_node.node.children)?;
         Ok(())
     }
