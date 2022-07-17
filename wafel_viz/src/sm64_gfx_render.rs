@@ -128,6 +128,7 @@ where
     cur_camera: Option<GraphNodeCamera>,
     cur_object: Option<GraphNodeObject>,
     cur_object_addr: Option<Address>,
+    cur_object_throw_mtx: Option<Matrixf>,
     cur_held_object: Option<GraphNodeHeldObject>,
     cur_node_addr: Option<Address>,
     indent: usize,
@@ -222,6 +223,7 @@ where
             cur_camera: None,
             cur_object: None,
             cur_object_addr: None,
+            cur_object_throw_mtx: None,
             cur_held_object: None,
             cur_node_addr: None,
             indent: 0,
@@ -891,16 +893,52 @@ where
         Ok(true)
     }
 
+    fn calc_throw_matrix(&mut self) -> Result<Option<Matrixf>, Error> {
+        let mario_object = (self.get_path)("gMarioObject")?
+            .read(self.memory)?
+            .try_as_address()?;
+        let is_mario = self.cur_object_addr == Some(mario_object);
+
+        if is_mario {
+            let align_action_names = [
+                "ACT_CRAWLING",
+                "ACT_BUTT_SLIDE",
+                "ACT_HOLD_BUTT_SLIDE",
+                "ACT_CROUCH_SLIDE",
+                "ACT_DIVE_SLIDE",
+                "ACT_STOMACH_SLIDE",
+                "ACT_HOLD_STOMACH_SLIDE",
+            ];
+            let mut align_actions = HashSet::new();
+            for name in &align_action_names {
+                align_actions.insert(self.layout.constant(name)?.value);
+            }
+
+            let action = (self.get_path)("gMarioState.action")?
+                .read(self.memory)?
+                .try_as_int()?;
+
+            if align_actions.contains(&action) {
+                let mtx_addr = (self.get_path)("sFloorAlignMatrix[0]")?
+                    .address(self.memory)?
+                    .unwrap();
+
+                let mut mtx = Matrixf::default();
+                self.read_u32(cast_slice_mut(&mut mtx.0), mtx_addr.into(), 0)?;
+
+                return Ok(Some(mtx.transpose()));
+            }
+        }
+
+        Ok(None)
+    }
+
     fn process_object(&mut self, node: &GraphNodeObject) -> Result<(), Error> {
-        // TODO: if (node->header.gfx.areaIndex == gCurGraphNodeRoot->areaIndex) {
-        {
-            // TODO: Matrix transform
-            if !node.throw_matrix.is_null() {
-                eprintln!("throw matrix");
-                // TODO
-                self.mtx_stack.push_mul(Matrixf::identity());
+        let root_area = self.cur_root.as_ref().map(|r| r.area_index);
+        if root_area.is_none() || root_area == Some(node.area_index as u8) {
+            if let Some(throw_matrix) = self.calc_throw_matrix()? {
+                self.mtx_stack.push_mul(throw_matrix);
             } else if node.node.flags.contains(GraphRenderFlags::BILLBOARD) {
-                // TODO
                 let mtx = Matrixf::billboard(
                     &self.mtx_stack.cur,
                     node.pos,
@@ -914,16 +952,13 @@ where
 
             self.mtx_stack
                 .execute(Matrixf::scale_vec3f(node.scale), MatrixOp::Mul, false);
-
-            // TODO: Calculate throwMatrix and cameraToObject
+            self.cur_object_throw_mtx = Some(self.mtx_stack.cur.clone());
 
             if !node.anim_info.cur_anim.is_null() {
                 self.set_animation_globals(&node.anim_info)?;
             }
             if self.obj_is_in_view(node, &self.mtx_stack.cur)? {
-                // TODO: Calculate matrix
                 if !node.shared_child.is_null() {
-                    // TODO: Set & unset shared_child parent
                     self.cur_object = Some(node.clone());
                     self.process_node_and_siblings(node.shared_child)?;
                     self.cur_object = None;
@@ -933,7 +968,7 @@ where
 
             self.mtx_stack.pop();
             self.anim = None;
-            // TODO: Reset object throw matrix
+            self.cur_object_throw_mtx = None;
         }
 
         Ok(())
@@ -1112,13 +1147,6 @@ where
     }
 
     fn process_held_object(&mut self, node: &GraphNodeHeldObject) -> Result<(), Error> {
-        // TODO: Animation globals?
-        // TODO: Matrix transform
-
-        if !node.fn_node.func.is_null() {
-            // TODO: Func?
-        }
-
         if !node.obj_node.is_null() {
             if let GfxTreeNode::Object(obj_node) = self.reader.read(node.obj_node)? {
                 if !obj_node.shared_child.is_null() {
@@ -1128,28 +1156,26 @@ where
                         node.translation[2] as f32 / 4.0,
                     ];
 
-                    let mut mtx =
+                    let translate =
                         Matrixf::rotate_xyz_and_translate(translation, Default::default());
 
-                    // TODO: Throw matrix
-                    // mtxf_copy(gMatStack[gMatStackIndex + 1], *gCurGraphNodeObject->throwMatrix);
-                    // gMatStack[gMatStackIndex + 1][3][0] = gMatStack[gMatStackIndex][3][0];
-                    // gMatStack[gMatStackIndex + 1][3][1] = gMatStack[gMatStackIndex][3][1];
-                    // gMatStack[gMatStackIndex + 1][3][2] = gMatStack[gMatStackIndex][3][2];
+                    let mut throw = self
+                        .cur_object_throw_mtx
+                        .clone()
+                        .expect("no current object");
+                    throw.0[0][3] = self.mtx_stack.cur.0[0][3];
+                    throw.0[1][3] = self.mtx_stack.cur.0[1][3];
+                    throw.0[2][3] = self.mtx_stack.cur.0[2][3];
 
-                    mtx = &Matrixf::scale_vec3f(obj_node.scale) * &mtx;
-                    self.mtx_stack.push_mul(mtx);
-
-                    if !node.fn_node.func.is_null() {
-                        // TODO: Func?
-                    }
+                    let mtx = &(&throw * &translate) * &Matrixf::scale_vec3f(obj_node.scale);
+                    self.mtx_stack.execute(mtx, MatrixOp::Load, true);
 
                     let temp_anim_state = mem::take(&mut self.anim);
                     self.cur_held_object = Some(node.clone());
+
                     if !obj_node.anim_info.cur_anim.is_null() {
                         self.set_animation_globals(&obj_node.anim_info)?;
                     }
-
                     self.process_node_and_siblings(obj_node.shared_child)?;
 
                     self.cur_held_object = None;

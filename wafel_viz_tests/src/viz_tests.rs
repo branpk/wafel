@@ -93,6 +93,7 @@ fn u120(cases: &mut Vec<TestCase>) {
     case("u120_025086_fading_shadow", 25086);
     case("u120_025090_tilted_shadow", 25090);
     case("u120_025141_limbo", 25141);
+    case("u120_026614_small_box_hold", 26614);
     case("u120_026638_box_kick", 26638);
     case("u120_032013_whirlpool", 32013);
     case("u120_032935_bowser_door", 32935);
