@@ -7,7 +7,7 @@ use fast3d::{
     cmd::{F3DCommand::*, *},
     decode::decode_f3d_display_list,
     interpret::{interpret_f3d_display_list, F3DRenderData},
-    util::{coss, sins, MatrixState, Matrixf},
+    util::{coss, sins, Angle, MatrixStack, Matrixf},
 };
 use itertools::Itertools;
 use wafel_api::{Address, Error, IntType, Value};
@@ -18,13 +18,13 @@ use wafel_memory::{MemoryError, MemoryRead};
 
 use crate::{
     sm64_gfx_tree::*,
-    sm64_render_mod::{get_dl_addr, F3DMemoryImpl, Pointer, RawDlIter},
+    sm64_render_mod::{get_dl_addr, Camera, F3DMemoryImpl, Pointer, RawDlIter},
     SM64RenderConfig,
 };
 
 const DEBUG_PRINT: bool = false;
 const DEBUG_ONE_FRAME: bool = false;
-const DEBUG_CALC_TRANSFORMS: bool = false;
+const DEBUG_CALC_TRANSFORMS: bool = true;
 const CHECK_CALC_TRANSFORMS: bool = false;
 const ASSERT_CALC_TRANSFORMS: bool = false;
 
@@ -63,7 +63,8 @@ pub fn test_render(
         != 0;
     let root_addr = get_path("gCurrentArea?.unk04")?.read(memory)?;
 
-    let mut renderer = NodeRenderer::new(input_dl.into_iter(), memory, layout, &mut get_path)?;
+    let mut renderer =
+        NodeRenderer::new(config, input_dl.into_iter(), memory, layout, &mut get_path)?;
 
     if let Value::Address(root_addr) = root_addr {
         renderer.render_game(root_addr, pause_rendering)?;
@@ -86,12 +87,14 @@ struct NodeRenderer<'m, M, I, F>
 where
     I: Iterator<Item = F3DCommand<Pointer>>,
 {
+    config: &'m SM64RenderConfig,
     input_display_list: Peekable<I>,
     memory: &'m M,
     layout: &'m DataLayout,
     get_path: F,
     reader: GfxNodeReader<'m>,
-    mtx_stack: MatrixState,
+    mtx_stack: MatrixStack,
+    mod_mtx_stack: MatrixStack,
     master_lists: [Vec<MasterListEdit>; 8],
     display_list: Vec<F3DCommand<Pointer>>,
     u32_buffer: Vec<u32>,
@@ -102,12 +105,14 @@ where
     cur_object: Option<GraphNodeObject>,
     cur_object_addr: Option<Address>,
     cur_object_throw_mtx: Option<Matrixf>,
+    cur_object_mod_throw_mtx: Option<Matrixf>,
     cur_held_object: Option<GraphNodeHeldObject>,
     cur_node_addr: Option<Address>,
     indent: usize,
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 enum MasterListEdit {
     Copy {
         transform: Vec<i32>,
@@ -118,7 +123,9 @@ enum MasterListEdit {
         transform: Vec<i32>,
         display_list: Address,
     },
-    OptDynamic,
+    OptDynamic {
+        transform: Vec<i32>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -171,6 +178,14 @@ enum AnimType {
     Rotation,
 }
 
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+struct CameraState {
+    pos: [f32; 3],
+    focus: [f32; 3],
+    roll: Angle,
+}
+
 impl<'m, M, I, F> NodeRenderer<'m, M, I, F>
 where
     M: MemoryRead,
@@ -178,6 +193,7 @@ where
     F: FnMut(&str) -> Result<Arc<GlobalDataPath>, Error>,
 {
     fn new(
+        config: &'m SM64RenderConfig,
         input_display_list: I,
         memory: &'m M,
         layout: &'m DataLayout,
@@ -185,12 +201,14 @@ where
     ) -> Result<Self, Error> {
         let reader = get_gfx_node_reader(memory, layout)?;
         Ok(Self {
+            config,
             input_display_list: input_display_list.peekable(),
             memory,
             layout,
             get_path,
             reader,
-            mtx_stack: MatrixState::default(),
+            mtx_stack: MatrixStack::default(),
+            mod_mtx_stack: MatrixStack::default(),
             master_lists: Default::default(),
             display_list: Vec::new(),
             u32_buffer: Vec::new(),
@@ -201,6 +219,7 @@ where
             cur_object: None,
             cur_object_addr: None,
             cur_object_throw_mtx: None,
+            cur_object_mod_throw_mtx: None,
             cur_held_object: None,
             cur_node_addr: None,
             indent: 0,
@@ -539,7 +558,7 @@ where
                             .filter(|&(_, dl)| dl == (*display_list).into())
                             .expect("master list discrepancy");
 
-                        if DEBUG_CALC_TRANSFORMS {
+                        if DEBUG_CALC_TRANSFORMS || self.config.camera != Camera::InGame {
                             let offset = self.u32_buffer.len();
                             self.u32_buffer.extend(cast_slice(transform));
                             new_nodes.push((Pointer::BufferOffset(offset), dl));
@@ -562,10 +581,16 @@ where
                         self.u32_buffer.extend(cast_slice(transform));
                         new_nodes.push((Pointer::BufferOffset(offset), (*display_list).into()));
                     }
-                    MasterListEdit::OptDynamic => {
+                    MasterListEdit::OptDynamic { transform } => {
                         if let Some(&&(mtx, dl)) = actual_nodes.peek() {
                             if is_dynamic(dl) {
-                                new_nodes.push((mtx, dl));
+                                if DEBUG_CALC_TRANSFORMS || self.config.camera != Camera::InGame {
+                                    let offset = self.u32_buffer.len();
+                                    self.u32_buffer.extend(cast_slice(transform));
+                                    new_nodes.push((Pointer::BufferOffset(offset), dl));
+                                } else {
+                                    new_nodes.push((mtx, dl));
+                                }
                                 actual_nodes.next();
                             }
                         }
@@ -752,7 +777,13 @@ where
 
     fn process_camera(&mut self, node: &GraphNodeCamera) -> Result<(), Error> {
         let camera_transform = Matrixf::look_at(node.pos, node.focus, node.roll);
-        self.mtx_stack.push_mul(camera_transform);
+        self.mtx_stack.push_mul(&camera_transform);
+
+        let mod_camera_transform = match self.config.camera {
+            Camera::InGame => camera_transform.clone(),
+            Camera::LookAt { pos, focus, roll } => Matrixf::look_at(pos, focus, roll),
+        };
+        self.mod_mtx_stack.push_mul(&mod_camera_transform);
 
         self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
 
@@ -760,6 +791,7 @@ where
         self.process_node_and_siblings(node.fn_node.node.children)?;
         self.cur_camera = None;
 
+        self.mod_mtx_stack.pop();
         self.mtx_stack.pop();
         Ok(())
     }
@@ -774,20 +806,22 @@ where
             node.translation[2] as f32,
         ];
         let mtx = Matrixf::rotate_zxy_and_translate(translation, node.rotation);
-        self.mtx_stack.push_mul(mtx);
+        self.mtx_stack.push_mul(&mtx);
+        self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
             let layer = node.node.flags.bits() >> 8;
             self.edit_master_list(
                 layer,
                 MasterListEdit::Copy {
-                    transform: self.mtx_stack.cur.to_fixed(),
+                    transform: self.mod_mtx_stack.cur.to_fixed(),
                     display_list: node.display_list,
                 },
             );
         }
         self.process_node_and_siblings(node.node.children)?;
 
+        self.mod_mtx_stack.pop();
         self.mtx_stack.pop();
         Ok(())
     }
@@ -799,20 +833,22 @@ where
             node.translation[2] as f32,
         ];
         let mtx = Matrixf::rotate_zxy_and_translate(translation, Default::default());
-        self.mtx_stack.push_mul(mtx);
+        self.mtx_stack.push_mul(&mtx);
+        self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
             let layer = node.node.flags.bits() >> 8;
             self.edit_master_list(
                 layer,
                 MasterListEdit::Copy {
-                    transform: self.mtx_stack.cur.to_fixed(),
+                    transform: self.mod_mtx_stack.cur.to_fixed(),
                     display_list: node.display_list,
                 },
             );
         }
         self.process_node_and_siblings(node.node.children)?;
 
+        self.mod_mtx_stack.pop();
         self.mtx_stack.pop();
         Ok(())
     }
@@ -820,20 +856,22 @@ where
     fn process_rotation(&mut self, node: &GraphNodeRotation) -> Result<(), Error> {
         let translation = [0.0, 0.0, 0.0];
         let mtx = Matrixf::rotate_zxy_and_translate(translation, node.rotation);
-        self.mtx_stack.push_mul(mtx);
+        self.mtx_stack.push_mul(&mtx);
+        self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
             let layer = node.node.flags.bits() >> 8;
             self.edit_master_list(
                 layer,
                 MasterListEdit::Copy {
-                    transform: self.mtx_stack.cur.to_fixed(),
+                    transform: self.mod_mtx_stack.cur.to_fixed(),
                     display_list: node.display_list,
                 },
             );
         }
         self.process_node_and_siblings(node.node.children)?;
 
+        self.mod_mtx_stack.pop();
         self.mtx_stack.pop();
         Ok(())
     }
@@ -928,26 +966,49 @@ where
         Ok(None)
     }
 
+    fn mod_camera(&self) -> CameraState {
+        match self.config.camera {
+            Camera::InGame => {
+                let camera = self.cur_camera.as_ref().expect("no current camera");
+                CameraState {
+                    pos: camera.pos,
+                    focus: camera.focus,
+                    roll: camera.roll,
+                }
+            }
+            Camera::LookAt { pos, focus, roll } => CameraState { pos, focus, roll },
+        }
+    }
+
     fn process_object(&mut self, node: &GraphNodeObject) -> Result<(), Error> {
         let root_area = self.cur_root.as_ref().map(|r| r.area_index);
         if root_area.is_none() || root_area == Some(node.area_index as u8) {
             if let Some(throw_matrix) = self.calc_throw_matrix()? {
-                self.mtx_stack.push_mul(throw_matrix);
+                self.mtx_stack.push_mul(&throw_matrix);
+                self.mod_mtx_stack.push_mul(&throw_matrix);
             } else if node.node.flags.contains(GraphRenderFlags::BILLBOARD) {
                 let mtx = Matrixf::billboard(
                     &self.mtx_stack.cur,
                     node.pos,
                     self.cur_camera.as_ref().expect("no current camera").roll,
                 );
-                self.mtx_stack.execute(mtx, MatrixOp::Load, true);
+                self.mtx_stack.execute(&mtx, MatrixOp::Load, true);
+
+                let mod_mtx =
+                    Matrixf::billboard(&self.mod_mtx_stack.cur, node.pos, self.mod_camera().roll);
+                self.mod_mtx_stack.execute(&mod_mtx, MatrixOp::Load, true);
             } else {
                 let transform = Matrixf::rotate_zxy_and_translate(node.pos, node.angle);
-                self.mtx_stack.push_mul(transform);
+                self.mtx_stack.push_mul(&transform);
+                self.mod_mtx_stack.push_mul(&transform);
             }
 
-            self.mtx_stack
-                .execute(Matrixf::scale_vec3f(node.scale), MatrixOp::Mul, false);
+            let scale_mtx = Matrixf::scale_vec3f(node.scale);
+            self.mtx_stack.execute(&scale_mtx, MatrixOp::Mul, false);
+            self.mod_mtx_stack.execute(&scale_mtx, MatrixOp::Mul, false);
+
             self.cur_object_throw_mtx = Some(self.mtx_stack.cur.clone());
+            self.cur_object_mod_throw_mtx = Some(self.mod_mtx_stack.cur.clone());
 
             if !node.anim_info.cur_anim.is_null() {
                 self.set_animation_globals(&node.anim_info)?;
@@ -963,8 +1024,10 @@ where
                 self.process_node_and_siblings(node.node.children)?;
             }
 
+            self.mod_mtx_stack.pop();
             self.mtx_stack.pop();
             self.anim = None;
+            self.cur_object_mod_throw_mtx = None;
             self.cur_object_throw_mtx = None;
         }
 
@@ -1009,20 +1072,22 @@ where
         }
 
         let transform = Matrixf::rotate_xyz_and_translate(translation, rotation);
-        self.mtx_stack.push_mul(transform);
+        self.mtx_stack.push_mul(&transform);
+        self.mod_mtx_stack.push_mul(&transform);
 
         if !node.display_list.is_null() {
             let layer = node.node.flags.bits() >> 8;
             self.edit_master_list(
                 layer,
                 MasterListEdit::Copy {
-                    transform: self.mtx_stack.cur.to_fixed(),
+                    transform: self.mod_mtx_stack.cur.to_fixed(),
                     display_list: node.display_list,
                 },
             );
         }
         self.process_node_and_siblings(node.node.children)?;
 
+        self.mod_mtx_stack.pop();
         self.mtx_stack.pop();
         Ok(())
     }
@@ -1033,12 +1098,17 @@ where
             node.translation[1] as f32,
             node.translation[2] as f32,
         ];
+
         let mtx = Matrixf::billboard(
             &self.mtx_stack.cur,
             translation,
             self.cur_camera.as_ref().expect("no current camera").roll,
         );
-        self.mtx_stack.execute(mtx, MatrixOp::Load, true);
+        self.mtx_stack.execute(&mtx, MatrixOp::Load, true);
+
+        let mod_mtx =
+            Matrixf::billboard(&self.mod_mtx_stack.cur, translation, self.mod_camera().roll);
+        self.mod_mtx_stack.execute(&mod_mtx, MatrixOp::Load, true);
 
         let mut cur_obj = self.cur_object.clone();
         if let Some(node) = self.cur_held_object.as_ref() {
@@ -1047,8 +1117,10 @@ where
             }
         }
         if let Some(obj) = cur_obj {
-            self.mtx_stack
-                .execute(Matrixf::scale_vec3f(obj.scale), MatrixOp::Mul, false);
+            let scale_matrix = Matrixf::scale_vec3f(obj.scale);
+            self.mtx_stack.execute(&scale_matrix, MatrixOp::Mul, false);
+            self.mod_mtx_stack
+                .execute(&scale_matrix, MatrixOp::Mul, false);
         }
 
         if !node.display_list.is_null() {
@@ -1056,13 +1128,14 @@ where
             self.edit_master_list(
                 layer,
                 MasterListEdit::Copy {
-                    transform: self.mtx_stack.cur.to_fixed(),
+                    transform: self.mod_mtx_stack.cur.to_fixed(),
                     display_list: node.display_list,
                 },
             );
         }
         self.process_node_and_siblings(node.node.children)?;
 
+        self.mod_mtx_stack.pop();
         self.mtx_stack.pop();
         Ok(())
     }
@@ -1073,7 +1146,7 @@ where
             self.edit_master_list(
                 layer,
                 MasterListEdit::Copy {
-                    transform: self.mtx_stack.cur.to_fixed(),
+                    transform: self.mod_mtx_stack.cur.to_fixed(),
                     display_list: node.display_list,
                 },
             );
@@ -1084,27 +1157,34 @@ where
 
     fn process_scale(&mut self, node: &GraphNodeScale) -> Result<(), Error> {
         let mtx = Matrixf::scale_vec3f([node.scale, node.scale, node.scale]);
-        self.mtx_stack.push_mul(mtx);
+        self.mtx_stack.push_mul(&mtx);
+        self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
             let layer = node.node.flags.bits() >> 8;
             self.edit_master_list(
                 layer,
                 MasterListEdit::Copy {
-                    transform: self.mtx_stack.cur.to_fixed(),
+                    transform: self.mod_mtx_stack.cur.to_fixed(),
                     display_list: node.display_list,
                 },
             );
         }
         self.process_node_and_siblings(node.node.children)?;
 
+        self.mod_mtx_stack.pop();
         self.mtx_stack.pop();
         Ok(())
     }
 
     fn process_shadow(&mut self, node: &GraphNodeShadow) -> Result<(), Error> {
         for layer in [4, 5, 6] {
-            self.edit_master_list(layer, MasterListEdit::OptDynamic);
+            self.edit_master_list(
+                layer,
+                MasterListEdit::OptDynamic {
+                    transform: self.mod_mtx_stack.cur.to_fixed(),
+                },
+            );
         }
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
@@ -1120,18 +1200,29 @@ where
 
     fn process_generated(&mut self, node: &GraphNodeGenerated) -> Result<(), Error> {
         let layer = node.fn_node.node.flags.bits() >> 8;
-        self.edit_master_list(layer, MasterListEdit::OptDynamic);
+        self.edit_master_list(
+            layer,
+            MasterListEdit::OptDynamic {
+                transform: self.mod_mtx_stack.cur.to_fixed(),
+            },
+        );
         self.process_node_and_siblings(node.fn_node.node.children)?;
         Ok(())
     }
 
     fn process_background(&mut self, node: &GraphNodeBackground) -> Result<(), Error> {
-        if !node.fn_node.func.is_null() {
-            let layer = node.fn_node.node.flags.bits() >> 8;
-            self.edit_master_list(layer, MasterListEdit::OptDynamic);
+        let layer = if !node.fn_node.func.is_null() {
+            node.fn_node.node.flags.bits() >> 8
         } else {
-            self.edit_master_list(0, MasterListEdit::OptDynamic);
-        }
+            0
+        };
+        self.edit_master_list(
+            layer,
+            MasterListEdit::OptDynamic {
+                transform: self.mod_mtx_stack.cur.to_fixed(),
+            },
+        );
+
         self.process_node_and_siblings(node.fn_node.node.children)?;
         Ok(())
     }
@@ -1157,8 +1248,20 @@ where
                     throw.0[1][3] = self.mtx_stack.cur.0[1][3];
                     throw.0[2][3] = self.mtx_stack.cur.0[2][3];
 
+                    let mut mod_throw = self
+                        .cur_object_mod_throw_mtx
+                        .clone()
+                        .expect("no current object");
+                    mod_throw.0[0][3] = self.mod_mtx_stack.cur.0[0][3];
+                    mod_throw.0[1][3] = self.mod_mtx_stack.cur.0[1][3];
+                    mod_throw.0[2][3] = self.mod_mtx_stack.cur.0[2][3];
+
                     let mtx = &(&throw * &translate) * &Matrixf::scale_vec3f(obj_node.scale);
-                    self.mtx_stack.execute(mtx, MatrixOp::Load, true);
+                    self.mtx_stack.execute(&mtx, MatrixOp::Load, true);
+
+                    let mod_mtx =
+                        &(&mod_throw * &translate) * &Matrixf::scale_vec3f(obj_node.scale);
+                    self.mod_mtx_stack.execute(&mod_mtx, MatrixOp::Load, true);
 
                     let temp_anim_state = mem::take(&mut self.anim);
                     self.cur_held_object = Some(node.clone());
@@ -1171,6 +1274,7 @@ where
                     self.cur_held_object = None;
                     self.anim = temp_anim_state;
 
+                    self.mod_mtx_stack.pop();
                     self.mtx_stack.pop();
                 }
             }

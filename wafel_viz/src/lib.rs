@@ -79,7 +79,7 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
     //     // }
 
     env_logger::init();
-    futures::executor::block_on(run(0, None)).unwrap();
+    futures::executor::block_on(run(3509, None)).unwrap();
     // 25090
     // 55945
     // 69260
@@ -299,6 +299,9 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                         }
 
                         let render_data = arg_data.clone().unwrap_or_else(|| {
+                            // let pos = game.read("gLakituState.pos").as_f32_3();
+                            // let focus = game.read("gLakituState.focus").as_f32_3();
+                            // let roll =
                             prepare_render_data(
                                 &game,
                                 &SM64RenderConfig {

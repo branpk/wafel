@@ -88,7 +88,7 @@ pub fn atan2f(x: f32, y: f32) -> f32 {
     atan2s(x, y).0 as f32 * M_PI_32 / 0x8000 as f32
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, PartialEq, Default)]
 pub struct Matrixf(pub [[f32; 4]; 4]);
 
 impl Matrixf {
@@ -424,12 +424,12 @@ pub fn scalar_mul(v: [f32; 4], s: f32) -> [f32; 4] {
 }
 
 #[derive(Debug)]
-pub struct MatrixState {
+pub struct MatrixStack {
     pub stack: Vec<Matrixf>,
     pub cur: Matrixf,
 }
 
-impl Default for MatrixState {
+impl Default for MatrixStack {
     fn default() -> Self {
         Self {
             stack: Vec::new(),
@@ -438,18 +438,18 @@ impl Default for MatrixState {
     }
 }
 
-impl MatrixState {
-    pub fn execute(&mut self, m: Matrixf, op: MatrixOp, push: bool) {
+impl MatrixStack {
+    pub fn execute(&mut self, m: &Matrixf, op: MatrixOp, push: bool) {
         if push {
             self.stack.push(self.cur.clone());
         }
         match op {
-            MatrixOp::Load => self.cur = m,
-            MatrixOp::Mul => self.cur = &self.cur * &m,
+            MatrixOp::Load => self.cur = m.clone(),
+            MatrixOp::Mul => self.cur = &self.cur * m,
         }
     }
 
-    pub fn push_mul(&mut self, m: Matrixf) {
+    pub fn push_mul(&mut self, m: &Matrixf) {
         self.execute(m, MatrixOp::Mul, true);
     }
 

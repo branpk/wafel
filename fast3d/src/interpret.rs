@@ -75,8 +75,8 @@ struct Interpreter<'m, M: F3DMemory> {
 
     viewport: Option<Viewport>,
     scissor: Option<(ScissorMode, Rectangle<u16>)>,
-    model_view: MatrixState,
-    proj: MatrixState,
+    model_view: MatrixStack,
+    proj: MatrixStack,
 
     texture_filter: TextureFilter,
     cycle_type: CycleType,
@@ -788,8 +788,8 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                     let fixed = read_matrix(self.memory(), matrix, 0)?;
                     let m = Matrixf::from_fixed(&fixed);
                     match mode {
-                        MatrixMode::Proj => self.proj.execute(m, op, push),
-                        MatrixMode::ModelView => self.model_view.execute(m, op, push),
+                        MatrixMode::Proj => self.proj.execute(&m, op, push),
+                        MatrixMode::ModelView => self.model_view.execute(&m, op, push),
                     }
                 }
                 SPViewport(ptr) => {
