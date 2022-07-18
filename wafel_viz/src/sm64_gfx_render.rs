@@ -23,7 +23,10 @@ use crate::{
 };
 
 const DEBUG_PRINT: bool = false;
-const ONE_FRAME: bool = false;
+const DEBUG_ONE_FRAME: bool = false;
+const DEBUG_CALC_TRANSFORMS: bool = false;
+const CHECK_CALC_TRANSFORMS: bool = false;
+const ASSERT_CALC_TRANSFORMS: bool = false;
 
 pub fn test_render(
     memory: &impl MemoryRead,
@@ -72,7 +75,7 @@ pub fn test_render(
 
     let render_data = interpret_f3d_display_list(&f3d_memory, config.screen_size, true)?;
 
-    if ONE_FRAME {
+    if DEBUG_ONE_FRAME {
         process::exit(0);
     }
     Ok(render_data)
@@ -106,7 +109,10 @@ where
 
 #[derive(Debug, Clone)]
 enum MasterListEdit {
-    Copy(Address),
+    Copy {
+        transform: Vec<i32>,
+        display_list: Address,
+    },
     Skip(Address),
     Insert {
         transform: Vec<i32>,
@@ -523,13 +529,23 @@ where
 
             for edit in layer_edits {
                 match edit {
-                    MasterListEdit::Copy(addr) => {
-                        let node = actual_nodes
+                    MasterListEdit::Copy {
+                        transform,
+                        display_list,
+                    } => {
+                        let (mtx, dl) = actual_nodes
                             .next()
                             .copied()
-                            .filter(|&(_, dl)| dl == (*addr).into())
+                            .filter(|&(_, dl)| dl == (*display_list).into())
                             .expect("master list discrepancy");
-                        new_nodes.push(node);
+
+                        if DEBUG_CALC_TRANSFORMS {
+                            let offset = self.u32_buffer.len();
+                            self.u32_buffer.extend(cast_slice(transform));
+                            new_nodes.push((Pointer::BufferOffset(offset), dl));
+                        } else {
+                            new_nodes.push((mtx, dl));
+                        }
                     }
                     MasterListEdit::Skip(addr) => {
                         actual_nodes
@@ -570,6 +586,50 @@ where
                     self.push_cmd(mtx_cmd(mtx));
                     self.push_cmd(SPDisplayList(dl));
                 }
+            }
+        }
+
+        // TODO: Exact matrix calculations
+
+        if CHECK_CALC_TRANSFORMS || ASSERT_CALC_TRANSFORMS {
+            let mut matches = true;
+
+            for layer in 0..8 {
+                let old_list = &original_lists[layer];
+                let new_list = &new_lists[layer];
+
+                if old_list.len() != new_list.len() {
+                    matches = false;
+                    if ASSERT_CALC_TRANSFORMS {
+                        panic!("{}: len {} -> {}", layer, old_list.len(), new_list.len());
+                    }
+                }
+                for (old_node, new_node) in old_list.iter().zip(new_list.iter()) {
+                    if old_node.1 != new_node.1 {
+                        matches = false;
+                        if ASSERT_CALC_TRANSFORMS {
+                            panic!("{}: dl {:?} -> {:?}", layer, old_node.1, new_node.1);
+                        }
+                    }
+                    let old_mtx = self.read_fixed(old_node.0)?;
+                    let new_mtx = self.read_fixed(new_node.0)?;
+                    if old_mtx != new_mtx {
+                        matches = false;
+                        if ASSERT_CALC_TRANSFORMS {
+                            panic!(
+                                "{}: mtx ({:?})\n{:?}\n{:?}",
+                                layer,
+                                self.symbol_name(old_node.1.address()),
+                                Matrixf::from_fixed(&old_mtx),
+                                Matrixf::from_fixed(&new_mtx),
+                            );
+                        }
+                    }
+                }
+            }
+
+            if !matches {
+                eprintln!("display list mismatch");
             }
         }
 
@@ -718,7 +778,13 @@ where
 
         if !node.display_list.is_null() {
             let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(layer, MasterListEdit::Copy(node.display_list));
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Copy {
+                    transform: self.mtx_stack.cur.to_fixed(),
+                    display_list: node.display_list,
+                },
+            );
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -737,7 +803,13 @@ where
 
         if !node.display_list.is_null() {
             let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(layer, MasterListEdit::Copy(node.display_list));
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Copy {
+                    transform: self.mtx_stack.cur.to_fixed(),
+                    display_list: node.display_list,
+                },
+            );
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -752,7 +824,13 @@ where
 
         if !node.display_list.is_null() {
             let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(layer, MasterListEdit::Copy(node.display_list));
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Copy {
+                    transform: self.mtx_stack.cur.to_fixed(),
+                    display_list: node.display_list,
+                },
+            );
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -935,7 +1013,13 @@ where
 
         if !node.display_list.is_null() {
             let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(layer, MasterListEdit::Copy(node.display_list));
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Copy {
+                    transform: self.mtx_stack.cur.to_fixed(),
+                    display_list: node.display_list,
+                },
+            );
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -969,7 +1053,13 @@ where
 
         if !node.display_list.is_null() {
             let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(layer, MasterListEdit::Copy(node.display_list));
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Copy {
+                    transform: self.mtx_stack.cur.to_fixed(),
+                    display_list: node.display_list,
+                },
+            );
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -980,7 +1070,13 @@ where
     fn process_display_list(&mut self, node: &GraphNodeDisplayList) -> Result<(), Error> {
         if !node.display_list.is_null() {
             let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(layer, MasterListEdit::Copy(node.display_list));
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Copy {
+                    transform: self.mtx_stack.cur.to_fixed(),
+                    display_list: node.display_list,
+                },
+            );
         }
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
@@ -992,7 +1088,13 @@ where
 
         if !node.display_list.is_null() {
             let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(layer, MasterListEdit::Copy(node.display_list));
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Copy {
+                    transform: self.mtx_stack.cur.to_fixed(),
+                    display_list: node.display_list,
+                },
+            );
         }
         self.process_node_and_siblings(node.node.children)?;
 

@@ -80,6 +80,9 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
 
     env_logger::init();
     futures::executor::block_on(run(0, None)).unwrap();
+    // 25090
+    // 55945
+    // 69260
 
     Ok(())
 }
