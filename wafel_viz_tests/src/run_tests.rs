@@ -7,6 +7,7 @@ use std::{
 
 use image::{Rgb, RgbImage};
 use itertools::Itertools;
+use wafel_viz::{ObjectCull, SM64RenderConfig};
 
 use crate::{game_runner::GameRunner, renderer::Renderer, viz_tests::TestCase};
 
@@ -41,7 +42,11 @@ pub fn run_tests(mut test_cases: Vec<TestCase>) -> Result<(), Box<dyn std::error
 
         let game = runner.get_frame(case.game_version, case.m64, case.frame);
 
-        let actual = renderer.render(game, &case.config);
+        let config = SM64RenderConfig {
+            // object_cull: ObjectCull::ShowAll,
+            ..case.config
+        };
+        let actual = renderer.render(game, &config);
 
         let expected = image::open(format!(
             "wafel_viz_tests/{}/{}.png",

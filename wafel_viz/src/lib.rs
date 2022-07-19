@@ -22,8 +22,7 @@ use std::{
 
 use custom_renderer::{CustomRenderer, Scene};
 use fast3d::{interpret::F3DRenderData, render::F3DRenderer};
-pub use sm64_render_mod::SM64RenderConfig;
-use sm64_render_mod::{render_sm64_with_config, Camera, ObjectCull};
+pub use sm64_render_mod::*;
 use wafel_api::{load_m64, Game, SaveState, Value};
 use wafel_data_path::GlobalDataPath;
 use wafel_memory::GameMemory;
