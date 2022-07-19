@@ -180,6 +180,17 @@ impl Matrixf {
         mtx
     }
 
+    pub fn translate(b: [f32; 3]) -> Self {
+        let mut mtx = Matrixf::identity();
+
+        mtx.0[0][3] = b[0];
+        mtx.0[1][3] = b[1];
+        mtx.0[2][3] = b[2];
+        mtx.0[3][3] = 1.0;
+
+        mtx
+    }
+
     pub fn rotate_xyz_and_translate(b: [f32; 3], c: [Angle; 3]) -> Self {
         let sx = sins(c[0]);
         let cx = coss(c[0]);
@@ -250,6 +261,15 @@ impl Matrixf {
         mtx
     }
 
+    pub fn rotate_xy(angle: Angle) -> Self {
+        let mut temp = Self::identity();
+        temp.0[0][0] = coss(angle);
+        temp.0[1][0] = sins(angle);
+        temp.0[0][1] = -temp.0[1][0];
+        temp.0[1][1] = temp.0[0][0];
+        temp
+    }
+
     pub fn scale_vec3f(s: [f32; 3]) -> Self {
         let mut mtx = Self::identity();
         mtx.0[0][0] = s[0];
@@ -289,6 +309,34 @@ impl Matrixf {
             + mtx.0[2][2] * position[2]
             + mtx.0[2][3];
         dest.0[3][3] = 1.0;
+
+        dest
+    }
+
+    pub fn pos_from_transform_mtx(&self, cam_mtx: &Matrixf) -> [f32; 3] {
+        let cam_x = cam_mtx.0[0][3] * cam_mtx.0[0][0]
+            + cam_mtx.0[1][3] * cam_mtx.0[1][0]
+            + cam_mtx.0[2][3] * cam_mtx.0[2][0];
+        let cam_y = cam_mtx.0[0][3] * cam_mtx.0[0][1]
+            + cam_mtx.0[1][3] * cam_mtx.0[1][1]
+            + cam_mtx.0[2][3] * cam_mtx.0[2][1];
+        let cam_z = cam_mtx.0[0][3] * cam_mtx.0[0][2]
+            + cam_mtx.0[1][3] * cam_mtx.0[1][2]
+            + cam_mtx.0[2][3] * cam_mtx.0[2][2];
+
+        let mut dest = [0.0; 3];
+        dest[0] = self.0[0][3] * cam_mtx.0[0][0]
+            + self.0[1][3] * cam_mtx.0[1][0]
+            + self.0[2][3] * cam_mtx.0[2][0]
+            - cam_x;
+        dest[1] = self.0[0][3] * cam_mtx.0[0][1]
+            + self.0[1][3] * cam_mtx.0[1][1]
+            + self.0[2][3] * cam_mtx.0[2][1]
+            - cam_y;
+        dest[2] = self.0[0][3] * cam_mtx.0[0][2]
+            + self.0[1][3] * cam_mtx.0[1][2]
+            + self.0[2][3] * cam_mtx.0[2][2]
+            - cam_z;
 
         dest
     }

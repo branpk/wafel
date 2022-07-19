@@ -102,6 +102,8 @@ where
     cur_root: Option<GraphNodeRoot>,
     cur_perspective: Option<GraphNodePerspective>,
     cur_camera: Option<GraphNodeCamera>,
+    cur_camera_mtx: Option<Matrixf>,
+    cur_mod_camera_mtx: Option<Matrixf>,
     cur_object: Option<GraphNodeObject>,
     cur_object_addr: Option<Address>,
     cur_object_throw_mtx: Option<Matrixf>,
@@ -138,7 +140,6 @@ struct DisplayListNode {
 #[derive(Debug, Clone)]
 struct AnimState {
     ty: AnimType,
-    #[allow(dead_code)]
     enabled: bool,
     frame: i16,
     translation_multiplier: f32,
@@ -217,6 +218,8 @@ where
             cur_perspective: None,
             cur_camera: None,
             cur_object: None,
+            cur_camera_mtx: None,
+            cur_mod_camera_mtx: None,
             cur_object_addr: None,
             cur_object_throw_mtx: None,
             cur_object_mod_throw_mtx: None,
@@ -542,6 +545,15 @@ where
         let edits = mem::take(&mut self.master_lists);
         let mut new_lists: [Vec<(Pointer, Pointer)>; 8] = Default::default();
 
+        let mut mod_transform = Matrixf::identity();
+        if self.config.camera != Camera::InGame {
+            if let (Some(camera_mtx), Some(mod_camera_mtx)) =
+                (&self.cur_camera_mtx, &self.cur_mod_camera_mtx)
+            {
+                mod_transform = mod_camera_mtx * &camera_mtx.invert_isometry();
+            }
+        }
+
         for (layer, layer_edits) in edits.iter().enumerate() {
             let mut actual_nodes = original_lists[layer].iter().peekable();
             let new_nodes = &mut new_lists[layer];
@@ -581,12 +593,14 @@ where
                         self.u32_buffer.extend(cast_slice(transform));
                         new_nodes.push((Pointer::BufferOffset(offset), (*display_list).into()));
                     }
-                    MasterListEdit::OptDynamic { transform } => {
+                    MasterListEdit::OptDynamic { .. } => {
                         if let Some(&&(mtx, dl)) = actual_nodes.peek() {
                             if is_dynamic(dl) {
                                 if DEBUG_CALC_TRANSFORMS || self.config.camera != Camera::InGame {
+                                    let orig_mtx = Matrixf::from_fixed(&self.read_fixed(mtx)?);
+                                    let new_mtx = &mod_transform * &orig_mtx;
                                     let offset = self.u32_buffer.len();
-                                    self.u32_buffer.extend(cast_slice(transform));
+                                    self.u32_buffer.extend(cast_slice(&new_mtx.to_fixed()));
                                     new_nodes.push((Pointer::BufferOffset(offset), dl));
                                 } else {
                                     new_nodes.push((mtx, dl));
@@ -626,14 +640,14 @@ where
                 if old_list.len() != new_list.len() {
                     matches = false;
                     if ASSERT_CALC_TRANSFORMS {
-                        panic!("{}: len {} -> {}", layer, old_list.len(), new_list.len());
+                        eprintln!("{}: len {} -> {}", layer, old_list.len(), new_list.len());
                     }
                 }
                 for (old_node, new_node) in old_list.iter().zip(new_list.iter()) {
                     if old_node.1 != new_node.1 {
                         matches = false;
                         if ASSERT_CALC_TRANSFORMS {
-                            panic!("{}: dl {:?} -> {:?}", layer, old_node.1, new_node.1);
+                            eprintln!("{}: dl {:?} -> {:?}", layer, old_node.1, new_node.1);
                         }
                     }
                     let old_mtx = self.read_fixed(old_node.0)?;
@@ -641,7 +655,7 @@ where
                     if old_mtx != new_mtx {
                         matches = false;
                         if ASSERT_CALC_TRANSFORMS {
-                            panic!(
+                            eprintln!(
                                 "{}: mtx ({:?})\n{:?}\n{:?}",
                                 layer,
                                 self.symbol_name(old_node.1.address()),
@@ -781,14 +795,35 @@ where
 
         let mod_camera_transform = match self.config.camera {
             Camera::InGame => camera_transform.clone(),
-            Camera::LookAt { pos, focus, roll } => Matrixf::look_at(pos, focus, roll),
+            Camera::LookAt { pos, focus, .. } => Matrixf::look_at(pos, focus, node.roll),
         };
         self.mod_mtx_stack.push_mul(&mod_camera_transform);
 
-        self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+        let cmd = self.dl_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+        match self.config.camera {
+            Camera::InGame => self.push_cmd(cmd),
+            Camera::LookAt { roll, .. } => {
+                let mtx = Matrixf::rotate_xy(roll);
+                let offset = self.u32_buffer.len();
+                self.u32_buffer.extend(cast_slice(&mtx.to_fixed()));
+                self.push_cmd(SPMatrix {
+                    matrix: Pointer::BufferOffset(offset),
+                    mode: MatrixMode::Proj,
+                    op: MatrixOp::Mul,
+                    push: false,
+                });
+            }
+        };
 
         self.cur_camera = Some(node.clone());
+        self.cur_camera_mtx = Some(self.mtx_stack.cur.clone());
+        self.cur_mod_camera_mtx = Some(self.mod_mtx_stack.cur.clone());
+
         self.process_node_and_siblings(node.fn_node.node.children)?;
+
+        // Needed in master_list_sub:
+        // self.cur_mod_camera_mtx = None;
+        // self.cur_camera_mtx = None;
         self.cur_camera = None;
 
         self.mod_mtx_stack.pop();
@@ -1178,14 +1213,61 @@ where
     }
 
     fn process_shadow(&mut self, node: &GraphNodeShadow) -> Result<(), Error> {
-        for layer in [4, 5, 6] {
-            self.edit_master_list(
-                layer,
-                MasterListEdit::OptDynamic {
-                    transform: self.mod_mtx_stack.cur.to_fixed(),
-                },
-            );
+        if let (Some(camera), Some(object)) = (&self.cur_camera, &self.cur_object) {
+            let camera_mtx = self.cur_camera_mtx.as_ref().unwrap();
+            let mod_camera_mtx = self.cur_mod_camera_mtx.as_ref().unwrap();
+
+            let mut shadow_pos;
+            if self.cur_held_object.is_some() {
+                shadow_pos = self.mtx_stack.cur.pos_from_transform_mtx(camera_mtx);
+            } else {
+                shadow_pos = object.pos;
+            }
+
+            if let Some(anim) = &mut self.anim {
+                if anim.enabled
+                    && matches!(
+                        anim.ty,
+                        AnimType::Translation | AnimType::LateralTranslation
+                    )
+                {
+                    let mut obj_scale = 1.0;
+
+                    let geo = node.node.children;
+                    if !geo.is_null() {
+                        if let GfxTreeNode::Scale(scale) = self.reader.read(geo)? {
+                            obj_scale = scale.scale;
+                        }
+                    }
+
+                    let anim_offset_x =
+                        anim.next(self.memory)? as f32 * anim.translation_multiplier * obj_scale;
+                    anim.attribute += 4;
+                    let anim_offset_z =
+                        anim.next(self.memory)? as f32 * anim.translation_multiplier * obj_scale;
+                    anim.attribute -= 12;
+
+                    let sin_ang = sins(object.angle[1]);
+                    let cos_ang = coss(object.angle[1]);
+
+                    shadow_pos[0] += anim_offset_x * cos_ang + anim_offset_z * sin_ang;
+                    shadow_pos[2] += -anim_offset_x * sin_ang + anim_offset_z * cos_ang;
+                }
+            }
+
+            let mod_mtx = mod_camera_mtx * &Matrixf::translate(shadow_pos);
+
+            for layer in [4, 5, 6] {
+                self.edit_master_list(
+                    layer,
+                    MasterListEdit::OptDynamic {
+                        transform: mod_mtx.to_fixed(),
+                        // transform: self.mod_mtx_stack.cur.to_fixed(),
+                    },
+                );
+            }
         }
+
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
     }
@@ -1237,8 +1319,7 @@ where
                         node.translation[2] as f32 / 4.0,
                     ];
 
-                    let translate =
-                        Matrixf::rotate_xyz_and_translate(translation, Default::default());
+                    let translate = Matrixf::translate(translation);
 
                     let mut throw = self
                         .cur_object_throw_mtx
