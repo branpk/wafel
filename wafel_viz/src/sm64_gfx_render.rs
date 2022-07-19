@@ -18,7 +18,7 @@ use wafel_memory::{MemoryError, MemoryRead};
 
 use crate::{
     sm64_gfx_tree::*,
-    sm64_render_mod::{get_dl_addr, Camera, F3DMemoryImpl, Pointer, RawDlIter},
+    sm64_render_mod::{get_dl_addr, Camera, F3DMemoryImpl, ObjectCull, Pointer, RawDlIter},
     SM64RenderConfig,
 };
 
@@ -108,8 +108,11 @@ where
     cur_object_addr: Option<Address>,
     cur_object_throw_mtx: Option<Matrixf>,
     cur_object_mod_throw_mtx: Option<Matrixf>,
+    cur_object_is_in_view: Option<bool>,
     cur_held_object: Option<GraphNodeHeldObject>,
     cur_node_addr: Option<Address>,
+    is_active: Option<bool>,
+    is_in_lod_range: Option<bool>,
     indent: usize,
 }
 
@@ -125,9 +128,7 @@ enum MasterListEdit {
         transform: Vec<i32>,
         display_list: Address,
     },
-    OptDynamic {
-        transform: Vec<i32>,
-    },
+    OptDynamic,
 }
 
 #[derive(Debug, Clone)]
@@ -165,6 +166,10 @@ impl AnimState {
 
     fn next(&mut self, memory: &impl MemoryRead) -> Result<i16, Error> {
         let index = self.index(memory)?;
+        if index < 0 {
+            // e.g. when mario is behind painting
+            return Ok(0);
+        }
         let result = memory.read_int(self.data + 2 * index as isize as usize, IntType::S16)? as i16;
         Ok(result)
     }
@@ -223,8 +228,11 @@ where
             cur_object_addr: None,
             cur_object_throw_mtx: None,
             cur_object_mod_throw_mtx: None,
+            cur_object_is_in_view: None,
             cur_held_object: None,
             cur_node_addr: None,
+            is_active: None,
+            is_in_lod_range: None,
             indent: 0,
         })
     }
@@ -272,6 +280,38 @@ where
 
     fn edit_master_list(&mut self, layer: i16, edit: MasterListEdit) {
         self.master_lists[layer as usize].push(edit);
+    }
+
+    fn is_node_rendered(&self) -> bool {
+        self.cur_object_is_in_view != Some(false)
+            && self.is_in_lod_range != Some(false)
+            && self.is_active != Some(false)
+    }
+
+    fn append_display_list(&mut self, layer: i16, display_list: Address) {
+        if self.is_node_rendered() {
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Copy {
+                    transform: self.mod_mtx_stack.cur.to_fixed(),
+                    display_list,
+                },
+            );
+        } else {
+            self.edit_master_list(
+                layer,
+                MasterListEdit::Insert {
+                    transform: self.mod_mtx_stack.cur.to_fixed(),
+                    display_list,
+                },
+            );
+        }
+    }
+
+    fn append_opt_dynamic_list(&mut self, layer: i16) {
+        if self.is_node_rendered() {
+            self.edit_master_list(layer, MasterListEdit::OptDynamic);
+        }
     }
 
     fn get_render_mode(&self, layer: i16, z_buffer: bool) -> RenderMode {
@@ -378,7 +418,43 @@ where
 
         loop {
             let flags = cur_node.node().flags;
-            if flags.contains(GraphRenderFlags::ACTIVE) {
+            let is_active = flags.contains(GraphRenderFlags::ACTIVE);
+            let parent_is_active = self.is_active;
+            self.is_active = Some(is_active && parent_is_active != Some(false));
+
+            let mut render_node = is_active;
+
+            if self.config.object_cull == ObjectCull::ShowAll && !render_node {
+                if let GfxTreeNode::Object(_) = &cur_node {
+                    let object_struct = self.layout.data_type(&TypeName {
+                        namespace: Namespace::Struct,
+                        name: "Object".to_string(),
+                    })?;
+                    if let DataType::Struct { fields } = object_struct.as_ref() {
+                        if let Some(field) = fields.get("activeFlags") {
+                            let active_flags_offset = field.offset;
+
+                            let active_flags = self
+                                .memory
+                                .read_int(cur_addr + active_flags_offset, IntType::S16)?
+                                as i16;
+
+                            let active_flag_active =
+                                self.layout.constant("ACTIVE_FLAG_ACTIVE")?.value as i16;
+                            let active_flag_far_away =
+                                self.layout.constant("ACTIVE_FLAG_FAR_AWAY")?.value as i16;
+
+                            if (active_flags & active_flag_active) != 0
+                                && (active_flags & active_flag_far_away) != 0
+                            {
+                                render_node = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if render_node {
                 if flags.contains(GraphRenderFlags::CHILDREN_FIRST) {
                     self.process_node_and_siblings(cur_node.node().children)?;
                 } else {
@@ -430,6 +506,8 @@ where
                     }
                 }
             }
+
+            self.is_active = parent_is_active;
 
             if !iterate_siblings {
                 break;
@@ -593,7 +671,7 @@ where
                         self.u32_buffer.extend(cast_slice(transform));
                         new_nodes.push((Pointer::BufferOffset(offset), (*display_list).into()));
                     }
-                    MasterListEdit::OptDynamic { .. } => {
+                    MasterListEdit::OptDynamic => {
                         if let Some(&&(mtx, dl)) = actual_nodes.peek() {
                             if is_dynamic(dl) {
                                 if DEBUG_CALC_TRANSFORMS || self.config.camera != Camera::InGame {
@@ -627,8 +705,6 @@ where
                 }
             }
         }
-
-        // TODO: Exact matrix calculations
 
         if CHECK_CALC_TRANSFORMS || ASSERT_CALC_TRANSFORMS {
             let mut matches = true;
@@ -729,8 +805,13 @@ where
         let mtx = self.mtx_stack.cur.to_fixed();
         let dist_from_cam = -(mtx[7] >> 16) as i16;
 
-        if node.min_distance <= dist_from_cam && dist_from_cam < node.max_distance {
+        let is_in_lod_range =
+            node.min_distance <= dist_from_cam && dist_from_cam < node.max_distance;
+        if is_in_lod_range {
+            let parent_in_lod_range = self.is_in_lod_range;
+            self.is_in_lod_range = Some(is_in_lod_range && parent_in_lod_range != Some(false));
             self.process_node_and_siblings(node.node.children)?;
+            self.is_in_lod_range = parent_in_lod_range;
         }
         Ok(())
     }
@@ -845,14 +926,7 @@ where
         self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
-            let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(
-                layer,
-                MasterListEdit::Copy {
-                    transform: self.mod_mtx_stack.cur.to_fixed(),
-                    display_list: node.display_list,
-                },
-            );
+            self.append_display_list(node.node.flags.bits() >> 8, node.display_list);
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -872,14 +946,7 @@ where
         self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
-            let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(
-                layer,
-                MasterListEdit::Copy {
-                    transform: self.mod_mtx_stack.cur.to_fixed(),
-                    display_list: node.display_list,
-                },
-            );
+            self.append_display_list(node.node.flags.bits() >> 8, node.display_list);
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -895,14 +962,7 @@ where
         self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
-            let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(
-                layer,
-                MasterListEdit::Copy {
-                    transform: self.mod_mtx_stack.cur.to_fixed(),
-                    display_list: node.display_list,
-                },
-            );
+            self.append_display_list(node.node.flags.bits() >> 8, node.display_list);
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -935,11 +995,6 @@ where
                 culling_radius = node.culling_radius;
             }
         }
-
-        // if self.is_mario()? {
-        //     eprintln!("{:?}", matrix);
-        //     eprintln!("{:?}", culling_radius);
-        // }
 
         if matrix.0[2][3] > -100.0 + culling_radius as f32 {
             return Ok(false);
@@ -1050,10 +1105,17 @@ where
             }
 
             let is_in_view = self.obj_is_in_view(node)?;
-            if is_in_view {
+            let render_object = match self.config.object_cull {
+                ObjectCull::Normal => is_in_view,
+                ObjectCull::ShowAll => true,
+            };
+
+            if render_object {
                 if !node.shared_child.is_null() {
                     self.cur_object = Some(node.clone());
+                    self.cur_object_is_in_view = Some(is_in_view);
                     self.process_node_and_siblings(node.shared_child)?;
+                    self.cur_object_is_in_view = None;
                     self.cur_object = None;
                 }
                 self.process_node_and_siblings(node.node.children)?;
@@ -1111,14 +1173,7 @@ where
         self.mod_mtx_stack.push_mul(&transform);
 
         if !node.display_list.is_null() {
-            let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(
-                layer,
-                MasterListEdit::Copy {
-                    transform: self.mod_mtx_stack.cur.to_fixed(),
-                    display_list: node.display_list,
-                },
-            );
+            self.append_display_list(node.node.flags.bits() >> 8, node.display_list);
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -1159,14 +1214,7 @@ where
         }
 
         if !node.display_list.is_null() {
-            let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(
-                layer,
-                MasterListEdit::Copy {
-                    transform: self.mod_mtx_stack.cur.to_fixed(),
-                    display_list: node.display_list,
-                },
-            );
+            self.append_display_list(node.node.flags.bits() >> 8, node.display_list);
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -1177,14 +1225,7 @@ where
 
     fn process_display_list(&mut self, node: &GraphNodeDisplayList) -> Result<(), Error> {
         if !node.display_list.is_null() {
-            let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(
-                layer,
-                MasterListEdit::Copy {
-                    transform: self.mod_mtx_stack.cur.to_fixed(),
-                    display_list: node.display_list,
-                },
-            );
+            self.append_display_list(node.node.flags.bits() >> 8, node.display_list);
         }
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
@@ -1196,14 +1237,7 @@ where
         self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
-            let layer = node.node.flags.bits() >> 8;
-            self.edit_master_list(
-                layer,
-                MasterListEdit::Copy {
-                    transform: self.mod_mtx_stack.cur.to_fixed(),
-                    display_list: node.display_list,
-                },
-            );
+            self.append_display_list(node.node.flags.bits() >> 8, node.display_list);
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -1258,13 +1292,7 @@ where
             let mod_mtx = mod_camera_mtx * &Matrixf::translate(shadow_pos);
 
             for layer in [4, 5, 6] {
-                self.edit_master_list(
-                    layer,
-                    MasterListEdit::OptDynamic {
-                        transform: mod_mtx.to_fixed(),
-                        // transform: self.mod_mtx_stack.cur.to_fixed(),
-                    },
-                );
+                self.append_opt_dynamic_list(layer);
             }
         }
 
@@ -1281,13 +1309,7 @@ where
     }
 
     fn process_generated(&mut self, node: &GraphNodeGenerated) -> Result<(), Error> {
-        let layer = node.fn_node.node.flags.bits() >> 8;
-        self.edit_master_list(
-            layer,
-            MasterListEdit::OptDynamic {
-                transform: self.mod_mtx_stack.cur.to_fixed(),
-            },
-        );
+        self.append_opt_dynamic_list(node.fn_node.node.flags.bits() >> 8);
         self.process_node_and_siblings(node.fn_node.node.children)?;
         Ok(())
     }
@@ -1298,12 +1320,7 @@ where
         } else {
             0
         };
-        self.edit_master_list(
-            layer,
-            MasterListEdit::OptDynamic {
-                transform: self.mod_mtx_stack.cur.to_fixed(),
-            },
-        );
+        self.append_opt_dynamic_list(layer);
 
         self.process_node_and_siblings(node.fn_node.node.children)?;
         Ok(())

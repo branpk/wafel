@@ -9,13 +9,13 @@ use fast3d::{
 };
 use wafel_api::{Address, Error, IntType};
 use wafel_data_path::GlobalDataPath;
-use wafel_data_type::DataType;
 use wafel_memory::{MemoryError, MemoryRead};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SM64RenderConfig {
     pub screen_size: (u32, u32),
     pub camera: Camera,
+    pub object_cull: ObjectCull,
 }
 
 impl Default for SM64RenderConfig {
@@ -23,6 +23,7 @@ impl Default for SM64RenderConfig {
         Self {
             screen_size: (320, 240),
             camera: Default::default(),
+            object_cull: Default::default(),
         }
     }
 }
@@ -40,6 +41,18 @@ pub enum Camera {
 impl Default for Camera {
     fn default() -> Self {
         Self::InGame
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ObjectCull {
+    Normal,
+    ShowAll,
+}
+
+impl Default for ObjectCull {
+    fn default() -> Self {
+        Self::Normal
     }
 }
 

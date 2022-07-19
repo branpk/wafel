@@ -23,7 +23,7 @@ use std::{
 use custom_renderer::{CustomRenderer, Scene};
 use fast3d::{interpret::F3DRenderData, render::F3DRenderer};
 pub use sm64_render_mod::SM64RenderConfig;
-use sm64_render_mod::{render_sm64_with_config, Camera};
+use sm64_render_mod::{render_sm64_with_config, Camera, ObjectCull};
 use wafel_api::{load_m64, Game, SaveState, Value};
 use wafel_data_path::GlobalDataPath;
 use wafel_memory::GameMemory;
@@ -79,7 +79,9 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
     //     // }
 
     env_logger::init();
-    futures::executor::block_on(run(7775, None)).unwrap();
+    futures::executor::block_on(run(2061, None)).unwrap();
+    // 6944
+    // 6953
     // 25090
     // 55945
     // 69260
@@ -315,6 +317,7 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                                             ),
                                         })
                                         .unwrap_or_default(),
+                                    object_cull: ObjectCull::ShowAll,
                                     ..Default::default()
                                 },
                             )
