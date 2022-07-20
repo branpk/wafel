@@ -23,8 +23,11 @@ fn u120(cases: &mut Vec<TestCase>) {
     };
     case("u120_000000_power_on", 0);
     case("u120_000052_logo", 52);
+    case("u120_000100_intro_star", 100);
     case("u120_000120_mario_head", 120);
+    case("u120_000135_before_file_select", 135);
     case("u120_000140_file_select", 140);
+    case("u120_000169_after_file_select", 169);
     case("u120_000279_peach_letter", 279);
     case("u120_000975_castle", 975);
     case("u120_001059_water_shadow", 1059);

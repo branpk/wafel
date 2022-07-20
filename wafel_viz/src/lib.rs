@@ -45,9 +45,9 @@ pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderD
             .map_err(Into::into)
     };
 
-    // render_sm64_with_config(&memory, get_path, config).expect("failed to process display list")
-    sm64_gfx_render::test_render(&memory, &game.layout, get_path, config)
-        .expect("failed to process display list")
+    render_sm64_with_config(&memory, get_path, config).expect("failed to process display list")
+    // sm64_gfx_render::test_render(&memory, &game.layout, get_path, config)
+    //     .expect("failed to process display list")
 }
 
 pub fn test_dl() -> Result<(), Box<dyn Error>> {
@@ -78,7 +78,7 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
     //     // }
 
     env_logger::init();
-    futures::executor::block_on(run(141930, None)).unwrap();
+    futures::executor::block_on(run(100, None)).unwrap();
     // 975 - cloud
     // 44732 - mips
     // 125576 - blue coin box
