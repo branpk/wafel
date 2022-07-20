@@ -51,34 +51,41 @@ pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderD
 }
 
 pub fn test_dl() -> Result<(), Box<dyn Error>> {
-    //     let mut game = unsafe { Game::new("libsm64/sm64_us") };
-    //     let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
-    //
-    //     while game.frame() < 2227 {
-    //         game.set_input(inputs[game.frame() as usize]);
-    //         game.advance();
-    //     }
-    //
-    //     if let Value::Address(root_addr) = game.read("gCurrentArea?.unk04") {
-    //         let memory = game.memory.with_slot(&game.base_slot);
-    //         let get_path = |source: &str| {
-    //             GlobalDataPath::compile(&game.layout, &game.memory, source)
-    //                 .map(Arc::new)
-    //                 .map_err(Into::into)
-    //         };
-    //         let render_data = sm64_gfx_render::test_render(&memory, &game.layout, get_path)?;
-    //
-    //         env_logger::init();
-    //         futures::executor::block_on(run(2227, None)).unwrap();
-    //     }
-    //
-    //     // for cmd in &render_data.commands {
-    //     //     let pipeline = &render_data.pipelines[&cmd.pipeline];
-    //     //     eprintln!("{:?}", pipeline);
-    //     // }
+    let mut game = unsafe { Game::new("libsm64/sm64_us") };
+    let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
 
-    env_logger::init();
-    futures::executor::block_on(run(135, None)).unwrap();
+    while game.frame() < 4001 {
+        game.set_input(inputs[game.frame() as usize]);
+        game.advance();
+    }
+
+    let count = 100;
+    let start = Instant::now();
+
+    for _ in 0..count {
+        let data = prepare_render_data(
+            &game,
+            &SM64RenderConfig {
+                camera: Camera::LookAt {
+                    pos: game.read("gLakituState.pos").as_f32_3(),
+                    focus: game.read("gLakituState.focus").as_f32_3(),
+                    roll: Wrapping(game.read("gLakituState.roll").as_int() as i16),
+                },
+                object_cull: ObjectCull::ShowAll,
+                ..Default::default()
+            },
+        );
+        assert_eq!(data.commands.len(), 251);
+    }
+
+    eprintln!(
+        "{} mspf",
+        start.elapsed().as_secs_f32() * 1000.0 / count as f32
+    );
+
+    // env_logger::init();
+    // futures::executor::block_on(run(4001, None)).unwrap();
+
     // 975 - cloud
     // 44732 - mips
     // 125576 - blue coin box
