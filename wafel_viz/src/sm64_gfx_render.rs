@@ -1247,49 +1247,6 @@ where
 
     fn process_shadow(&mut self, node: &GraphNodeShadow) -> Result<(), Error> {
         if let (Some(camera), Some(object)) = (&self.cur_camera, &self.cur_object) {
-            let camera_mtx = self.cur_camera_mtx.as_ref().unwrap();
-            let mod_camera_mtx = self.cur_mod_camera_mtx.as_ref().unwrap();
-
-            let mut shadow_pos;
-            if self.cur_held_object.is_some() {
-                shadow_pos = self.mtx_stack.cur.pos_from_transform_mtx(camera_mtx);
-            } else {
-                shadow_pos = object.pos;
-            }
-
-            if let Some(anim) = &mut self.anim {
-                if anim.enabled
-                    && matches!(
-                        anim.ty,
-                        AnimType::Translation | AnimType::LateralTranslation
-                    )
-                {
-                    let mut obj_scale = 1.0;
-
-                    let geo = node.node.children;
-                    if !geo.is_null() {
-                        if let GfxTreeNode::Scale(scale) = self.reader.read(geo)? {
-                            obj_scale = scale.scale;
-                        }
-                    }
-
-                    let anim_offset_x =
-                        anim.next(self.memory)? as f32 * anim.translation_multiplier * obj_scale;
-                    anim.attribute += 4;
-                    let anim_offset_z =
-                        anim.next(self.memory)? as f32 * anim.translation_multiplier * obj_scale;
-                    anim.attribute -= 12;
-
-                    let sin_ang = sins(object.angle[1]);
-                    let cos_ang = coss(object.angle[1]);
-
-                    shadow_pos[0] += anim_offset_x * cos_ang + anim_offset_z * sin_ang;
-                    shadow_pos[2] += -anim_offset_x * sin_ang + anim_offset_z * cos_ang;
-                }
-            }
-
-            let mod_mtx = mod_camera_mtx * &Matrixf::translate(shadow_pos);
-
             for layer in [4, 5, 6] {
                 self.append_opt_dynamic_list(layer);
             }

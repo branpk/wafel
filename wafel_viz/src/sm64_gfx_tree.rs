@@ -4,7 +4,7 @@ use std::{collections::HashMap, sync::Arc};
 use bitflags::bitflags;
 use fast3d::util::Angle;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use wafel_api::{Address, Error, IntType};
+use wafel_api::{Address, Error, IntType, Value};
 use wafel_data_type::{DataType, DataTypeRef, Field, Namespace, TypeName, ValueSerializeWrapper};
 use wafel_layout::DataLayout;
 use wafel_memory::MemoryRead;
@@ -543,10 +543,7 @@ fn get_node_reader_entry<'m, T: DeserializeOwned + 'static>(
     let func = move |addr| {
         let data_type = Arc::clone(&data_type);
         let data = memory.read_value(addr, &data_type, &resolve_type)?;
-        let json = serde_json::to_string(&ValueSerializeWrapper(&data))
-            .expect("failed to serialize value");
-        let node: T = serde_json::from_str(&json).expect("failed to deserialize gfx node");
-
+        let node = value_to_struct(data);
         Ok(variant(node))
     };
 
@@ -554,4 +551,11 @@ fn get_node_reader_entry<'m, T: DeserializeOwned + 'static>(
         layout.constant(id_name)?.value as i16,
         GfxNodeReader(Box::new(func)),
     ))
+}
+
+fn value_to_struct<T: DeserializeOwned + 'static>(data: Value) -> T {
+    let json =
+        serde_json::to_string(&ValueSerializeWrapper(&data)).expect("failed to serialize value");
+    let node: T = serde_json::from_str(&json).expect("failed to deserialize gfx node");
+    node
 }

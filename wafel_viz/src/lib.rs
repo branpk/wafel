@@ -32,9 +32,12 @@ use winit::{
     window::WindowBuilder,
 };
 
+use crate::sm64_render_dl::render_sm64_dl;
+
 pub mod custom_renderer;
 mod sm64_gfx_render;
 mod sm64_gfx_tree;
+mod sm64_render_dl;
 mod sm64_render_mod;
 
 pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderData {
@@ -62,23 +65,32 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
         game.advance();
     }
 
+    // let config = SM64RenderConfig {
+    //     camera: Camera::LookAt {
+    //         pos: game.read("gLakituState.pos").as_f32_3(),
+    //         focus: game.read("gLakituState.focus").as_f32_3(),
+    //         roll: Wrapping(game.read("gLakituState.roll").as_int() as i16),
+    //     },
+    //     object_cull: ObjectCull::ShowAll,
+    //     ..Default::default()
+    // };
+    let config = SM64RenderConfig::default();
+
     let count = 100;
     let start = Instant::now();
 
     for _ in 0..count {
-        let data = prepare_render_data(
-            &game,
-            &SM64RenderConfig {
-                camera: Camera::LookAt {
-                    pos: game.read("gLakituState.pos").as_f32_3(),
-                    focus: game.read("gLakituState.focus").as_f32_3(),
-                    roll: Wrapping(game.read("gLakituState.roll").as_int() as i16),
-                },
-                object_cull: ObjectCull::ShowAll,
-                ..Default::default()
-            },
-        );
-        assert_eq!(data.commands.len(), 251);
+        // let memory = game.memory.with_slot(&game.base_slot);
+        // let get_path = |source: &str| {
+        //     GlobalDataPath::compile(&game.layout, &game.memory, source)
+        //         .map(Arc::new)
+        //         .map_err(Into::into)
+        // };
+        // let data = render_sm64_dl(&memory, get_path, (320, 240))?;
+
+        let data = prepare_render_data(&game, &config);
+
+        assert_eq!(data.commands.len(), 127);
     }
 
     eprintln!(
