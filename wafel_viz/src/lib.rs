@@ -51,6 +51,9 @@ pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderD
 }
 
 pub fn test_dl() -> Result<(), Box<dyn Error>> {
+    // env_logger::init();
+    // futures::executor::block_on(run(4001, None)).unwrap();
+
     let mut game = unsafe { Game::new("libsm64/sm64_us") };
     let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
 
@@ -82,9 +85,6 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
         "{} mspf",
         start.elapsed().as_secs_f32() * 1000.0 / count as f32
     );
-
-    // env_logger::init();
-    // futures::executor::block_on(run(4001, None)).unwrap();
 
     // 975 - cloud
     // 44732 - mips
@@ -197,10 +197,26 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
 
     let mut fixed_camera_pos = None;
 
+    let mut last_fps_time = Instant::now();
+    let mut fps_count = 0;
+
     event_loop.run(move |event, _, control_flow| {
         let _ = (&instance, &adapter, &renderer);
 
         *control_flow = ControlFlow::Poll;
+
+        fps_count += 1;
+        let elapsed = last_fps_time.elapsed();
+        if elapsed.as_secs_f32() >= 1.0 {
+            let title = format!(
+                "{:.2} mspf ({:.1} fps)",
+                elapsed.as_secs_f32() * 1000.0 / fps_count as f32,
+                fps_count as f32 / elapsed.as_secs_f32()
+            );
+            window.set_title(&title);
+            fps_count = 0;
+            last_fps_time = Instant::now();
+        }
 
         match event {
             Event::WindowEvent { event, .. } => match event {
