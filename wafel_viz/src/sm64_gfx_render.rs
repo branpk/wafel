@@ -1107,7 +1107,7 @@ where
             let is_in_view = self.obj_is_in_view(node)?;
             let render_object = match self.config.object_cull {
                 ObjectCull::Normal => is_in_view,
-                ObjectCull::ShowAll => true,
+                ObjectCull::ShowAll => !node.node.flags.contains(GraphRenderFlags::INVISIBLE),
             };
 
             if render_object {
