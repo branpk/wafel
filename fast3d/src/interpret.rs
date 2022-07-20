@@ -403,9 +403,13 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         let texture_width = (tile_size.lrs - tile_size.uls + 4) / 4;
         let texture_height = (tile_size.lrt - tile_size.ult + 4) / 4;
 
+        let texture_gen = self
+            .geometry_mode
+            .contains(GeometryModes::TEXTURE_GEN | GeometryModes::LIGHTING);
+
         let mut lookat_x_coeffs = [0.0; 4];
         let mut lookat_y_coeffs = [0.0; 4];
-        if self.geometry_mode.contains(GeometryModes::TEXTURE_GEN) {
+        if texture_gen {
             let lookat_x = [1.0, 0.0, 0.0, 0.0];
             lookat_x_coeffs = &self.model_view.cur.transpose() * lookat_x;
             lookat_x_coeffs[3] = 0.0;
@@ -419,7 +423,7 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
 
         let mut u;
         let mut v;
-        if self.geometry_mode.contains(GeometryModes::TEXTURE_GEN) {
+        if texture_gen {
             let mut dotx = 0.0;
             let mut doty = 0.0;
             for i in 0..3 {
@@ -771,7 +775,7 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         for cmd in dl {
             let cmd = cmd?;
             // if !matches!(cmd, F3DCommand::Unknown { .. }) {
-            // println!("{:?}", cmd);
+            //     println!("{:?}", cmd);
             // }
             match cmd {
                 NoOp => {}

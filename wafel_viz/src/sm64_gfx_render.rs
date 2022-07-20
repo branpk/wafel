@@ -65,10 +65,7 @@ pub fn test_render(
 
     let mut renderer =
         NodeRenderer::new(config, input_dl.into_iter(), memory, layout, &mut get_path)?;
-
-    if let Value::Address(root_addr) = root_addr {
-        renderer.render_game(root_addr, pause_rendering)?;
-    }
+    renderer.render_game(root_addr, pause_rendering)?;
 
     let mut f3d_memory = F3DMemoryImpl::new(memory, Pointer::BufferOffset(0));
     f3d_memory.set_dl_buffer(vec![renderer.display_list]);
@@ -379,12 +376,14 @@ where
         Ok(())
     }
 
-    fn render_game(&mut self, root_addr: Address, pause_rendering: bool) -> Result<(), Error> {
-        // Skip init_rcp and viewport/scissor override
-        self.dl_push_until(|cmd| matches!(cmd, SPViewport(_)));
+    fn render_game(&mut self, root_addr: Value, pause_rendering: bool) -> Result<(), Error> {
+        if let Value::Address(root_addr) = root_addr {
+            // Skip init_rcp and viewport/scissor override
+            self.dl_push_until(|cmd| matches!(cmd, SPViewport(_)));
 
-        if !pause_rendering {
-            self.process_node(root_addr, false)?;
+            if !pause_rendering {
+                self.process_node(root_addr, false)?;
+            }
         }
 
         // Skip hud, in-game menu etc
