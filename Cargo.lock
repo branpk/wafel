@@ -2581,7 +2581,7 @@ dependencies = [
  "pwbox",
  "rand",
  "serde_json",
- "wafel_data_path",
+ "wafel_data_access",
  "wafel_data_type",
  "wafel_layout",
  "wafel_memory",
@@ -2611,6 +2611,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "wafel_data_access"
+version = "0.1.0"
+dependencies = [
+ "wafel_data_access_derive",
+ "wafel_data_type",
+ "wafel_layout",
+ "wafel_memory",
+]
+
+[[package]]
 name = "wafel_data_access_derive"
 version = "0.1.0"
 dependencies = [
@@ -2618,16 +2628,6 @@ dependencies = [
  "proc-macro2 1.0.40",
  "quote 1.0.20",
  "syn 1.0.98",
-]
-
-[[package]]
-name = "wafel_data_path"
-version = "0.1.0"
-dependencies = [
- "wafel_data_access_derive",
- "wafel_data_type",
- "wafel_layout",
- "wafel_memory",
 ]
 
 [[package]]
@@ -2695,7 +2695,7 @@ dependencies = [
  "serde",
  "serde_json",
  "wafel_api",
- "wafel_data_path",
+ "wafel_data_access",
  "wafel_data_type",
  "wafel_layout",
  "wafel_memory",

@@ -2,7 +2,7 @@
 
 use std::{error, fmt, io, sync::Arc};
 
-use wafel_data_path::{DataPathError, GlobalDataPath};
+use wafel_data_access::{DataPathError, GlobalDataPath};
 use wafel_data_type::{IntValue, Value, ValueTypeError};
 use wafel_layout::{DllLayoutError, LayoutLookupError, SM64LayoutError};
 use wafel_memory::{MemoryError, MemoryInitError};

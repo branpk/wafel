@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use wafel_data_path::DataPath;
+use wafel_data_access::DataPath;
 use wafel_data_type::{Address, Value};
 use wafel_layout::{load_sm64_n64_layout, DataLayout};
 use wafel_memory::{EmptySymbolLookup, EmuMemory, MemoryRead};

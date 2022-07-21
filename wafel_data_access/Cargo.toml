@@ -1,5 +1,5 @@
 [package]
-name = "wafel_data_path"
+name = "wafel_data_access"
 version = "0.1.0"
 edition = "2021"
 

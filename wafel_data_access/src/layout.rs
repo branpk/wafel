@@ -3,7 +3,7 @@ use std::sync::Arc;
 use wafel_layout::DataLayout;
 use wafel_memory::SymbolLookup;
 
-use crate::{DataError, DataPathError, GlobalDataPath, LocalDataPath};
+use crate::{DataError, GlobalDataPath, LocalDataPath};
 
 pub trait MemoryLayout {
     type SymbolLookup: SymbolLookup;

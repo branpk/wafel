@@ -5,7 +5,7 @@ use fast3d::{
     interpret::{interpret_f3d_display_list, F3DMemory, F3DRenderData},
 };
 use wafel_api::{Address, Error, IntType};
-use wafel_data_path::GlobalDataPath;
+use wafel_data_access::GlobalDataPath;
 use wafel_memory::{MemoryError, MemoryRead};
 
 pub fn render_sm64_dl(

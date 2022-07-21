@@ -1,4 +1,10 @@
-//! Data path compilation and evaluation.
+//! Reading and writing structured data to memory.
+//!
+//! This crate provides two ways to access data:
+//! - Data paths, which dynamically look up individual variables from memory
+//! - [DataReadable], which enables reading into Rust structs
+//!
+//! # Data paths
 //!
 //! A data path describes a location in memory using a C-like syntax. It allows
 //! pointer dereferencing, array indexing, and struct/union field accesses.
@@ -16,6 +22,21 @@
 //! e.g. `struct Foo.x`, `typedef Foo.x`.
 //!
 //! The crate documentation for `wafel_api` has more details about the syntax.
+//!
+//! # [DataReadable] example
+//!
+//! ```no_run
+//! #[derive(Debug, Clone, DataReadable)]
+//! struct Surface {
+//!     normal: [f32; 3],
+//!     vertex1: [i16; 3],
+//!     vertex2: [i16; 3],
+//!     vertex3: [i16; 3],
+//! }
+//!
+//! let reader: Reader<Surface> = Surface::reader(&layout)?;
+//! let surface: Surface = reader.read(&memory, addr)?;
+//! ```
 
 #![warn(
     missing_docs,

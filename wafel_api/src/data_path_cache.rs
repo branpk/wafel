@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use wafel_data_path::{DataPathError, GlobalDataPath, LocalDataPath};
+use wafel_data_access::{DataPathError, GlobalDataPath, LocalDataPath};
 use wafel_layout::DataLayout;
 use wafel_memory::{DllGameMemory, SymbolLookup};
 

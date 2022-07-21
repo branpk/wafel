@@ -101,7 +101,7 @@ impl GlobalDataPath {
             match edge {
                 DataPathEdge::Offset(offset) => {
                     if !address.is_null() {
-                        address = address + *offset
+                        address += *offset
                     }
                 }
                 DataPathEdge::Deref => {

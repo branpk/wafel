@@ -12,7 +12,7 @@ serde_json = "1.0.82"
 fast3d = { path = "../fast3d", features = ["wgpu"] }
 wafel_api = { path = "../wafel_api" }
 wafel_data_type = { path = "../wafel_data_type" }
-wafel_data_path = { path = "../wafel_data_path" }
+wafel_data_access = { path = "../wafel_data_access" }
 wafel_layout = { path = "../wafel_layout" }
 wafel_memory = { path = "../wafel_memory" }
 wgpu = { git = "https://github.com/gfx-rs/wgpu" }

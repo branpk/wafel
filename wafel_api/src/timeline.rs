@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use wafel_data_path::{DataPath, GlobalDataPath};
+use wafel_data_access::{DataPath, GlobalDataPath};
 use wafel_data_type::{Address, Value};
 use wafel_layout::{DataLayout, DllLayout};
 use wafel_memory::{DllGameMemory, DllSlotMemoryView, GameMemory, MemoryRead, SymbolLookup};

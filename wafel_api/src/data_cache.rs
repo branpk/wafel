@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use deepsize::{known_deep_size, DeepSizeOf};
 use lru::LruCache;
-use wafel_data_path::GlobalDataPath;
+use wafel_data_access::GlobalDataPath;
 use wafel_data_type::Value;
 use wafel_memory::MemoryRead;
 

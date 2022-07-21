@@ -8,7 +8,7 @@ use fast3d::{
     util::{Angle, Matrixf},
 };
 use wafel_api::{Address, Error, IntType};
-use wafel_data_path::GlobalDataPath;
+use wafel_data_access::GlobalDataPath;
 use wafel_memory::{MemoryError, MemoryRead};
 
 #[derive(Debug, Clone, PartialEq)]

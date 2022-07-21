@@ -11,7 +11,7 @@ use fast3d::{
 };
 use itertools::Itertools;
 use wafel_api::{Address, Error, IntType, Value};
-use wafel_data_path::GlobalDataPath;
+use wafel_data_access::GlobalDataPath;
 use wafel_data_type::{DataType, Namespace, TypeName};
 use wafel_layout::DataLayout;
 use wafel_memory::{MemoryError, MemoryRead};

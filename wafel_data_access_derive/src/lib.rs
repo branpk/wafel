@@ -36,7 +36,7 @@ fn generate_reader(input: &DeriveInput, reader_name: &Ident) -> TokenStream {
 
         let name = Ident::new(&format!("field_{}", field_name), field_name.span());
         quote! {
-            #name: (usize, wafel_data_path::Reader<#field_ty>),
+            #name: (usize, wafel_data_access::Reader<#field_ty>),
         }
     });
 
@@ -62,14 +62,14 @@ fn generate_reader_impl(input: &DeriveInput, reader_name: &Ident) -> TokenStream
 
     quote! {
         #[allow(unused_parens)]
-        impl wafel_data_path::DataReader for #reader_name {
+        impl wafel_data_access::DataReader for #reader_name {
             type Output = #name;
 
             fn read(
                 &self,
                 memory: &impl wafel_memory::MemoryRead,
                 addr: wafel_data_type::Address,
-            ) -> Result<#name, wafel_data_path::DataError> {
+            ) -> Result<#name, wafel_data_access::DataError> {
                 Ok(#name {
                     #(#field_inits)*
                 })
@@ -122,7 +122,7 @@ fn generate_readable_impl(input: &DeriveInput, reader_name: &Ident) -> TokenStre
         quote! {
             #name: (
                 #offset,
-                <#field_ty as wafel_data_path::DataReadable>::reader(layout)?,
+                <#field_ty as wafel_data_access::DataReadable>::reader(layout)?,
             ),
         }
     });
@@ -136,12 +136,12 @@ fn generate_readable_impl(input: &DeriveInput, reader_name: &Ident) -> TokenStre
 
     quote! {
         #[allow(unused_parens)]
-        impl wafel_data_path::DataReadable for #name {
+        impl wafel_data_access::DataReadable for #name {
             type Reader = #reader_name;
 
             fn reader(
-                layout: &impl wafel_data_path::MemoryLayout
-            ) -> Result<#reader_name, wafel_data_path::DataError> {
+                layout: &impl wafel_data_access::MemoryLayout
+            ) -> Result<#reader_name, wafel_data_access::DataError> {
                 #calc_data_type
                 Ok(#reader_name {
                     #(#field_inits)*
