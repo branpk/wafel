@@ -1,0 +1,13 @@
+[package]
+name = "wafel_data_access_derive"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+heck = "0.4.0"
+proc-macro2 = "1.0.40"
+quote = "1.0.20"
+syn = "1.0.98"

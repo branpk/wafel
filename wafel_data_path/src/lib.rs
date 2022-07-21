@@ -26,8 +26,13 @@
 
 pub use data_path_types::*;
 pub use error::*;
+pub use layout::*;
+pub use read_write::{DataReadable, DataReader, Reader};
+pub use wafel_data_access_derive::*;
 
 mod compile;
 mod data_path_types;
 mod error;
+mod layout;
 mod parse;
+mod read_write;

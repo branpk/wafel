@@ -5,7 +5,7 @@ use std::{fmt, mem, sync::Arc};
 use indexmap::IndexMap;
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::error::NotAnArrayOrPointerError;
+use crate::error::DataTypeError;
 
 /// A representation of a C data type.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -147,6 +147,32 @@ pub struct TypeName {
     pub name: String,
 }
 
+impl TypeName {
+    /// Return a struct type name.
+    pub fn of_struct(name: &str) -> Self {
+        Self {
+            namespace: Namespace::Struct,
+            name: name.to_string(),
+        }
+    }
+
+    /// Return a union type name.
+    pub fn of_union(name: &str) -> Self {
+        Self {
+            namespace: Namespace::Union,
+            name: name.to_string(),
+        }
+    }
+
+    /// Return a typedef type name.
+    pub fn of_typedef(name: &str) -> Self {
+        Self {
+            namespace: Namespace::Typedef,
+            name: name.to_string(),
+        }
+    }
+}
+
 /// A field in a struct or union.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Field {
@@ -162,9 +188,33 @@ impl DataType {
         matches!(self, Self::Void)
     }
 
+    /// Return an error if the data type is not void.
+    pub fn try_as_void(&self) -> Result<(), DataTypeError> {
+        if self.is_void() {
+            Ok(())
+        } else {
+            Err(DataTypeError::ExpectedType {
+                expected: "void".into(),
+                actual: self.clone(),
+            })
+        }
+    }
+
     /// Return true if the data type is an integer type.
     pub fn is_int(&self) -> bool {
         matches!(self, Self::Int(_))
+    }
+
+    /// Convert the data type to an int type.
+    pub fn try_as_int(&self) -> Result<IntType, DataTypeError> {
+        if let Self::Int(int_type) = self {
+            Ok(*int_type)
+        } else {
+            Err(DataTypeError::ExpectedType {
+                expected: "int type".into(),
+                actual: self.clone(),
+            })
+        }
     }
 
     /// Return true if the data type is a float type.
@@ -172,9 +222,33 @@ impl DataType {
         matches!(self, Self::Float(_))
     }
 
+    /// Convert the data type to a float type.
+    pub fn try_as_float(&self) -> Result<FloatType, DataTypeError> {
+        if let Self::Float(float_type) = self {
+            Ok(*float_type)
+        } else {
+            Err(DataTypeError::ExpectedType {
+                expected: "float type".into(),
+                actual: self.clone(),
+            })
+        }
+    }
+
     /// Return true if the data type is a pointer type.
     pub fn is_pointer(&self) -> bool {
         matches!(self, Self::Pointer { .. })
+    }
+
+    /// Convert the data type to a pointer type.
+    pub fn try_as_pointer(&self) -> Result<(&DataTypeRef, Option<usize>), DataTypeError> {
+        if let Self::Pointer { base, stride } = self {
+            Ok((base, *stride))
+        } else {
+            Err(DataTypeError::ExpectedType {
+                expected: "pointer type".into(),
+                actual: self.clone(),
+            })
+        }
     }
 
     /// Return true if the data type is an array type.
@@ -182,9 +256,38 @@ impl DataType {
         matches!(self, Self::Array { .. })
     }
 
+    /// Convert the data type to an array type.
+    pub fn try_as_array(&self) -> Result<(&DataTypeRef, Option<usize>, usize), DataTypeError> {
+        if let Self::Array {
+            base,
+            length,
+            stride,
+        } = self
+        {
+            Ok((base, *length, *stride))
+        } else {
+            Err(DataTypeError::ExpectedType {
+                expected: "array type".into(),
+                actual: self.clone(),
+            })
+        }
+    }
+
     /// Return true if the data type is a struct type.
     pub fn is_struct(&self) -> bool {
         matches!(self, Self::Struct { .. })
+    }
+
+    /// Convert the data type to a struct type.
+    pub fn try_as_struct(&self) -> Result<&IndexMap<String, Field>, DataTypeError> {
+        if let Self::Struct { fields } = self {
+            Ok(fields)
+        } else {
+            Err(DataTypeError::ExpectedType {
+                expected: "struct type".into(),
+                actual: self.clone(),
+            })
+        }
     }
 
     /// Return true if the data type is a union type.
@@ -192,17 +295,55 @@ impl DataType {
         matches!(self, Self::Union { .. })
     }
 
+    /// Convert the data type to a union type.
+    pub fn try_as_union(&self) -> Result<&IndexMap<String, Field>, DataTypeError> {
+        if let Self::Union { fields } = self {
+            Ok(fields)
+        } else {
+            Err(DataTypeError::ExpectedType {
+                expected: "union type".into(),
+                actual: self.clone(),
+            })
+        }
+    }
+
     /// Return true if the data type is a type name.
     pub fn is_name(&self) -> bool {
         matches!(self, Self::Name(_))
     }
 
+    /// Convert the data type to a type name.
+    pub fn try_as_name(&self) -> Result<&TypeName, DataTypeError> {
+        if let Self::Name(name) = self {
+            Ok(name)
+        } else {
+            Err(DataTypeError::ExpectedType {
+                expected: "type name".into(),
+                actual: self.clone(),
+            })
+        }
+    }
+
     /// Return the stride for an array or pointer type.
-    pub fn stride(&self) -> Result<Option<usize>, NotAnArrayOrPointerError> {
+    pub fn stride(&self) -> Result<Option<usize>, DataTypeError> {
         match self {
             DataType::Pointer { stride, .. } => Ok(*stride),
             DataType::Array { stride, .. } => Ok(Some(*stride)),
-            _ => Err(NotAnArrayOrPointerError),
+            _ => Err(DataTypeError::ExpectedType {
+                expected: "pointer or array".into(),
+                actual: self.clone(),
+            }),
+        }
+    }
+
+    /// Look up a field by name in a struct type.
+    pub fn struct_field(&self, name: &str) -> Result<&Field, DataTypeError> {
+        let fields = self.try_as_struct()?;
+        match fields.get(name) {
+            Some(field) => Ok(field),
+            None => Err(DataTypeError::NoSuchField {
+                name: name.to_string(),
+            }),
         }
     }
 }
@@ -244,7 +385,7 @@ fn display_fields(f: &mut fmt::Formatter<'_>, fields: &IndexMap<String, Field>) 
             f,
             "  {}: {}",
             name,
-            format!("{}", field.data_type).replace("\n", "\n  ")
+            format!("{}", field.data_type).replace('\n', "\n  ")
         )?;
     }
     write!(f, "}}")?;
@@ -307,7 +448,7 @@ impl<'de> Deserialize<'de> for TypeName {
     {
         let s = <&str>::deserialize(deserializer)?;
         let (namespace_str, name) = s
-            .split_once(" ")
+            .split_once(' ')
             .ok_or_else(|| D::Error::custom("type name must have form '<namespace> <name>'"))?;
         let namespace = match namespace_str {
             "struct" => Namespace::Struct,

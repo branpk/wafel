@@ -20,7 +20,9 @@ use crate::error::ValueTypeError;
 ///
 /// Having a single numeric type is convenient so that `Value` doesn't have to be generic
 /// on a `Memory` implementation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Serialize, Deserialize,
+)]
 pub struct Address(pub usize);
 
 impl Add<usize> for Address {

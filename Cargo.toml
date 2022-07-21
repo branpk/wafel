@@ -7,6 +7,7 @@ members = [
     "wafel_api",
     "wafel_core",
     "wafel_data_path",
+    "wafel_data_access_derive",
     "wafel_data_type",
     "wafel_layout",
     "wafel_memory",

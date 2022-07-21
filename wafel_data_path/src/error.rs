@@ -2,8 +2,54 @@
 
 use std::{error::Error, fmt};
 
-use wafel_data_type::DataTypeRef;
+use wafel_data_type::{DataTypeError, DataTypeRef};
 use wafel_layout::LayoutLookupError;
+use wafel_memory::MemoryError;
+
+#[derive(Debug, Clone)]
+pub enum DataError {
+    DataPathError(DataPathError),
+    MemoryError(MemoryError),
+    LayoutLookupError(LayoutLookupError),
+    DataTypeError(DataTypeError),
+}
+
+impl fmt::Display for DataError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DataError::DataPathError(error) => write!(f, "{}", error),
+            DataError::MemoryError(error) => write!(f, "{}", error),
+            DataError::LayoutLookupError(error) => write!(f, "{}", error),
+            DataError::DataTypeError(error) => write!(f, "{}", error),
+        }
+    }
+}
+
+impl Error for DataError {}
+
+impl From<DataPathError> for DataError {
+    fn from(v: DataPathError) -> Self {
+        Self::DataPathError(v)
+    }
+}
+
+impl From<MemoryError> for DataError {
+    fn from(v: MemoryError) -> Self {
+        Self::MemoryError(v)
+    }
+}
+
+impl From<LayoutLookupError> for DataError {
+    fn from(v: LayoutLookupError) -> Self {
+        Self::LayoutLookupError(v)
+    }
+}
+
+impl From<DataTypeError> for DataError {
+    fn from(v: DataTypeError) -> Self {
+        Self::DataTypeError(v)
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum DataPathError {

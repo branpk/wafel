@@ -2,18 +2,33 @@
 
 use std::{borrow::Cow, error::Error, fmt};
 
-use crate::Value;
+use crate::{DataType, Value};
 
 #[derive(Debug, Clone)]
-pub struct NotAnArrayOrPointerError;
+pub enum DataTypeError {
+    ExpectedType {
+        expected: Cow<'static, str>,
+        actual: DataType,
+    },
+    NoSuchField {
+        name: String,
+    },
+}
 
-impl fmt::Display for NotAnArrayOrPointerError {
+impl fmt::Display for DataTypeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "DataType::stride called on a non-array/pointer type")
+        match self {
+            DataTypeError::ExpectedType { expected, actual } => {
+                write!(f, "expected {}, found {}", expected, actual)
+            }
+            DataTypeError::NoSuchField { name } => {
+                write!(f, "no such field: {}", name)
+            }
+        }
     }
 }
 
-impl Error for NotAnArrayOrPointerError {}
+impl Error for DataTypeError {}
 
 #[derive(Debug, Clone)]
 pub struct ValueTypeError {
