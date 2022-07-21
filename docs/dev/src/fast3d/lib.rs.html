@@ -25,33 +25,27 @@
 <span id="19">19</span>
 <span id="20">20</span>
 <span id="21">21</span>
-<span id="22">22</span>
-<span id="23">23</span>
-<span id="24">24</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Decoding, interpreting, and rendering of Nintendo 64 Fast3D commands.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! There are three modules:</span>
-<span class="doccomment">//! - [decode] parses raw commands into a structured [decode::F3DCommand]</span>
-<span class="doccomment">//! - [interpret] processes a display list into a [interpret::F3DRenderData] which is</span>
-<span class="doccomment">//!   straightforward to write a renderer for</span>
-<span class="doccomment">//! - [render] is a renderer implementation using wgpu. It is only available if the</span>
-<span class="doccomment">//!   `wgpu` feature is enabled</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Note: this module is not currently intended to be a complete and accurate implementation.</span>
 <span class="doccomment">//! Several commands are unimplemented in both [decode] and [interpret].</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! This crate requires nightly to compile.</span>
 
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">stmt_expr_attributes</span>)]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">doc_cfg</span>)]</span>
 <span class="attribute">#![<span class="ident">warn</span>(<span class="ident">missing_docs</span>, <span class="ident">missing_debug_implementations</span>, <span class="ident">rust_2018_idioms</span>)]</span>
 <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy::map_entry</span>, <span class="ident">clippy::needless_range_loop</span>)]</span>
 
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">cmd</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">decode</span>;
 <span class="kw">mod</span> <span class="ident">f3d_render_data</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">interpret</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;wgpu&quot;</span>, <span class="ident">doc</span>))]</span>
 <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;wgpu&quot;</span>))]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">render</span>;
-<span class="kw">mod</span> <span class="ident">util</span>;
+<span class="kw">mod</span> <span class="ident">trig_tables</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">util</span>;
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="fast3d" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (87588a2af 2022-07-13)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="fast3d" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (9a7b7d5e5 2022-07-19)" ></div>
 </body></html>

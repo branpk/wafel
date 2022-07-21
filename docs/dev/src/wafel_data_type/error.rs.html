@@ -49,7 +49,7 @@
 
 <span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">NotAnArrayOrPointerError</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
-        <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;DataType::stride called a non-array/pointer type&quot;</span>)
+        <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;DataType::stride called on a non-array/pointer type&quot;</span>)
     }
 }
 
@@ -73,5 +73,5 @@
 
 <span class="kw">impl</span> <span class="ident">Error</span> <span class="kw">for</span> <span class="ident">ValueTypeError</span> {}
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_data_type" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (87588a2af 2022-07-13)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_data_type" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (9a7b7d5e5 2022-07-19)" ></div>
 </body></html>

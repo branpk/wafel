@@ -516,6 +516,18 @@
 <span id="510">510</span>
 <span id="511">511</span>
 <span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">mem</span>, <span class="ident">ptr</span>,
     <span class="ident">sync</span>::{
@@ -527,7 +539,7 @@
 
 <span class="kw">use</span> <span class="ident">dlopen::raw</span>::{<span class="ident">AddressInfoObtainer</span>, <span class="ident">Library</span>};
 <span class="kw">use</span> <span class="ident">once_cell::sync::OnceCell</span>;
-<span class="kw">use</span> <span class="ident">wafel_data_type::Address</span>;
+<span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">Address</span>, <span class="ident">IntType</span>};
 <span class="kw">use</span> <span class="ident">wafel_layout</span>::{<span class="ident">append_dll_extension</span>, <span class="ident">read_dll_segments</span>, <span class="ident">DllSegment</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
@@ -961,6 +973,10 @@
         <span class="kw">let</span> <span class="ident">pointer</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">read_primitive</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>(<span class="ident">address</span>)<span class="question-mark">?</span> <span class="kw">as</span> <span class="kw-2">*const</span> () };
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">memory</span>.<span class="ident">unchecked_pointer_to_address</span>(<span class="ident">pointer</span>))
     }
+
+    <span class="kw">fn</span> <span class="ident">pointer_int_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">IntType</span> {
+        <span class="ident">IntType::u_ptr_native</span>()
+    }
 }
 
 <span class="doccomment">/// A read-only view of both static and non-static memory, backed by a</span>
@@ -983,6 +999,10 @@
     <span class="kw">fn</span> <span class="ident">read_address</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">address</span>: <span class="ident">Address</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Address</span>, <span class="ident">MemoryError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">pointer</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">read_primitive</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>(<span class="ident">address</span>)<span class="question-mark">?</span> <span class="kw">as</span> <span class="kw-2">*const</span> () };
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">memory</span>.<span class="ident">unchecked_pointer_to_address</span>(<span class="ident">pointer</span>))
+    }
+
+    <span class="kw">fn</span> <span class="ident">pointer_int_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">IntType</span> {
+        <span class="ident">IntType::u_ptr_native</span>()
     }
 }
 
@@ -1007,6 +1027,10 @@
         <span class="kw">let</span> <span class="ident">pointer</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">read_primitive</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>(<span class="ident">address</span>)<span class="question-mark">?</span> <span class="kw">as</span> <span class="kw-2">*const</span> () };
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">memory</span>.<span class="ident">unchecked_pointer_to_address</span>(<span class="ident">pointer</span>))
     }
+
+    <span class="kw">fn</span> <span class="ident">pointer_int_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">IntType</span> {
+        <span class="ident">IntType::u_ptr_native</span>()
+    }
 }
 
 <span class="kw">impl</span> <span class="ident">MemoryWritePrimitive</span> <span class="kw">for</span> <span class="ident">DllSlotMemoryViewMut</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span> {
@@ -1029,5 +1053,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_memory" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (87588a2af 2022-07-13)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_memory" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (9a7b7d5e5 2022-07-19)" ></div>
 </body></html>

@@ -241,6 +241,10 @@
 <span id="235">235</span>
 <span id="236">236</span>
 <span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">process_memory</span>::{<span class="ident">CopyAddress</span>, <span class="ident">Pid</span>, <span class="ident">ProcessHandle</span>, <span class="ident">PutAddress</span>, <span class="ident">TryIntoProcessHandle</span>};
 <span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">Address</span>, <span class="ident">FloatType</span>, <span class="ident">FloatValue</span>, <span class="ident">IntType</span>, <span class="ident">IntValue</span>};
 
@@ -441,6 +445,10 @@
     <span class="kw">fn</span> <span class="ident">read_address</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">address</span>: <span class="ident">Address</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Address</span>, <span class="ident">MemoryError</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="ident">Address</span>(<span class="self">self</span>.<span class="ident">read_u32</span>(<span class="ident">address</span>)<span class="question-mark">?</span> <span class="kw">as</span> <span class="ident">usize</span>))
     }
+
+    <span class="kw">fn</span> <span class="ident">pointer_int_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">IntType</span> {
+        <span class="ident">IntType::U32</span>
+    }
 }
 
 <span class="kw">impl</span> <span class="ident">MemoryWrite</span> <span class="kw">for</span> <span class="ident">EmuMemory</span> {
@@ -479,5 +487,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_memory" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (87588a2af 2022-07-13)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_memory" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (9a7b7d5e5 2022-07-19)" ></div>
 </body></html>

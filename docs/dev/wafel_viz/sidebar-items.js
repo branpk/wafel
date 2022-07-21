@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["custom_render_test",""],["prepare_render_data",""],["test",""],["test_dl",""]],"mod":[["custom_renderer",""]]};
+window.SIDEBAR_ITEMS = {"enum":[["Camera",""],["DlIter",""],["ObjectCull",""],["Pointer",""],["SimplePointer",""]],"fn":[["custom_render_test",""],["get_dl_addr",""],["prepare_render_data",""],["render_sm64_with_config",""],["test",""],["test_dl",""]],"mod":[["custom_renderer",""]],"struct":[["DlTransformer",""],["F3DMemoryImpl",""],["RawDlIter",""],["SM64RenderConfig",""]]};
