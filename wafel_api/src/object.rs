@@ -1,5 +1,4 @@
-use wafel_data_access::MemoryLayout;
-use wafel_data_type::{FloatType, IntType};
+use wafel_data_access::{DataReadable, MemoryLayout};
 use wafel_memory::MemoryRead;
 
 use crate::Error;
@@ -15,9 +14,20 @@ pub struct ObjectHitbox {
     pub hitbox_radius: f32,
 }
 
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("Object")]
+struct SM64ObjectFields {
+    active_flags: i16,
+    o_pos_x: f32,
+    o_pos_y: f32,
+    o_pos_z: f32,
+    hitbox_height: f32,
+    hitbox_radius: f32,
+}
+
 pub(crate) fn read_object_hitboxes(
-    memory: &impl MemoryRead,
     layout: &impl MemoryLayout,
+    memory: &impl MemoryRead,
 ) -> Result<Vec<ObjectHitbox>, Error> {
     let object_pool_addr = layout.global_path("gObjectPool")?.address(memory)?.unwrap();
 
@@ -29,40 +39,19 @@ pub(crate) fn read_object_hitboxes(
         .flatten()
         .ok_or(Error::UnsizedObjectPoolArray)?;
 
-    let offset = |path| -> Result<usize, Error> { Ok(layout.local_path(path)?.field_offset()?) };
-    let o_active_flags = offset("struct Object.activeFlags")?;
-    let o_pos_x = offset("struct Object.oPosX")?;
-    let o_pos_y = offset("struct Object.oPosY")?;
-    let o_pos_z = offset("struct Object.oPosZ")?;
-    let o_hitbox_height = offset("struct Object.hitboxHeight")?;
-    let o_hitbox_radius = offset("struct Object.hitboxRadius")?;
-
+    let reader = SM64ObjectFields::reader(layout)?;
     let active_flag_active = layout.data_layout().constant("ACTIVE_FLAG_ACTIVE")?.value as i16;
-
-    let read_f32 = |address| -> Result<f32, Error> {
-        let result = memory.read_float(address, FloatType::F32)? as f32;
-        Ok(result)
-    };
-
-    let read_s16 = |address| -> Result<i16, Error> {
-        let result = memory.read_int(address, IntType::S16)? as i16;
-        Ok(result)
-    };
 
     let mut objects = Vec::new();
     for slot in 0..240 {
         let object_addr = object_pool_addr + slot * object_size;
+        let fields = reader.read(memory, object_addr)?;
 
-        let active_flags = read_s16(object_addr + o_active_flags)?;
-        if (active_flags & active_flag_active) != 0 {
+        if (fields.active_flags & active_flag_active) != 0 {
             objects.push(ObjectHitbox {
-                pos: [
-                    read_f32(object_addr + o_pos_x)?,
-                    read_f32(object_addr + o_pos_y)?,
-                    read_f32(object_addr + o_pos_z)?,
-                ],
-                hitbox_height: read_f32(object_addr + o_hitbox_height)?,
-                hitbox_radius: read_f32(object_addr + o_hitbox_radius)?,
+                pos: [fields.o_pos_x, fields.o_pos_y, fields.o_pos_z],
+                hitbox_height: fields.hitbox_height,
+                hitbox_radius: fields.hitbox_radius,
             })
         }
     }

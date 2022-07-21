@@ -48,6 +48,7 @@ fn generate_reader(input: &DeriveInput, reader_name: &Ident) -> TokenStream {
 }
 
 fn generate_reader_impl(input: &DeriveInput, reader_name: &Ident) -> TokenStream {
+    let vis = &input.vis;
     let name = &input.ident;
     let fields = named_fields(input);
 
@@ -62,6 +63,18 @@ fn generate_reader_impl(input: &DeriveInput, reader_name: &Ident) -> TokenStream
 
     quote! {
         #[allow(unused_parens)]
+        impl #reader_name {
+            #vis fn read(
+                &self,
+                memory: &impl wafel_memory::MemoryRead,
+                addr: wafel_data_type::Address,
+            ) -> Result<#name, wafel_data_access::DataError> {
+                Ok(#name {
+                    #(#field_inits)*
+                })
+            }
+        }
+
         impl wafel_data_access::DataReader for #reader_name {
             type Output = #name;
 
@@ -70,9 +83,7 @@ fn generate_reader_impl(input: &DeriveInput, reader_name: &Ident) -> TokenStream
                 memory: &impl wafel_memory::MemoryRead,
                 addr: wafel_data_type::Address,
             ) -> Result<#name, wafel_data_access::DataError> {
-                Ok(#name {
-                    #(#field_inits)*
-                })
+                self.read(memory, addr)
             }
         }
     }

@@ -265,7 +265,7 @@ impl Emu {
     ///
     /// Returns an error if the read fails.
     pub fn try_surfaces(&self) -> Result<Vec<Surface>, Error> {
-        let surfaces = read_surfaces(&self.memory, &self.layout)?;
+        let surfaces = read_surfaces(&self.layout, &self.memory)?;
         Ok(surfaces)
     }
 
@@ -286,7 +286,7 @@ impl Emu {
     ///
     /// Returns an error if the read fails.
     pub fn try_object_hitboxes(&self) -> Result<Vec<ObjectHitbox>, Error> {
-        let hitboxes = read_object_hitboxes(&self.memory, &self.layout)?;
+        let hitboxes = read_object_hitboxes(&self.layout, &self.memory)?;
         Ok(hitboxes)
     }
 }

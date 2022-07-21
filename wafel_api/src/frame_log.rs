@@ -10,8 +10,8 @@ use crate::Error;
 // TODO: Parse frame log into data structure
 
 pub(crate) fn read_frame_log(
-    memory: &impl MemoryRead,
     layout: &impl MemoryLayout,
+    memory: &impl MemoryRead,
 ) -> Result<Vec<HashMap<String, Value>>, Error> {
     let event_type_source = ConstantSource::Enum {
         name: Some("FrameLogEventType".to_owned()),

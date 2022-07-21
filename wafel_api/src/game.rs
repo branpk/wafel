@@ -373,7 +373,7 @@ impl Game {
     /// Returns an error if reading the frame log fails, e.g. it contains an invalid event type.
     pub fn try_frame_log(&self) -> Result<Vec<HashMap<String, Value>>, Error> {
         let memory = self.memory.with_slot(&self.base_slot);
-        let frame_log = read_frame_log(&memory, &self.layout)?;
+        let frame_log = read_frame_log(&self.layout, &memory)?;
         Ok(frame_log)
     }
 
@@ -395,7 +395,7 @@ impl Game {
     /// Returns an error if the read fails.
     pub fn try_surfaces(&self) -> Result<Vec<Surface>, Error> {
         let memory = self.memory.with_slot(&self.base_slot);
-        let surfaces = read_surfaces(&memory, &self.layout)?;
+        let surfaces = read_surfaces(&self.layout, &memory)?;
         Ok(surfaces)
     }
 
@@ -417,7 +417,7 @@ impl Game {
     /// Returns an error if the read fails.
     pub fn try_object_hitboxes(&self) -> Result<Vec<ObjectHitbox>, Error> {
         let memory = self.memory.with_slot(&self.base_slot);
-        let hitboxes = read_object_hitboxes(&memory, &self.layout)?;
+        let hitboxes = read_object_hitboxes(&self.layout, &memory)?;
         Ok(hitboxes)
     }
 }

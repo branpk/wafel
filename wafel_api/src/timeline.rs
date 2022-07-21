@@ -470,7 +470,7 @@ impl Timeline {
     /// Returns an error if reading the frame log fails, e.g. it contains an invalid event type,
     /// or if a `write` on a previous frame failed.
     pub fn try_frame_log(&self, frame: u32) -> Result<Vec<HashMap<String, Value>>, Error> {
-        self.with_slot_memory(frame, |memory| read_frame_log(memory, &self.layout))
+        self.with_slot_memory(frame, |memory| read_frame_log(&self.layout, memory))
     }
 
     /// Read the currently loaded surfaces.
@@ -490,7 +490,7 @@ impl Timeline {
     ///
     /// Returns an error if the read fails or if a `write` on a previous frame failed.
     pub fn try_surfaces(&self, frame: u32) -> Result<Vec<Surface>, Error> {
-        self.with_slot_memory(frame, |memory| read_surfaces(memory, &self.layout))
+        self.with_slot_memory(frame, |memory| read_surfaces(&self.layout, memory))
     }
 
     /// Read the hitboxes for active objects.
@@ -510,7 +510,7 @@ impl Timeline {
     ///
     /// Returns an error if the read fails or if a `write` on a previous frame failed.
     pub fn try_object_hitboxes(&self, frame: u32) -> Result<Vec<ObjectHitbox>, Error> {
-        self.with_slot_memory(frame, |memory| read_object_hitboxes(memory, &self.layout))
+        self.with_slot_memory(frame, |memory| read_object_hitboxes(&self.layout, memory))
     }
 }
 

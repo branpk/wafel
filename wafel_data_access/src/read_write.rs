@@ -38,11 +38,17 @@ macro_rules! prim_readable {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
         pub struct $reader;
 
+        impl $reader {
+            pub fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<$ty, DataError> {
+                Ok(memory.$method(addr, $($arg),*)? as $ty)
+            }
+        }
+
         impl DataReader for $reader {
             type Output = $ty;
 
             fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<$ty, DataError> {
-                Ok(memory.$method(addr, $($arg),*)? as $ty)
+                self.read(memory, addr)
             }
         }
 
@@ -75,16 +81,26 @@ macro_rules! prim_array_readable {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
         pub struct $array_reader<const N: usize>;
 
-        impl<const N: usize> DataReader for $array_reader<N> {
-            type Output = [$ty; N];
-
-            fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<[$ty; N], DataError> {
+        impl<const N: usize> $array_reader<N> {
+            pub fn read(
+                &self,
+                memory: &impl MemoryRead,
+                addr: Address,
+            ) -> Result<[$ty; N], DataError> {
                 let mut result = [Default::default(); N];
                 let stride = $size;
                 for i in 0..N {
                     result[i] = $reader.read(memory, addr + i * stride)?;
                 }
                 Ok(result)
+            }
+        }
+
+        impl<const N: usize> DataReader for $array_reader<N> {
+            type Output = [$ty; N];
+
+            fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<[$ty; N], DataError> {
+                self.read(memory, addr)
             }
         }
 
