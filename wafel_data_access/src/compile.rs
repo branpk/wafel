@@ -11,7 +11,7 @@ use crate::{
     DataPathEdge, DataPathError, DataPathImpl, GlobalDataPath, LocalDataPath,
 };
 
-pub(crate) fn data_path(
+pub fn data_path(
     layout: &Arc<DataLayout>,
     symbol_lookup: &impl SymbolLookup,
     source: &str,

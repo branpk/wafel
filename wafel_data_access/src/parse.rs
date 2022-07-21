@@ -4,29 +4,29 @@ use wafel_data_type::{IntValue, Namespace, TypeName};
 
 use crate::DataPathCompileError::{self, ParseError};
 
-pub(crate) struct PathAst {
-    pub(crate) root: RootAst,
-    pub(crate) edges: Vec<EdgeAst>,
-    pub(crate) mask: Option<IntOrConstant>,
+pub struct PathAst {
+    pub root: RootAst,
+    pub edges: Vec<EdgeAst>,
+    pub mask: Option<IntOrConstant>,
 }
 
-pub(crate) enum RootAst {
+pub enum RootAst {
     Global(String),
     Local(TypeName),
 }
 
-pub(crate) enum EdgeAst {
+pub enum EdgeAst {
     Field(String),
     Subscript(IntOrConstant),
     Nullable,
 }
 
-pub(crate) enum IntOrConstant {
+pub enum IntOrConstant {
     Int(IntValue),
     Constant(String),
 }
 
-pub(crate) fn parse_data_path(source: &str) -> Result<PathAst, DataPathCompileError> {
+pub fn parse_data_path(source: &str) -> Result<PathAst, DataPathCompileError> {
     Parser::new(source).parse()
 }
 

@@ -1,37 +1,38 @@
 use std::collections::HashMap;
 
+use wafel_data_access::MemoryLayout;
 use wafel_data_type::{IntValue, Value};
-use wafel_layout::{ConstantSource, DataLayout};
+use wafel_layout::ConstantSource;
 use wafel_memory::MemoryRead;
 
-use crate::{data_path_cache::DataPathCache, Error};
+use crate::Error;
 
 // TODO: Parse frame log into data structure
 
 pub(crate) fn read_frame_log(
     memory: &impl MemoryRead,
-    layout: &DataLayout,
-    data_path_cache: &DataPathCache,
+    layout: &impl MemoryLayout,
 ) -> Result<Vec<HashMap<String, Value>>, Error> {
     let event_type_source = ConstantSource::Enum {
         name: Some("FrameLogEventType".to_owned()),
     };
     let event_types: HashMap<IntValue, String> = layout
+        .data_layout()
         .constants
         .iter()
         .filter(|(_, constant)| constant.source == event_type_source)
         .map(|(name, constant)| (constant.value, name.clone()))
         .collect();
 
-    let log_length = data_path_cache
-        .global("gFrameLogLength")?
+    let log_length = layout
+        .global_path("gFrameLogLength")?
         .read(memory)?
         .try_as_usize()?;
 
     (0..log_length)
         .map(|i| -> Result<_, Error> {
-            let event_type_value = data_path_cache
-                .global(&format!("gFrameLog[{}].type", i))?
+            let event_type_value = layout
+                .global_path(&format!("gFrameLog[{}].type", i))?
                 .read(memory)?
                 .try_as_int()?;
             let event_type = event_types
@@ -39,8 +40,8 @@ pub(crate) fn read_frame_log(
                 .ok_or(Error::InvalidFrameLogEventType(event_type_value))?;
 
             let variant_name = frame_log_event_variant_name(event_type);
-            let mut event: HashMap<String, Value> = data_path_cache
-                .global(&format!("gFrameLog[{}].__anon.{}", i, variant_name))?
+            let mut event: HashMap<String, Value> = layout
+                .global_path(&format!("gFrameLog[{}].__anon.{}", i, variant_name))?
                 .read(memory)?
                 .try_as_struct()?
                 .clone()

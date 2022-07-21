@@ -61,7 +61,6 @@ pub use wafel_data_type::{
 };
 
 mod data_cache;
-mod data_path_cache;
 mod data_type;
 mod emu;
 mod error;

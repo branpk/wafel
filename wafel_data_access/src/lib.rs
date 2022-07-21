@@ -38,12 +38,7 @@
 //! let surface: Surface = reader.read(&memory, addr)?;
 //! ```
 
-#![warn(
-    missing_docs,
-    missing_debug_implementations,
-    rust_2018_idioms,
-    unreachable_pub
-)]
+#![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 
 pub use data_path_types::*;
 pub use error::*;
@@ -52,6 +47,7 @@ pub use read_write::{DataReadable, DataReader, Reader};
 pub use wafel_data_access_derive::*;
 
 mod compile;
+mod data_path_cache;
 mod data_path_types;
 mod error;
 mod layout;

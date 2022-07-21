@@ -1,7 +1,8 @@
+use wafel_data_access::MemoryLayout;
 use wafel_data_type::{FloatType, IntType};
-use wafel_memory::{MemoryRead, SymbolLookup};
+use wafel_memory::MemoryRead;
 
-use crate::{data_path_cache::DataPathCache, Error};
+use crate::Error;
 
 // TODO: Returns garbage after level is unloaded
 
@@ -14,31 +15,30 @@ pub struct Surface {
     pub vertices: [[i16; 3]; 3],
 }
 
-pub(crate) fn read_surfaces<S: SymbolLookup>(
+pub(crate) fn read_surfaces(
     memory: &impl MemoryRead,
-    data_path_cache: &DataPathCache<S>,
+    layout: &impl MemoryLayout,
 ) -> Result<Vec<Surface>, Error> {
-    let surface_pool_addr = data_path_cache.global("sSurfacePool?")?.read(memory)?;
+    let surface_pool_addr = layout.global_path("sSurfacePool?")?.read(memory)?;
     if surface_pool_addr.is_none() {
         return Ok(Vec::new());
     }
     let surface_pool_addr = surface_pool_addr.try_as_address()?;
 
-    let surfaces_allocated = data_path_cache
-        .global("gSurfacesAllocated")?
+    let surfaces_allocated = layout
+        .global_path("gSurfacesAllocated")?
         .read(memory)?
         .try_as_usize()?;
 
-    let surface_size = data_path_cache
-        .global("sSurfacePool")?
+    let surface_size = layout
+        .global_path("sSurfacePool")?
         .concrete_type()
         .stride()
         .ok()
         .flatten()
         .ok_or(Error::UnsizedSurfacePoolPointer)?;
 
-    let offset =
-        |path| -> Result<usize, Error> { Ok(data_path_cache.local(path)?.field_offset()?) };
+    let offset = |path| -> Result<usize, Error> { Ok(layout.local_path(path)?.field_offset()?) };
     let o_normal = offset("struct Surface.normal")?;
     let o_vertex1 = offset("struct Surface.vertex1")?;
     let o_vertex2 = offset("struct Surface.vertex2")?;

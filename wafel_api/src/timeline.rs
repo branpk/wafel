@@ -4,16 +4,16 @@ use std::{
     time::Duration,
 };
 
-use wafel_data_access::{DataPath, GlobalDataPath};
+use wafel_data_access::{DataPath, GlobalDataPath, MemoryLayout, MemoryLayoutImpl};
 use wafel_data_type::{Address, Value};
-use wafel_layout::{DataLayout, DllLayout};
-use wafel_memory::{DllGameMemory, DllSlotMemoryView, GameMemory, MemoryRead, SymbolLookup};
+use wafel_layout::DllLayout;
+use wafel_memory::{DllGameMemory, DllSlotMemoryView, GameMemory, MemoryRead};
 use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
 
 use crate::{
-    data_cache::DataCache, data_path_cache::DataPathCache, frame_log::read_frame_log,
-    mario::mario_action_names, read_object_hitboxes, read_surfaces, simplified_data_type, DataType,
-    Error, Input, ObjectHitbox, Surface,
+    data_cache::DataCache, frame_log::read_frame_log, mario::mario_action_names,
+    read_object_hitboxes, read_surfaces, simplified_data_type, DataType, Error, Input,
+    ObjectHitbox, Surface,
 };
 
 /// An SM64 API that allows reads and writes to arbitrary frames without frame advance or
@@ -51,10 +51,8 @@ use crate::{
 #[derive(Debug)]
 pub struct Timeline {
     memory: Arc<DllGameMemory>,
-    layout: Arc<DataLayout>,
-    symbols_by_address: HashMap<Address, String>,
+    layout: MemoryLayoutImpl<DllGameMemory>,
     timeline: Mutex<GameTimeline<Arc<DllGameMemory>, Controller>>,
-    data_path_cache: DataPathCache,
     data_cache: Mutex<DataCache>,
 }
 
@@ -92,32 +90,24 @@ impl Timeline {
     ///   except this [Timeline], this is UB.
     /// - The DLL can easily execute arbitrary code.
     pub unsafe fn try_new(dll_path: &str) -> Result<Self, Error> {
-        let mut layout = DllLayout::read(&dll_path)?.data_layout;
-        layout.add_sm64_extras()?;
-        let layout = Arc::new(layout);
+        let mut data_layout = DllLayout::read(&dll_path)?.data_layout;
+        data_layout.add_sm64_extras()?;
+        let data_layout = Arc::new(data_layout);
 
         let (memory, base_slot) = DllGameMemory::load(dll_path, "sm64_init", "sm64_update")?;
         let memory = Arc::new(memory);
-
-        let symbols_by_address = layout
-            .globals
-            .keys()
-            .filter_map(|name| memory.symbol_address(name).map(|addr| (addr, name.clone())))
-            .collect();
 
         let controller = Controller::new();
 
         let timeline = GameTimeline::new(Arc::clone(&memory), base_slot, controller, 30);
         let timeline = Mutex::new(timeline);
 
-        let data_path_cache = DataPathCache::new(&memory, &layout);
+        let layout = MemoryLayoutImpl::new(&data_layout, &memory);
 
         Ok(Self {
             memory,
             layout,
-            symbols_by_address,
             timeline,
-            data_path_cache,
             data_cache: Mutex::new(DataCache::new()),
         })
     }
@@ -184,10 +174,11 @@ impl Timeline {
     /// - Reading from memory fails
     /// - A `write` on a previous frame failed
     pub fn try_read(&self, frame: u32, path: &str) -> Result<Value, Error> {
-        let path = self.data_path_cache.global(path)?;
+        let path = self.layout.global_path(path)?;
         let mut data_cache = self.data_cache.lock().unwrap();
 
-        let value = match data_cache.get(frame, &path) {
+        let value = data_cache.get(frame, &path);
+        let value = match value {
             Some(value) => value,
             None => self.read_and_cache(&mut data_cache, frame, &path)?,
         };
@@ -267,7 +258,7 @@ impl Timeline {
     /// - Reading from memory fails
     /// - A `write` on a previous frame failed
     pub fn try_address(&self, frame: u32, path: &str) -> Result<Option<Address>, Error> {
-        let path = self.data_path_cache.global(path)?;
+        let path = self.layout.global_path(path)?;
         self.with_slot_memory(frame, |memory| Ok(path.address(memory)?))
     }
 
@@ -275,7 +266,7 @@ impl Timeline {
     ///
     /// Returns None if no global variable is at the address.
     pub fn address_to_symbol(&self, address: Address) -> Option<String> {
-        self.symbols_by_address.get(&address).cloned()
+        self.layout.address_to_symbol(address).ok()
     }
 
     /// Return a simplified description of the type of the given variable.
@@ -301,9 +292,9 @@ impl Timeline {
     ///
     /// Panics if the path fails to compile or type resolution fails.
     pub fn try_data_type(&self, path: &str) -> Result<DataType, Error> {
-        let path = DataPath::compile(&self.layout, &self.memory, path)?;
+        let path = DataPath::compile(&self.layout.data_layout, &self.layout.symbol_lookup, path)?;
         let data_type = path.concrete_type();
-        let simplified = simplified_data_type(&self.layout, &data_type)?;
+        let simplified = simplified_data_type(&self.layout.data_layout, &data_type)?;
         Ok(simplified)
     }
 
@@ -336,7 +327,7 @@ impl Timeline {
     /// Instead, write errors will be returned if `read` is called on a frame later than or
     /// equal to `frame`.
     pub fn try_write(&mut self, frame: u32, path: &str, value: Value) -> Result<(), Error> {
-        let path = self.data_path_cache.global(path)?;
+        let path = self.layout.global_path(path)?;
         self.with_controller_mut(|controller| controller.write(frame, &path, value));
         Ok(())
     }
@@ -387,7 +378,7 @@ impl Timeline {
     ///
     /// Returns an error if the data path fails to compile.
     pub fn try_reset(&mut self, frame: u32, path: &str) -> Result<(), Error> {
-        let path = self.data_path_cache.global(path)?;
+        let path = self.layout.global_path(path)?;
         self.with_controller_mut(|controller| controller.reset(frame, &path));
         Ok(())
     }
@@ -451,13 +442,13 @@ impl Timeline {
     /// Unless the name has a typo, it is likely that either Wafel is out of date or it is just
     /// a limitation of how Wafel obtains constants from the source.
     pub fn try_constant(&self, name: &str) -> Result<Value, Error> {
-        let value = self.layout.constant(name)?;
+        let value = self.layout.data_layout().constant(name)?;
         Ok(value.value.into())
     }
 
     /// Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`).
     pub fn mario_action_names(&self) -> HashMap<u32, String> {
-        mario_action_names(&self.layout)
+        mario_action_names(self.layout.data_layout())
     }
 
     /// Read the Wafel frame log for the previous frame advance.
@@ -479,9 +470,7 @@ impl Timeline {
     /// Returns an error if reading the frame log fails, e.g. it contains an invalid event type,
     /// or if a `write` on a previous frame failed.
     pub fn try_frame_log(&self, frame: u32) -> Result<Vec<HashMap<String, Value>>, Error> {
-        self.with_slot_memory(frame, |memory| {
-            read_frame_log(memory, &self.layout, &self.data_path_cache)
-        })
+        self.with_slot_memory(frame, |memory| read_frame_log(memory, &self.layout))
     }
 
     /// Read the currently loaded surfaces.
@@ -501,7 +490,7 @@ impl Timeline {
     ///
     /// Returns an error if the read fails or if a `write` on a previous frame failed.
     pub fn try_surfaces(&self, frame: u32) -> Result<Vec<Surface>, Error> {
-        self.with_slot_memory(frame, |memory| read_surfaces(memory, &self.data_path_cache))
+        self.with_slot_memory(frame, |memory| read_surfaces(memory, &self.layout))
     }
 
     /// Read the hitboxes for active objects.
@@ -521,9 +510,7 @@ impl Timeline {
     ///
     /// Returns an error if the read fails or if a `write` on a previous frame failed.
     pub fn try_object_hitboxes(&self, frame: u32) -> Result<Vec<ObjectHitbox>, Error> {
-        self.with_slot_memory(frame, |memory| {
-            read_object_hitboxes(memory, &self.layout, &self.data_path_cache)
-        })
+        self.with_slot_memory(frame, |memory| read_object_hitboxes(memory, &self.layout))
     }
 }
 

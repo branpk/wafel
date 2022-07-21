@@ -1,8 +1,8 @@
+use wafel_data_access::MemoryLayout;
 use wafel_data_type::{FloatType, IntType};
-use wafel_layout::DataLayout;
-use wafel_memory::{MemoryRead, SymbolLookup};
+use wafel_memory::MemoryRead;
 
-use crate::{data_path_cache::DataPathCache, Error};
+use crate::Error;
 
 /// Hitbox information for an SM64 object.
 #[derive(Debug, Clone)]
@@ -15,26 +15,21 @@ pub struct ObjectHitbox {
     pub hitbox_radius: f32,
 }
 
-pub(crate) fn read_object_hitboxes<S: SymbolLookup>(
+pub(crate) fn read_object_hitboxes(
     memory: &impl MemoryRead,
-    layout: &DataLayout,
-    data_path_cache: &DataPathCache<S>,
+    layout: &impl MemoryLayout,
 ) -> Result<Vec<ObjectHitbox>, Error> {
-    let object_pool_addr = data_path_cache
-        .global("gObjectPool")?
-        .address(memory)?
-        .unwrap();
+    let object_pool_addr = layout.global_path("gObjectPool")?.address(memory)?.unwrap();
 
-    let object_size = data_path_cache
-        .global("gObjectPool")?
+    let object_size = layout
+        .global_path("gObjectPool")?
         .concrete_type()
         .stride()
         .ok()
         .flatten()
         .ok_or(Error::UnsizedObjectPoolArray)?;
 
-    let offset =
-        |path| -> Result<usize, Error> { Ok(data_path_cache.local(path)?.field_offset()?) };
+    let offset = |path| -> Result<usize, Error> { Ok(layout.local_path(path)?.field_offset()?) };
     let o_active_flags = offset("struct Object.activeFlags")?;
     let o_pos_x = offset("struct Object.oPosX")?;
     let o_pos_y = offset("struct Object.oPosY")?;
@@ -42,7 +37,7 @@ pub(crate) fn read_object_hitboxes<S: SymbolLookup>(
     let o_hitbox_height = offset("struct Object.hitboxHeight")?;
     let o_hitbox_radius = offset("struct Object.hitboxRadius")?;
 
-    let active_flag_active = layout.constant("ACTIVE_FLAG_ACTIVE")?.value as i16;
+    let active_flag_active = layout.data_layout().constant("ACTIVE_FLAG_ACTIVE")?.value as i16;
 
     let read_f32 = |address| -> Result<f32, Error> {
         let result = memory.read_float(address, FloatType::F32)? as f32;

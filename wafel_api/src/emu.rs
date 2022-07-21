@@ -1,13 +1,13 @@
 use std::{collections::HashMap, sync::Arc};
 
-use wafel_data_access::DataPath;
+use wafel_data_access::{DataPath, MemoryLayout, MemoryLayoutImpl};
 use wafel_data_type::{Address, Value};
-use wafel_layout::{load_sm64_n64_layout, DataLayout};
+use wafel_layout::load_sm64_n64_layout;
 use wafel_memory::{EmptySymbolLookup, EmuMemory, MemoryRead};
 
 use crate::{
-    data_path_cache::DataPathCache, mario::mario_action_names, read_object_hitboxes, read_surfaces,
-    simplified_data_type, DataType, Error, ObjectHitbox, SM64Version, Surface,
+    mario::mario_action_names, read_object_hitboxes, read_surfaces, simplified_data_type, DataType,
+    Error, ObjectHitbox, SM64Version, Surface,
 };
 
 /// An SM64 API that attaches to a running emulator and can read/write to its
@@ -35,10 +35,8 @@ use crate::{
 /// ```
 #[derive(Debug)]
 pub struct Emu {
-    layout: Arc<DataLayout>,
-    pub memory: EmuMemory, // FIXME: Remove pub
-    symbols_by_address: HashMap<Address, String>,
-    data_path_cache: DataPathCache<EmptySymbolLookup>,
+    layout: MemoryLayoutImpl<EmptySymbolLookup>,
+    memory: EmuMemory,
 }
 
 impl Emu {
@@ -69,29 +67,14 @@ impl Emu {
     ) -> Result<Self, Error> {
         const SM64_MEMORY_SIZE: usize = 0x0040_0000;
 
-        let layout = load_sm64_n64_layout(&sm64_version.to_string().to_lowercase())?;
-        let layout = Arc::new(layout);
+        let data_layout = load_sm64_n64_layout(&sm64_version.to_string().to_lowercase())?;
+        let data_layout = Arc::new(data_layout);
 
         let memory = EmuMemory::attach(pid, base_address, SM64_MEMORY_SIZE)?;
 
-        let symbols_by_address = layout
-            .globals
-            .iter()
-            .filter_map(|(name, value)| {
-                value
-                    .address
-                    .map(|addr| (Address(addr as usize), name.clone()))
-            })
-            .collect();
+        let layout = MemoryLayoutImpl::new(&data_layout, &Arc::new(EmptySymbolLookup));
 
-        let data_path_cache = DataPathCache::new(&Arc::new(EmptySymbolLookup), &layout);
-
-        Ok(Self {
-            layout,
-            memory,
-            symbols_by_address,
-            data_path_cache,
-        })
+        Ok(Self { layout, memory })
     }
 
     /// Read a value from memory.
@@ -115,7 +98,7 @@ impl Emu {
     ///
     /// Returns an error if the path fails to compile or reading from memory fails.
     pub fn try_read(&self, path: &str) -> Result<Value, Error> {
-        let path = self.data_path_cache.global(path)?;
+        let path = self.layout.global_path(path)?;
         let value = path.read(&self.memory)?;
         Ok(value)
     }
@@ -168,7 +151,7 @@ impl Emu {
     ///
     /// Returns an error if the path fails to compile or reading from memory fails.
     pub fn try_address(&self, path: &str) -> Result<Option<Address>, Error> {
-        let path = self.data_path_cache.global(path)?;
+        let path = self.layout.global_path(path)?;
         let address = path.address(&self.memory)?;
         Ok(address)
     }
@@ -177,7 +160,7 @@ impl Emu {
     ///
     /// Returns None if no global variable is at the address.
     pub fn address_to_symbol(&self, address: Address) -> Option<String> {
-        self.symbols_by_address.get(&address).cloned()
+        self.layout.address_to_symbol(address).ok()
     }
 
     /// Return a simplified description of the type of the given variable.
@@ -203,9 +186,9 @@ impl Emu {
     ///
     /// Panics if the path fails to compile or type resolution fails.
     pub fn try_data_type(&self, path: &str) -> Result<DataType, Error> {
-        let path = DataPath::compile(&self.layout, &EmptySymbolLookup, path)?;
+        let path = DataPath::compile(&self.layout.data_layout, &self.layout.symbol_lookup, path)?;
         let data_type = path.concrete_type();
-        let simplified = simplified_data_type(&self.layout, &data_type)?;
+        let simplified = simplified_data_type(&self.layout.data_layout, &data_type)?;
         Ok(simplified)
     }
 
@@ -230,7 +213,7 @@ impl Emu {
     ///
     /// Returns an error if the data path fails to compile or the write fails.
     pub fn try_write(&mut self, path: &str, value: Value) -> Result<(), Error> {
-        let path = self.data_path_cache.global(path)?;
+        let path = self.layout.global_path(path)?;
         path.write(&mut self.memory, value)?;
         Ok(())
     }
@@ -256,13 +239,13 @@ impl Emu {
     /// Unless the name has a typo, it is likely that either Wafel is out of date or it is just
     /// a limitation of how Wafel obtains constants from the source.
     pub fn try_constant(&self, name: &str) -> Result<Value, Error> {
-        let value = self.layout.constant(name)?;
+        let value = self.layout.data_layout().constant(name)?;
         Ok(value.value.into())
     }
 
     /// Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`).
     pub fn mario_action_names(&self) -> HashMap<u32, String> {
-        mario_action_names(&self.layout)
+        mario_action_names(self.layout.data_layout())
     }
 
     /// Read the currently loaded surfaces.
@@ -282,7 +265,7 @@ impl Emu {
     ///
     /// Returns an error if the read fails.
     pub fn try_surfaces(&self) -> Result<Vec<Surface>, Error> {
-        let surfaces = read_surfaces(&self.memory, &self.data_path_cache)?;
+        let surfaces = read_surfaces(&self.memory, &self.layout)?;
         Ok(surfaces)
     }
 
@@ -303,7 +286,7 @@ impl Emu {
     ///
     /// Returns an error if the read fails.
     pub fn try_object_hitboxes(&self) -> Result<Vec<ObjectHitbox>, Error> {
-        let hitboxes = read_object_hitboxes(&self.memory, &self.layout, &self.data_path_cache)?;
+        let hitboxes = read_object_hitboxes(&self.memory, &self.layout)?;
         Ok(hitboxes)
     }
 }

@@ -1,9 +1,9 @@
+//! Derive macro for wafel_data_access::DataReadable.
+
 use heck::ToLowerCamelCase;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{
-    parse_macro_input, parse_quote, Data, DeriveInput, Fields, FieldsNamed, GenericParam, Generics,
-};
+use syn::{parse_macro_input, Data, DeriveInput, Fields, FieldsNamed};
 
 #[proc_macro_derive(
     DataReadable,

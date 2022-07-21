@@ -11,28 +11,31 @@ use crate::{
 
 /// Internal representation of a global or local data path.
 #[derive(Clone)]
-pub(crate) struct DataPathImpl<R> {
+pub struct DataPathImpl<R> {
     /// The original source for the data path.
-    pub(crate) source: String,
+    pub source: String,
     /// The root for the path (either a global variable address or a struct type).
-    pub(crate) root: R,
+    pub root: R,
     /// The operations to perform when evaluating the path.
-    pub(crate) edges: Vec<DataPathEdge>,
+    pub edges: Vec<DataPathEdge>,
     /// The mask to apply for an integer variable.
-    pub(crate) mask: Option<IntValue>,
+    pub mask: Option<IntValue>,
     /// The type of the value that the path points to.
     ///
     /// This should be "concrete", i.e. not a TypeName.
-    pub(crate) concrete_type: DataTypeRef,
+    pub concrete_type: DataTypeRef,
     /// A reference to the global DataLayout.
-    pub(crate) layout: Arc<DataLayout>,
+    pub layout: Arc<DataLayout>,
 }
 
 /// An operation that is applied when evaluating a data path.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum DataPathEdge {
+pub enum DataPathEdge {
+    /// addr -> addr + offset
     Offset(usize),
+    /// addr -> *addr
     Deref,
+    /// If the value calculated so far is null, return Value::None.
     Nullable,
 }
 
@@ -40,13 +43,13 @@ pub(crate) enum DataPathEdge {
 ///
 /// See module documentation for more information.
 #[derive(Debug, Clone)]
-pub struct GlobalDataPath(pub(crate) DataPathImpl<Address>);
+pub struct GlobalDataPath(pub DataPathImpl<Address>);
 
 /// A data path starting from a type, such as a specific struct.
 ///
 /// See module documentation for more information.
 #[derive(Debug, Clone)]
-pub struct LocalDataPath(pub(crate) DataPathImpl<DataTypeRef>);
+pub struct LocalDataPath(pub DataPathImpl<DataTypeRef>);
 
 /// Either a global or a local data path.
 #[derive(Debug, Clone)]

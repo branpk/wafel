@@ -1,14 +1,13 @@
 use std::{collections::HashMap, sync::Arc};
 
-use wafel_data_access::DataPath;
+use wafel_data_access::{DataPath, MemoryLayout, MemoryLayoutImpl};
 use wafel_data_type::{Address, Value};
-use wafel_layout::{DataLayout, DllLayout};
-use wafel_memory::{DllGameMemory, GameMemory, MemoryRead, SymbolLookup};
+use wafel_layout::DllLayout;
+use wafel_memory::{DllGameMemory, GameMemory, MemoryRead};
 
 use crate::{
-    data_path_cache::DataPathCache, frame_log::read_frame_log, mario::mario_action_names,
-    read_object_hitboxes, read_surfaces, simplified_data_type, DataType, Error, Input,
-    ObjectHitbox, Surface,
+    frame_log::read_frame_log, mario::mario_action_names, read_object_hitboxes, read_surfaces,
+    simplified_data_type, DataType, Error, Input, ObjectHitbox, Surface,
 };
 
 /// An SM64 API that uses a traditional frame advance / save state model.
@@ -46,12 +45,10 @@ use crate::{
 #[derive(Debug)]
 pub struct Game {
     id: Arc<()>,
-    pub layout: Arc<DataLayout>,
-    pub memory: Arc<DllGameMemory>, // FIXME: Remove pubs
-    symbols_by_address: HashMap<Address, String>,
+    layout: MemoryLayoutImpl<DllGameMemory>,
+    memory: Arc<DllGameMemory>,
     base_slot_frame: u32,
-    pub base_slot: <DllGameMemory as GameMemory>::Slot,
-    data_path_cache: DataPathCache,
+    base_slot: <DllGameMemory as GameMemory>::Slot,
     rerecords: u32,
 }
 
@@ -89,29 +86,21 @@ impl Game {
     ///   except this [Game], this is UB.
     /// - The DLL can easily execute arbitrary code.
     pub unsafe fn try_new(dll_path: &str) -> Result<Self, Error> {
-        let mut layout = DllLayout::read(&dll_path)?.data_layout;
-        layout.add_sm64_extras()?;
-        let layout = Arc::new(layout);
+        let mut data_layout = DllLayout::read(&dll_path)?.data_layout;
+        data_layout.add_sm64_extras()?;
+        let data_layout = Arc::new(data_layout);
 
         let (memory, base_slot) = DllGameMemory::load(dll_path, "sm64_init", "sm64_update")?;
         let memory = Arc::new(memory);
 
-        let symbols_by_address = layout
-            .globals
-            .keys()
-            .filter_map(|name| memory.symbol_address(name).map(|addr| (addr, name.clone())))
-            .collect();
-
-        let data_path_cache = DataPathCache::new(&memory, &layout);
+        let layout = MemoryLayoutImpl::new(&data_layout, &memory);
 
         Ok(Self {
             id: Arc::new(()),
             layout,
             memory,
-            symbols_by_address,
             base_slot_frame: 0,
             base_slot,
-            data_path_cache,
             rerecords: 0,
         })
     }
@@ -137,7 +126,7 @@ impl Game {
     ///
     /// Returns an error if the path fails to compile or reading from memory fails.
     pub fn try_read(&self, path: &str) -> Result<Value, Error> {
-        let path = self.data_path_cache.global(path)?;
+        let path = self.layout.global_path(path)?;
         let value = path.read(&self.memory.with_slot(&self.base_slot))?;
         Ok(value)
     }
@@ -191,7 +180,7 @@ impl Game {
     ///
     /// Returns an error if the path fails to compile or reading from memory fails.
     pub fn try_address(&self, path: &str) -> Result<Option<Address>, Error> {
-        let path = self.data_path_cache.global(path)?;
+        let path = self.layout.global_path(path)?;
         let address = path.address(&self.memory.with_slot(&self.base_slot))?;
         Ok(address)
     }
@@ -200,7 +189,7 @@ impl Game {
     ///
     /// Returns None if no global variable is at the address.
     pub fn address_to_symbol(&self, address: Address) -> Option<String> {
-        self.symbols_by_address.get(&address).cloned()
+        self.layout.address_to_symbol(address).ok()
     }
 
     /// Return a simplified description of the type of the given variable.
@@ -226,9 +215,9 @@ impl Game {
     ///
     /// Panics if the path fails to compile or type resolution fails.
     pub fn try_data_type(&self, path: &str) -> Result<DataType, Error> {
-        let path = DataPath::compile(&self.layout, &self.memory, path)?;
+        let path = DataPath::compile(&self.layout.data_layout, &self.memory, path)?;
         let data_type = path.concrete_type();
-        let simplified = simplified_data_type(&self.layout, &data_type)?;
+        let simplified = simplified_data_type(&self.layout.data_layout, &data_type)?;
         Ok(simplified)
     }
 
@@ -253,7 +242,7 @@ impl Game {
     ///
     /// Returns an error if the data path fails to compile or the write fails.
     pub fn try_write(&mut self, path: &str, value: Value) -> Result<(), Error> {
-        let path = self.data_path_cache.global(path)?;
+        let path = self.layout.global_path(path)?;
         path.write(&mut self.memory.with_slot_mut(&mut self.base_slot), value)?;
         Ok(())
     }
@@ -357,13 +346,13 @@ impl Game {
     /// Unless the name has a typo, it is likely that either Wafel is out of date or it is just
     /// a limitation of how Wafel obtains constants from the source.
     pub fn try_constant(&self, name: &str) -> Result<Value, Error> {
-        let value = self.layout.constant(name)?;
+        let value = self.layout.data_layout().constant(name)?;
         Ok(value.value.into())
     }
 
     /// Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`).
     pub fn mario_action_names(&self) -> HashMap<u32, String> {
-        mario_action_names(&self.layout)
+        mario_action_names(self.layout.data_layout())
     }
 
     /// Read the Wafel frame log for the previous frame advance.
@@ -384,7 +373,7 @@ impl Game {
     /// Returns an error if reading the frame log fails, e.g. it contains an invalid event type.
     pub fn try_frame_log(&self) -> Result<Vec<HashMap<String, Value>>, Error> {
         let memory = self.memory.with_slot(&self.base_slot);
-        let frame_log = read_frame_log(&memory, &self.layout, &self.data_path_cache)?;
+        let frame_log = read_frame_log(&memory, &self.layout)?;
         Ok(frame_log)
     }
 
@@ -406,7 +395,7 @@ impl Game {
     /// Returns an error if the read fails.
     pub fn try_surfaces(&self) -> Result<Vec<Surface>, Error> {
         let memory = self.memory.with_slot(&self.base_slot);
-        let surfaces = read_surfaces(&memory, &self.data_path_cache)?;
+        let surfaces = read_surfaces(&memory, &self.layout)?;
         Ok(surfaces)
     }
 
@@ -428,7 +417,7 @@ impl Game {
     /// Returns an error if the read fails.
     pub fn try_object_hitboxes(&self) -> Result<Vec<ObjectHitbox>, Error> {
         let memory = self.memory.with_slot(&self.base_slot);
-        let hitboxes = read_object_hitboxes(&memory, &self.layout, &self.data_path_cache)?;
+        let hitboxes = read_object_hitboxes(&memory, &self.layout)?;
         Ok(hitboxes)
     }
 }

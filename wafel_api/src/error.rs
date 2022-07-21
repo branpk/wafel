@@ -2,7 +2,7 @@
 
 use std::{error, fmt, io, sync::Arc};
 
-use wafel_data_access::{DataPathError, GlobalDataPath};
+use wafel_data_access::{DataError, DataPathError, GlobalDataPath};
 use wafel_data_type::{IntValue, Value, ValueTypeError};
 use wafel_layout::{DllLayoutError, LayoutLookupError, SM64LayoutError};
 use wafel_memory::{MemoryError, MemoryInitError};
@@ -14,6 +14,7 @@ pub enum Error {
     MemoryInitError(MemoryInitError),
     DataPathError(DataPathError),
     MemoryError(MemoryError),
+    DataError(DataError),
     ApplyEditError {
         path: Arc<GlobalDataPath>,
         value: Value,
@@ -59,6 +60,7 @@ impl fmt::Display for Error {
             Error::MemoryInitError(error) => write!(f, "{}", error),
             Error::DataPathError(error) => write!(f, "{}", error),
             Error::MemoryError(error) => write!(f, "{}", error),
+            Error::DataError(error) => write!(f, "{}", error),
             Error::ApplyEditError { path, value, error } => {
                 write!(f, "while applying edit {} = {}:\n  {}", path, value, error)
             }
@@ -144,5 +146,11 @@ impl From<LayoutLookupError> for Error {
 impl From<ValueTypeError> for Error {
     fn from(v: ValueTypeError) -> Self {
         Self::ValueTypeError(v)
+    }
+}
+
+impl From<DataError> for Error {
+    fn from(v: DataError) -> Self {
+        Self::DataError(v)
     }
 }

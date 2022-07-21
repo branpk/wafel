@@ -1,3 +1,4 @@
+use core::fmt;
 use std::ops::Deref;
 
 use indexmap::IndexMap;
@@ -10,7 +11,7 @@ use crate::MemoryError::{self, *};
 /// Trait for looking up a symbol's address.
 ///
 /// A symbol is the name of a global variable or function.
-pub trait SymbolLookup {
+pub trait SymbolLookup: fmt::Debug {
     /// Look up a symbol's address.
     ///
     /// Returns None if the symbol is undefined.
@@ -19,7 +20,7 @@ pub trait SymbolLookup {
 
 impl<R, M> SymbolLookup for R
 where
-    R: Deref<Target = M>,
+    R: Deref<Target = M> + fmt::Debug,
     M: SymbolLookup,
 {
     fn symbol_address(&self, symbol: &str) -> Option<Address> {
@@ -86,7 +87,7 @@ pub trait MemoryRead {
                 break;
             }
             bytes.push(byte);
-            current = current + 1;
+            current += 1;
         }
         Ok(bytes)
     }

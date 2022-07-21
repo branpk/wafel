@@ -2,7 +2,7 @@
 
 use std::{error::Error, fmt};
 
-use wafel_data_type::{DataTypeError, DataTypeRef};
+use wafel_data_type::{Address, DataTypeError, DataTypeRef};
 use wafel_layout::LayoutLookupError;
 use wafel_memory::MemoryError;
 
@@ -12,6 +12,7 @@ pub enum DataError {
     MemoryError(MemoryError),
     LayoutLookupError(LayoutLookupError),
     DataTypeError(DataTypeError),
+    NoSymbolAtAddress(Address),
 }
 
 impl fmt::Display for DataError {
@@ -21,6 +22,7 @@ impl fmt::Display for DataError {
             DataError::MemoryError(error) => write!(f, "{}", error),
             DataError::LayoutLookupError(error) => write!(f, "{}", error),
             DataError::DataTypeError(error) => write!(f, "{}", error),
+            DataError::NoSymbolAtAddress(addr) => write!(f, "no symbol at address: {}", addr),
         }
     }
 }
