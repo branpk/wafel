@@ -536,6 +536,7 @@
 <span id="530">530</span>
 <span id="531">531</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">feature</span>(<span class="ident">stmt_expr_attributes</span>)]</span>
+<span class="attribute">#![<span class="ident">feature</span>(<span class="ident">generic_associated_types</span>)]</span>
 <span class="attribute">#![<span class="ident">warn</span>(<span class="ident">missing_docs</span>, <span class="ident">missing_debug_implementations</span>, <span class="ident">rust_2018_idioms</span>)]</span>
 <span class="attribute">#![<span class="ident">allow</span>(
     <span class="ident">clippy::map_entry</span>,
@@ -556,7 +557,6 @@
 
 <span class="kw">use</span> <span class="ident">custom_renderer</span>::{<span class="ident">CustomRenderer</span>, <span class="ident">Scene</span>};
 <span class="kw">use</span> <span class="ident">fast3d</span>::{<span class="ident">interpret::F3DRenderData</span>, <span class="ident">render::F3DRenderer</span>};
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">sm64_render_mod</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">wafel_api</span>::{<span class="ident">load_m64</span>, <span class="ident">Game</span>, <span class="ident">SaveState</span>};
 <span class="kw">use</span> <span class="ident">wafel_memory::GameMemory</span>;
 <span class="kw">use</span> <span class="ident">winit</span>::{
@@ -565,18 +565,18 @@
     <span class="ident">window::WindowBuilder</span>,
 };
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::sm64_render_dl::render_sm64_dl</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::<span class="kw-2">*</span>;
 
+<span class="kw">mod</span> <span class="ident">config</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">custom_renderer</span>;
+<span class="kw">mod</span> <span class="ident">error</span>;
+<span class="kw">mod</span> <span class="ident">f3d_builder</span>;
 <span class="kw">mod</span> <span class="ident">sm64_gfx_render</span>;
-<span class="kw">mod</span> <span class="ident">sm64_render_dl</span>;
-<span class="kw">mod</span> <span class="ident">sm64_render_mod</span>;
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">prepare_render_data</span>(<span class="ident">game</span>: <span class="kw-2">&amp;</span><span class="ident">Game</span>, <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">SM64RenderConfig</span>) -&gt; <span class="ident">F3DRenderData</span> {
     <span class="kw">let</span> <span class="ident">memory</span> <span class="op">=</span> <span class="ident">game</span>.<span class="ident">memory</span>.<span class="ident">with_slot</span>(<span class="kw-2">&amp;</span><span class="ident">game</span>.<span class="ident">base_slot</span>);
 
-    <span class="comment">// render_sm64_with_config(&amp;game.layout, &amp;memory, config).expect(&quot;failed to process display list&quot;)</span>
-    <span class="ident">sm64_gfx_render::test_render</span>(<span class="kw-2">&amp;</span><span class="ident">game</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="ident">memory</span>, <span class="ident">config</span>)
+    <span class="ident">sm64_gfx_render::test_render</span>(<span class="kw-2">&amp;</span><span class="ident">game</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="ident">memory</span>, <span class="ident">config</span>, <span class="bool-val">true</span>)
         .<span class="ident">expect</span>(<span class="string">&quot;failed to process display list&quot;</span>)
 }
 
@@ -607,10 +607,10 @@
     <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">Instant::now</span>();
 
     <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">count</span> {
-        <span class="comment">// let memory = game.memory.with_slot(&amp;game.base_slot);</span>
-        <span class="comment">// let data = render_sm64_dl(&amp;game.layout, &amp;memory, (320, 240))?;</span>
+        <span class="kw">let</span> <span class="ident">memory</span> <span class="op">=</span> <span class="ident">game</span>.<span class="ident">memory</span>.<span class="ident">with_slot</span>(<span class="kw-2">&amp;</span><span class="ident">game</span>.<span class="ident">base_slot</span>);
 
-        <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">prepare_render_data</span>(<span class="kw-2">&amp;</span><span class="ident">game</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>);
+        <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">sm64_gfx_render::test_render</span>(<span class="kw-2">&amp;</span><span class="ident">game</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="ident">memory</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>, <span class="bool-val">true</span>)
+            .<span class="ident">expect</span>(<span class="string">&quot;failed to process display list&quot;</span>);
 
         <span class="macro">assert_eq!</span>(<span class="ident">data</span>.<span class="ident">commands</span>.<span class="ident">len</span>(), <span class="number">127</span>);
     }
