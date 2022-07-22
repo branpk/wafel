@@ -2656,7 +2656,6 @@ name = "wafel_memory"
 version = "0.1.0"
 dependencies = [
  "dlopen",
- "indexmap",
  "once_cell",
  "process-memory",
  "same-file",
