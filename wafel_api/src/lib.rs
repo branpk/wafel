@@ -55,7 +55,7 @@ pub use lock::*;
 pub use m64::*;
 pub use timeline::*;
 pub use wafel_data_type::{
-    Address, FloatType, FloatValue, IntType, IntValue, Value, ValueTypeError,
+    Address, Angle, FloatType, FloatValue, IntType, IntValue, Value, ValueTypeError,
 };
 pub use wafel_sm64::{ObjectHitbox, Surface};
 

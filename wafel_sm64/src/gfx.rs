@@ -1,7 +1,10 @@
+//! Rust structs for the SM64 gfx tree that implement [DataReadable].
+
+#![allow(missing_docs)]
+
 use bitflags::bitflags;
-use fast3d::util::Angle;
-use wafel_api::{Address, IntType};
 use wafel_data_access::{DataError, DataReadable, DataReader, MemoryLayout, Reader};
+use wafel_data_type::{Address, Angle, IntType};
 use wafel_memory::MemoryRead;
 
 #[derive(Debug, Clone)]
@@ -341,9 +344,9 @@ pub struct GfxTreeNodeReader {
 }
 
 impl GfxTreeNodeReader {
+    #[rustfmt::skip]
     pub fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<GfxTreeNode, DataError> {
         let type_id = memory.read_int(addr, IntType::S16)? as i16;
-        #[rustfmt::skip]
         match type_id {
             0x001 => self.root_reader.read(memory, addr).map(GfxTreeNode::Root),
             0x002 => self.ortho_projection_reader.read(memory, addr).map(GfxTreeNode::OrthoProjection),
@@ -367,7 +370,7 @@ impl GfxTreeNodeReader {
             0x12C => self.background_reader.read(memory, addr).map(GfxTreeNode::Background),
             0x12E => self.held_object_reader.read(memory, addr).map(GfxTreeNode::HeldObject),
             0x02F => self.culling_radius_reader.read(memory, addr).map(GfxTreeNode::CullingRadius),
-            _ => unimplemented!("gfx node id: {:#X}", type_id) // TODO: Error handling
+            _ => Err(DataError::InvalidValue { expected: "gfx node id".to_string(), value: type_id.into() })
         }
     }
 }

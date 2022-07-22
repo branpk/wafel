@@ -2680,6 +2680,7 @@ dependencies = [
 name = "wafel_sm64"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
  "wafel_data_access",
  "wafel_data_type",
  "wafel_layout",
@@ -2711,6 +2712,7 @@ dependencies = [
  "wafel_data_type",
  "wafel_layout",
  "wafel_memory",
+ "wafel_sm64",
  "wgpu 0.12.0 (git+https://github.com/gfx-rs/wgpu)",
  "winit",
 ]

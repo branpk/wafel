@@ -2,7 +2,7 @@
 
 use std::{error::Error, fmt};
 
-use wafel_data_type::{Address, DataTypeError, DataTypeRef, ValueTypeError};
+use wafel_data_type::{Address, DataTypeError, DataTypeRef, Value, ValueTypeError};
 use wafel_layout::LayoutLookupError;
 use wafel_memory::MemoryError;
 
@@ -23,6 +23,10 @@ pub enum DataError {
     WriteExtraField(String),
     WriteMissingField(String),
     WriteUnion,
+    InvalidValue {
+        expected: String,
+        value: Value,
+    },
 }
 
 impl fmt::Display for DataError {
@@ -49,6 +53,9 @@ impl fmt::Display for DataError {
             }
             DataError::WriteUnion => {
                 write!(f, "cannot write to union with unspecified variant")
+            }
+            DataError::InvalidValue { expected, value } => {
+                write!(f, "invalid value: expected {}, found {}", expected, value)
             }
         }
     }

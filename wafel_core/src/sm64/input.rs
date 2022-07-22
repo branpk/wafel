@@ -1,11 +1,9 @@
 use std::{f32::consts::PI, num::Wrapping};
 
 use lazy_static::lazy_static;
+use wafel_api::Angle;
 
 // TODO: Accurate trig functions
-
-/// A wrapping 16 bit integer representing an angle.
-pub type Angle = Wrapping<i16>;
 
 fn sins(x: Angle) -> f32 {
     (x.0 as f32 / 0x8000 as f32 * PI).sin()

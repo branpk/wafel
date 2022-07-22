@@ -10,6 +10,7 @@ pub use surface::*;
 
 mod error;
 mod frame_log;
+pub mod gfx;
 mod mario;
 mod object;
 mod surface;

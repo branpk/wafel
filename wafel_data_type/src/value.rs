@@ -4,6 +4,7 @@ use std::{
     collections::HashMap,
     convert::TryFrom,
     fmt,
+    num::Wrapping,
     ops::{Add, AddAssign, Sub, SubAssign},
 };
 
@@ -641,3 +642,6 @@ impl<'a> Serialize for ValueSerializeWrapper<'a> {
         }
     }
 }
+
+/// A 16 bit signed angle.
+pub type Angle = Wrapping<i16>;

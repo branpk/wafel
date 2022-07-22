@@ -11,9 +11,9 @@ use wafel_api::{Address, Error, IntType, Value};
 use wafel_data_access::{DataReadable, MemoryLayout, Reader};
 use wafel_data_type::{DataType, Namespace, TypeName};
 use wafel_memory::{MemoryError, MemoryRead};
+use wafel_sm64::gfx::*;
 
 use crate::{
-    sm64_gfx_tree::*,
     sm64_render_mod::{get_dl_addr, Camera, F3DMemoryImpl, ObjectCull, Pointer, RawDlIter},
     SM64RenderConfig,
 };

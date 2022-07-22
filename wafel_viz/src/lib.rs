@@ -32,7 +32,6 @@ use crate::sm64_render_dl::render_sm64_dl;
 
 pub mod custom_renderer;
 mod sm64_gfx_render;
-mod sm64_gfx_tree;
 mod sm64_render_dl;
 mod sm64_render_mod;
 
