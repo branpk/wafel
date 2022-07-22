@@ -1,6 +1,7 @@
 use core::fmt;
 use std::ops::Deref;
 
+use bytemuck::{cast_slice, cast_slice_mut};
 use wafel_data_type::{Address, FloatType, FloatValue, IntType, IntValue};
 
 use crate::MemoryError;
@@ -39,31 +40,152 @@ impl SymbolLookup for EmptySymbolLookup {
 ///
 /// Endianness should be handled by the implementer.
 pub trait MemoryRead {
+    /// Read an array of u8s from the given address.
+    fn read_u8s(&self, addr: Address, buf: &mut [u8]) -> Result<(), MemoryError>;
+
+    /// Read a u8 from the given address.
+    fn read_u8(&self, addr: Address) -> Result<u8, MemoryError> {
+        let buf = [0];
+        self.read_u8s(addr, &mut buf)?;
+        Ok(buf[0])
+    }
+
+    /// Read an array of i8s from the given address.
+    fn read_i8s(&self, addr: Address, buf: &mut [i8]) -> Result<(), MemoryError> {
+        self.read_i8s(addr, cast_slice_mut(buf))
+    }
+
+    /// Read an i8 from the given address.
+    fn read_i8(&self, addr: Address) -> Result<i8, MemoryError> {
+        self.read_u8(addr).map(|n| n as i8)
+    }
+
+    /// Read an array of u16s from the given address.
+    fn read_u16s(&self, addr: Address, buf: &mut [u16]) -> Result<(), MemoryError>;
+
+    /// Read a u16 from the given address.
+    fn read_u16(&self, addr: Address) -> Result<u16, MemoryError> {
+        let buf = [0];
+        self.read_u16s(addr, &mut buf)?;
+        Ok(buf[0])
+    }
+
+    /// Read an array of i16s from the given address.
+    fn read_i16s(&self, addr: Address, buf: &mut [i16]) -> Result<(), MemoryError> {
+        self.read_i16s(addr, cast_slice_mut(buf))
+    }
+
+    /// Read an i16 from the given address.
+    fn read_i16(&self, addr: Address) -> Result<i16, MemoryError> {
+        self.read_u16(addr).map(|n| n as i16)
+    }
+
+    /// Read an array of u32s from the given address.
+    fn read_u32s(&self, addr: Address, buf: &mut [u32]) -> Result<(), MemoryError>;
+
+    /// Read a u32 from the given address.
+    fn read_u32(&self, addr: Address) -> Result<u32, MemoryError> {
+        let buf = [0];
+        self.read_u32s(addr, &mut buf)?;
+        Ok(buf[0])
+    }
+
+    /// Read an array of i32s from the given address.
+    fn read_i32s(&self, addr: Address, buf: &mut [i32]) -> Result<(), MemoryError> {
+        self.read_i32s(addr, cast_slice_mut(buf))
+    }
+
+    /// Read an i32 from the given address.
+    fn read_i32(&self, addr: Address) -> Result<i32, MemoryError> {
+        self.read_u32(addr).map(|n| n as i32)
+    }
+
+    /// Read an array of u64s from the given address.
+    fn read_u64s(&self, addr: Address, buf: &mut [u64]) -> Result<(), MemoryError>;
+
+    /// Read a u64 from the given address.
+    fn read_u64(&self, addr: Address) -> Result<u64, MemoryError> {
+        let buf = [0];
+        self.read_u64s(addr, &mut buf)?;
+        Ok(buf[0])
+    }
+
+    /// Read an array of i64s from the given address.
+    fn read_i64s(&self, addr: Address, buf: &mut [i64]) -> Result<(), MemoryError> {
+        self.read_i64s(addr, cast_slice_mut(buf))
+    }
+
+    /// Read an i64 from the given address.
+    fn read_i64(&self, addr: Address) -> Result<i64, MemoryError> {
+        self.read_u64(addr).map(|n| n as i64)
+    }
+
+    /// Read an array of f32s from the given address.
+    fn read_f32s(&self, addr: Address, buf: &mut [f32]) -> Result<(), MemoryError> {
+        self.read_u32s(addr, cast_slice_mut(buf))
+    }
+
+    /// Read an f32 from the given address.
+    fn read_f32(&self, addr: Address) -> Result<f32, MemoryError> {
+        let buf = [0.0];
+        self.read_f32s(addr, &mut buf)?;
+        Ok(buf[0])
+    }
+
+    /// Read an array of f64s from the given address.
+    fn read_f64s(&self, addr: Address, buf: &mut [f64]) -> Result<(), MemoryError> {
+        self.read_u64s(addr, cast_slice_mut(buf))
+    }
+
+    /// Read an f64 from the given address.
+    fn read_f64(&self, addr: Address) -> Result<f64, MemoryError> {
+        let buf = [0.0];
+        self.read_f64s(addr, &mut buf)?;
+        Ok(buf[0])
+    }
+
+    /// Read an array of pointers from the given address.
+    fn read_addrs(&self, addr: Address, buf: &mut [Address]) -> Result<(), MemoryError>;
+
+    /// Read a pointer from the given address.
+    fn read_addr(&self, addr: Address) -> Result<Address, MemoryError> {
+        let buf = [Address::NULL];
+        self.read_addrs(addr, &mut buf)?;
+        Ok(buf[0])
+    }
+
     /// Read an int from the given address.
     ///
     /// The int's size and signedness is given by `int_type`.
-    fn read_int(&self, address: Address, int_type: IntType) -> Result<IntValue, MemoryError>;
+    fn read_int(&self, addr: Address, int_type: IntType) -> Result<IntValue, MemoryError> {
+        match int_type {
+            IntType::U8 => self.read_u8(addr).map(IntValue::from),
+            IntType::S8 => self.read_i8(addr).map(IntValue::from),
+            IntType::U16 => self.read_u16(addr).map(IntValue::from),
+            IntType::S16 => self.read_i16(addr).map(IntValue::from),
+            IntType::U32 => self.read_u32(addr).map(IntValue::from),
+            IntType::S32 => self.read_i32(addr).map(IntValue::from),
+            IntType::U64 => self.read_u64(addr).map(IntValue::from),
+            IntType::S64 => self.read_i64(addr).map(IntValue::from),
+        }
+    }
 
     /// Read a float from the given address.
     ///
     /// The float's size and signedness is given by `float_type`.
-    fn read_float(
-        &self,
-        address: Address,
-        float_type: FloatType,
-    ) -> Result<FloatValue, MemoryError>;
-
-    /// Read an address value from the given address.
-    ///
-    /// The resulting address may be invalid or zero.
-    fn read_address(&self, address: Address) -> Result<Address, MemoryError>;
+    fn read_float(&self, addr: Address, float_type: FloatType) -> Result<FloatValue, MemoryError> {
+        match float_type {
+            FloatType::F32 => self.read_f32(addr).map(FloatValue::from),
+            FloatType::F64 => self.read_f64(addr).map(FloatValue::from),
+        }
+    }
 
     /// Read a null terminated C string from the given address.
-    fn read_string(&self, address: Address) -> Result<Vec<u8>, MemoryError> {
+    fn read_string(&self, addr: Address) -> Result<Vec<u8>, MemoryError> {
         let mut bytes = Vec::new();
-        let mut current = address;
+        let mut current = addr;
         loop {
-            let byte = self.read_int(current, IntType::U8)? as u8;
+            let byte = self.read_u8(current)?;
             if byte == 0 {
                 break;
             }
@@ -81,140 +203,144 @@ pub trait MemoryRead {
 ///
 /// Endianness should be handled by the implementer.
 pub trait MemoryWrite {
+    /// Write an array of u8s to the given address.
+    fn write_u8s(&mut self, addr: Address, buf: &[u8]) -> Result<(), MemoryError>;
+
+    /// Write a u8 to the given address.
+    fn write_u8(&mut self, addr: Address, value: u8) -> Result<(), MemoryError> {
+        self.write_u8s(addr, &[value])
+    }
+
+    /// Write an array of i8s to the given address.
+    fn write_i8s(&mut self, addr: Address, buf: &[i8]) -> Result<(), MemoryError> {
+        self.write_u8s(addr, cast_slice(buf))
+    }
+
+    /// Write an i8 to the given address.
+    fn write_i8(&mut self, addr: Address, value: i8) -> Result<(), MemoryError> {
+        self.write_i8s(addr, &[value])
+    }
+
+    /// Write an array of u16s to the given address.
+    fn write_u16s(&mut self, addr: Address, buf: &[u16]) -> Result<(), MemoryError>;
+
+    /// Write a u16 to the given address.
+    fn write_u16(&mut self, addr: Address, value: u16) -> Result<(), MemoryError> {
+        self.write_u16s(addr, &[value])
+    }
+
+    /// Write an array of i16s to the given address.
+    fn write_i16s(&mut self, addr: Address, buf: &[i16]) -> Result<(), MemoryError> {
+        self.write_u16s(addr, cast_slice(buf))
+    }
+
+    /// Write an i16 to the given address.
+    fn write_i16(&mut self, addr: Address, value: i16) -> Result<(), MemoryError> {
+        self.write_i16s(addr, &[value])
+    }
+
+    /// Write an array of u32s to the given address.
+    fn write_u32s(&mut self, addr: Address, buf: &[u32]) -> Result<(), MemoryError>;
+
+    /// Write a u32 to the given address.
+    fn write_u32(&mut self, addr: Address, value: u32) -> Result<(), MemoryError> {
+        self.write_u32s(addr, &[value])
+    }
+
+    /// Write an array of i32s to the given address.
+    fn write_i32s(&mut self, addr: Address, buf: &[i32]) -> Result<(), MemoryError> {
+        self.write_u32s(addr, cast_slice(buf))
+    }
+
+    /// Write an i32 to the given address.
+    fn write_i32(&mut self, addr: Address, value: i32) -> Result<(), MemoryError> {
+        self.write_i32s(addr, &[value])
+    }
+
+    /// Write an array of u64s to the given address.
+    fn write_u64s(&mut self, addr: Address, buf: &[u64]) -> Result<(), MemoryError>;
+
+    /// Write a u64 to the given address.
+    fn write_u64(&mut self, addr: Address, value: u64) -> Result<(), MemoryError> {
+        self.write_u64s(addr, &[value])
+    }
+
+    /// Write an array of i64s to the given address.
+    fn write_i64s(&mut self, addr: Address, buf: &[i64]) -> Result<(), MemoryError> {
+        self.write_u64s(addr, cast_slice(buf))
+    }
+
+    /// Write an i64 to the given address.
+    fn write_i64(&mut self, addr: Address, value: i64) -> Result<(), MemoryError> {
+        self.write_i64s(addr, &[value])
+    }
+
+    /// Write an array of f32s to the given address.
+    fn write_f32s(&mut self, addr: Address, buf: &[f32]) -> Result<(), MemoryError> {
+        self.write_u32s(addr, cast_slice(buf))
+    }
+
+    /// Write an f32 to the given address.
+    fn write_f32(&mut self, addr: Address, value: f32) -> Result<(), MemoryError> {
+        self.write_f32s(addr, &[value])
+    }
+
+    /// Write an array of f64s to the given address.
+    fn write_f64s(&mut self, addr: Address, buf: &[f64]) -> Result<(), MemoryError> {
+        self.write_u64s(addr, cast_slice(buf))
+    }
+
+    /// Write an f64 to the given address.
+    fn write_f64(&mut self, addr: Address, value: f64) -> Result<(), MemoryError> {
+        self.write_f64s(addr, &[value])
+    }
+
+    /// Write an array of pointer values at the given address.
+    ///
+    /// The pointer values may be invalid or zero.
+    fn write_addrs(&mut self, addr: Address, buf: &[Address]) -> Result<(), MemoryError>;
+
+    /// Write a pointer value at the given address.
+    ///
+    /// The pointer value may be invalid or zero.
+    fn write_addr(&mut self, addr: Address, value: Address) -> Result<(), MemoryError> {
+        self.write_addrs(addr, &[value])
+    }
+
     /// Write an int at the given address.
     ///
     /// The int's size and signedness is given by `int_type`.
     fn write_int(
         &mut self,
-        address: Address,
+        addr: Address,
         int_type: IntType,
         value: IntValue,
-    ) -> Result<(), MemoryError>;
+    ) -> Result<(), MemoryError> {
+        match int_type {
+            IntType::U8 => self.write_u8(addr, value as u8),
+            IntType::S8 => self.write_i8(addr, value as i8),
+            IntType::U16 => self.write_u16(addr, value as u16),
+            IntType::S16 => self.write_i16(addr, value as i16),
+            IntType::U32 => self.write_u32(addr, value as u32),
+            IntType::S32 => self.write_i32(addr, value as i32),
+            IntType::U64 => self.write_u64(addr, value as u64),
+            IntType::S64 => self.write_i64(addr, value as i64),
+        }
+    }
 
     /// Write a float at the given address.
     ///
     /// The float's size and signedness is given by `float_type`.
     fn write_float(
         &mut self,
-        address: Address,
-        float_type: FloatType,
-        value: FloatValue,
-    ) -> Result<(), MemoryError>;
-
-    /// Write an address value at the given address.
-    ///
-    /// The address value may be invalid or zero.
-    fn write_address(&mut self, address: Address, value: Address) -> Result<(), MemoryError>;
-}
-
-/// A helper trait for implementing [MemoryRead].
-pub(crate) trait MemoryReadPrimitive {
-    /// Read a primitive value from memory.
-    ///
-    /// # Safety
-    ///
-    /// T must be an integral or float type.
-    unsafe fn read_primitive<T: Copy>(&self, address: Address) -> Result<T, MemoryError>;
-
-    /// Read an address from memory.
-    fn read_address(&self, address: Address) -> Result<Address, MemoryError>;
-
-    /// Returns the int type corresponding to a pointer (either U32 or U64).
-    fn pointer_int_type(&self) -> IntType;
-}
-
-/// A helper trait for implementing [MemoryWrite].
-pub(crate) trait MemoryWritePrimitive {
-    /// Write a primitive value to memory.
-    ///
-    /// # Safety
-    ///
-    /// T must be an integral or float type.
-    unsafe fn write_primitive<T: Copy>(
-        &mut self,
-        address: Address,
-        value: T,
-    ) -> Result<(), MemoryError>;
-
-    /// Write an address to memory.
-    fn write_address(&mut self, address: Address, value: Address) -> Result<(), MemoryError>;
-}
-
-impl<M: MemoryReadPrimitive> MemoryRead for M {
-    fn read_int(&self, address: Address, int_type: IntType) -> Result<IntValue, MemoryError> {
-        unsafe {
-            Ok(match int_type {
-                IntType::U8 => (self.read_primitive::<u8>(address)?).into(),
-                IntType::S8 => (self.read_primitive::<i8>(address)?).into(),
-                IntType::U16 => (self.read_primitive::<u16>(address)?).into(),
-                IntType::S16 => (self.read_primitive::<i16>(address)?).into(),
-                IntType::U32 => (self.read_primitive::<u32>(address)?).into(),
-                IntType::S32 => (self.read_primitive::<i32>(address)?).into(),
-                IntType::U64 => (self.read_primitive::<u64>(address)?).into(),
-                IntType::S64 => (self.read_primitive::<i64>(address)?).into(),
-            })
-        }
-    }
-
-    fn read_float(
-        &self,
-        address: Address,
-        float_type: FloatType,
-    ) -> Result<FloatValue, MemoryError> {
-        unsafe {
-            Ok(match float_type {
-                FloatType::F32 => (self.read_primitive::<f32>(address)?).into(),
-                FloatType::F64 => (self.read_primitive::<f64>(address)?),
-            })
-        }
-    }
-
-    fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
-        MemoryReadPrimitive::read_address(self, address)
-    }
-
-    fn pointer_int_type(&self) -> IntType {
-        MemoryReadPrimitive::pointer_int_type(self)
-    }
-}
-
-impl<M: MemoryWritePrimitive> MemoryWrite for M {
-    fn write_int(
-        &mut self,
-        address: Address,
-        int_type: IntType,
-        value: IntValue,
-    ) -> Result<(), MemoryError> {
-        unsafe {
-            match int_type {
-                IntType::U8 => self.write_primitive(address, value as u8),
-                IntType::S8 => self.write_primitive(address, value as i8),
-                IntType::U16 => self.write_primitive(address, value as u16),
-                IntType::S16 => self.write_primitive(address, value as i16),
-                IntType::U32 => self.write_primitive(address, value as u32),
-                IntType::S32 => self.write_primitive(address, value as i32),
-                IntType::U64 => self.write_primitive(address, value as u64),
-                IntType::S64 => self.write_primitive(address, value as i64),
-            }
-        }
-    }
-
-    fn write_float(
-        &mut self,
-        address: Address,
+        addr: Address,
         float_type: FloatType,
         value: FloatValue,
     ) -> Result<(), MemoryError> {
-        unsafe {
-            match float_type {
-                FloatType::F32 => self.write_primitive(address, value as f32),
-                FloatType::F64 => self.write_primitive(address, value as f64),
-            }
+        match float_type {
+            FloatType::F32 => self.write_f32(addr, value as f32),
+            FloatType::F64 => self.write_f64(addr, value),
         }
-    }
-
-    fn write_address(&mut self, address: Address, value: Address) -> Result<(), MemoryError> {
-        MemoryWritePrimitive::write_address(self, address, value)
     }
 }
 
