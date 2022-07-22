@@ -5,10 +5,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{parse_macro_input, Data, DeriveInput, Fields, FieldsNamed};
 
-#[proc_macro_derive(
-    DataReadable,
-    attributes(struct_name, struct_anon, field_offset, field_name)
-)]
+#[proc_macro_derive(DataReadable, attributes(struct_name, field_offset, field_name))]
 pub fn derive_data_readable(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
@@ -58,7 +55,11 @@ fn generate_reader_impl(input: &DeriveInput, reader_name: &Ident) -> TokenStream
         let name = Ident::new(&format!("field_{}", field_name), field_name.span());
 
         quote! {
-            #field_name: self.#name.1.read(memory, addr + self.#name.0)?,
+            #field_name: wafel_data_access::DataReader::read(
+                &self.#name.1,
+                memory,
+                addr + self.#name.0,
+            )?,
         }
     });
 
@@ -94,13 +95,10 @@ fn generate_readable_impl(input: &DeriveInput, reader_name: &Ident) -> TokenStre
     let name = &input.ident;
     let fields = named_fields(input);
 
-    let struct_name = name.to_string();
-    let mut used_struct_name = Some(quote! { #struct_name });
+    let mut used_struct_name = None;
     for attr in &input.attrs {
         if attr.path.is_ident("struct_name") {
             used_struct_name = Some(attr.tokens.clone());
-        } else if attr.path.is_ident("struct_anon") {
-            used_struct_name = None;
         }
     }
 
@@ -122,7 +120,7 @@ fn generate_readable_impl(input: &DeriveInput, reader_name: &Ident) -> TokenStre
         }
 
         if offset.is_none() && used_struct_name.is_none() {
-            panic!("anonymous struct requires explicit #[field_offset(..)]");
+            panic!("#[struct_name] is required when using #[field_name] or default field name");
         }
 
         let offset = offset.unwrap_or_else(|| {

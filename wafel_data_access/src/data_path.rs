@@ -196,7 +196,7 @@ impl GlobalDataPath {
                             memory,
                             address,
                             &self.0.concrete_type,
-                            value,
+                            &value,
                             &self.0.concrete_types,
                         )?;
                     }

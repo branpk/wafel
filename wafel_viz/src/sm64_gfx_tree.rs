@@ -1,12 +1,7 @@
-use core::fmt;
-use std::{collections::HashMap, sync::Arc};
-
 use bitflags::bitflags;
 use fast3d::util::Angle;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use wafel_api::{Address, Error, IntType, Value};
-use wafel_data_access::MemoryLayout;
-use wafel_data_type::{DataType, DataTypeRef, Field, Namespace, TypeName, ValueSerializeWrapper};
+use wafel_api::{Address, IntType};
+use wafel_data_access::{DataError, DataReadable, DataReader, MemoryLayout, Reader};
 use wafel_memory::MemoryRead;
 
 #[derive(Debug, Clone)]
@@ -76,21 +71,27 @@ impl GfxTreeNode {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNode")]
 pub struct GraphNode {
-    #[serde(rename = "type")]
+    #[field_name("type")]
     pub ty: i16,
-    pub flags: GraphRenderFlags,
+    pub flags: i16,
     pub prev: Address,
     pub next: Address,
     pub parent: Address,
     pub children: Address,
 }
 
+impl GraphNode {
+    pub fn flags(&self) -> GraphRenderFlags {
+        unsafe { GraphRenderFlags::from_bits_unchecked(self.flags) }
+    }
+}
+
 bitflags! {
-    #[derive(Serialize, Deserialize)]
-    #[serde(transparent)]
+    #[derive(DataReadable)]
+    #[struct_name("GraphRenderFlags")]
     pub struct GraphRenderFlags: i16 {
         const ACTIVE         = 1 << 0;
         const CHILDREN_FIRST = 1 << 1;
@@ -101,15 +102,15 @@ bitflags! {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("FnGraphNode")]
 pub struct FnGraphNode {
     pub node: GraphNode,
     pub func: Address,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeRoot")]
 pub struct GraphNodeRoot {
     pub node: GraphNode,
     pub area_index: u8,
@@ -122,15 +123,15 @@ pub struct GraphNodeRoot {
     pub views: Address,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeOrthoProjection")]
 pub struct GraphNodeOrthoProjection {
     pub node: GraphNode,
     pub scale: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodePerspective")]
 pub struct GraphNodePerspective {
     pub fn_node: FnGraphNode,
     pub fov: f32,
@@ -138,40 +139,41 @@ pub struct GraphNodePerspective {
     pub far: i16,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeMasterList")]
 pub struct GraphNodeMasterList {
     pub node: GraphNode,
     pub list_heads: [Address; 8],
     pub list_tails: [Address; 8],
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeStart")]
 pub struct GraphNodeStart {
     pub node: GraphNode,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeLevelOfDetail")]
 pub struct GraphNodeLevelOfDetail {
     pub node: GraphNode,
     pub min_distance: i16,
     pub max_distance: i16,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeSwitchCase")]
 pub struct GraphNodeSwitchCase {
     pub fn_node: FnGraphNode,
     pub num_cases: i16,
     pub selected_case: i16,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeCamera")]
 pub struct GraphNodeCamera {
     pub fn_node: FnGraphNode,
+    #[field_name("config")]
     pub camera: Address,
     pub pos: [f32; 3],
     pub focus: [f32; 3],
@@ -180,8 +182,8 @@ pub struct GraphNodeCamera {
     pub roll_screen: Angle,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeTranslationRotation")]
 pub struct GraphNodeTranslationRotation {
     pub node: GraphNode,
     pub display_list: Address,
@@ -189,26 +191,26 @@ pub struct GraphNodeTranslationRotation {
     pub rotation: [Angle; 3],
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeTranslation")]
 pub struct GraphNodeTranslation {
     pub node: GraphNode,
     pub display_list: Address,
     pub translation: [i16; 3],
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeRotation")]
 pub struct GraphNodeRotation {
     pub node: GraphNode,
     pub display_list: Address,
     pub rotation: [Angle; 3],
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("AnimInfo")]
 pub struct AnimInfo {
-    #[serde(rename = "animID")]
+    #[field_name("animID")]
     pub anim_id: i16,
     pub anim_y_trans: i16,
     pub cur_anim: Address,
@@ -218,8 +220,8 @@ pub struct AnimInfo {
     pub anim_accel: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeObject")]
 pub struct GraphNodeObject {
     pub node: GraphNode,
     pub shared_child: Address,
@@ -229,45 +231,45 @@ pub struct GraphNodeObject {
     pub pos: [f32; 3],
     pub scale: [f32; 3],
     pub anim_info: AnimInfo,
-    #[serde(rename = "unk4C")]
+    #[field_name("unk4C")]
     pub unk_4c: Address,
     pub throw_matrix: Address,
     pub camera_to_object: [f32; 3],
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeAnimatedPart")]
 pub struct GraphNodeAnimatedPart {
     pub node: GraphNode,
     pub display_list: Address,
     pub translation: [i16; 3],
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeBillboard")]
 pub struct GraphNodeBillboard {
     pub node: GraphNode,
     pub display_list: Address,
     pub translation: [i16; 3],
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeDisplayList")]
 pub struct GraphNodeDisplayList {
     pub node: GraphNode,
     pub display_list: Address,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeScale")]
 pub struct GraphNodeScale {
     pub node: GraphNode,
     pub display_list: Address,
     pub scale: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeShadow")]
 pub struct GraphNodeShadow {
     pub node: GraphNode,
     pub shadow_scale: i16,
@@ -275,29 +277,29 @@ pub struct GraphNodeShadow {
     pub shadow_type: u8,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeObjectParent")]
 pub struct GraphNodeObjectParent {
     pub node: GraphNode,
     pub shared_child: Address,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeGenerated")]
 pub struct GraphNodeGenerated {
     pub fn_node: FnGraphNode,
     pub parameter: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeBackground")]
 pub struct GraphNodeBackground {
     pub fn_node: FnGraphNode,
     pub background: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeHeldObject")]
 pub struct GraphNodeHeldObject {
     pub fn_node: FnGraphNode,
     pub player_index: i32,
@@ -305,259 +307,106 @@ pub struct GraphNodeHeldObject {
     pub translation: [i16; 3],
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("GraphNodeCullingRadius")]
 pub struct GraphNodeCullingRadius {
     pub node: GraphNode,
     pub culling_radius: i16,
 }
 
-pub struct GfxNodeReader<'m>(Box<dyn Fn(Address) -> Result<GfxTreeNode, Error> + 'm>);
-
-impl<'m> fmt::Debug for GfxNodeReader<'m> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("GfxNodeReader").finish_non_exhaustive()
-    }
+#[derive(Debug, Clone)]
+pub struct GfxTreeNodeReader {
+    root_reader: Reader<GraphNodeRoot>,
+    ortho_projection_reader: Reader<GraphNodeOrthoProjection>,
+    perspective_reader: Reader<GraphNodePerspective>,
+    master_list_reader: Reader<GraphNodeMasterList>,
+    start_reader: Reader<GraphNodeStart>,
+    level_of_detail_reader: Reader<GraphNodeLevelOfDetail>,
+    switch_case_reader: Reader<GraphNodeSwitchCase>,
+    camera_reader: Reader<GraphNodeCamera>,
+    translation_rotation_reader: Reader<GraphNodeTranslationRotation>,
+    translation_reader: Reader<GraphNodeTranslation>,
+    rotation_reader: Reader<GraphNodeRotation>,
+    object_reader: Reader<GraphNodeObject>,
+    animated_part_reader: Reader<GraphNodeAnimatedPart>,
+    billboard_reader: Reader<GraphNodeBillboard>,
+    display_list_reader: Reader<GraphNodeDisplayList>,
+    scale_reader: Reader<GraphNodeScale>,
+    shadow_reader: Reader<GraphNodeShadow>,
+    object_parent_reader: Reader<GraphNodeObjectParent>,
+    generated_reader: Reader<GraphNodeGenerated>,
+    background_reader: Reader<GraphNodeBackground>,
+    held_object_reader: Reader<GraphNodeHeldObject>,
+    culling_radius_reader: Reader<GraphNodeCullingRadius>,
 }
 
-impl<'m> GfxNodeReader<'m> {
-    pub fn read(&self, addr: Address) -> Result<GfxTreeNode, Error> {
-        self.0(addr)
-    }
-}
-
-pub fn get_gfx_node_reader<'m>(
-    layout: &'m impl MemoryLayout,
-    memory: &'m impl MemoryRead,
-) -> Result<GfxNodeReader<'m>, Error> {
-    let readers = Arc::new(get_node_readers(layout, memory)?);
-    let func = move |addr| {
-        let readers = Arc::clone(&readers);
+impl GfxTreeNodeReader {
+    pub fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<GfxTreeNode, DataError> {
         let type_id = memory.read_int(addr, IntType::S16)? as i16;
-        let reader = readers
-            .get(&type_id)
-            .unwrap_or_else(|| unimplemented!("gfx node type: {:#06X}", type_id));
-        reader.read(addr)
-    };
-    Ok(GfxNodeReader(Box::new(func)))
-}
-
-fn get_node_readers<'m>(
-    layout: &'m impl MemoryLayout,
-    memory: &'m impl MemoryRead,
-) -> Result<HashMap<i16, GfxNodeReader<'m>>, Error> {
-    Ok([
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_ROOT",
-            "GraphNodeRoot",
-            GfxTreeNode::Root,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_ORTHO_PROJECTION",
-            "GraphNodeOrthoProjection",
-            GfxTreeNode::OrthoProjection,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_PERSPECTIVE",
-            "GraphNodePerspective",
-            GfxTreeNode::Perspective,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_MASTER_LIST",
-            "GraphNodeMasterList",
-            GfxTreeNode::MasterList,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_START",
-            "GraphNodeStart",
-            GfxTreeNode::Start,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_LEVEL_OF_DETAIL",
-            "GraphNodeLevelOfDetail",
-            GfxTreeNode::LevelOfDetail,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_SWITCH_CASE",
-            "GraphNodeSwitchCase",
-            GfxTreeNode::SwitchCase,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_CAMERA",
-            "GraphNodeCamera",
-            GfxTreeNode::Camera,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_TRANSLATION_ROTATION",
-            "GraphNodeTranslationRotation",
-            GfxTreeNode::TranslationRotation,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_TRANSLATION",
-            "GraphNodeTranslation",
-            GfxTreeNode::Translation,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_ROTATION",
-            "GraphNodeRotation",
-            GfxTreeNode::Rotation,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_OBJECT",
-            "GraphNodeObject",
-            GfxTreeNode::Object,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_ANIMATED_PART",
-            "GraphNodeAnimatedPart",
-            GfxTreeNode::AnimatedPart,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_BILLBOARD",
-            "GraphNodeBillboard",
-            GfxTreeNode::Billboard,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_DISPLAY_LIST",
-            "GraphNodeDisplayList",
-            GfxTreeNode::DisplayList,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_SCALE",
-            "GraphNodeScale",
-            GfxTreeNode::Scale,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_SHADOW",
-            "GraphNodeShadow",
-            GfxTreeNode::Shadow,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_OBJECT_PARENT",
-            "GraphNodeObjectParent",
-            GfxTreeNode::ObjectParent,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_GENERATED_LIST",
-            "GraphNodeGenerated",
-            GfxTreeNode::Generated,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_BACKGROUND",
-            "GraphNodeBackground",
-            GfxTreeNode::Background,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_HELD_OBJ",
-            "GraphNodeHeldObject",
-            GfxTreeNode::HeldObject,
-        )?,
-        get_node_reader_entry(
-            layout,
-            memory,
-            "GRAPH_NODE_TYPE_CULLING_RADIUS",
-            "GraphNodeCullingRadius",
-            GfxTreeNode::CullingRadius,
-        )?,
-    ]
-    .into_iter()
-    .collect())
-}
-
-fn get_node_reader_entry<'m, T: DeserializeOwned + 'static>(
-    layout: &'m impl MemoryLayout,
-    memory: &'m impl MemoryRead,
-    id_name: &'static str,
-    struct_name: &'static str,
-    variant: fn(T) -> GfxTreeNode,
-) -> Result<(i16, GfxNodeReader<'m>), Error> {
-    let resolve_type =
-        |type_name: &TypeName| layout.data_layout().data_type(type_name).ok().cloned();
-
-    let mut data_type = Arc::clone(layout.data_layout().data_type(&TypeName {
-        namespace: Namespace::Struct,
-        name: struct_name.into(),
-    })?);
-
-    // GraphNodeCamera contains a union, so replace it with void *camera
-    if struct_name == "GraphNodeCamera" {
-        if let DataType::Struct { fields } = data_type.as_ref() {
-            let mut new_fields = fields.clone();
-            if let Some(config) = new_fields.remove("config") {
-                new_fields.insert(
-                    "camera".to_string(),
-                    Field {
-                        offset: config.offset,
-                        data_type: DataTypeRef::new(DataType::Pointer {
-                            base: DataTypeRef::new(DataType::Void),
-                            stride: None,
-                        }),
-                    },
-                );
-            }
-            data_type = DataTypeRef::new(DataType::Struct { fields: new_fields });
+        #[rustfmt::skip]
+        match type_id {
+            0x001 => self.root_reader.read(memory, addr).map(GfxTreeNode::Root),
+            0x002 => self.ortho_projection_reader.read(memory, addr).map(GfxTreeNode::OrthoProjection),
+            0x103 => self.perspective_reader.read(memory, addr).map(GfxTreeNode::Perspective),
+            0x004 => self.master_list_reader.read(memory, addr).map(GfxTreeNode::MasterList),
+            0x00A => self.start_reader.read(memory, addr).map(GfxTreeNode::Start),
+            0x00B => self.level_of_detail_reader.read(memory, addr).map(GfxTreeNode::LevelOfDetail),
+            0x10C => self.switch_case_reader.read(memory, addr).map(GfxTreeNode::SwitchCase),
+            0x114 => self.camera_reader.read(memory, addr).map(GfxTreeNode::Camera),
+            0x015 => self.translation_rotation_reader.read(memory, addr).map(GfxTreeNode::TranslationRotation),
+            0x016 => self.translation_reader.read(memory, addr).map(GfxTreeNode::Translation),
+            0x017 => self.rotation_reader.read(memory, addr).map(GfxTreeNode::Rotation),
+            0x018 => self.object_reader.read(memory, addr).map(GfxTreeNode::Object),
+            0x019 => self.animated_part_reader.read(memory, addr).map(GfxTreeNode::AnimatedPart),
+            0x01A => self.billboard_reader.read(memory, addr).map(GfxTreeNode::Billboard),
+            0x01B => self.display_list_reader.read(memory, addr).map(GfxTreeNode::DisplayList),
+            0x01C => self.scale_reader.read(memory, addr).map(GfxTreeNode::Scale),
+            0x028 => self.shadow_reader.read(memory, addr).map(GfxTreeNode::Shadow),
+            0x029 => self.object_parent_reader.read(memory, addr).map(GfxTreeNode::ObjectParent),
+            0x12A => self.generated_reader.read(memory, addr).map(GfxTreeNode::Generated),
+            0x12C => self.background_reader.read(memory, addr).map(GfxTreeNode::Background),
+            0x12E => self.held_object_reader.read(memory, addr).map(GfxTreeNode::HeldObject),
+            0x02F => self.culling_radius_reader.read(memory, addr).map(GfxTreeNode::CullingRadius),
+            _ => unimplemented!("gfx node id: {:#X}", type_id) // TODO: Error handling
         }
     }
-
-    let func = move |addr| {
-        let data_type = Arc::clone(&data_type);
-        let reader = layout.data_type_reader(&data_type)?;
-        let data = reader.read(memory, addr)?;
-        let node = value_to_struct(data);
-        Ok(variant(node))
-    };
-
-    Ok((
-        layout.data_layout().constant(id_name)?.value as i16,
-        GfxNodeReader(Box::new(func)),
-    ))
 }
 
-fn value_to_struct<T: DeserializeOwned + 'static>(data: Value) -> T {
-    let json =
-        serde_json::to_string(&ValueSerializeWrapper(&data)).expect("failed to serialize value");
-    let node: T = serde_json::from_str(&json).expect("failed to deserialize gfx node");
-    node
+impl DataReader for GfxTreeNodeReader {
+    type Value = GfxTreeNode;
+
+    fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<Self::Value, DataError> {
+        self.read(memory, addr)
+    }
+}
+
+impl DataReadable for GfxTreeNode {
+    type Reader = GfxTreeNodeReader;
+
+    fn reader(layout: &impl MemoryLayout) -> Result<Self::Reader, DataError> {
+        Ok(GfxTreeNodeReader {
+            root_reader: GraphNodeRoot::reader(layout)?,
+            ortho_projection_reader: GraphNodeOrthoProjection::reader(layout)?,
+            perspective_reader: GraphNodePerspective::reader(layout)?,
+            master_list_reader: GraphNodeMasterList::reader(layout)?,
+            start_reader: GraphNodeStart::reader(layout)?,
+            level_of_detail_reader: GraphNodeLevelOfDetail::reader(layout)?,
+            switch_case_reader: GraphNodeSwitchCase::reader(layout)?,
+            camera_reader: GraphNodeCamera::reader(layout)?,
+            translation_rotation_reader: GraphNodeTranslationRotation::reader(layout)?,
+            translation_reader: GraphNodeTranslation::reader(layout)?,
+            rotation_reader: GraphNodeRotation::reader(layout)?,
+            object_reader: GraphNodeObject::reader(layout)?,
+            animated_part_reader: GraphNodeAnimatedPart::reader(layout)?,
+            billboard_reader: GraphNodeBillboard::reader(layout)?,
+            display_list_reader: GraphNodeDisplayList::reader(layout)?,
+            scale_reader: GraphNodeScale::reader(layout)?,
+            shadow_reader: GraphNodeShadow::reader(layout)?,
+            object_parent_reader: GraphNodeObjectParent::reader(layout)?,
+            generated_reader: GraphNodeGenerated::reader(layout)?,
+            background_reader: GraphNodeBackground::reader(layout)?,
+            held_object_reader: GraphNodeHeldObject::reader(layout)?,
+            culling_radius_reader: GraphNodeCullingRadius::reader(layout)?,
+        })
+    }
 }

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use wafel_data_access::{DataPath, MemoryLayout, MemoryLayoutImpl};
-use wafel_data_type::{Address, Value};
+use wafel_data_type::{Address, IntType, Value};
 use wafel_layout::DllLayout;
 use wafel_memory::{DllGameMemory, GameMemory, MemoryRead};
 
@@ -93,7 +93,7 @@ impl Game {
         let (memory, base_slot) = DllGameMemory::load(dll_path, "sm64_init", "sm64_update")?;
         let memory = Arc::new(memory);
 
-        let layout = MemoryLayoutImpl::new(&data_layout, &memory);
+        let layout = MemoryLayoutImpl::new(&data_layout, &memory, IntType::u_ptr_native().size());
 
         Ok(Self {
             id: Arc::new(()),

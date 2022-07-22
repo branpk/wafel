@@ -1,17 +1,19 @@
 #![allow(clippy::needless_range_loop)]
 #![allow(missing_docs)]
 
+use std::num::Wrapping;
+
 use indexmap::IndexMap;
 use wafel_data_type::{Address, DataType, DataTypeRef, FloatType, IntType, TypeName, Value};
 use wafel_memory::{MemoryRead, MemoryWrite};
 
 use crate::{
     DataError::{self, *},
-    DataWritable, DataWriter, MemoryLayout,
+    DataStride, DataWritable, DataWriter, MemoryLayout,
 };
 
 macro_rules! prim_writable {
-    ($ty:ident, $writer:ident, $method:ident $(, $arg:expr)*) => {
+    ($ty:ident, $writer:ident, $method:ident, $prim_ty:expr) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
         pub struct $writer;
 
@@ -20,9 +22,9 @@ macro_rules! prim_writable {
                 &self,
                 memory: &mut M,
                 addr: Address,
-                value: $ty,
+                value: &$ty,
             ) -> Result<(), DataError> {
-                memory.$method(addr, $($arg,)* value.into())?;
+                memory.$method(addr, $prim_ty, (*value).into())?;
                 Ok(())
             }
         }
@@ -34,7 +36,7 @@ macro_rules! prim_writable {
                 &self,
                 memory: &mut M,
                 addr: Address,
-                value: $ty,
+                value: &$ty,
             ) -> Result<(), DataError> {
                 self.write(memory, addr, value)
             }
@@ -62,99 +64,93 @@ prim_writable!(i64, I64Writer, write_int, IntType::S64);
 prim_writable!(f32, F32Writer, write_float, FloatType::F32);
 prim_writable!(f64, F64Writer, write_float, FloatType::F64);
 
-prim_writable!(Address, AddressWriter, write_address);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct AddressWriter;
 
-macro_rules! prim_array_writable {
-    ($ty:ident, $writer:ident, $array_writer:ident, $size:expr) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-        pub struct $array_writer<const N: usize>;
-
-        impl<const N: usize> $array_writer<N> {
-            pub fn write<M: MemoryRead + MemoryWrite>(
-                &self,
-                memory: &mut M,
-                addr: Address,
-                value: [$ty; N],
-            ) -> Result<(), DataError> {
-                let stride = $size;
-                for i in 0..N {
-                    $writer.write(memory, addr + i * stride, value[i])?;
-                }
-                Ok(())
-            }
-        }
-
-        impl<const N: usize> DataWriter for $array_writer<N> {
-            type Value = [$ty; N];
-
-            fn write<M: MemoryRead + MemoryWrite>(
-                &self,
-                memory: &mut M,
-                addr: Address,
-                value: [$ty; N],
-            ) -> Result<(), DataError> {
-                self.write(memory, addr, value)
-            }
-        }
-
-        impl<const N: usize> DataWritable for [$ty; N] {
-            type Writer = $array_writer<N>;
-
-            fn writer(_layout: &impl MemoryLayout) -> Result<$array_writer<N>, DataError> {
-                Ok($array_writer)
-            }
-        }
-    };
+impl AddressWriter {
+    pub fn write<M: MemoryRead + MemoryWrite>(
+        &self,
+        memory: &mut M,
+        addr: Address,
+        value: Address,
+    ) -> Result<(), DataError> {
+        memory.write_address(addr, value)?;
+        Ok(())
+    }
 }
 
-prim_array_writable!(u8, U8Writer, U8ArrayWriter, IntType::U8.size());
-prim_array_writable!(i8, I8Writer, I8ArrayWriter, IntType::S8.size());
-prim_array_writable!(u16, U16Writer, U16ArrayWriter, IntType::U16.size());
-prim_array_writable!(i16, I16Writer, I16ArrayWriter, IntType::S16.size());
-prim_array_writable!(u32, U32Writer, U32ArrayWriter, IntType::U32.size());
-prim_array_writable!(i32, I32Writer, I32ArrayWriter, IntType::S32.size());
-prim_array_writable!(u64, U64Writer, U64ArrayWriter, IntType::U64.size());
-prim_array_writable!(i64, I64Writer, I64ArrayWriter, IntType::S64.size());
+impl DataWriter for AddressWriter {
+    type Value = Address;
 
-prim_array_writable!(f32, F32Writer, F32ArrayWriter, FloatType::F32.size());
-prim_array_writable!(f64, F64Writer, F64ArrayWriter, FloatType::F64.size());
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct AddressArrayWriter<const N: usize>;
-
-impl<const N: usize> AddressArrayWriter<N> {
     fn write<M: MemoryRead + MemoryWrite>(
         &self,
         memory: &mut M,
         addr: Address,
-        value: [Address; N],
+        value: &Address,
     ) -> Result<(), DataError> {
-        let stride = memory.pointer_int_type().size();
+        self.write(memory, addr, *value)
+    }
+}
+
+impl DataWritable for Address {
+    type Writer = AddressWriter;
+
+    fn writer(_layout: &impl MemoryLayout) -> Result<AddressWriter, DataError> {
+        Ok(AddressWriter)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ArrayWriter<W, const N: usize> {
+    inner: W,
+    stride: usize,
+}
+
+impl<W, const N: usize> ArrayWriter<W, N>
+where
+    W: DataWriter,
+{
+    pub fn write<M: MemoryRead + MemoryWrite>(
+        &self,
+        memory: &mut M,
+        addr: Address,
+        value: &[W::Value; N],
+    ) -> Result<(), DataError> {
         for i in 0..N {
-            AddressWriter.write(memory, addr + i * stride, value[i])?;
+            self.inner
+                .write(memory, addr + i * self.stride, &value[i])?;
         }
         Ok(())
     }
 }
 
-impl<const N: usize> DataWriter for AddressArrayWriter<N> {
-    type Value = [Address; N];
+impl<W, const N: usize> DataWriter for ArrayWriter<W, N>
+where
+    W: DataWriter,
+{
+    type Value = [W::Value; N];
 
     fn write<M: MemoryRead + MemoryWrite>(
         &self,
         memory: &mut M,
         addr: Address,
-        value: [Address; N],
+        value: &[W::Value; N],
     ) -> Result<(), DataError> {
         self.write(memory, addr, value)
     }
 }
 
-impl<const N: usize> DataWritable for [Address; N] {
-    type Writer = AddressArrayWriter<N>;
+impl<T, const N: usize> DataWritable for [T; N]
+where
+    T: DataWritable + DataStride,
+{
+    type Writer = ArrayWriter<T::Writer, N>;
 
-    fn writer(_layout: &impl MemoryLayout) -> Result<AddressArrayWriter<N>, DataError> {
-        Ok(AddressArrayWriter)
+    fn writer(layout: &impl MemoryLayout) -> Result<Self::Writer, DataError> {
+        Ok(ArrayWriter {
+            inner: T::writer(layout)?,
+            stride: T::stride(layout)?,
+        })
     }
 }
 
@@ -169,7 +165,7 @@ impl DataTypeWriter {
         &self,
         memory: &mut M,
         addr: Address,
-        value: Value,
+        value: &Value,
     ) -> Result<(), DataError> {
         write_value_impl(memory, addr, &self.data_type, value, &self.concrete_types)
     }
@@ -182,7 +178,7 @@ impl DataWriter for DataTypeWriter {
         &self,
         memory: &mut M,
         addr: Address,
-        value: Value,
+        value: &Value,
     ) -> Result<(), DataError> {
         self.write(memory, addr, value)
     }
@@ -192,7 +188,7 @@ pub(crate) fn write_value_impl(
     memory: &mut impl MemoryWrite,
     address: Address,
     data_type: &DataTypeRef,
-    value: Value,
+    value: &Value,
     concrete_types: &IndexMap<TypeName, DataTypeRef>,
 ) -> Result<(), DataError> {
     match data_type.as_ref() {
@@ -214,13 +210,7 @@ pub(crate) fn write_value_impl(
                 None => value.try_as_array()?,
             };
             for (i, element) in elements.iter().enumerate() {
-                write_value_impl(
-                    memory,
-                    address + i * *stride,
-                    base,
-                    element.clone(),
-                    concrete_types,
-                )?;
+                write_value_impl(memory, address + i * *stride, base, element, concrete_types)?;
             }
         }
         DataType::Struct { fields } => {
@@ -236,12 +226,11 @@ pub(crate) fn write_value_impl(
                 }
             }
             for (field_name, field) in fields {
-                let field_value = field_values[field_name].clone();
                 write_value_impl(
                     memory,
                     address + field.offset,
                     &field.data_type,
-                    field_value,
+                    &field_values[field_name],
                     concrete_types,
                 )?;
             }
@@ -255,4 +244,48 @@ pub(crate) fn write_value_impl(
         }
     }
     Ok(())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct WrappingWriter<W>(W);
+
+impl<W> WrappingWriter<W>
+where
+    W: DataWriter,
+{
+    fn write<M: MemoryRead + MemoryWrite>(
+        &self,
+        memory: &mut M,
+        addr: Address,
+        value: &Wrapping<W::Value>,
+    ) -> Result<(), DataError> {
+        self.0.write(memory, addr, &value.0)
+    }
+}
+
+impl<W> DataWriter for WrappingWriter<W>
+where
+    W: DataWriter,
+{
+    type Value = Wrapping<W::Value>;
+
+    fn write<M: MemoryRead + MemoryWrite>(
+        &self,
+        memory: &mut M,
+        addr: Address,
+        value: &Wrapping<W::Value>,
+    ) -> Result<(), DataError> {
+        self.write(memory, addr, value)
+    }
+}
+
+impl<T> DataWritable for Wrapping<T>
+where
+    T: DataWritable,
+{
+    type Writer = WrappingWriter<T::Writer>;
+
+    fn writer(layout: &impl MemoryLayout) -> Result<Self::Writer, DataError> {
+        T::writer(layout).map(WrappingWriter)
+    }
 }

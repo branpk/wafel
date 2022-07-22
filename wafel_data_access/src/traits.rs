@@ -41,7 +41,7 @@ pub trait DataWriter {
         &self,
         memory: &mut M,
         addr: Address,
-        value: Self::Value,
+        value: &Self::Value,
     ) -> Result<(), DataError>;
 }
 
@@ -59,3 +59,9 @@ pub trait DataWritable {
 
 /// Shorthand for the [Writer] of a [DataWritable].
 pub type Writer<T> = <T as DataWritable>::Writer;
+
+/// A readable/writable type that can be used in an array since its stride is known.
+pub trait DataStride {
+    /// The stride of an array of this type of value.
+    fn stride(layout: &impl MemoryLayout) -> Result<usize, DataError>;
+}

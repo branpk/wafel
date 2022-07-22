@@ -8,7 +8,7 @@ use fast3d::{
     util::{coss, sins, Angle, MatrixStack, Matrixf},
 };
 use wafel_api::{Address, Error, IntType, Value};
-use wafel_data_access::MemoryLayout;
+use wafel_data_access::{DataReadable, MemoryLayout, Reader};
 use wafel_data_type::{DataType, Namespace, TypeName};
 use wafel_memory::{MemoryError, MemoryRead};
 
@@ -83,7 +83,7 @@ where
     input_display_list: Peekable<I>,
     layout: &'m L,
     memory: &'m M,
-    reader: GfxNodeReader<'m>,
+    reader: Reader<GfxTreeNode>,
     mtx_stack: MatrixStack,
     mod_mtx_stack: MatrixStack,
     master_lists: [Vec<MasterListEdit>; 8],
@@ -195,7 +195,7 @@ where
         layout: &'m L,
         memory: &'m M,
     ) -> Result<Self, Error> {
-        let reader = get_gfx_node_reader(layout, memory)?;
+        let reader = GfxTreeNode::reader(layout)?;
         Ok(Self {
             config,
             input_display_list: input_display_list.peekable(),
@@ -392,7 +392,7 @@ where
         if first_addr.is_null() {
             return Ok(());
         }
-        let first_node = self.reader.read(first_addr)?;
+        let first_node = self.reader.read(self.memory, first_addr)?;
 
         let mut iterate_siblings = siblings;
         let mut cur_addr = first_addr;
@@ -412,7 +412,7 @@ where
         }
 
         loop {
-            let flags = cur_node.node().flags;
+            let flags = cur_node.node().flags();
             let is_active = flags.contains(GraphRenderFlags::ACTIVE);
             let parent_is_active = self.is_active;
             self.is_active = Some(is_active && parent_is_active != Some(false));
@@ -518,7 +518,7 @@ where
                 break;
             }
             cur_addr = next_addr;
-            cur_node = self.reader.read(next_addr)?;
+            cur_node = self.reader.read(self.memory, next_addr)?;
         }
 
         Ok(())
@@ -569,7 +569,7 @@ where
     }
 
     fn process_master_list_sub(&mut self, node: &GraphNodeMasterList) -> Result<(), Error> {
-        let z_buffer = node.node.flags.contains(GraphRenderFlags::Z_BUFFER);
+        let z_buffer = node.node.flags().contains(GraphRenderFlags::Z_BUFFER);
         if z_buffer {
             self.dl_push_expect(|cmd| matches!(cmd, DPPipeSync));
             self.dl_push_expect(|cmd| matches!(cmd, SPSetGeometryMode(_)));
@@ -869,7 +869,7 @@ where
         let mut i = 0;
 
         while !selected_child.is_null() && selected_case > i {
-            selected_child = self.reader.read(selected_child)?.node().next;
+            selected_child = self.reader.read(self.memory, selected_child)?.node().next;
             i += 1;
         }
 
@@ -933,7 +933,7 @@ where
         self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags.bits() >> 8, node.display_list);
+            self.append_display_list(node.node.flags >> 8, node.display_list);
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -953,7 +953,7 @@ where
         self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags.bits() >> 8, node.display_list);
+            self.append_display_list(node.node.flags >> 8, node.display_list);
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -969,7 +969,7 @@ where
         self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags.bits() >> 8, node.display_list);
+            self.append_display_list(node.node.flags >> 8, node.display_list);
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -981,7 +981,7 @@ where
     fn obj_is_in_view(&mut self, node: &GraphNodeObject) -> Result<bool, Error> {
         let matrix = self.mtx_stack.cur.clone();
 
-        if node.node.flags.contains(GraphRenderFlags::INVISIBLE) {
+        if node.node.flags().contains(GraphRenderFlags::INVISIBLE) {
             return Ok(false);
         }
 
@@ -998,7 +998,7 @@ where
 
         let mut culling_radius = 300;
         if !geo.is_null() {
-            if let GfxTreeNode::CullingRadius(node) = self.reader.read(geo)? {
+            if let GfxTreeNode::CullingRadius(node) = self.reader.read(self.memory, geo)? {
                 culling_radius = node.culling_radius;
             }
         }
@@ -1085,7 +1085,7 @@ where
             if let Some(throw_matrix) = self.calc_throw_matrix()? {
                 self.mtx_stack.push_mul(&throw_matrix);
                 self.mod_mtx_stack.push_mul(&throw_matrix);
-            } else if node.node.flags.contains(GraphRenderFlags::BILLBOARD) {
+            } else if node.node.flags().contains(GraphRenderFlags::BILLBOARD) {
                 let mtx = Matrixf::billboard(
                     &self.mtx_stack.cur,
                     node.pos,
@@ -1116,7 +1116,7 @@ where
             let is_in_view = self.obj_is_in_view(node)?;
             let render_object = match self.config.object_cull {
                 ObjectCull::Normal => is_in_view,
-                ObjectCull::ShowAll => !node.node.flags.contains(GraphRenderFlags::INVISIBLE),
+                ObjectCull::ShowAll => !node.node.flags().contains(GraphRenderFlags::INVISIBLE),
             };
 
             if render_object {
@@ -1182,7 +1182,7 @@ where
         self.mod_mtx_stack.push_mul(&transform);
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags.bits() >> 8, node.display_list);
+            self.append_display_list(node.node.flags >> 8, node.display_list);
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -1211,7 +1211,7 @@ where
 
         let mut cur_obj = self.cur_object.clone();
         if let Some(node) = self.cur_held_object.as_ref() {
-            if let GfxTreeNode::Object(node) = self.reader.read(node.obj_node)? {
+            if let GfxTreeNode::Object(node) = self.reader.read(self.memory, node.obj_node)? {
                 cur_obj = Some(node);
             }
         }
@@ -1223,7 +1223,7 @@ where
         }
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags.bits() >> 8, node.display_list);
+            self.append_display_list(node.node.flags >> 8, node.display_list);
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -1234,7 +1234,7 @@ where
 
     fn process_display_list(&mut self, node: &GraphNodeDisplayList) -> Result<(), Error> {
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags.bits() >> 8, node.display_list);
+            self.append_display_list(node.node.flags >> 8, node.display_list);
         }
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
@@ -1246,7 +1246,7 @@ where
         self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags.bits() >> 8, node.display_list);
+            self.append_display_list(node.node.flags >> 8, node.display_list);
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -1275,14 +1275,14 @@ where
     }
 
     fn process_generated(&mut self, node: &GraphNodeGenerated) -> Result<(), Error> {
-        self.append_opt_dynamic_list(node.fn_node.node.flags.bits() >> 8);
+        self.append_opt_dynamic_list(node.fn_node.node.flags >> 8);
         self.process_node_and_siblings(node.fn_node.node.children)?;
         Ok(())
     }
 
     fn process_background(&mut self, node: &GraphNodeBackground) -> Result<(), Error> {
         let layer = if !node.fn_node.func.is_null() {
-            node.fn_node.node.flags.bits() >> 8
+            node.fn_node.node.flags >> 8
         } else {
             0
         };
@@ -1294,7 +1294,7 @@ where
 
     fn process_held_object(&mut self, node: &GraphNodeHeldObject) -> Result<(), Error> {
         if !node.obj_node.is_null() {
-            if let GfxTreeNode::Object(obj_node) = self.reader.read(node.obj_node)? {
+            if let GfxTreeNode::Object(obj_node) = self.reader.read(self.memory, node.obj_node)? {
                 if !obj_node.shared_child.is_null() {
                     let translation = [
                         node.translation[0] as f32 / 4.0,

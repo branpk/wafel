@@ -14,6 +14,9 @@ pub trait MemoryLayout {
     /// Return the layout of data types and globals.
     fn data_layout(&self) -> &DataLayout;
 
+    /// Return the size in bytes of a pointer (4 or 8).
+    fn pointer_size(&self) -> usize;
+
     /// Look up a symbol in memory.
     fn symbol_address(&self, symbol: &str) -> Result<Address, DataError>;
 
@@ -49,6 +52,7 @@ pub trait MemoryLayout {
 pub struct MemoryLayoutImpl<S> {
     data_layout: Arc<DataLayout>,
     symbol_lookup: Arc<S>,
+    pointer_size: usize,
     data_path_cache: DataPathCache,
     address_to_symbol: HashMap<Address, String>,
 }
@@ -58,7 +62,7 @@ where
     S: SymbolLookup,
 {
     /// Construct a new [MemoryLayoutImpl].
-    pub fn new(data_layout: &Arc<DataLayout>, symbol_lookup: &Arc<S>) -> Self {
+    pub fn new(data_layout: &Arc<DataLayout>, symbol_lookup: &Arc<S>, pointer_size: usize) -> Self {
         let address_to_symbol = data_layout
             .globals
             .keys()
@@ -70,6 +74,7 @@ where
         Self {
             data_layout: Arc::clone(data_layout),
             symbol_lookup: Arc::clone(symbol_lookup),
+            pointer_size,
             data_path_cache: DataPathCache::default(),
             address_to_symbol,
         }
@@ -82,6 +87,10 @@ where
 {
     fn data_layout(&self) -> &DataLayout {
         &self.data_layout
+    }
+
+    fn pointer_size(&self) -> usize {
+        self.pointer_size
     }
 
     fn symbol_address(&self, symbol: &str) -> Result<Address, DataError> {

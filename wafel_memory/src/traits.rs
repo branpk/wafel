@@ -73,7 +73,7 @@ pub trait MemoryRead {
         Ok(bytes)
     }
 
-    /// Returns the int type corresponding to a pointer (either U32 or U64).
+    /// Return the int type corresponding to a pointer (either U32 or U64).
     fn pointer_int_type(&self) -> IntType;
 }
 

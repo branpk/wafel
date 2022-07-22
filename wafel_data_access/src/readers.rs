@@ -1,25 +1,28 @@
 #![allow(clippy::needless_range_loop)]
 #![allow(missing_docs)]
 
+use core::array;
+use std::num::Wrapping;
+
 use indexmap::IndexMap;
 use wafel_data_type::{Address, DataType, DataTypeRef, FloatType, IntType, TypeName, Value};
 use wafel_memory::MemoryRead;
 
 use crate::{
     DataError::{self, *},
-    DataReadable, DataReader, MemoryLayout,
+    DataReadable, DataReader, DataStride, MemoryLayout,
 };
 
 // TODO: Arrays should determine stride based on the field type in derive?
 
 macro_rules! prim_readable {
-    ($ty:ident, $reader:ident, $method:ident $(, $arg:expr)*) => {
+    ($ty:ident, $reader:ident, $method:ident, $prim_ty:expr) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
         pub struct $reader;
 
         impl $reader {
             pub fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<$ty, DataError> {
-                Ok(memory.$method(addr, $($arg),*)? as $ty)
+                Ok(memory.$method(addr, $prim_ty)? as $ty)
             }
         }
 
@@ -38,6 +41,12 @@ macro_rules! prim_readable {
                 Ok($reader)
             }
         }
+
+        impl DataStride for $ty {
+            fn stride(_layout: &impl MemoryLayout) -> Result<usize, DataError> {
+                Ok($prim_ty.size())
+            }
+        }
     };
 }
 
@@ -53,85 +62,93 @@ prim_readable!(i64, I64Reader, read_int, IntType::S64);
 prim_readable!(f32, F32Reader, read_float, FloatType::F32);
 prim_readable!(f64, F64Reader, read_float, FloatType::F64);
 
-prim_readable!(Address, AddressReader, read_address);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct AddressReader;
 
-macro_rules! prim_array_readable {
-    ($ty:ident, $reader:ident, $array_reader:ident, $size:expr) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-        pub struct $array_reader<const N: usize>;
-
-        impl<const N: usize> $array_reader<N> {
-            pub fn read(
-                &self,
-                memory: &impl MemoryRead,
-                addr: Address,
-            ) -> Result<[$ty; N], DataError> {
-                let mut result = [Default::default(); N];
-                let stride = $size;
-                for i in 0..N {
-                    result[i] = $reader.read(memory, addr + i * stride)?;
-                }
-                Ok(result)
-            }
-        }
-
-        impl<const N: usize> DataReader for $array_reader<N> {
-            type Value = [$ty; N];
-
-            fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<[$ty; N], DataError> {
-                self.read(memory, addr)
-            }
-        }
-
-        impl<const N: usize> DataReadable for [$ty; N] {
-            type Reader = $array_reader<N>;
-
-            fn reader(_layout: &impl MemoryLayout) -> Result<$array_reader<N>, DataError> {
-                Ok($array_reader)
-            }
-        }
-    };
+impl AddressReader {
+    pub fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<Address, DataError> {
+        Ok(memory.read_address(addr)? as Address)
+    }
 }
 
-prim_array_readable!(u8, U8Reader, U8ArrayReader, IntType::U8.size());
-prim_array_readable!(i8, I8Reader, I8ArrayReader, IntType::S8.size());
-prim_array_readable!(u16, U16Reader, U16ArrayReader, IntType::U16.size());
-prim_array_readable!(i16, I16Reader, I16ArrayReader, IntType::S16.size());
-prim_array_readable!(u32, U32Reader, U32ArrayReader, IntType::U32.size());
-prim_array_readable!(i32, I32Reader, I32ArrayReader, IntType::S32.size());
-prim_array_readable!(u64, U64Reader, U64ArrayReader, IntType::U64.size());
-prim_array_readable!(i64, I64Reader, I64ArrayReader, IntType::S64.size());
+impl DataReader for AddressReader {
+    type Value = Address;
 
-prim_array_readable!(f32, F32Reader, F32ArrayReader, FloatType::F32.size());
-prim_array_readable!(f64, F64Reader, F64ArrayReader, FloatType::F64.size());
+    fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<Address, DataError> {
+        self.read(memory, addr)
+    }
+}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct AddressArrayReader<const N: usize>;
+impl DataReadable for Address {
+    type Reader = AddressReader;
 
-impl<const N: usize> AddressArrayReader<N> {
-    fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<[Address; N], DataError> {
-        let mut result = [Default::default(); N];
-        let stride = memory.pointer_int_type().size();
+    fn reader(_layout: &impl MemoryLayout) -> Result<AddressReader, DataError> {
+        Ok(AddressReader)
+    }
+}
+
+impl DataStride for Address {
+    fn stride(layout: &impl MemoryLayout) -> Result<usize, DataError> {
+        Ok(layout.pointer_size())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ArrayReader<R, const N: usize> {
+    inner: R,
+    stride: usize,
+}
+
+impl<R, const N: usize> ArrayReader<R, N>
+where
+    R: DataReader,
+    R::Value: Default,
+{
+    pub fn read(
+        &self,
+        memory: &impl MemoryRead,
+        addr: Address,
+    ) -> Result<[R::Value; N], DataError> {
+        let mut result = array::from_fn(|_| Default::default());
         for i in 0..N {
-            result[i] = AddressReader.read(memory, addr + i * stride)?;
+            result[i] = self.inner.read(memory, addr + i * self.stride)?;
         }
         Ok(result)
     }
 }
 
-impl<const N: usize> DataReader for AddressArrayReader<N> {
-    type Value = [Address; N];
+impl<R, const N: usize> DataReader for ArrayReader<R, N>
+where
+    R: DataReader,
+    R::Value: Default,
+{
+    type Value = [R::Value; N];
 
-    fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<[Address; N], DataError> {
+    fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<[R::Value; N], DataError> {
         self.read(memory, addr)
     }
 }
 
-impl<const N: usize> DataReadable for [Address; N] {
-    type Reader = AddressArrayReader<N>;
+impl<T, const N: usize> DataReadable for [T; N]
+where
+    T: DataReadable + DataStride + Default,
+{
+    type Reader = ArrayReader<T::Reader, N>;
 
-    fn reader(_layout: &impl MemoryLayout) -> Result<AddressArrayReader<N>, DataError> {
-        Ok(AddressArrayReader)
+    fn reader(layout: &impl MemoryLayout) -> Result<Self::Reader, DataError> {
+        Ok(ArrayReader {
+            inner: T::reader(layout)?,
+            stride: T::stride(layout)?,
+        })
+    }
+}
+
+impl<T, const N: usize> DataStride for [T; N]
+where
+    T: DataStride,
+{
+    fn stride(layout: &impl MemoryLayout) -> Result<usize, DataError> {
+        Ok(T::stride(layout)? * N)
     }
 }
 
@@ -203,4 +220,55 @@ pub(crate) fn read_value_impl(
         }
     };
     Ok(value)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct WrappingReader<R>(R);
+
+impl<R> WrappingReader<R>
+where
+    R: DataReader,
+{
+    pub fn read(
+        &self,
+        memory: &impl MemoryRead,
+        addr: Address,
+    ) -> Result<Wrapping<R::Value>, DataError> {
+        self.0.read(memory, addr).map(Wrapping)
+    }
+}
+
+impl<R> DataReader for WrappingReader<R>
+where
+    R: DataReader,
+{
+    type Value = Wrapping<R::Value>;
+
+    fn read(
+        &self,
+        memory: &impl MemoryRead,
+        addr: Address,
+    ) -> Result<Wrapping<R::Value>, DataError> {
+        self.read(memory, addr)
+    }
+}
+
+impl<T> DataReadable for Wrapping<T>
+where
+    T: DataReadable,
+{
+    type Reader = WrappingReader<T::Reader>;
+
+    fn reader(layout: &impl MemoryLayout) -> Result<Self::Reader, DataError> {
+        T::reader(layout).map(WrappingReader)
+    }
+}
+
+impl<T> DataStride for Wrapping<T>
+where
+    T: DataStride,
+{
+    fn stride(layout: &impl MemoryLayout) -> Result<usize, DataError> {
+        T::stride(layout)
+    }
 }

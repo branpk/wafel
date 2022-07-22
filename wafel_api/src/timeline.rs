@@ -5,7 +5,7 @@ use std::{
 };
 
 use wafel_data_access::{DataPath, GlobalDataPath, MemoryLayout, MemoryLayoutImpl};
-use wafel_data_type::{Address, Value};
+use wafel_data_type::{Address, IntType, Value};
 use wafel_layout::DllLayout;
 use wafel_memory::{DllGameMemory, DllSlotMemoryView, GameMemory, MemoryRead};
 use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
@@ -102,7 +102,7 @@ impl Timeline {
         let timeline = GameTimeline::new(Arc::clone(&memory), base_slot, controller, 30);
         let timeline = Mutex::new(timeline);
 
-        let layout = MemoryLayoutImpl::new(&data_layout, &memory);
+        let layout = MemoryLayoutImpl::new(&data_layout, &memory, IntType::u_ptr_native().size());
 
         Ok(Self {
             memory,

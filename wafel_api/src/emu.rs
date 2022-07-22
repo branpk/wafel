@@ -72,7 +72,7 @@ impl Emu {
 
         let memory = EmuMemory::attach(pid, base_address, SM64_MEMORY_SIZE)?;
 
-        let layout = MemoryLayoutImpl::new(&data_layout, &Arc::new(EmptySymbolLookup));
+        let layout = MemoryLayoutImpl::new(&data_layout, &Arc::new(EmptySymbolLookup), 4);
 
         Ok(Self { layout, memory })
     }
