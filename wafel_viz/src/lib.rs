@@ -45,8 +45,8 @@ pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderD
 }
 
 pub fn test_dl() -> Result<(), Box<dyn Error>> {
-    env_logger::init();
-    futures::executor::block_on(run(4001, None)).unwrap();
+    // env_logger::init();
+    // futures::executor::block_on(run(4001, None)).unwrap();
 
     let mut game = unsafe { Game::new("libsm64/sm64_us") };
     let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
@@ -56,15 +56,15 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
         game.advance();
     }
 
-    // let config = SM64RenderConfig {
-    //     camera: Camera::LookAt {
-    //         pos: game.read("gLakituState.pos").as_f32_3(),
-    //         focus: game.read("gLakituState.focus").as_f32_3(),
-    //         roll: Wrapping(game.read("gLakituState.roll").as_int() as i16),
-    //     },
-    //     object_cull: ObjectCull::ShowAll,
-    //     ..Default::default()
-    // };
+    let config = SM64RenderConfig {
+        camera: Camera::LookAt {
+            pos: game.read("gLakituState.pos").as_f32_3(),
+            focus: game.read("gLakituState.focus").as_f32_3(),
+            roll: Wrapping(game.read("gLakituState.roll").as_int() as i16),
+        },
+        object_cull: ObjectCull::ShowAll,
+        ..Default::default()
+    };
     let config = SM64RenderConfig::default();
 
     let count = 100;

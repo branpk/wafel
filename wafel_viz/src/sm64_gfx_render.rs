@@ -561,9 +561,9 @@ where
         let ptr_size = self.memory.pointer_int_type().size();
 
         Ok(DisplayListNode {
-            transform: self.memory.read_address(addr)?,
-            display_list: self.memory.read_address(addr + ptr_size)?,
-            next: self.memory.read_address(addr + 2 * ptr_size)?,
+            transform: self.memory.read_addr(addr)?,
+            display_list: self.memory.read_addr(addr + ptr_size)?,
+            next: self.memory.read_addr(addr + 2 * ptr_size)?,
         })
     }
 

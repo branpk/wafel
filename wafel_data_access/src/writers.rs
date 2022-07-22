@@ -4,7 +4,7 @@
 use std::num::Wrapping;
 
 use indexmap::IndexMap;
-use wafel_data_type::{Address, DataType, DataTypeRef, FloatType, IntType, TypeName, Value};
+use wafel_data_type::{Address, DataType, DataTypeRef, TypeName, Value};
 use wafel_memory::{MemoryRead, MemoryWrite};
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
 };
 
 macro_rules! prim_writable {
-    ($ty:ident, $writer:ident, $method:ident, $prim_ty:expr) => {
+    ($ty:ident, $writer:ident, $method:ident) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
         pub struct $writer;
 
@@ -24,7 +24,7 @@ macro_rules! prim_writable {
                 addr: Address,
                 value: &$ty,
             ) -> Result<(), DataError> {
-                memory.$method(addr, $prim_ty, (*value).into())?;
+                memory.$method(addr, *value)?;
                 Ok(())
             }
         }
@@ -52,17 +52,17 @@ macro_rules! prim_writable {
     };
 }
 
-prim_writable!(u8, U8Writer, write_int, IntType::U8);
-prim_writable!(i8, I8Writer, write_int, IntType::S8);
-prim_writable!(u16, U16Writer, write_int, IntType::U16);
-prim_writable!(i16, I16Writer, write_int, IntType::S16);
-prim_writable!(u32, U32Writer, write_int, IntType::U32);
-prim_writable!(i32, I32Writer, write_int, IntType::S32);
-prim_writable!(u64, U64Writer, write_int, IntType::U64);
-prim_writable!(i64, I64Writer, write_int, IntType::S64);
+prim_writable!(u8, U8Writer, write_u8);
+prim_writable!(i8, I8Writer, write_i8);
+prim_writable!(u16, U16Writer, write_u16);
+prim_writable!(i16, I16Writer, write_i16);
+prim_writable!(u32, U32Writer, write_u32);
+prim_writable!(i32, I32Writer, write_i32);
+prim_writable!(u64, U64Writer, write_u64);
+prim_writable!(i64, I64Writer, write_i64);
 
-prim_writable!(f32, F32Writer, write_float, FloatType::F32);
-prim_writable!(f64, F64Writer, write_float, FloatType::F64);
+prim_writable!(f32, F32Writer, write_f32);
+prim_writable!(f64, F64Writer, write_f64);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct AddressWriter;
@@ -74,7 +74,7 @@ impl AddressWriter {
         addr: Address,
         value: Address,
     ) -> Result<(), DataError> {
-        memory.write_address(addr, value)?;
+        memory.write_addr(addr, value)?;
         Ok(())
     }
 }
@@ -199,7 +199,7 @@ pub(crate) fn write_value_impl(
         DataType::Float(float_type) => {
             memory.write_float(address, *float_type, value.try_as_float_lenient()?)?
         }
-        DataType::Pointer { .. } => memory.write_address(address, value.try_as_address()?)?,
+        DataType::Pointer { .. } => memory.write_addr(address, value.try_as_address()?)?,
         DataType::Array {
             base,
             length,

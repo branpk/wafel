@@ -111,10 +111,10 @@ impl GlobalDataPath {
                     if address.is_null() {
                         return Err(MemoryError::InvalidAddress.into());
                     }
-                    address = memory.read_address(address)?;
+                    address = memory.read_addr(address)?;
                 }
                 DataPathEdge::Nullable => {
-                    if memory.read_address(address)?.is_null() {
+                    if memory.read_addr(address)?.is_null() {
                         return Ok(None);
                     }
                 }

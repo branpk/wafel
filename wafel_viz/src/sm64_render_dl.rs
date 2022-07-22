@@ -2,7 +2,7 @@ use fast3d::{
     decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand},
     interpret::{interpret_f3d_display_list, F3DMemory, F3DRenderData},
 };
-use wafel_api::{Address, Error, IntType};
+use wafel_api::{Address, Error};
 use wafel_data_access::MemoryLayout;
 use wafel_memory::{MemoryError, MemoryRead};
 
@@ -62,30 +62,16 @@ impl<'m, M: MemoryRead> F3DMemory for F3DMemoryImpl<'m, M> {
         Ok(self.read_dl_impl(ptr))
     }
 
-    // TODO: Optimize buffer reads?
-
     fn read_u8(&self, dst: &mut [u8], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error> {
-        let addr = ptr + offset;
-        for i in 0..dst.len() {
-            dst[i] = self.memory.read_int(addr + i, IntType::U8)? as u8;
-        }
-        Ok(())
+        self.memory.read_u8s(ptr + offset, dst)
     }
 
     fn read_u16(&self, dst: &mut [u16], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error> {
-        let addr = ptr + offset;
-        for i in 0..dst.len() {
-            dst[i] = self.memory.read_int(addr + 2 * i, IntType::U16)? as u16;
-        }
-        Ok(())
+        self.memory.read_u16s(ptr + offset, dst)
     }
 
     fn read_u32(&self, dst: &mut [u32], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error> {
-        let addr = ptr + offset;
-        for i in 0..dst.len() {
-            dst[i] = self.memory.read_int(addr + 4 * i, IntType::U32)? as u32;
-        }
-        Ok(())
+        self.memory.read_u32s(ptr + offset, dst)
     }
 }
 
@@ -104,7 +90,7 @@ impl<'m, M: MemoryRead> RawDlIter<'m, M> {
         self.addr += w_size;
 
         let w1 = self.memory.read_int(self.addr, w_type)? as u32;
-        let w1_ptr = self.memory.read_address(self.addr)?;
+        let w1_ptr = self.memory.read_addr(self.addr)?;
         self.addr += w_size;
 
         Ok(RawF3DCommand { w0, w1, w1_ptr })

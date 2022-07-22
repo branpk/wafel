@@ -2,10 +2,10 @@
 #![allow(missing_docs)]
 
 use core::array;
-use std::num::Wrapping;
+use std::{mem, num::Wrapping};
 
 use indexmap::IndexMap;
-use wafel_data_type::{Address, DataType, DataTypeRef, FloatType, IntType, TypeName, Value};
+use wafel_data_type::{Address, DataType, DataTypeRef, TypeName, Value};
 use wafel_memory::MemoryRead;
 
 use crate::{
@@ -16,13 +16,13 @@ use crate::{
 // TODO: Arrays should determine stride based on the field type in derive?
 
 macro_rules! prim_readable {
-    ($ty:ident, $reader:ident, $method:ident, $prim_ty:expr) => {
+    ($ty:ident, $reader:ident, $method:ident) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
         pub struct $reader;
 
         impl $reader {
             pub fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<$ty, DataError> {
-                Ok(memory.$method(addr, $prim_ty)? as $ty)
+                Ok(memory.$method(addr)?)
             }
         }
 
@@ -44,30 +44,30 @@ macro_rules! prim_readable {
 
         impl DataStride for $ty {
             fn stride(_layout: &impl MemoryLayout) -> Result<usize, DataError> {
-                Ok($prim_ty.size())
+                Ok(mem::size_of::<$ty>())
             }
         }
     };
 }
 
-prim_readable!(u8, U8Reader, read_int, IntType::U8);
-prim_readable!(i8, I8Reader, read_int, IntType::S8);
-prim_readable!(u16, U16Reader, read_int, IntType::U16);
-prim_readable!(i16, I16Reader, read_int, IntType::S16);
-prim_readable!(u32, U32Reader, read_int, IntType::U32);
-prim_readable!(i32, I32Reader, read_int, IntType::S32);
-prim_readable!(u64, U64Reader, read_int, IntType::U64);
-prim_readable!(i64, I64Reader, read_int, IntType::S64);
+prim_readable!(u8, U8Reader, read_u8);
+prim_readable!(i8, I8Reader, read_i8);
+prim_readable!(u16, U16Reader, read_u16);
+prim_readable!(i16, I16Reader, read_i16);
+prim_readable!(u32, U32Reader, read_u32);
+prim_readable!(i32, I32Reader, read_i32);
+prim_readable!(u64, U64Reader, read_u64);
+prim_readable!(i64, I64Reader, read_i64);
 
-prim_readable!(f32, F32Reader, read_float, FloatType::F32);
-prim_readable!(f64, F64Reader, read_float, FloatType::F64);
+prim_readable!(f32, F32Reader, read_f32);
+prim_readable!(f64, F64Reader, read_f64);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct AddressReader;
 
 impl AddressReader {
     pub fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<Address, DataError> {
-        Ok(memory.read_address(addr)? as Address)
+        Ok(memory.read_addr(addr)? as Address)
     }
 }
 
@@ -182,7 +182,7 @@ pub(crate) fn read_value_impl(
         DataType::Void => Value::None,
         DataType::Int(int_type) => Value::Int(memory.read_int(addr, *int_type)?),
         DataType::Float(float_type) => Value::Float(memory.read_float(addr, *float_type)?),
-        DataType::Pointer { .. } => Value::Address(memory.read_address(addr)?),
+        DataType::Pointer { .. } => Value::Address(memory.read_addr(addr)?),
         DataType::Array {
             base,
             length,
