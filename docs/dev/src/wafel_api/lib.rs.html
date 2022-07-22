@@ -73,11 +73,6 @@
 <span id="67">67</span>
 <span id="68">68</span>
 <span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
 </pre><pre class="rust"><code><span class="doccomment">//! The main SM64 API for Wafel.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! This crate provides two simulation APIs: [Game] and [Timeline].</span>
@@ -133,24 +128,19 @@
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">game</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">lock</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">m64</span>::<span class="kw-2">*</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">object</span>::<span class="kw-2">*</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">surface</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">timeline</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">wafel_data_type</span>::{
     <span class="ident">Address</span>, <span class="ident">FloatType</span>, <span class="ident">FloatValue</span>, <span class="ident">IntType</span>, <span class="ident">IntValue</span>, <span class="ident">Value</span>, <span class="ident">ValueTypeError</span>,
 };
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">wafel_sm64</span>::{<span class="ident">ObjectHitbox</span>, <span class="ident">Surface</span>};
 
 <span class="kw">mod</span> <span class="ident">data_cache</span>;
 <span class="kw">mod</span> <span class="ident">data_type</span>;
 <span class="kw">mod</span> <span class="ident">emu</span>;
 <span class="kw">mod</span> <span class="ident">error</span>;
-<span class="kw">mod</span> <span class="ident">frame_log</span>;
 <span class="kw">mod</span> <span class="ident">game</span>;
 <span class="kw">mod</span> <span class="ident">lock</span>;
 <span class="kw">mod</span> <span class="ident">m64</span>;
-<span class="kw">mod</span> <span class="ident">mario</span>;
-<span class="kw">mod</span> <span class="ident">object</span>;
-<span class="kw">mod</span> <span class="ident">surface</span>;
 <span class="kw">mod</span> <span class="ident">timeline</span>;
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_api" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (62b272d25 2022-07-21)" ></div>

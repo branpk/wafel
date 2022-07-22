@@ -294,19 +294,15 @@
 <span id="288">288</span>
 <span id="289">289</span>
 <span id="290">290</span>
-<span id="291">291</span>
-<span id="292">292</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">sync::Arc</span>};
 
 <span class="kw">use</span> <span class="ident">wafel_data_access</span>::{<span class="ident">DataPath</span>, <span class="ident">MemoryLayout</span>, <span class="ident">MemoryLayoutImpl</span>};
 <span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">Address</span>, <span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">wafel_layout::load_sm64_n64_layout</span>;
 <span class="kw">use</span> <span class="ident">wafel_memory</span>::{<span class="ident">EmptySymbolLookup</span>, <span class="ident">EmuMemory</span>, <span class="ident">MemoryRead</span>};
+<span class="kw">use</span> <span class="ident">wafel_sm64</span>::{<span class="ident">mario_action_names</span>, <span class="ident">read_object_hitboxes</span>, <span class="ident">read_surfaces</span>, <span class="ident">ObjectHitbox</span>, <span class="ident">Surface</span>};
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">mario::mario_action_names</span>, <span class="ident">read_object_hitboxes</span>, <span class="ident">read_surfaces</span>, <span class="ident">simplified_data_type</span>, <span class="ident">DataType</span>,
-    <span class="ident">Error</span>, <span class="ident">ObjectHitbox</span>, <span class="ident">SM64Version</span>, <span class="ident">Surface</span>,
-};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">simplified_data_type</span>, <span class="ident">DataType</span>, <span class="ident">Error</span>, <span class="ident">SM64Version</span>};
 
 <span class="doccomment">/// An SM64 API that attaches to a running emulator and can read/write to its</span>
 <span class="doccomment">/// memory.</span>
@@ -543,7 +539,7 @@
 
     <span class="doccomment">/// Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`).</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mario_action_names</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="ident">mario_action_names</span>(<span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">data_layout</span>())
+        <span class="ident">mario_action_names</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>)
     }
 
     <span class="doccomment">/// Read the currently loaded surfaces.</span>

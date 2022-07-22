@@ -157,17 +157,15 @@
 <span id="151">151</span>
 <span id="152">152</span>
 <span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">error</span>, <span class="ident">fmt</span>, <span class="ident">io</span>, <span class="ident">sync::Arc</span>};
 
 <span class="kw">use</span> <span class="ident">wafel_data_access</span>::{<span class="ident">DataError</span>, <span class="ident">DataPathError</span>, <span class="ident">GlobalDataPath</span>};
-<span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">IntValue</span>, <span class="ident">Value</span>, <span class="ident">ValueTypeError</span>};
+<span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">Value</span>, <span class="ident">ValueTypeError</span>};
 <span class="kw">use</span> <span class="ident">wafel_layout</span>::{<span class="ident">DllLayoutError</span>, <span class="ident">LayoutLookupError</span>, <span class="ident">SM64LayoutError</span>};
 <span class="kw">use</span> <span class="ident">wafel_memory</span>::{<span class="ident">MemoryError</span>, <span class="ident">MemoryInitError</span>};
+<span class="kw">use</span> <span class="ident">wafel_sm64::SM64DataError</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Error</span> {
@@ -177,6 +175,7 @@
     <span class="ident">DataPathError</span>(<span class="ident">DataPathError</span>),
     <span class="ident">MemoryError</span>(<span class="ident">MemoryError</span>),
     <span class="ident">DataError</span>(<span class="ident">DataError</span>),
+    <span class="ident">SM64DataError</span>(<span class="ident">SM64DataError</span>),
     <span class="ident">ApplyEditError</span> {
         <span class="ident">path</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">GlobalDataPath</span><span class="op">&gt;</span>,
         <span class="ident">value</span>: <span class="ident">Value</span>,
@@ -185,9 +184,6 @@
     <span class="ident">LayoutLookupError</span>(<span class="ident">LayoutLookupError</span>),
     <span class="ident">SaveStateMismatch</span>,
     <span class="ident">ValueTypeError</span>(<span class="ident">ValueTypeError</span>),
-    <span class="ident">InvalidFrameLogEventType</span>(<span class="ident">IntValue</span>),
-    <span class="ident">UnsizedSurfacePoolPointer</span>,
-    <span class="ident">UnsizedObjectPoolArray</span>,
     <span class="ident">M64ReadError</span> {
         <span class="ident">filename</span>: <span class="ident">String</span>,
         <span class="ident">error</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">io::Error</span><span class="op">&gt;</span>,
@@ -223,6 +219,7 @@
             <span class="ident">Error::DataPathError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
             <span class="ident">Error::MemoryError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
             <span class="ident">Error::DataError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
+            <span class="ident">Error::SM64DataError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
             <span class="ident">Error::ApplyEditError</span> { <span class="ident">path</span>, <span class="ident">value</span>, <span class="ident">error</span> } =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;while applying edit {} = {}:\n  {}&quot;</span>, <span class="ident">path</span>, <span class="ident">value</span>, <span class="ident">error</span>)
             }
@@ -231,15 +228,6 @@
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;save state was created by a different Game instance&quot;</span>)
             }
             <span class="ident">Error::ValueTypeError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
-            <span class="ident">Error::InvalidFrameLogEventType</span>(<span class="ident">value</span>) =&gt; {
-                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;invalid frame log event type: {}&quot;</span>, <span class="ident">value</span>)
-            }
-            <span class="ident">Error::UnsizedSurfacePoolPointer</span> =&gt; {
-                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;surface pool array does not have a stride&quot;</span>)
-            }
-            <span class="ident">Error::UnsizedObjectPoolArray</span> =&gt; {
-                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;object pool array does not have a stride&quot;</span>)
-            }
             <span class="ident">Error::M64ReadError</span> { <span class="ident">filename</span>, <span class="ident">error</span> } =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;failed to read {}:\n  {}&quot;</span>, <span class="ident">filename</span>, <span class="ident">error</span>)
             }
@@ -314,6 +302,12 @@
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">DataError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">v</span>: <span class="ident">DataError</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::DataError</span>(<span class="ident">v</span>)
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">SM64DataError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">v</span>: <span class="ident">SM64DataError</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::SM64DataError</span>(<span class="ident">v</span>)
     }
 }
 </code></pre></div>

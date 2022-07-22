@@ -105,26 +105,6 @@
 <span id="99">99</span>
 <span id="100">100</span>
 <span id="101">101</span>
-<span id="102">102</span>
-<span id="103">103</span>
-<span id="104">104</span>
-<span id="105">105</span>
-<span id="106">106</span>
-<span id="107">107</span>
-<span id="108">108</span>
-<span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">error::Error</span>, <span class="ident">fmt</span>, <span class="ident">io</span>, <span class="ident">sync::Arc</span>};
@@ -141,11 +121,6 @@
     <span class="ident">ValueTypeError</span>(<span class="ident">ValueTypeError</span>),
     <span class="ident">UndefinedTypeName</span>(<span class="ident">TypeName</span>),
     <span class="ident">UndefinedSymbol</span>(<span class="ident">String</span>),
-    <span class="ident">ReadUnsizedArray</span>,
-    <span class="ident">ReadUnion</span>,
-    <span class="ident">WriteExtraField</span>(<span class="ident">String</span>),
-    <span class="ident">WriteMissingField</span>(<span class="ident">String</span>),
-    <span class="ident">WriteUnion</span>,
     <span class="ident">InvalidAddress</span>,
     <span class="ident">WriteToStaticAddress</span>,
     <span class="ident">NonStaticAddressInStaticView</span>,
@@ -163,21 +138,6 @@
             }
             <span class="ident">MemoryError::UndefinedSymbol</span>(<span class="ident">name</span>) =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;undefined symbol: {}&quot;</span>, <span class="ident">name</span>)
-            }
-            <span class="ident">MemoryError::ReadUnsizedArray</span> =&gt; {
-                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;cannot read array with unknown length&quot;</span>)
-            }
-            <span class="ident">MemoryError::ReadUnion</span> =&gt; {
-                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;cannot read union with unspecified variant&quot;</span>)
-            }
-            <span class="ident">MemoryError::WriteExtraField</span>(<span class="ident">name</span>) =&gt; {
-                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;extra field when writing to struct: {}&quot;</span>, <span class="ident">name</span>)
-            }
-            <span class="ident">MemoryError::WriteMissingField</span>(<span class="ident">name</span>) =&gt; {
-                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;missing field when writing to struct: {}&quot;</span>, <span class="ident">name</span>)
-            }
-            <span class="ident">MemoryError::WriteUnion</span> =&gt; {
-                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;cannot write to union with unspecified variant&quot;</span>)
             }
             <span class="ident">MemoryError::InvalidAddress</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;null or invalid address&quot;</span>),
             <span class="ident">MemoryError::WriteToStaticAddress</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;write to static address&quot;</span>),

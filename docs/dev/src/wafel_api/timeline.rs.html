@@ -610,6 +610,11 @@
 <span id="604">604</span>
 <span id="605">605</span>
 <span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections::HashMap</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>},
@@ -620,13 +625,12 @@
 <span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">Address</span>, <span class="ident">IntType</span>, <span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">wafel_layout::DllLayout</span>;
 <span class="kw">use</span> <span class="ident">wafel_memory</span>::{<span class="ident">DllGameMemory</span>, <span class="ident">DllSlotMemoryView</span>, <span class="ident">GameMemory</span>, <span class="ident">MemoryRead</span>};
+<span class="kw">use</span> <span class="ident">wafel_sm64</span>::{
+    <span class="ident">mario_action_names</span>, <span class="ident">read_frame_log</span>, <span class="ident">read_object_hitboxes</span>, <span class="ident">read_surfaces</span>, <span class="ident">ObjectHitbox</span>, <span class="ident">Surface</span>,
+};
 <span class="kw">use</span> <span class="ident">wafel_timeline</span>::{<span class="ident">GameController</span>, <span class="ident">GameTimeline</span>, <span class="ident">InvalidatedFrames</span>};
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">data_cache::DataCache</span>, <span class="ident">frame_log::read_frame_log</span>, <span class="ident">mario::mario_action_names</span>,
-    <span class="ident">read_object_hitboxes</span>, <span class="ident">read_surfaces</span>, <span class="ident">simplified_data_type</span>, <span class="ident">DataType</span>, <span class="ident">Error</span>, <span class="ident">Input</span>,
-    <span class="ident">ObjectHitbox</span>, <span class="ident">Surface</span>,
-};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">data_cache::DataCache</span>, <span class="ident">simplified_data_type</span>, <span class="ident">DataType</span>, <span class="ident">Error</span>, <span class="ident">Input</span>};
 
 <span class="doccomment">/// An SM64 API that allows reads and writes to arbitrary frames without frame advance or</span>
 <span class="doccomment">/// save states.</span>
@@ -1060,7 +1064,7 @@
 
     <span class="doccomment">/// Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`).</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mario_action_names</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="ident">mario_action_names</span>(<span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">data_layout</span>())
+        <span class="ident">mario_action_names</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>)
     }
 
     <span class="doccomment">/// Read the Wafel frame log for the previous frame advance.</span>
@@ -1082,7 +1086,9 @@
     <span class="doccomment">/// Returns an error if reading the frame log fails, e.g. it contains an invalid event type,</span>
     <span class="doccomment">/// or if a `write` on a previous frame failed.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_frame_log</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">frame</span>: <span class="ident">u32</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Value</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">with_slot_memory</span>(<span class="ident">frame</span>, <span class="op">|</span><span class="ident">memory</span><span class="op">|</span> <span class="ident">read_frame_log</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="ident">memory</span>))
+        <span class="self">self</span>.<span class="ident">with_slot_memory</span>(<span class="ident">frame</span>, <span class="op">|</span><span class="ident">memory</span><span class="op">|</span> {
+            <span class="ident">read_frame_log</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="ident">memory</span>).<span class="ident">map_err</span>(<span class="ident">Error::from</span>)
+        })
     }
 
     <span class="doccomment">/// Read the currently loaded surfaces.</span>
@@ -1102,7 +1108,9 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns an error if the read fails or if a `write` on a previous frame failed.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_surfaces</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">frame</span>: <span class="ident">u32</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Surface</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">with_slot_memory</span>(<span class="ident">frame</span>, <span class="op">|</span><span class="ident">memory</span><span class="op">|</span> <span class="ident">read_surfaces</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="ident">memory</span>))
+        <span class="self">self</span>.<span class="ident">with_slot_memory</span>(<span class="ident">frame</span>, <span class="op">|</span><span class="ident">memory</span><span class="op">|</span> {
+            <span class="ident">read_surfaces</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="ident">memory</span>).<span class="ident">map_err</span>(<span class="ident">Error::from</span>)
+        })
     }
 
     <span class="doccomment">/// Read the hitboxes for active objects.</span>
@@ -1122,7 +1130,9 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns an error if the read fails or if a `write` on a previous frame failed.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_object_hitboxes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">frame</span>: <span class="ident">u32</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ObjectHitbox</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">with_slot_memory</span>(<span class="ident">frame</span>, <span class="op">|</span><span class="ident">memory</span><span class="op">|</span> <span class="ident">read_object_hitboxes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="ident">memory</span>))
+        <span class="self">self</span>.<span class="ident">with_slot_memory</span>(<span class="ident">frame</span>, <span class="op">|</span><span class="ident">memory</span><span class="op">|</span> {
+            <span class="ident">read_object_hitboxes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="ident">memory</span>).<span class="ident">map_err</span>(<span class="ident">Error::from</span>)
+        })
     }
 }
 
