@@ -28,6 +28,8 @@ use winit::{
     window::WindowBuilder,
 };
 
+use crate::sm64_render_dl::render_sm64_dl;
+
 pub mod custom_renderer;
 mod sm64_gfx_render;
 mod sm64_gfx_tree;
@@ -43,8 +45,8 @@ pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderD
 }
 
 pub fn test_dl() -> Result<(), Box<dyn Error>> {
-    // env_logger::init();
-    // futures::executor::block_on(run(4001, None)).unwrap();
+    env_logger::init();
+    futures::executor::block_on(run(4001, None)).unwrap();
 
     let mut game = unsafe { Game::new("libsm64/sm64_us") };
     let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
@@ -70,12 +72,7 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
 
     for _ in 0..count {
         // let memory = game.memory.with_slot(&game.base_slot);
-        // let get_path = |source: &str| {
-        //     GlobalDataPath::compile(&game.layout, &game.memory, source)
-        //         .map(Arc::new)
-        //         .map_err(Into::into)
-        // };
-        // let data = render_sm64_dl(&memory, get_path, (320, 240))?;
+        // let data = render_sm64_dl(&game.layout, &memory, (320, 240))?;
 
         let data = prepare_render_data(&game, &config);
 
