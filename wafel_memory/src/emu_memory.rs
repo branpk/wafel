@@ -215,35 +215,35 @@ impl MemoryRead for EmuMemory {
 impl MemoryWrite for EmuMemory {
     fn write_u8s(&mut self, addr: Address, buf: &[u8]) -> Result<(), MemoryError> {
         for (i, value) in buf.iter().copied().enumerate() {
-            (&*self).write_u8(addr + i, value)?;
+            (*self).write_u8(addr + i, value)?;
         }
         Ok(())
     }
 
     fn write_u16s(&mut self, addr: Address, buf: &[u16]) -> Result<(), MemoryError> {
         for (i, value) in buf.iter().copied().enumerate() {
-            (&*self).write_u16(addr + 2 * i, value)?;
+            (*self).write_u16(addr + 2 * i, value)?;
         }
         Ok(())
     }
 
     fn write_u32s(&mut self, addr: Address, buf: &[u32]) -> Result<(), MemoryError> {
         for (i, value) in buf.iter().copied().enumerate() {
-            (&*self).write_u32(addr + 4 * i, value)?;
+            (*self).write_u32(addr + 4 * i, value)?;
         }
         Ok(())
     }
 
     fn write_u64s(&mut self, addr: Address, buf: &[u64]) -> Result<(), MemoryError> {
         for (i, value) in buf.iter().copied().enumerate() {
-            (&*self).write_u64(addr + 8 * i, value)?;
+            (*self).write_u64(addr + 8 * i, value)?;
         }
         Ok(())
     }
 
     fn write_addrs(&mut self, addr: Address, buf: &[Address]) -> Result<(), MemoryError> {
         for (i, value) in buf.iter().copied().enumerate() {
-            (&*self).write_u32(addr + 4 * i, value.0 as u32)?;
+            (*self).write_u32(addr + 4 * i, value.0 as u32)?;
         }
         Ok(())
     }

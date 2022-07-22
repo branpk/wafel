@@ -45,14 +45,14 @@ pub trait MemoryRead {
 
     /// Read a u8 from the given address.
     fn read_u8(&self, addr: Address) -> Result<u8, MemoryError> {
-        let buf = [0];
+        let mut buf = [0];
         self.read_u8s(addr, &mut buf)?;
         Ok(buf[0])
     }
 
     /// Read an array of i8s from the given address.
     fn read_i8s(&self, addr: Address, buf: &mut [i8]) -> Result<(), MemoryError> {
-        self.read_i8s(addr, cast_slice_mut(buf))
+        self.read_u8s(addr, cast_slice_mut(buf))
     }
 
     /// Read an i8 from the given address.
@@ -65,14 +65,14 @@ pub trait MemoryRead {
 
     /// Read a u16 from the given address.
     fn read_u16(&self, addr: Address) -> Result<u16, MemoryError> {
-        let buf = [0];
+        let mut buf = [0];
         self.read_u16s(addr, &mut buf)?;
         Ok(buf[0])
     }
 
     /// Read an array of i16s from the given address.
     fn read_i16s(&self, addr: Address, buf: &mut [i16]) -> Result<(), MemoryError> {
-        self.read_i16s(addr, cast_slice_mut(buf))
+        self.read_u16s(addr, cast_slice_mut(buf))
     }
 
     /// Read an i16 from the given address.
@@ -85,14 +85,14 @@ pub trait MemoryRead {
 
     /// Read a u32 from the given address.
     fn read_u32(&self, addr: Address) -> Result<u32, MemoryError> {
-        let buf = [0];
+        let mut buf = [0];
         self.read_u32s(addr, &mut buf)?;
         Ok(buf[0])
     }
 
     /// Read an array of i32s from the given address.
     fn read_i32s(&self, addr: Address, buf: &mut [i32]) -> Result<(), MemoryError> {
-        self.read_i32s(addr, cast_slice_mut(buf))
+        self.read_u32s(addr, cast_slice_mut(buf))
     }
 
     /// Read an i32 from the given address.
@@ -105,14 +105,14 @@ pub trait MemoryRead {
 
     /// Read a u64 from the given address.
     fn read_u64(&self, addr: Address) -> Result<u64, MemoryError> {
-        let buf = [0];
+        let mut buf = [0];
         self.read_u64s(addr, &mut buf)?;
         Ok(buf[0])
     }
 
     /// Read an array of i64s from the given address.
     fn read_i64s(&self, addr: Address, buf: &mut [i64]) -> Result<(), MemoryError> {
-        self.read_i64s(addr, cast_slice_mut(buf))
+        self.read_u64s(addr, cast_slice_mut(buf))
     }
 
     /// Read an i64 from the given address.
@@ -127,7 +127,7 @@ pub trait MemoryRead {
 
     /// Read an f32 from the given address.
     fn read_f32(&self, addr: Address) -> Result<f32, MemoryError> {
-        let buf = [0.0];
+        let mut buf = [0.0];
         self.read_f32s(addr, &mut buf)?;
         Ok(buf[0])
     }
@@ -139,7 +139,7 @@ pub trait MemoryRead {
 
     /// Read an f64 from the given address.
     fn read_f64(&self, addr: Address) -> Result<f64, MemoryError> {
-        let buf = [0.0];
+        let mut buf = [0.0];
         self.read_f64s(addr, &mut buf)?;
         Ok(buf[0])
     }
@@ -149,7 +149,7 @@ pub trait MemoryRead {
 
     /// Read a pointer from the given address.
     fn read_addr(&self, addr: Address) -> Result<Address, MemoryError> {
-        let buf = [Address::NULL];
+        let mut buf = [Address::NULL];
         self.read_addrs(addr, &mut buf)?;
         Ok(buf[0])
     }
