@@ -198,11 +198,18 @@
 <span id="192">192</span>
 <span id="193">193</span>
 <span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">error::Error</span>, <span class="ident">fmt</span>};
 
-<span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">Address</span>, <span class="ident">DataTypeError</span>, <span class="ident">DataTypeRef</span>, <span class="ident">ValueTypeError</span>};
+<span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">Address</span>, <span class="ident">DataTypeError</span>, <span class="ident">DataTypeRef</span>, <span class="ident">Value</span>, <span class="ident">ValueTypeError</span>};
 <span class="kw">use</span> <span class="ident">wafel_layout::LayoutLookupError</span>;
 <span class="kw">use</span> <span class="ident">wafel_memory::MemoryError</span>;
 
@@ -223,6 +230,10 @@
     <span class="ident">WriteExtraField</span>(<span class="ident">String</span>),
     <span class="ident">WriteMissingField</span>(<span class="ident">String</span>),
     <span class="ident">WriteUnion</span>,
+    <span class="ident">InvalidValue</span> {
+        <span class="ident">expected</span>: <span class="ident">String</span>,
+        <span class="ident">value</span>: <span class="ident">Value</span>,
+    },
 }
 
 <span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">DataError</span> {
@@ -249,6 +260,9 @@
             }
             <span class="ident">DataError::WriteUnion</span> =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;cannot write to union with unspecified variant&quot;</span>)
+            }
+            <span class="ident">DataError::InvalidValue</span> { <span class="ident">expected</span>, <span class="ident">value</span> } =&gt; {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;invalid value: expected {}, found {}&quot;</span>, <span class="ident">expected</span>, <span class="ident">value</span>)
             }
         }
     }

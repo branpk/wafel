@@ -249,16 +249,12 @@
 <span id="243">243</span>
 <span id="244">244</span>
 <span id="245">245</span>
-<span id="246">246</span>
-<span id="247">247</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">f32::consts::PI</span>, <span class="ident">num::Wrapping</span>};
 
 <span class="kw">use</span> <span class="ident">lazy_static::lazy_static</span>;
+<span class="kw">use</span> <span class="ident">wafel_api::Angle</span>;
 
 <span class="comment">// TODO: Accurate trig functions</span>
-
-<span class="doccomment">/// A wrapping 16 bit integer representing an angle.</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Angle</span> <span class="op">=</span> <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">i16</span><span class="op">&gt;</span>;
 
 <span class="kw">fn</span> <span class="ident">sins</span>(<span class="ident">x</span>: <span class="ident">Angle</span>) -&gt; <span class="ident">f32</span> {
     (<span class="ident">x</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">f32</span> <span class="op">/</span> <span class="number">0x8000</span> <span class="kw">as</span> <span class="ident">f32</span> <span class="op">*</span> <span class="ident">PI</span>).<span class="ident">sin</span>()

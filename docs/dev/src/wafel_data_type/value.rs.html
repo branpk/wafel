@@ -647,12 +647,17 @@
 <span id="641">641</span>
 <span id="642">642</span>
 <span id="643">643</span>
+<span id="644">644</span>
+<span id="645">645</span>
+<span id="646">646</span>
+<span id="647">647</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Dynamically typed value used for reading and writing to memory.</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections::HashMap</span>,
     <span class="ident">convert::TryFrom</span>,
     <span class="ident">fmt</span>,
+    <span class="ident">num::Wrapping</span>,
     <span class="ident">ops</span>::{<span class="ident">Add</span>, <span class="ident">AddAssign</span>, <span class="ident">Sub</span>, <span class="ident">SubAssign</span>},
 };
 
@@ -1290,6 +1295,9 @@
         }
     }
 }
+
+<span class="doccomment">/// A 16 bit signed angle.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Angle</span> <span class="op">=</span> <span class="ident">Wrapping</span><span class="op">&lt;</span><span class="ident">i16</span><span class="op">&gt;</span>;
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_data_type" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (62b272d25 2022-07-21)" ></div>
 </body></html>
