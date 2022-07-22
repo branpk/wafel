@@ -1,5 +1,5 @@
 use std::{
-    mem, ptr,
+    mem, ptr, slice,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Mutex,
@@ -18,7 +18,7 @@ use crate::{
     unique_dll::UniqueLibrary,
     GameMemory,
     MemoryError::{self, *},
-    MemoryReadPrimitive, MemoryWritePrimitive, SymbolLookup,
+    MemoryRead, MemoryWrite, SymbolLookup,
 };
 
 /// A slot for [DllGameMemory].
@@ -152,9 +152,16 @@ impl DllGameMemory {
         );
     }
 
-    fn validate_offset<T>(&self, offset: usize, range_size: usize) -> Result<(), MemoryError> {
-        if offset + mem::size_of::<T>() > range_size {
-            // || offset % mem::align_of::<T>() != 0 {
+    fn validate_offset<T>(
+        &self,
+        offset: usize,
+        len: usize,
+        range_size: usize,
+    ) -> Result<(), MemoryError> {
+        let data_size = mem::size_of::<T>()
+            .checked_mul(len)
+            .expect("buffer is too large");
+        if offset + data_size > range_size {
             Err(InvalidAddress)
         } else {
             Ok(())
@@ -206,8 +213,8 @@ impl DllGameMemory {
     ///
     /// Performs validation and bounds checking, so the result should be a valid pointer.
     /// Dereferencing should be safe provided junk data is acceptable in T.
-    fn static_to_pointer<T>(&self, offset: usize) -> Result<*const T, MemoryError> {
-        self.validate_offset::<T>(offset, self.base_size)?;
+    fn static_to_pointer<T>(&self, offset: usize, len: usize) -> Result<*const T, MemoryError> {
+        self.validate_offset::<T>(offset, len, self.base_size)?;
         Ok((self.base_pointer.0 as usize).wrapping_add(offset) as *const T)
     }
 
@@ -220,11 +227,12 @@ impl DllGameMemory {
         slot: &DllSlot,
         segment: usize,
         offset: usize,
+        len: usize,
     ) -> Result<*const T, MemoryError> {
         self.validate_slot(slot);
         unsafe {
             let segment = slot.0.segment(segment).ok_or(InvalidAddress)?;
-            self.validate_offset::<T>(offset, segment.len())?;
+            self.validate_offset::<T>(offset, len, segment.len())?;
             Ok(&segment[offset] as *const u8 as *const T)
         }
     }
@@ -238,11 +246,12 @@ impl DllGameMemory {
         slot: &mut DllSlot,
         segment: usize,
         offset: usize,
+        len: usize,
     ) -> Result<*mut T, MemoryError> {
         self.validate_slot(slot);
         unsafe {
             let segment = slot.0.segment_mut(segment).ok_or(InvalidAddress)?;
-            self.validate_offset::<T>(offset, segment.len())?;
+            self.validate_offset::<T>(offset, len, segment.len())?;
             Ok(&mut segment[offset] as *mut u8 as *mut T)
         }
     }
@@ -251,9 +260,13 @@ impl DllGameMemory {
     ///
     /// Performs validation and bounds checking, so the result should be a valid pointer.
     /// Dereferencing should be safe provided junk data is acceptable in T.
-    fn address_to_static_pointer<T>(&self, address: Address) -> Result<*const T, MemoryError> {
+    fn address_to_static_pointer<T>(
+        &self,
+        address: Address,
+        len: usize,
+    ) -> Result<*const T, MemoryError> {
         match self.classify_address(address) {
-            ClassifiedAddress::Static { offset } => self.static_to_pointer(offset),
+            ClassifiedAddress::Static { offset } => self.static_to_pointer(offset, len),
             ClassifiedAddress::Relocatable { .. } => Err(NonStaticAddressInStaticView),
             ClassifiedAddress::Invalid => Err(InvalidAddress),
         }
@@ -267,11 +280,12 @@ impl DllGameMemory {
         &self,
         slot: &DllSlot,
         address: Address,
+        len: usize,
     ) -> Result<*const T, MemoryError> {
         match self.classify_address(address) {
-            ClassifiedAddress::Static { offset } => self.static_to_pointer(offset),
+            ClassifiedAddress::Static { offset } => self.static_to_pointer(offset, len),
             ClassifiedAddress::Relocatable { segment, offset } => {
-                self.relocatable_to_pointer(slot, segment, offset)
+                self.relocatable_to_pointer(slot, segment, offset, len)
             }
             ClassifiedAddress::Invalid => Err(InvalidAddress),
         }
@@ -285,11 +299,12 @@ impl DllGameMemory {
         &self,
         slot: &mut DllSlot,
         address: Address,
+        len: usize,
     ) -> Result<*mut T, MemoryError> {
         match self.classify_address(address) {
             ClassifiedAddress::Static { .. } => Err(WriteToStaticAddress),
             ClassifiedAddress::Relocatable { segment, offset } => {
-                self.relocatable_to_pointer_mut(slot, segment, offset)
+                self.relocatable_to_pointer_mut(slot, segment, offset, len)
             }
             ClassifiedAddress::Invalid => Err(InvalidAddress),
         }
@@ -432,16 +447,52 @@ pub struct DllStaticMemoryView<'a> {
     memory: &'a DllGameMemory,
 }
 
-impl MemoryReadPrimitive for DllStaticMemoryView<'_> {
-    unsafe fn read_primitive<T: Copy>(&self, address: Address) -> Result<T, MemoryError> {
-        self.memory
-            .address_to_static_pointer::<T>(address)
-            .map(|p| *p)
+impl MemoryRead for DllStaticMemoryView<'_> {
+    fn read_u8s(&self, addr: Address, buf: &mut [u8]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_static_pointer::<u8>(addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts(ptr, buf.len()) };
+        buf.copy_from_slice(data);
+        Ok(())
     }
 
-    fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
-        let pointer = unsafe { self.read_primitive::<usize>(address)? as *const () };
-        Ok(self.memory.unchecked_pointer_to_address(pointer))
+    fn read_u16s(&self, addr: Address, buf: &mut [u16]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_static_pointer::<u16>(addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts(ptr, buf.len()) };
+        buf.copy_from_slice(data);
+        Ok(())
+    }
+
+    fn read_u32s(&self, addr: Address, buf: &mut [u32]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_static_pointer::<u32>(addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts(ptr, buf.len()) };
+        buf.copy_from_slice(data);
+        Ok(())
+    }
+
+    fn read_u64s(&self, addr: Address, buf: &mut [u64]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_static_pointer::<u64>(addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts(ptr, buf.len()) };
+        buf.copy_from_slice(data);
+        Ok(())
+    }
+
+    fn read_addrs(&self, addr: Address, buf: &mut [Address]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_static_pointer::<*const ()>(addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts(ptr, buf.len()) };
+        for (dst, src) in buf.iter_mut().zip(data.iter().copied()) {
+            *dst = self.memory.unchecked_pointer_to_address(src);
+        }
+        Ok(())
     }
 
     fn pointer_int_type(&self) -> IntType {
@@ -459,16 +510,52 @@ pub struct DllSlotMemoryView<'a> {
     slot: &'a DllSlot,
 }
 
-impl MemoryReadPrimitive for DllSlotMemoryView<'_> {
-    unsafe fn read_primitive<T: Copy>(&self, address: Address) -> Result<T, MemoryError> {
-        self.memory
-            .address_to_pointer::<T>(self.slot, address)
-            .map(|p| *p)
+impl MemoryRead for DllSlotMemoryView<'_> {
+    fn read_u8s(&self, addr: Address, buf: &mut [u8]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_pointer::<u8>(self.slot, addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts(ptr, buf.len()) };
+        buf.copy_from_slice(data);
+        Ok(())
     }
 
-    fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
-        let pointer = unsafe { self.read_primitive::<usize>(address)? as *const () };
-        Ok(self.memory.unchecked_pointer_to_address(pointer))
+    fn read_u16s(&self, addr: Address, buf: &mut [u16]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_pointer::<u16>(self.slot, addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts(ptr, buf.len()) };
+        buf.copy_from_slice(data);
+        Ok(())
+    }
+
+    fn read_u32s(&self, addr: Address, buf: &mut [u32]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_pointer::<u32>(self.slot, addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts(ptr, buf.len()) };
+        buf.copy_from_slice(data);
+        Ok(())
+    }
+
+    fn read_u64s(&self, addr: Address, buf: &mut [u64]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_pointer::<u64>(self.slot, addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts(ptr, buf.len()) };
+        buf.copy_from_slice(data);
+        Ok(())
+    }
+
+    fn read_addrs(&self, addr: Address, buf: &mut [Address]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_pointer::<*const ()>(self.slot, addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts(ptr, buf.len()) };
+        for (dst, src) in buf.iter_mut().zip(data.iter().copied()) {
+            *dst = self.memory.unchecked_pointer_to_address(src);
+        }
+        Ok(())
     }
 
     fn pointer_int_type(&self) -> IntType {
@@ -486,16 +573,52 @@ pub struct DllSlotMemoryViewMut<'a> {
     slot: &'a mut DllSlot,
 }
 
-impl MemoryReadPrimitive for DllSlotMemoryViewMut<'_> {
-    unsafe fn read_primitive<T: Copy>(&self, address: Address) -> Result<T, MemoryError> {
-        self.memory
-            .address_to_pointer::<T>(self.slot, address)
-            .map(|p| *p)
+impl MemoryRead for DllSlotMemoryViewMut<'_> {
+    fn read_u8s(&self, addr: Address, buf: &mut [u8]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_pointer::<u8>(self.slot, addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts(ptr, buf.len()) };
+        buf.copy_from_slice(data);
+        Ok(())
     }
 
-    fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
-        let pointer = unsafe { self.read_primitive::<usize>(address)? as *const () };
-        Ok(self.memory.unchecked_pointer_to_address(pointer))
+    fn read_u16s(&self, addr: Address, buf: &mut [u16]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_pointer::<u16>(self.slot, addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts(ptr, buf.len()) };
+        buf.copy_from_slice(data);
+        Ok(())
+    }
+
+    fn read_u32s(&self, addr: Address, buf: &mut [u32]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_pointer::<u32>(self.slot, addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts(ptr, buf.len()) };
+        buf.copy_from_slice(data);
+        Ok(())
+    }
+
+    fn read_u64s(&self, addr: Address, buf: &mut [u64]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_pointer::<u64>(self.slot, addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts(ptr, buf.len()) };
+        buf.copy_from_slice(data);
+        Ok(())
+    }
+
+    fn read_addrs(&self, addr: Address, buf: &mut [Address]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_pointer::<*const ()>(self.slot, addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts(ptr, buf.len()) };
+        for (dst, src) in buf.iter_mut().zip(data.iter().copied()) {
+            *dst = self.memory.unchecked_pointer_to_address(src);
+        }
+        Ok(())
     }
 
     fn pointer_int_type(&self) -> IntType {
@@ -503,21 +626,50 @@ impl MemoryReadPrimitive for DllSlotMemoryViewMut<'_> {
     }
 }
 
-impl MemoryWritePrimitive for DllSlotMemoryViewMut<'_> {
-    unsafe fn write_primitive<T: Copy>(
-        &mut self,
-        address: Address,
-        value: T,
-    ) -> Result<(), MemoryError> {
-        let pointer = self.memory.address_to_pointer_mut(self.slot, address)?;
-        *pointer = value;
+impl MemoryWrite for DllSlotMemoryViewMut<'_> {
+    fn write_u8s(&mut self, addr: Address, buf: &[u8]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_pointer_mut::<u8>(self.slot, addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts_mut(ptr, buf.len()) };
+        data.copy_from_slice(buf);
         Ok(())
     }
 
-    fn write_address(&mut self, address: Address, value: Address) -> Result<(), MemoryError> {
-        let value_pointer: *const () = self.memory.unchecked_address_to_pointer(value);
-        unsafe {
-            self.write_primitive(address, value_pointer as usize)?;
+    fn write_u16s(&mut self, addr: Address, buf: &[u16]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_pointer_mut::<u16>(self.slot, addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts_mut(ptr, buf.len()) };
+        data.copy_from_slice(buf);
+        Ok(())
+    }
+
+    fn write_u32s(&mut self, addr: Address, buf: &[u32]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_pointer_mut::<u32>(self.slot, addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts_mut(ptr, buf.len()) };
+        data.copy_from_slice(buf);
+        Ok(())
+    }
+
+    fn write_u64s(&mut self, addr: Address, buf: &[u64]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_pointer_mut::<u64>(self.slot, addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts_mut(ptr, buf.len()) };
+        data.copy_from_slice(buf);
+        Ok(())
+    }
+
+    fn write_addrs(&mut self, addr: Address, buf: &[Address]) -> Result<(), MemoryError> {
+        let ptr = self
+            .memory
+            .address_to_pointer_mut::<*const ()>(self.slot, addr, buf.len())?;
+        let data = unsafe { slice::from_raw_parts_mut(ptr, buf.len()) };
+        for (dst, src) in data.iter_mut().zip(buf.iter().copied()) {
+            *dst = self.memory.unchecked_address_to_pointer(src);
         }
         Ok(())
     }
