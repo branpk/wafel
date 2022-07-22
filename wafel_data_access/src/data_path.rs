@@ -7,6 +7,7 @@ use wafel_memory::{MemoryError, MemoryRead, MemoryWrite};
 use crate::{
     compile,
     readers::read_value_impl,
+    writers::write_value_impl,
     DataError,
     DataPathError::{self, *},
     MemoryLayout,
@@ -191,10 +192,13 @@ impl GlobalDataPath {
                         }
                     }
                     None => {
-                        // memory.write_value(address, &self.0.concrete_type, value, |type_name| {
-                        //     self.0.layout.data_type(type_name).ok().cloned()
-                        // })?;
-                        todo!()
+                        write_value_impl(
+                            memory,
+                            address,
+                            &self.0.concrete_type,
+                            value,
+                            &self.0.concrete_types,
+                        )?;
                     }
                 }
                 Ok(())

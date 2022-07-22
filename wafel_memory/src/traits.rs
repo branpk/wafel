@@ -1,11 +1,9 @@
 use core::fmt;
 use std::ops::Deref;
 
-use wafel_data_type::{
-    Address, DataType, DataTypeRef, FloatType, FloatValue, IntType, IntValue, TypeName, Value,
-};
+use wafel_data_type::{Address, FloatType, FloatValue, IntType, IntValue};
 
-use crate::MemoryError::{self, *};
+use crate::MemoryError;
 
 /// Trait for looking up a symbol's address.
 ///
@@ -107,89 +105,6 @@ pub trait MemoryWrite {
     ///
     /// The address value may be invalid or zero.
     fn write_address(&mut self, address: Address, value: Address) -> Result<(), MemoryError>;
-
-    /// Write a value of the given type.
-    ///
-    /// Any type names present in `data_type` are resolved using `resolve_type`.
-    ///
-    /// This method can handle all data types except for unions.
-    fn write_value(
-        &mut self,
-        address: Address,
-        data_type: &DataTypeRef,
-        value: Value,
-        mut resolve_type: impl FnMut(&TypeName) -> Option<DataTypeRef>,
-    ) -> Result<(), MemoryError> {
-        write_value_impl(self, address, data_type, value, &mut resolve_type)
-    }
-}
-
-fn write_value_impl<M: MemoryWrite + ?Sized>(
-    memory: &mut M,
-    address: Address,
-    data_type: &std::sync::Arc<DataType>,
-    value: Value,
-    resolve_type: &mut impl FnMut(&TypeName) -> Option<std::sync::Arc<DataType>>,
-) -> Result<(), MemoryError> {
-    match data_type.as_ref() {
-        DataType::Void => value.try_as_none()?,
-        DataType::Int(int_type) => {
-            memory.write_int(address, *int_type, value.try_as_int_lenient()?)?
-        }
-        DataType::Float(float_type) => {
-            memory.write_float(address, *float_type, value.try_as_float_lenient()?)?
-        }
-        DataType::Pointer { .. } => memory.write_address(address, value.try_as_address()?)?,
-        DataType::Array {
-            base,
-            length,
-            stride,
-        } => {
-            let elements = match *length {
-                Some(length) => value.try_as_array_with_len(length)?,
-                None => value.try_as_array()?,
-            };
-            for (i, element) in elements.iter().enumerate() {
-                write_value_impl(
-                    memory,
-                    address + i * *stride,
-                    base,
-                    element.clone(),
-                    resolve_type,
-                )?;
-            }
-        }
-        DataType::Struct { fields } => {
-            let field_values = value.try_as_struct()?;
-            for name in field_values.keys() {
-                if !fields.contains_key(name) {
-                    return Err(WriteExtraField(name.clone()));
-                }
-            }
-            for name in fields.keys() {
-                if !field_values.contains_key(name) {
-                    return Err(WriteExtraField(name.clone()));
-                }
-            }
-            for (field_name, field) in fields {
-                let field_value = field_values[field_name].clone();
-                write_value_impl(
-                    memory,
-                    address + field.offset,
-                    &field.data_type,
-                    field_value,
-                    resolve_type,
-                )?;
-            }
-        }
-        DataType::Union { fields: _ } => return Err(WriteUnion),
-        DataType::Name(type_name) => {
-            let resolved_type =
-                resolve_type(type_name).ok_or_else(|| UndefinedTypeName(type_name.clone()))?;
-            write_value_impl(memory, address, &resolved_type, value, resolve_type)?
-        }
-    }
-    Ok(())
 }
 
 /// A helper trait for implementing [MemoryRead].

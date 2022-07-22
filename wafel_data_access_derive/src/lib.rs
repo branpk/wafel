@@ -77,7 +77,7 @@ fn generate_reader_impl(input: &DeriveInput, reader_name: &Ident) -> TokenStream
         }
 
         impl wafel_data_access::DataReader for #reader_name {
-            type Output = #name;
+            type Value = #name;
 
             fn read(
                 &self,

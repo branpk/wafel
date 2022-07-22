@@ -24,7 +24,7 @@ macro_rules! prim_readable {
         }
 
         impl DataReader for $reader {
-            type Output = $ty;
+            type Value = $ty;
 
             fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<$ty, DataError> {
                 self.read(memory, addr)
@@ -76,7 +76,7 @@ macro_rules! prim_array_readable {
         }
 
         impl<const N: usize> DataReader for $array_reader<N> {
-            type Output = [$ty; N];
+            type Value = [$ty; N];
 
             fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<[$ty; N], DataError> {
                 self.read(memory, addr)
@@ -108,8 +108,7 @@ prim_array_readable!(f64, F64Reader, F64ArrayReader, FloatType::F64.size());
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct AddressArrayReader<const N: usize>;
 
-impl<const N: usize> DataReader for AddressArrayReader<N> {
-    type Output = [Address; N];
+impl<const N: usize> AddressArrayReader<N> {
     fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<[Address; N], DataError> {
         let mut result = [Default::default(); N];
         let stride = memory.pointer_int_type().size();
@@ -119,8 +118,18 @@ impl<const N: usize> DataReader for AddressArrayReader<N> {
         Ok(result)
     }
 }
+
+impl<const N: usize> DataReader for AddressArrayReader<N> {
+    type Value = [Address; N];
+
+    fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<[Address; N], DataError> {
+        self.read(memory, addr)
+    }
+}
+
 impl<const N: usize> DataReadable for [Address; N] {
     type Reader = AddressArrayReader<N>;
+
     fn reader(_layout: &impl MemoryLayout) -> Result<AddressArrayReader<N>, DataError> {
         Ok(AddressArrayReader)
     }
@@ -139,7 +148,7 @@ impl DataTypeReader {
 }
 
 impl DataReader for DataTypeReader {
-    type Output = Value;
+    type Value = Value;
 
     fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<Value, DataError> {
         self.read(memory, addr)

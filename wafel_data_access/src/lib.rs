@@ -2,7 +2,7 @@
 //!
 //! This crate provides two ways to access data:
 //! - Data paths, which dynamically look up individual variables from memory
-//! - [DataReadable], which enables reading into Rust structs
+//! - [DataReadable] and [DataWritable], which enable reading/writing using native Rust types
 //!
 //! # Data paths
 //!
@@ -54,3 +54,4 @@ mod layout;
 mod parse;
 pub mod readers;
 mod traits;
+pub mod writers;

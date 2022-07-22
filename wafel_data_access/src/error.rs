@@ -20,6 +20,9 @@ pub enum DataError {
     NoSymbolAtAddress(Address),
     ReadUnsizedArray,
     ReadUnion,
+    WriteExtraField(String),
+    WriteMissingField(String),
+    WriteUnion,
 }
 
 impl fmt::Display for DataError {
@@ -37,6 +40,15 @@ impl fmt::Display for DataError {
             }
             DataError::ReadUnion => {
                 write!(f, "cannot read union with unspecified variant")
+            }
+            DataError::WriteExtraField(name) => {
+                write!(f, "extra field when writing to struct: {}", name)
+            }
+            DataError::WriteMissingField(name) => {
+                write!(f, "missing field when writing to struct: {}", name)
+            }
+            DataError::WriteUnion => {
+                write!(f, "cannot write to union with unspecified variant")
             }
         }
     }
