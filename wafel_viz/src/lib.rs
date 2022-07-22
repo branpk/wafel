@@ -1,4 +1,5 @@
 #![feature(stmt_expr_attributes)]
+#![feature(generic_associated_types)]
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 #![allow(
     clippy::map_entry,
@@ -19,7 +20,6 @@ use std::{
 
 use custom_renderer::{CustomRenderer, Scene};
 use fast3d::{interpret::F3DRenderData, render::F3DRenderer};
-pub use sm64_render_mod::*;
 use wafel_api::{load_m64, Game, SaveState};
 use wafel_memory::GameMemory;
 use winit::{
@@ -28,18 +28,18 @@ use winit::{
     window::WindowBuilder,
 };
 
-use crate::sm64_render_dl::render_sm64_dl;
+pub use config::*;
 
+mod config;
 pub mod custom_renderer;
+mod error;
+mod f3d_builder;
 mod sm64_gfx_render;
-mod sm64_render_dl;
-mod sm64_render_mod;
 
 pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderData {
     let memory = game.memory.with_slot(&game.base_slot);
 
-    // render_sm64_with_config(&game.layout, &memory, config).expect("failed to process display list")
-    sm64_gfx_render::test_render(&game.layout, &memory, config)
+    sm64_gfx_render::test_render(&game.layout, &memory, config, true)
         .expect("failed to process display list")
 }
 
@@ -70,10 +70,10 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
     let start = Instant::now();
 
     for _ in 0..count {
-        // let memory = game.memory.with_slot(&game.base_slot);
-        // let data = render_sm64_dl(&game.layout, &memory, (320, 240))?;
+        let memory = game.memory.with_slot(&game.base_slot);
 
-        let data = prepare_render_data(&game, &config);
+        let data = sm64_gfx_render::test_render(&game.layout, &memory, &config, true)
+            .expect("failed to process display list");
 
         assert_eq!(data.commands.len(), 127);
     }

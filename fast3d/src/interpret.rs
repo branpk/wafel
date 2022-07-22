@@ -29,12 +29,14 @@ pub trait F3DMemory {
     /// Error that can be thrown when reading from memory.
     type Error;
     /// An iterator over a display list that is read from memory.
-    type DlIter: Iterator<Item = Result<F3DCommand<Self::Ptr>, Self::Error>>;
+    type DlIter<'a>: Iterator<Item = Result<F3DCommand<Self::Ptr>, Self::Error>>
+    where
+        Self: 'a;
 
     /// Returns the top level display list to be interpreted.
-    fn root_dl(&self) -> Result<Self::DlIter, Self::Error>;
+    fn root_dl(&self) -> Result<Self::DlIter<'_>, Self::Error>;
     /// Reads a child display list from memory at the given address.
-    fn read_dl(&self, ptr: Self::Ptr) -> Result<Self::DlIter, Self::Error>;
+    fn read_dl(&self, ptr: Self::Ptr) -> Result<Self::DlIter<'_>, Self::Error>;
 
     /// Reads dst.len() u8s from memory, starting at ptr + offset (in bytes).
     fn read_u8(&self, dst: &mut [u8], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error>;
@@ -769,7 +771,7 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         Ok(())
     }
 
-    fn interpret(&mut self, dl: M::DlIter) -> Result<(), M::Error> {
+    fn interpret(&mut self, dl: M::DlIter<'_>) -> Result<(), M::Error> {
         use F3DCommand::*;
 
         for cmd in dl {
@@ -813,11 +815,11 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                     self.vertices = read_vertices(self.memory(), v, offset, n as usize)?;
                 }
                 SPDisplayList(ptr) => {
-                    let child_dl = self.memory().read_dl(ptr)?;
+                    let child_dl = self.memory.unwrap().read_dl(ptr)?;
                     self.interpret(child_dl)?;
                 }
                 SPBranchList(ptr) => {
-                    let child_dl = self.memory().read_dl(ptr)?;
+                    let child_dl = self.memory.unwrap().read_dl(ptr)?;
                     self.interpret(child_dl)?;
                     break;
                 }

@@ -1,4 +1,4 @@
-use std::{iter::Peekable, mem, num::Wrapping, process};
+use std::{mem, num::Wrapping, process};
 
 use bytemuck::{cast_slice, cast_slice_mut};
 use fast3d::{
@@ -7,20 +7,21 @@ use fast3d::{
     interpret::{interpret_f3d_display_list, F3DRenderData},
     util::{coss, sins, Angle, MatrixStack, Matrixf},
 };
-use wafel_api::{Address, Error, IntType, Value};
+use wafel_api::{Address, IntType, Value};
 use wafel_data_access::{DataReadable, MemoryLayout, Reader};
-use wafel_data_type::{DataType, Namespace, TypeName};
-use wafel_memory::{MemoryError, MemoryRead};
+use wafel_data_type::{Namespace, TypeName};
+use wafel_memory::MemoryRead;
 use wafel_sm64::gfx::*;
 
 use crate::{
-    sm64_render_mod::{get_dl_addr, Camera, F3DMemoryImpl, ObjectCull, Pointer, RawDlIter},
-    SM64RenderConfig,
+    error::VizError,
+    f3d_builder::{F3DBuilder, Pointer, RawDlIter},
+    Camera, ObjectCull, SM64RenderConfig,
 };
 
 const DEBUG_PRINT: bool = false;
 const DEBUG_ONE_FRAME: bool = false;
-const DEBUG_CALC_TRANSFORMS: bool = true;
+const DEBUG_CALC_TRANSFORMS: bool = false;
 const CHECK_CALC_TRANSFORMS: bool = false;
 const ASSERT_CALC_TRANSFORMS: bool = false;
 
@@ -28,43 +29,42 @@ pub fn test_render(
     layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
     config: &SM64RenderConfig,
-) -> Result<F3DRenderData, Error> {
-    let dl_addr = get_dl_addr(layout, memory)?;
-    let dl_addr = match dl_addr {
-        Some(addr) => addr,
-        None => return Ok(F3DRenderData::default()),
-    };
-
-    let raw_input_dl = RawDlIter {
-        memory,
-        addr: dl_addr,
+    process_gfx: bool,
+) -> Result<F3DRenderData, VizError> {
+    let input_dl_addr = layout.global_path("gGfxPool?")?.read(memory)?;
+    if input_dl_addr.is_none() {
+        return Ok(F3DRenderData::default());
     }
-    .map(|cmd| cmd.map_err(Error::from));
-
-    let input_dl: Vec<F3DCommand<Pointer>> =
-        decode_f3d_display_list(raw_input_dl).collect::<Result<_, Error>>()?;
+    let input_dl_addr = input_dl_addr.try_as_address()?;
 
     if DEBUG_PRINT {
         println!("\n\n------- FRAME -------");
-        for cmd in &input_dl {
-            println!("  {:?}", cmd);
+        let cmds = decode_f3d_display_list(RawDlIter {
+            memory,
+            addr: input_dl_addr,
+        });
+        for cmd in cmds {
+            println!("  {:?}", cmd?);
         }
         println!("\n\n");
     }
 
-    let pause_rendering = layout
-        .global_path("gWarpTransition.pauseRendering")?
-        .read(memory)?
-        .try_as_int()?
-        != 0;
-    let root_addr = layout.global_path("gCurrentArea?.unk04")?.read(memory)?;
+    let f3d_memory = if process_gfx {
+        let pause_rendering = layout
+            .global_path("gWarpTransition.pauseRendering")?
+            .read(memory)?
+            .try_as_int()?
+            != 0;
+        let root_addr = layout.global_path("gCurrentArea?.unk04")?.read(memory)?;
 
-    let mut renderer = NodeRenderer::new(config, input_dl.into_iter(), layout, memory)?;
-    renderer.render_game(root_addr, pause_rendering)?;
-
-    let mut f3d_memory = F3DMemoryImpl::new(memory, Pointer::BufferOffset(0));
-    f3d_memory.set_dl_buffer(vec![renderer.display_list]);
-    f3d_memory.set_u32_buffer(renderer.u32_buffer);
+        let mut renderer = NodeRenderer::new(config, layout, memory, input_dl_addr)?;
+        renderer.render_game(root_addr, pause_rendering)?;
+        renderer.output
+    } else {
+        let mut builder = F3DBuilder::new(memory, input_dl_addr);
+        builder.push_remaining()?;
+        builder
+    };
 
     let render_data = interpret_f3d_display_list(&f3d_memory, config.screen_size, true)?;
 
@@ -75,21 +75,16 @@ pub fn test_render(
 }
 
 #[derive(Debug)]
-struct NodeRenderer<'m, L, M, I>
-where
-    I: Iterator<Item = F3DCommand<Pointer>>,
-{
+struct NodeRenderer<'m, L, M: MemoryRead> {
     config: &'m SM64RenderConfig,
-    input_display_list: Peekable<I>,
     layout: &'m L,
     memory: &'m M,
+    output: F3DBuilder<'m, M>,
     reader: Reader<GfxTreeNode>,
     object_fields_reader: Reader<ObjectFields>,
     mtx_stack: MatrixStack,
     mod_mtx_stack: MatrixStack,
     master_lists: [Vec<MasterListEdit>; 8],
-    display_list: Vec<F3DCommand<Pointer>>,
-    u32_buffer: Vec<u32>,
     anim: Option<AnimState>,
     cur_root: Option<GraphNodeRoot>,
     cur_perspective: Option<GraphNodePerspective>,
@@ -131,6 +126,7 @@ struct DisplayListNode {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct AnimState {
     ty: AnimType,
     enabled: bool,
@@ -141,7 +137,7 @@ struct AnimState {
 }
 
 impl AnimState {
-    fn index(&mut self, memory: &impl MemoryRead) -> Result<i32, Error> {
+    fn index(&mut self, memory: &impl MemoryRead) -> Result<i32, VizError> {
         let frame = self.frame as i32;
         let attr0 = memory.read_int(self.attribute, IntType::U16)? as u16;
         let attr1 = memory.read_int(self.attribute + 2, IntType::U16)? as u16;
@@ -156,7 +152,7 @@ impl AnimState {
         Ok(result)
     }
 
-    fn next(&mut self, memory: &impl MemoryRead) -> Result<i16, Error> {
+    fn next(&mut self, memory: &impl MemoryRead) -> Result<i16, VizError> {
         let index = self.index(memory)?;
         if index < 0 {
             // e.g. when mario is behind painting
@@ -191,31 +187,28 @@ struct ObjectFields {
     o_anim_state: i32,
 }
 
-impl<'m, L, M, I> NodeRenderer<'m, L, M, I>
+impl<'m, L, M> NodeRenderer<'m, L, M>
 where
     L: MemoryLayout,
     M: MemoryRead,
-    I: Iterator<Item = F3DCommand<Pointer>>,
 {
     fn new(
         config: &'m SM64RenderConfig,
-        input_display_list: I,
         layout: &'m L,
         memory: &'m M,
-    ) -> Result<Self, Error> {
+        input_dl_addr: Address,
+    ) -> Result<Self, VizError> {
         let reader = GfxTreeNode::reader(layout)?;
         Ok(Self {
             config,
-            input_display_list: input_display_list.peekable(),
             layout,
             memory,
+            output: F3DBuilder::new(memory, input_dl_addr),
             reader,
             object_fields_reader: ObjectFields::reader(layout)?,
             mtx_stack: MatrixStack::default(),
             mod_mtx_stack: MatrixStack::default(),
             master_lists: Default::default(),
-            display_list: Vec::new(),
-            u32_buffer: Vec::new(),
             anim: None,
             cur_root: None,
             cur_perspective: None,
@@ -233,47 +226,6 @@ where
             is_in_lod_range: None,
             indent: 0,
         })
-    }
-
-    fn push_cmd(&mut self, cmd: F3DCommand<Pointer>) {
-        if DEBUG_PRINT {
-            println!("{}{:?}", "  ".repeat(self.indent), cmd);
-        }
-        self.display_list.push(cmd);
-    }
-
-    fn dl_push_until(&mut self, mut f: impl FnMut(F3DCommand<Pointer>) -> bool) -> bool {
-        loop {
-            match self.input_display_list.peek().copied() {
-                Some(cmd) if f(cmd) => return true,
-                Some(cmd) => {
-                    self.push_cmd(cmd);
-                    self.input_display_list.next();
-                }
-                None => return false,
-            }
-        }
-    }
-
-    #[track_caller]
-    fn dl_expect(&mut self, mut f: impl FnMut(F3DCommand<Pointer>) -> bool) -> F3DCommand<Pointer> {
-        if let Some(&cmd) = self.input_display_list.peek() {
-            if f(cmd) {
-                self.input_display_list.next();
-                return cmd;
-            }
-        }
-        // TODO: Error handling
-        panic!(
-            "unexpected display list cmd: {:?}",
-            self.input_display_list.peek()
-        );
-    }
-
-    #[track_caller]
-    fn dl_push_expect(&mut self, f: impl FnMut(F3DCommand<Pointer>) -> bool) {
-        let cmd = self.dl_expect(f);
-        self.push_cmd(cmd);
     }
 
     fn edit_master_list(&mut self, layer: i16, edit: MasterListEdit) {
@@ -334,7 +286,7 @@ where
         }
     }
 
-    fn set_animation_globals(&mut self, node: &AnimInfo) -> Result<(), Error> {
+    fn set_animation_globals(&mut self, node: &AnimInfo) -> Result<(), VizError> {
         let animation_struct = self.layout.data_layout().data_type(&TypeName {
             namespace: Namespace::Struct,
             name: "Animation".to_string(),
@@ -375,10 +327,10 @@ where
         Ok(())
     }
 
-    fn render_game(&mut self, root_addr: Value, pause_rendering: bool) -> Result<(), Error> {
+    fn render_game(&mut self, root_addr: Value, pause_rendering: bool) -> Result<(), VizError> {
         if let Value::Address(root_addr) = root_addr {
             // Skip init_rcp and viewport/scissor override
-            self.dl_push_until(|cmd| matches!(cmd, SPViewport(_)));
+            self.output.push_until(|cmd| matches!(cmd, SPViewport(_)))?;
 
             if !pause_rendering {
                 self.process_node(root_addr, false)?;
@@ -386,18 +338,16 @@ where
         }
 
         // Skip hud, in-game menu etc
-        while let Some(cmd) = self.input_display_list.next() {
-            self.push_cmd(cmd);
-        }
+        self.output.push_remaining()?;
 
         Ok(())
     }
 
-    fn process_node_and_siblings(&mut self, first_addr: Address) -> Result<(), Error> {
+    fn process_node_and_siblings(&mut self, first_addr: Address) -> Result<(), VizError> {
         self.process_node(first_addr, true)
     }
 
-    fn process_node(&mut self, first_addr: Address, siblings: bool) -> Result<(), Error> {
+    fn process_node(&mut self, first_addr: Address, siblings: bool) -> Result<(), VizError> {
         if first_addr.is_null() {
             return Ok(());
         }
@@ -523,12 +473,14 @@ where
         Ok(())
     }
 
-    fn process_root(&mut self, node: &GraphNodeRoot) -> Result<(), Error> {
+    fn process_root(&mut self, node: &GraphNodeRoot) -> Result<(), VizError> {
         // Skip viewport/scissor override
-        self.dl_push_until(|cmd| matches!(cmd, SPViewport(_)));
+        self.output.push_until(|cmd| matches!(cmd, SPViewport(_)))?;
 
-        self.dl_push_expect(|cmd| matches!(cmd, SPViewport(_)));
-        self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+        self.output
+            .push_expect(|cmd| matches!(cmd, SPViewport(_)))?;
+        self.output
+            .push_expect(|cmd| matches!(cmd, SPMatrix { .. }))?;
 
         self.cur_root = Some(node.clone());
         self.process_node_and_siblings(node.node.children)?;
@@ -536,19 +488,26 @@ where
         Ok(())
     }
 
-    fn process_ortho_projection(&mut self, node: &GraphNodeOrthoProjection) -> Result<(), Error> {
+    fn process_ortho_projection(
+        &mut self,
+        node: &GraphNodeOrthoProjection,
+    ) -> Result<(), VizError> {
         if !node.node.children.is_null() {
-            self.dl_push_expect(|cmd| matches!(cmd, SPPerspNormalize(_)));
-            self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+            self.output
+                .push_expect(|cmd| matches!(cmd, SPPerspNormalize(_)))?;
+            self.output
+                .push_expect(|cmd| matches!(cmd, SPMatrix { .. }))?;
             self.process_node_and_siblings(node.node.children)?;
         }
         Ok(())
     }
 
-    fn process_perspective(&mut self, node: &GraphNodePerspective) -> Result<(), Error> {
+    fn process_perspective(&mut self, node: &GraphNodePerspective) -> Result<(), VizError> {
         if !node.fn_node.node.children.is_null() {
-            self.dl_push_expect(|cmd| matches!(cmd, SPPerspNormalize(_)));
-            self.dl_push_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+            self.output
+                .push_expect(|cmd| matches!(cmd, SPPerspNormalize(_)))?;
+            self.output
+                .push_expect(|cmd| matches!(cmd, SPMatrix { .. }))?;
 
             self.cur_perspective = Some(node.clone());
             self.process_node_and_siblings(node.fn_node.node.children)?;
@@ -557,7 +516,7 @@ where
         Ok(())
     }
 
-    fn read_display_list_node(&mut self, addr: Address) -> Result<DisplayListNode, Error> {
+    fn read_display_list_node(&mut self, addr: Address) -> Result<DisplayListNode, VizError> {
         let ptr_size = self.memory.pointer_int_type().size();
 
         Ok(DisplayListNode {
@@ -567,11 +526,12 @@ where
         })
     }
 
-    fn process_master_list_sub(&mut self, node: &GraphNodeMasterList) -> Result<(), Error> {
+    fn process_master_list_sub(&mut self, node: &GraphNodeMasterList) -> Result<(), VizError> {
         let z_buffer = node.node.flags().contains(GraphRenderFlags::Z_BUFFER);
         if z_buffer {
-            self.dl_push_expect(|cmd| matches!(cmd, DPPipeSync));
-            self.dl_push_expect(|cmd| matches!(cmd, SPSetGeometryMode(_)));
+            self.output.push_expect(|cmd| matches!(cmd, DPPipeSync))?;
+            self.output
+                .push_expect(|cmd| matches!(cmd, SPSetGeometryMode(_)))?;
         }
 
         // TODO: Could detect generated display lists for more accuracy
@@ -589,12 +549,15 @@ where
             let mut dl_node_addr = node.list_heads[layer as usize];
             if !dl_node_addr.is_null() {
                 let render_mode = self.get_render_mode(layer, z_buffer);
-                self.dl_expect(|cmd| cmd == DPSetRenderMode(render_mode));
+                self.output
+                    .expect(|cmd| cmd == DPSetRenderMode(render_mode))?;
 
                 while !dl_node_addr.is_null() {
                     let dl_node = self.read_display_list_node(dl_node_addr)?;
-                    self.dl_expect(|cmd| cmd == mtx_cmd(dl_node.transform.into()));
-                    self.dl_expect(|cmd| cmd == SPDisplayList(dl_node.display_list.into()));
+                    self.output
+                        .expect(|cmd| cmd == mtx_cmd(dl_node.transform.into()))?;
+                    self.output
+                        .expect(|cmd| cmd == SPDisplayList(dl_node.display_list.into()))?;
 
                     original_lists[layer as usize]
                         .push((dl_node.transform.into(), dl_node.display_list.into()));
@@ -652,9 +615,8 @@ where
                             .expect("master list discrepancy");
 
                         if DEBUG_CALC_TRANSFORMS || self.config.camera != Camera::InGame {
-                            let offset = self.u32_buffer.len();
-                            self.u32_buffer.extend(cast_slice(transform));
-                            new_nodes.push((Pointer::BufferOffset(offset), dl));
+                            let ptr = self.output.alloc_u32(cast_slice(transform));
+                            new_nodes.push((ptr, dl));
                         } else {
                             new_nodes.push((mtx, dl));
                         }
@@ -670,9 +632,8 @@ where
                         transform,
                         display_list,
                     } => {
-                        let offset = self.u32_buffer.len();
-                        self.u32_buffer.extend(cast_slice(transform));
-                        new_nodes.push((Pointer::BufferOffset(offset), (*display_list).into()));
+                        let ptr = self.output.alloc_u32(cast_slice(transform));
+                        new_nodes.push((ptr, (*display_list).into()));
                     }
                     MasterListEdit::OptDynamic => {
                         if let Some(&&(mtx, dl)) = actual_nodes.peek() {
@@ -680,9 +641,9 @@ where
                                 if DEBUG_CALC_TRANSFORMS || self.config.camera != Camera::InGame {
                                     let orig_mtx = Matrixf::from_fixed(&self.read_fixed(mtx)?);
                                     let new_mtx = &mod_transform * &orig_mtx;
-                                    let offset = self.u32_buffer.len();
-                                    self.u32_buffer.extend(cast_slice(&new_mtx.to_fixed()));
-                                    new_nodes.push((Pointer::BufferOffset(offset), dl));
+                                    let ptr =
+                                        self.output.alloc_u32(cast_slice(&new_mtx.to_fixed()));
+                                    new_nodes.push((ptr, dl));
                                 } else {
                                     new_nodes.push((mtx, dl));
                                 }
@@ -700,11 +661,11 @@ where
         for (layer, list) in new_lists.iter().enumerate() {
             if !list.is_empty() {
                 let render_mode = self.get_render_mode(layer as i16, z_buffer);
-                self.push_cmd(DPSetRenderMode(render_mode));
+                self.output.push_cmd(DPSetRenderMode(render_mode));
 
                 for (mtx, dl) in list.iter().copied() {
-                    self.push_cmd(mtx_cmd(mtx));
-                    self.push_cmd(SPDisplayList(dl));
+                    self.output.push_cmd(mtx_cmd(mtx));
+                    self.output.push_cmd(SPDisplayList(dl));
                 }
             }
         }
@@ -737,7 +698,7 @@ where
                             eprintln!(
                                 "{}: mtx ({:?})\n{:?}\n{:?}",
                                 layer,
-                                self.symbol_name(old_node.1.address()),
+                                self.symbol_name(old_node.1.addr().unwrap()),
                                 Matrixf::from_fixed(&old_mtx),
                                 Matrixf::from_fixed(&new_mtx),
                             );
@@ -752,8 +713,9 @@ where
         }
 
         if z_buffer {
-            self.dl_push_expect(|cmd| matches!(cmd, DPPipeSync));
-            self.dl_push_expect(|cmd| matches!(cmd, SPClearGeometryMode(_)));
+            self.output.push_expect(|cmd| matches!(cmd, DPPipeSync))?;
+            self.output
+                .push_expect(|cmd| matches!(cmd, SPClearGeometryMode(_)))?;
         }
 
         Ok(())
@@ -770,29 +732,14 @@ where
     }
 
     #[allow(dead_code)]
-    fn read_fixed(&self, ptr: Pointer) -> Result<Vec<i32>, MemoryError> {
+    fn read_fixed(&self, ptr: Pointer) -> Result<Vec<i32>, VizError> {
         let mut data = vec![0; 16];
-        self.read_u32(cast_slice_mut(data.as_mut_slice()), ptr, 0)?;
+        self.output
+            .read_u32(cast_slice_mut(data.as_mut_slice()), ptr, 0)?;
         Ok(data)
     }
 
-    fn read_u32(&self, dst: &mut [u32], ptr: Pointer, offset: usize) -> Result<(), MemoryError> {
-        match ptr {
-            Pointer::Address(addr) => {
-                let addr = addr + offset;
-                for i in 0..dst.len() {
-                    dst[i] = self.memory.read_int(addr + 4 * i, IntType::U32)? as u32;
-                }
-            }
-            Pointer::BufferOffset(offset) => {
-                dst.copy_from_slice(&self.u32_buffer[offset..offset + dst.len()]);
-            }
-            _ => unimplemented!(),
-        }
-        Ok(())
-    }
-
-    fn process_master_list(&mut self, node: &GraphNodeMasterList) -> Result<(), Error> {
+    fn process_master_list(&mut self, node: &GraphNodeMasterList) -> Result<(), VizError> {
         if !node.node.children.is_null() {
             self.process_node_and_siblings(node.node.children)?;
             self.process_master_list_sub(node)?;
@@ -800,12 +747,12 @@ where
         Ok(())
     }
 
-    fn process_start(&mut self, node: &GraphNodeStart) -> Result<(), Error> {
+    fn process_start(&mut self, node: &GraphNodeStart) -> Result<(), VizError> {
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
     }
 
-    fn process_level_of_detail(&mut self, node: &GraphNodeLevelOfDetail) -> Result<(), Error> {
+    fn process_level_of_detail(&mut self, node: &GraphNodeLevelOfDetail) -> Result<(), VizError> {
         let mtx = self.mtx_stack.cur.to_fixed();
         let dist_from_cam = -(mtx[7] >> 16) as i16;
 
@@ -820,7 +767,7 @@ where
         Ok(())
     }
 
-    fn process_switch_case(&mut self, node: &GraphNodeSwitchCase) -> Result<(), Error> {
+    fn process_switch_case(&mut self, node: &GraphNodeSwitchCase) -> Result<(), VizError> {
         let mut selected_case = node.selected_case;
 
         if !node.fn_node.func.is_null() {
@@ -862,7 +809,7 @@ where
         Ok(())
     }
 
-    fn process_camera(&mut self, node: &GraphNodeCamera) -> Result<(), Error> {
+    fn process_camera(&mut self, node: &GraphNodeCamera) -> Result<(), VizError> {
         let camera_transform = Matrixf::look_at(node.pos, node.focus, node.roll);
         self.mtx_stack.push_mul(&camera_transform);
 
@@ -872,15 +819,14 @@ where
         };
         self.mod_mtx_stack.push_mul(&mod_camera_transform);
 
-        let cmd = self.dl_expect(|cmd| matches!(cmd, SPMatrix { .. }));
+        let cmd = self.output.expect(|cmd| matches!(cmd, SPMatrix { .. }))?;
         match self.config.camera {
-            Camera::InGame => self.push_cmd(cmd),
+            Camera::InGame => self.output.push_cmd(cmd),
             Camera::LookAt { roll, .. } => {
                 let mtx = Matrixf::rotate_xy(roll);
-                let offset = self.u32_buffer.len();
-                self.u32_buffer.extend(cast_slice(&mtx.to_fixed()));
-                self.push_cmd(SPMatrix {
-                    matrix: Pointer::BufferOffset(offset),
+                let ptr = self.output.alloc_u32(cast_slice(&mtx.to_fixed()));
+                self.output.push_cmd(SPMatrix {
+                    matrix: ptr,
                     mode: MatrixMode::Proj,
                     op: MatrixOp::Mul,
                     push: false,
@@ -907,7 +853,7 @@ where
     fn process_translation_rotation(
         &mut self,
         node: &GraphNodeTranslationRotation,
-    ) -> Result<(), Error> {
+    ) -> Result<(), VizError> {
         let translation = [
             node.translation[0] as f32,
             node.translation[1] as f32,
@@ -927,7 +873,7 @@ where
         Ok(())
     }
 
-    fn process_translation(&mut self, node: &GraphNodeTranslation) -> Result<(), Error> {
+    fn process_translation(&mut self, node: &GraphNodeTranslation) -> Result<(), VizError> {
         let translation = [
             node.translation[0] as f32,
             node.translation[1] as f32,
@@ -947,7 +893,7 @@ where
         Ok(())
     }
 
-    fn process_rotation(&mut self, node: &GraphNodeRotation) -> Result<(), Error> {
+    fn process_rotation(&mut self, node: &GraphNodeRotation) -> Result<(), VizError> {
         let translation = [0.0, 0.0, 0.0];
         let mtx = Matrixf::rotate_zxy_and_translate(translation, node.rotation);
         self.mtx_stack.push_mul(&mtx);
@@ -963,7 +909,7 @@ where
         Ok(())
     }
 
-    fn obj_is_in_view(&mut self, node: &GraphNodeObject) -> Result<bool, Error> {
+    fn obj_is_in_view(&mut self, node: &GraphNodeObject) -> Result<bool, VizError> {
         let matrix = self.mtx_stack.cur.clone();
 
         if node.node.flags().contains(GraphRenderFlags::INVISIBLE) {
@@ -1005,7 +951,8 @@ where
         Ok(true)
     }
 
-    fn is_mario(&mut self) -> Result<bool, Error> {
+    #[allow(dead_code)]
+    fn is_mario(&mut self) -> Result<bool, VizError> {
         let mario_object = self
             .layout
             .global_path("gMarioObject")?
@@ -1014,7 +961,7 @@ where
         Ok(self.cur_object_addr == Some(mario_object))
     }
 
-    fn calc_throw_matrix(&mut self) -> Result<Option<Matrixf>, Error> {
+    fn calc_throw_matrix(&mut self) -> Result<Option<Matrixf>, VizError> {
         // TODO: Need more accurate condition for checking if align_with_floor was called
         //         if self.is_mario()? {
         //             let align_action_names = [
@@ -1064,7 +1011,7 @@ where
         }
     }
 
-    fn process_object(&mut self, node: &GraphNodeObject) -> Result<(), Error> {
+    fn process_object(&mut self, node: &GraphNodeObject) -> Result<(), VizError> {
         let root_area = self.cur_root.as_ref().map(|r| r.area_index);
         if root_area.is_none() || root_area == Some(node.area_index as u8) {
             if let Some(throw_matrix) = self.calc_throw_matrix()? {
@@ -1125,7 +1072,7 @@ where
         Ok(())
     }
 
-    fn process_animated_part(&mut self, node: &GraphNodeAnimatedPart) -> Result<(), Error> {
+    fn process_animated_part(&mut self, node: &GraphNodeAnimatedPart) -> Result<(), VizError> {
         let mut rotation = [Wrapping(0), Wrapping(0), Wrapping(0)];
         let mut translation = node.translation.map(|x| x as f32);
 
@@ -1176,7 +1123,7 @@ where
         Ok(())
     }
 
-    fn process_billboard(&mut self, node: &GraphNodeBillboard) -> Result<(), Error> {
+    fn process_billboard(&mut self, node: &GraphNodeBillboard) -> Result<(), VizError> {
         let translation = [
             node.translation[0] as f32,
             node.translation[1] as f32,
@@ -1217,7 +1164,7 @@ where
         Ok(())
     }
 
-    fn process_display_list(&mut self, node: &GraphNodeDisplayList) -> Result<(), Error> {
+    fn process_display_list(&mut self, node: &GraphNodeDisplayList) -> Result<(), VizError> {
         if !node.display_list.is_null() {
             self.append_display_list(node.node.flags >> 8, node.display_list);
         }
@@ -1225,7 +1172,7 @@ where
         Ok(())
     }
 
-    fn process_scale(&mut self, node: &GraphNodeScale) -> Result<(), Error> {
+    fn process_scale(&mut self, node: &GraphNodeScale) -> Result<(), VizError> {
         let mtx = Matrixf::scale_vec3f([node.scale, node.scale, node.scale]);
         self.mtx_stack.push_mul(&mtx);
         self.mod_mtx_stack.push_mul(&mtx);
@@ -1240,8 +1187,8 @@ where
         Ok(())
     }
 
-    fn process_shadow(&mut self, node: &GraphNodeShadow) -> Result<(), Error> {
-        if let (Some(camera), Some(object)) = (&self.cur_camera, &self.cur_object) {
+    fn process_shadow(&mut self, node: &GraphNodeShadow) -> Result<(), VizError> {
+        if self.cur_camera.is_some() && self.cur_object.is_some() {
             for layer in [4, 5, 6] {
                 self.append_opt_dynamic_list(layer);
             }
@@ -1251,7 +1198,7 @@ where
         Ok(())
     }
 
-    fn process_object_parent(&mut self, node: &GraphNodeObjectParent) -> Result<(), Error> {
+    fn process_object_parent(&mut self, node: &GraphNodeObjectParent) -> Result<(), VizError> {
         if !node.shared_child.is_null() {
             self.process_node_and_siblings(node.shared_child)?;
         }
@@ -1259,13 +1206,13 @@ where
         Ok(())
     }
 
-    fn process_generated(&mut self, node: &GraphNodeGenerated) -> Result<(), Error> {
+    fn process_generated(&mut self, node: &GraphNodeGenerated) -> Result<(), VizError> {
         self.append_opt_dynamic_list(node.fn_node.node.flags >> 8);
         self.process_node_and_siblings(node.fn_node.node.children)?;
         Ok(())
     }
 
-    fn process_background(&mut self, node: &GraphNodeBackground) -> Result<(), Error> {
+    fn process_background(&mut self, node: &GraphNodeBackground) -> Result<(), VizError> {
         let layer = if !node.fn_node.func.is_null() {
             node.fn_node.node.flags >> 8
         } else {
@@ -1277,7 +1224,7 @@ where
         Ok(())
     }
 
-    fn process_held_object(&mut self, node: &GraphNodeHeldObject) -> Result<(), Error> {
+    fn process_held_object(&mut self, node: &GraphNodeHeldObject) -> Result<(), VizError> {
         if !node.obj_node.is_null() {
             if let GfxTreeNode::Object(obj_node) = self.reader.read(self.memory, node.obj_node)? {
                 if !obj_node.shared_child.is_null() {
@@ -1333,7 +1280,7 @@ where
         Ok(())
     }
 
-    fn process_culling_radius(&mut self, node: &GraphNodeCullingRadius) -> Result<(), Error> {
+    fn process_culling_radius(&mut self, node: &GraphNodeCullingRadius) -> Result<(), VizError> {
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
     }

@@ -7,6 +7,7 @@
 
 #![feature(stmt_expr_attributes)]
 #![feature(doc_cfg)]
+#![feature(generic_associated_types)]
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 #![allow(clippy::map_entry, clippy::needless_range_loop)]
 
