@@ -536,9 +536,6 @@
 <span id="530">530</span>
 <span id="531">531</span>
 <span id="532">532</span>
-<span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">feature</span>(<span class="ident">stmt_expr_attributes</span>)]</span>
 <span class="attribute">#![<span class="ident">warn</span>(<span class="ident">missing_docs</span>, <span class="ident">missing_debug_implementations</span>, <span class="ident">rust_2018_idioms</span>)]</span>
 <span class="attribute">#![<span class="ident">allow</span>(
@@ -569,6 +566,8 @@
     <span class="ident">window::WindowBuilder</span>,
 };
 
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::sm64_render_dl::render_sm64_dl</span>;
+
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">custom_renderer</span>;
 <span class="kw">mod</span> <span class="ident">sm64_gfx_render</span>;
 <span class="kw">mod</span> <span class="ident">sm64_gfx_tree</span>;
@@ -584,8 +583,8 @@
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test_dl</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="comment">// env_logger::init();</span>
-    <span class="comment">// futures::executor::block_on(run(4001, None)).unwrap();</span>
+    <span class="ident">env_logger::init</span>();
+    <span class="ident">futures::executor::block_on</span>(<span class="ident">run</span>(<span class="number">4001</span>, <span class="prelude-val">None</span>)).<span class="ident">unwrap</span>();
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">game</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">Game::new</span>(<span class="string">&quot;libsm64/sm64_us&quot;</span>) };
     <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">inputs</span>) <span class="op">=</span> <span class="ident">load_m64</span>(<span class="string">&quot;wafel_viz_tests/input/120_u.m64&quot;</span>);
@@ -611,12 +610,7 @@
 
     <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">count</span> {
         <span class="comment">// let memory = game.memory.with_slot(&amp;game.base_slot);</span>
-        <span class="comment">// let get_path = |source: &amp;str| {</span>
-        <span class="comment">//     GlobalDataPath::compile(&amp;game.layout, &amp;game.memory, source)</span>
-        <span class="comment">//         .map(Arc::new)</span>
-        <span class="comment">//         .map_err(Into::into)</span>
-        <span class="comment">// };</span>
-        <span class="comment">// let data = render_sm64_dl(&amp;memory, get_path, (320, 240))?;</span>
+        <span class="comment">// let data = render_sm64_dl(&amp;game.layout, &amp;memory, (320, 240))?;</span>
 
         <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">prepare_render_data</span>(<span class="kw-2">&amp;</span><span class="ident">game</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>);
 
