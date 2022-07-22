@@ -485,10 +485,10 @@
                     <span class="kw">if</span> <span class="ident">address</span>.<span class="ident">is_null</span>() {
                         <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">MemoryError::InvalidAddress</span>.<span class="ident">into</span>());
                     }
-                    <span class="ident">address</span> <span class="op">=</span> <span class="ident">memory</span>.<span class="ident">read_address</span>(<span class="ident">address</span>)<span class="question-mark">?</span>;
+                    <span class="ident">address</span> <span class="op">=</span> <span class="ident">memory</span>.<span class="ident">read_addr</span>(<span class="ident">address</span>)<span class="question-mark">?</span>;
                 }
                 <span class="ident">DataPathEdge::Nullable</span> =&gt; {
-                    <span class="kw">if</span> <span class="ident">memory</span>.<span class="ident">read_address</span>(<span class="ident">address</span>)<span class="question-mark">?</span>.<span class="ident">is_null</span>() {
+                    <span class="kw">if</span> <span class="ident">memory</span>.<span class="ident">read_addr</span>(<span class="ident">address</span>)<span class="question-mark">?</span>.<span class="ident">is_null</span>() {
                         <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
                     }
                 }

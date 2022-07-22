@@ -583,8 +583,8 @@
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test_dl</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">env_logger::init</span>();
-    <span class="ident">futures::executor::block_on</span>(<span class="ident">run</span>(<span class="number">4001</span>, <span class="prelude-val">None</span>)).<span class="ident">unwrap</span>();
+    <span class="comment">// env_logger::init();</span>
+    <span class="comment">// futures::executor::block_on(run(4001, None)).unwrap();</span>
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">game</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">Game::new</span>(<span class="string">&quot;libsm64/sm64_us&quot;</span>) };
     <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">inputs</span>) <span class="op">=</span> <span class="ident">load_m64</span>(<span class="string">&quot;wafel_viz_tests/input/120_u.m64&quot;</span>);
@@ -594,15 +594,15 @@
         <span class="ident">game</span>.<span class="ident">advance</span>();
     }
 
-    <span class="comment">// let config = SM64RenderConfig {</span>
-    <span class="comment">//     camera: Camera::LookAt {</span>
-    <span class="comment">//         pos: game.read(&quot;gLakituState.pos&quot;).as_f32_3(),</span>
-    <span class="comment">//         focus: game.read(&quot;gLakituState.focus&quot;).as_f32_3(),</span>
-    <span class="comment">//         roll: Wrapping(game.read(&quot;gLakituState.roll&quot;).as_int() as i16),</span>
-    <span class="comment">//     },</span>
-    <span class="comment">//     object_cull: ObjectCull::ShowAll,</span>
-    <span class="comment">//     ..Default::default()</span>
-    <span class="comment">// };</span>
+    <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">SM64RenderConfig</span> {
+        <span class="ident">camera</span>: <span class="ident">Camera::LookAt</span> {
+            <span class="ident">pos</span>: <span class="ident">game</span>.<span class="ident">read</span>(<span class="string">&quot;gLakituState.pos&quot;</span>).<span class="ident">as_f32_3</span>(),
+            <span class="ident">focus</span>: <span class="ident">game</span>.<span class="ident">read</span>(<span class="string">&quot;gLakituState.focus&quot;</span>).<span class="ident">as_f32_3</span>(),
+            <span class="ident">roll</span>: <span class="ident">Wrapping</span>(<span class="ident">game</span>.<span class="ident">read</span>(<span class="string">&quot;gLakituState.roll&quot;</span>).<span class="ident">as_int</span>() <span class="kw">as</span> <span class="ident">i16</span>),
+        },
+        <span class="ident">object_cull</span>: <span class="ident">ObjectCull::ShowAll</span>,
+        ..<span class="ident">Default::default</span>()
+    };
     <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">SM64RenderConfig::default</span>();
 
     <span class="kw">let</span> <span class="ident">count</span> <span class="op">=</span> <span class="number">100</span>;

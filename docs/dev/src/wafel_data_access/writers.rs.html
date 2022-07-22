@@ -301,7 +301,7 @@
 <span class="kw">use</span> <span class="ident">std::num::Wrapping</span>;
 
 <span class="kw">use</span> <span class="ident">indexmap::IndexMap</span>;
-<span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">Address</span>, <span class="ident">DataType</span>, <span class="ident">DataTypeRef</span>, <span class="ident">FloatType</span>, <span class="ident">IntType</span>, <span class="ident">TypeName</span>, <span class="ident">Value</span>};
+<span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">Address</span>, <span class="ident">DataType</span>, <span class="ident">DataTypeRef</span>, <span class="ident">TypeName</span>, <span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">wafel_memory</span>::{<span class="ident">MemoryRead</span>, <span class="ident">MemoryWrite</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
@@ -310,7 +310,7 @@
 };
 
 <span class="macro">macro_rules!</span> <span class="ident">prim_writable</span> {
-    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">ty</span>:<span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">writer</span>:<span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>:<span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">prim_ty</span>:<span class="ident">expr</span>) =&gt; {
+    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">ty</span>:<span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">writer</span>:<span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>:<span class="ident">ident</span>) =&gt; {
         <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">Default</span>)]</span>
         <span class="kw">pub</span> <span class="kw">struct</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">writer</span>;
 
@@ -321,7 +321,7 @@
                 <span class="ident">addr</span>: <span class="ident">Address</span>,
                 <span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">ty</span>,
             ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">DataError</span><span class="op">&gt;</span> {
-                <span class="ident">memory</span>.<span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>(<span class="ident">addr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">prim_ty</span>, (<span class="kw-2">*</span><span class="ident">value</span>).<span class="ident">into</span>())<span class="question-mark">?</span>;
+                <span class="ident">memory</span>.<span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>(<span class="ident">addr</span>, <span class="kw-2">*</span><span class="ident">value</span>)<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(())
             }
         }
@@ -349,17 +349,17 @@
     };
 }
 
-<span class="macro">prim_writable!</span>(<span class="ident">u8</span>, <span class="ident">U8Writer</span>, <span class="ident">write_int</span>, <span class="ident">IntType::U8</span>);
-<span class="macro">prim_writable!</span>(<span class="ident">i8</span>, <span class="ident">I8Writer</span>, <span class="ident">write_int</span>, <span class="ident">IntType::S8</span>);
-<span class="macro">prim_writable!</span>(<span class="ident">u16</span>, <span class="ident">U16Writer</span>, <span class="ident">write_int</span>, <span class="ident">IntType::U16</span>);
-<span class="macro">prim_writable!</span>(<span class="ident">i16</span>, <span class="ident">I16Writer</span>, <span class="ident">write_int</span>, <span class="ident">IntType::S16</span>);
-<span class="macro">prim_writable!</span>(<span class="ident">u32</span>, <span class="ident">U32Writer</span>, <span class="ident">write_int</span>, <span class="ident">IntType::U32</span>);
-<span class="macro">prim_writable!</span>(<span class="ident">i32</span>, <span class="ident">I32Writer</span>, <span class="ident">write_int</span>, <span class="ident">IntType::S32</span>);
-<span class="macro">prim_writable!</span>(<span class="ident">u64</span>, <span class="ident">U64Writer</span>, <span class="ident">write_int</span>, <span class="ident">IntType::U64</span>);
-<span class="macro">prim_writable!</span>(<span class="ident">i64</span>, <span class="ident">I64Writer</span>, <span class="ident">write_int</span>, <span class="ident">IntType::S64</span>);
+<span class="macro">prim_writable!</span>(<span class="ident">u8</span>, <span class="ident">U8Writer</span>, <span class="ident">write_u8</span>);
+<span class="macro">prim_writable!</span>(<span class="ident">i8</span>, <span class="ident">I8Writer</span>, <span class="ident">write_i8</span>);
+<span class="macro">prim_writable!</span>(<span class="ident">u16</span>, <span class="ident">U16Writer</span>, <span class="ident">write_u16</span>);
+<span class="macro">prim_writable!</span>(<span class="ident">i16</span>, <span class="ident">I16Writer</span>, <span class="ident">write_i16</span>);
+<span class="macro">prim_writable!</span>(<span class="ident">u32</span>, <span class="ident">U32Writer</span>, <span class="ident">write_u32</span>);
+<span class="macro">prim_writable!</span>(<span class="ident">i32</span>, <span class="ident">I32Writer</span>, <span class="ident">write_i32</span>);
+<span class="macro">prim_writable!</span>(<span class="ident">u64</span>, <span class="ident">U64Writer</span>, <span class="ident">write_u64</span>);
+<span class="macro">prim_writable!</span>(<span class="ident">i64</span>, <span class="ident">I64Writer</span>, <span class="ident">write_i64</span>);
 
-<span class="macro">prim_writable!</span>(<span class="ident">f32</span>, <span class="ident">F32Writer</span>, <span class="ident">write_float</span>, <span class="ident">FloatType::F32</span>);
-<span class="macro">prim_writable!</span>(<span class="ident">f64</span>, <span class="ident">F64Writer</span>, <span class="ident">write_float</span>, <span class="ident">FloatType::F64</span>);
+<span class="macro">prim_writable!</span>(<span class="ident">f32</span>, <span class="ident">F32Writer</span>, <span class="ident">write_f32</span>);
+<span class="macro">prim_writable!</span>(<span class="ident">f64</span>, <span class="ident">F64Writer</span>, <span class="ident">write_f64</span>);
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AddressWriter</span>;
@@ -371,7 +371,7 @@
         <span class="ident">addr</span>: <span class="ident">Address</span>,
         <span class="ident">value</span>: <span class="ident">Address</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">DataError</span><span class="op">&gt;</span> {
-        <span class="ident">memory</span>.<span class="ident">write_address</span>(<span class="ident">addr</span>, <span class="ident">value</span>)<span class="question-mark">?</span>;
+        <span class="ident">memory</span>.<span class="ident">write_addr</span>(<span class="ident">addr</span>, <span class="ident">value</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
@@ -496,7 +496,7 @@
         <span class="ident">DataType::Float</span>(<span class="ident">float_type</span>) =&gt; {
             <span class="ident">memory</span>.<span class="ident">write_float</span>(<span class="ident">address</span>, <span class="kw-2">*</span><span class="ident">float_type</span>, <span class="ident">value</span>.<span class="ident">try_as_float_lenient</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>
         }
-        <span class="ident">DataType::Pointer</span> { .. } =&gt; <span class="ident">memory</span>.<span class="ident">write_address</span>(<span class="ident">address</span>, <span class="ident">value</span>.<span class="ident">try_as_address</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>,
+        <span class="ident">DataType::Pointer</span> { .. } =&gt; <span class="ident">memory</span>.<span class="ident">write_addr</span>(<span class="ident">address</span>, <span class="ident">value</span>.<span class="ident">try_as_address</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>,
         <span class="ident">DataType::Array</span> {
             <span class="ident">base</span>,
             <span class="ident">length</span>,
