@@ -1,5 +1,5 @@
 use process_memory::{CopyAddress, Pid, ProcessHandle, PutAddress, TryIntoProcessHandle};
-use wafel_data_type::{Address, FloatType, FloatValue, IntType, IntValue};
+use wafel_data_type::{Address, IntType};
 
 use crate::{
     MemoryError::{self, *},
@@ -7,6 +7,7 @@ use crate::{
 };
 
 // TODO: Cache hints, e.g. in read_surfaces
+// TODO: More efficient buffer reading/writing
 
 #[derive(Debug, Clone)]
 struct ProcessHandleWrapper(ProcessHandle);
@@ -171,32 +172,39 @@ impl EmuMemory {
 }
 
 impl MemoryRead for EmuMemory {
-    fn read_int(&self, address: Address, int_type: IntType) -> Result<IntValue, MemoryError> {
-        Ok(match int_type {
-            IntType::U8 => self.read_u8(address)?.into(),
-            IntType::S8 => (self.read_u8(address)? as i8).into(),
-            IntType::U16 => self.read_u16(address)?.into(),
-            IntType::S16 => (self.read_u16(address)? as i16).into(),
-            IntType::U32 => self.read_u32(address)?.into(),
-            IntType::S32 => (self.read_u32(address)? as i32).into(),
-            IntType::U64 => self.read_u64(address)?.into(),
-            IntType::S64 => (self.read_u64(address)? as i64).into(),
-        })
+    fn read_u8s(&self, addr: Address, buf: &mut [u8]) -> Result<(), MemoryError> {
+        for (i, value) in buf.iter_mut().enumerate() {
+            *value = self.read_u8(addr + i)?;
+        }
+        Ok(())
     }
 
-    fn read_float(
-        &self,
-        address: Address,
-        float_type: FloatType,
-    ) -> Result<FloatValue, MemoryError> {
-        Ok(match float_type {
-            FloatType::F32 => f32::from_bits(self.read_u32(address)?).into(),
-            FloatType::F64 => f64::from_bits(self.read_u64(address)?),
-        })
+    fn read_u16s(&self, addr: Address, buf: &mut [u16]) -> Result<(), MemoryError> {
+        for (i, value) in buf.iter_mut().enumerate() {
+            *value = self.read_u16(addr + 2 * i)?;
+        }
+        Ok(())
     }
 
-    fn read_address(&self, address: Address) -> Result<Address, MemoryError> {
-        Ok(Address(self.read_u32(address)? as usize))
+    fn read_u32s(&self, addr: Address, buf: &mut [u32]) -> Result<(), MemoryError> {
+        for (i, value) in buf.iter_mut().enumerate() {
+            *value = self.read_u32(addr + 4 * i)?;
+        }
+        Ok(())
+    }
+
+    fn read_u64s(&self, addr: Address, buf: &mut [u64]) -> Result<(), MemoryError> {
+        for (i, value) in buf.iter_mut().enumerate() {
+            *value = self.read_u64(addr + 8 * i)?;
+        }
+        Ok(())
+    }
+
+    fn read_addrs(&self, addr: Address, buf: &mut [Address]) -> Result<(), MemoryError> {
+        for (i, value) in buf.iter_mut().enumerate() {
+            *value = Address(self.read_u32(addr + 4 * i)? as usize);
+        }
+        Ok(())
     }
 
     fn pointer_int_type(&self) -> IntType {
@@ -205,37 +213,38 @@ impl MemoryRead for EmuMemory {
 }
 
 impl MemoryWrite for EmuMemory {
-    fn write_int(
-        &mut self,
-        address: Address,
-        int_type: IntType,
-        value: IntValue,
-    ) -> Result<(), MemoryError> {
-        match int_type {
-            IntType::U8 => self.write_u8(address, value as u8),
-            IntType::S8 => self.write_u8(address, value as u8),
-            IntType::U16 => self.write_u16(address, value as u16),
-            IntType::S16 => self.write_u16(address, value as u16),
-            IntType::U32 => self.write_u32(address, value as u32),
-            IntType::S32 => self.write_u32(address, value as u32),
-            IntType::U64 => self.write_u64(address, value as u64),
-            IntType::S64 => self.write_u64(address, value as u64),
+    fn write_u8s(&mut self, addr: Address, buf: &[u8]) -> Result<(), MemoryError> {
+        for (i, value) in buf.iter().copied().enumerate() {
+            (&*self).write_u8(addr + i, value)?;
         }
+        Ok(())
     }
 
-    fn write_float(
-        &mut self,
-        address: Address,
-        float_type: FloatType,
-        value: FloatValue,
-    ) -> Result<(), MemoryError> {
-        match float_type {
-            FloatType::F32 => self.write_u32(address, (value as f32).to_bits()),
-            FloatType::F64 => self.write_u64(address, value.to_bits()),
+    fn write_u16s(&mut self, addr: Address, buf: &[u16]) -> Result<(), MemoryError> {
+        for (i, value) in buf.iter().copied().enumerate() {
+            (&*self).write_u16(addr + 2 * i, value)?;
         }
+        Ok(())
     }
 
-    fn write_address(&mut self, address: Address, value: Address) -> Result<(), MemoryError> {
-        self.write_u32(address, value.0 as u32)
+    fn write_u32s(&mut self, addr: Address, buf: &[u32]) -> Result<(), MemoryError> {
+        for (i, value) in buf.iter().copied().enumerate() {
+            (&*self).write_u32(addr + 4 * i, value)?;
+        }
+        Ok(())
+    }
+
+    fn write_u64s(&mut self, addr: Address, buf: &[u64]) -> Result<(), MemoryError> {
+        for (i, value) in buf.iter().copied().enumerate() {
+            (&*self).write_u64(addr + 8 * i, value)?;
+        }
+        Ok(())
+    }
+
+    fn write_addrs(&mut self, addr: Address, buf: &[Address]) -> Result<(), MemoryError> {
+        for (i, value) in buf.iter().copied().enumerate() {
+            (&*self).write_u32(addr + 4 * i, value.0 as u32)?;
+        }
+        Ok(())
     }
 }
