@@ -2,27 +2,42 @@
 
 use std::{error::Error, fmt};
 
-use wafel_data_type::{Address, DataTypeError, DataTypeRef};
+use wafel_data_type::{Address, DataTypeError, DataTypeRef, ValueTypeError};
 use wafel_layout::LayoutLookupError;
 use wafel_memory::MemoryError;
 
 #[derive(Debug, Clone)]
 pub enum DataError {
+    Context {
+        context: String,
+        error: Box<DataError>,
+    },
     DataPathError(DataPathError),
     MemoryError(MemoryError),
     LayoutLookupError(LayoutLookupError),
     DataTypeError(DataTypeError),
+    ValueTypeError(ValueTypeError),
     NoSymbolAtAddress(Address),
+    ReadUnsizedArray,
+    ReadUnion,
 }
 
 impl fmt::Display for DataError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            DataError::Context { context, error } => write!(f, "{}:\n  {}", context, error),
             DataError::DataPathError(error) => write!(f, "{}", error),
             DataError::MemoryError(error) => write!(f, "{}", error),
             DataError::LayoutLookupError(error) => write!(f, "{}", error),
             DataError::DataTypeError(error) => write!(f, "{}", error),
+            DataError::ValueTypeError(error) => write!(f, "{}", error),
             DataError::NoSymbolAtAddress(addr) => write!(f, "no symbol at address: {}", addr),
+            DataError::ReadUnsizedArray => {
+                write!(f, "cannot read array with unknown length")
+            }
+            DataError::ReadUnion => {
+                write!(f, "cannot read union with unspecified variant")
+            }
         }
     }
 }
@@ -50,6 +65,12 @@ impl From<LayoutLookupError> for DataError {
 impl From<DataTypeError> for DataError {
     fn from(v: DataTypeError) -> Self {
         Self::DataTypeError(v)
+    }
+}
+
+impl From<ValueTypeError> for DataError {
+    fn from(v: ValueTypeError) -> Self {
+        Self::ValueTypeError(v)
     }
 }
 

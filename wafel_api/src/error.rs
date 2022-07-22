@@ -18,7 +18,7 @@ pub enum Error {
     ApplyEditError {
         path: Arc<GlobalDataPath>,
         value: Value,
-        error: MemoryError,
+        error: DataError,
     },
     LayoutLookupError(LayoutLookupError),
     SaveStateMismatch,

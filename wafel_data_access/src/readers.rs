@@ -1,37 +1,16 @@
 #![allow(clippy::needless_range_loop)]
+#![allow(missing_docs)]
 
-use wafel_data_type::{Address, FloatType, IntType};
+use indexmap::IndexMap;
+use wafel_data_type::{Address, DataType, DataTypeRef, FloatType, IntType, TypeName, Value};
 use wafel_memory::MemoryRead;
 
-use crate::{DataError, MemoryLayout};
+use crate::{
+    DataError::{self, *},
+    DataReadable, DataReader, MemoryLayout,
+};
 
 // TODO: Arrays should determine stride based on the field type in derive?
-
-/// A type that knows how to read a structured value from memory.
-///
-/// See [DataReadable].
-pub trait DataReader {
-    /// The type of value that is read from memory.
-    type Output;
-
-    /// Read the value from memory at the given address.
-    fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<Self::Output, DataError>;
-}
-
-/// Trait for Rust types that can be read from memory.
-pub trait DataReadable {
-    /// The reader for the type.
-    type Reader: DataReader<Output = Self>;
-
-    /// Construct a reader using the given layout.
-    ///
-    /// This method is expected to do the heavy lifting for the read operation,
-    /// like looking up struct field offsets=.
-    fn reader(layout: &impl MemoryLayout) -> Result<Self::Reader, DataError>;
-}
-
-/// Shorthand for the [Reader] of a [DataReadable].
-pub type Reader<T> = <T as DataReadable>::Reader;
 
 macro_rules! prim_readable {
     ($ty:ident, $reader:ident, $method:ident $(, $arg:expr)*) => {
@@ -145,4 +124,74 @@ impl<const N: usize> DataReadable for [Address; N] {
     fn reader(_layout: &impl MemoryLayout) -> Result<AddressArrayReader<N>, DataError> {
         Ok(AddressArrayReader)
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct DataTypeReader {
+    pub(crate) data_type: DataTypeRef,
+    pub(crate) concrete_types: IndexMap<TypeName, DataTypeRef>,
+}
+
+impl DataTypeReader {
+    pub fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<Value, DataError> {
+        read_value_impl(memory, addr, &self.data_type, &self.concrete_types)
+    }
+}
+
+impl DataReader for DataTypeReader {
+    type Output = Value;
+
+    fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<Value, DataError> {
+        self.read(memory, addr)
+    }
+}
+
+pub(crate) fn read_value_impl(
+    memory: &impl MemoryRead,
+    addr: Address,
+    data_type: &DataTypeRef,
+    concrete_types: &IndexMap<TypeName, DataTypeRef>,
+) -> Result<Value, DataError> {
+    let value = match data_type.as_ref() {
+        DataType::Void => Value::None,
+        DataType::Int(int_type) => Value::Int(memory.read_int(addr, *int_type)?),
+        DataType::Float(float_type) => Value::Float(memory.read_float(addr, *float_type)?),
+        DataType::Pointer { .. } => Value::Address(memory.read_address(addr)?),
+        DataType::Array {
+            base,
+            length,
+            stride,
+        } => match *length {
+            Some(length) => {
+                let values: Vec<Value> = (0..length)
+                    .map(|index| {
+                        read_value_impl(memory, addr + index * *stride, base, concrete_types)
+                    })
+                    .collect::<Result<_, DataError>>()?;
+                Value::Array(values)
+            }
+            None => return Err(ReadUnsizedArray),
+        },
+        DataType::Struct { fields } => {
+            let mut field_values: IndexMap<String, Value> = IndexMap::new();
+            for (name, field) in fields {
+                let field_value = read_value_impl(
+                    memory,
+                    addr + field.offset,
+                    &field.data_type,
+                    concrete_types,
+                )?;
+                field_values.insert(name.clone(), field_value);
+            }
+            Value::Struct(Box::new(field_values))
+        }
+        DataType::Union { .. } => return Err(ReadUnion),
+        DataType::Name(type_name) => {
+            let resolved_type = concrete_types
+                .get(type_name)
+                .expect("missing concrete type for type name");
+            read_value_impl(memory, addr, resolved_type, concrete_types)?
+        }
+    };
+    Ok(value)
 }

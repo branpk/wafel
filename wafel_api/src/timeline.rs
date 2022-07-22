@@ -292,9 +292,9 @@ impl Timeline {
     ///
     /// Panics if the path fails to compile or type resolution fails.
     pub fn try_data_type(&self, path: &str) -> Result<DataType, Error> {
-        let path = DataPath::compile(&self.layout.data_layout, &self.layout.symbol_lookup, path)?;
+        let path = DataPath::compile(&self.layout, path)?;
         let data_type = path.concrete_type();
-        let simplified = simplified_data_type(&self.layout.data_layout, &data_type)?;
+        let simplified = simplified_data_type(&self.layout, &data_type)?;
         Ok(simplified)
     }
 

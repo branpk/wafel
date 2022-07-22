@@ -2,6 +2,7 @@
 
 use std::{collections::HashMap, fmt};
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use wafel_data_type::{DataType, DataTypeRef, IntValue, TypeName};
 
@@ -100,6 +101,38 @@ impl DataLayout {
         self.constants
             .get(name)
             .ok_or_else(|| UndefinedConstant(name.to_string()))
+    }
+
+    /// Recursively look up all type names in the given type.
+    pub fn concrete_types(
+        &self,
+        data_type: &DataTypeRef,
+    ) -> Result<IndexMap<TypeName, DataTypeRef>, LayoutLookupError> {
+        let mut concrete_types = IndexMap::new();
+        self.insert_concrete_types(&mut concrete_types, data_type)?;
+        Ok(concrete_types)
+    }
+
+    fn insert_concrete_types(
+        &self,
+        concrete_types: &mut IndexMap<TypeName, DataTypeRef>,
+        data_type: &DataTypeRef,
+    ) -> Result<(), LayoutLookupError> {
+        match data_type.as_ref() {
+            DataType::Pointer { base, .. } | DataType::Array { base, .. } => {
+                self.insert_concrete_types(concrete_types, base)?;
+            }
+            DataType::Struct { fields } | DataType::Union { fields } => {
+                for field in fields.values() {
+                    self.insert_concrete_types(concrete_types, &field.data_type)?;
+                }
+            }
+            DataType::Name(type_name) => {
+                concrete_types.insert(type_name.clone(), self.concrete_type(data_type)?);
+            }
+            _ => {}
+        }
+        Ok(())
     }
 }
 

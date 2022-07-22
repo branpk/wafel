@@ -1,10 +1,13 @@
 use std::{collections::HashMap, sync::Arc};
 
-use wafel_data_type::Address;
+use wafel_data_type::{Address, DataTypeRef};
 use wafel_layout::{DataLayout, LayoutLookupError};
 use wafel_memory::SymbolLookup;
 
-use crate::{data_path_cache::DataPathCache, DataError, GlobalDataPath, LocalDataPath};
+use crate::{
+    data_path_cache::DataPathCache, readers::DataTypeReader, DataError, GlobalDataPath,
+    LocalDataPath,
+};
 
 /// A trait for looking up the structured layout of data in memory.
 pub trait MemoryLayout {
@@ -24,16 +27,30 @@ pub trait MemoryLayout {
 
     /// Compile a local data path, cached.
     fn local_path(&self, source: &str) -> Result<Arc<LocalDataPath>, DataError>;
+
+    /// Returns a [DataReader](crate::DataReader) for reading a [Value](wafel_data_type::Value) of
+    /// a given type.
+    ///
+    /// The reader can handle all data types except for:
+    /// - Unsized arrays
+    /// - Unions
+    fn data_type_reader(&self, data_type: &DataTypeRef) -> Result<DataTypeReader, DataError> {
+        let concrete_types = self.data_layout().concrete_types(data_type)?;
+        Ok(DataTypeReader {
+            data_type: data_type.clone(),
+            concrete_types,
+        })
+    }
 }
 
 /// Basic implementation of [MemoryLayout].
 #[derive(Debug)]
 #[allow(missing_docs)]
 pub struct MemoryLayoutImpl<S> {
-    pub data_layout: Arc<DataLayout>,
-    pub symbol_lookup: Arc<S>,
-    pub data_path_cache: DataPathCache<S>,
-    pub address_to_symbol: HashMap<Address, String>,
+    data_layout: Arc<DataLayout>,
+    symbol_lookup: Arc<S>,
+    data_path_cache: DataPathCache,
+    address_to_symbol: HashMap<Address, String>,
 }
 
 impl<S> MemoryLayoutImpl<S>
@@ -53,7 +70,7 @@ where
         Self {
             data_layout: Arc::clone(data_layout),
             symbol_lookup: Arc::clone(symbol_lookup),
-            data_path_cache: DataPathCache::new(symbol_lookup, data_layout),
+            data_path_cache: DataPathCache::default(),
             address_to_symbol,
         }
     }
@@ -80,11 +97,15 @@ where
     }
 
     fn global_path(&self, source: &str) -> Result<Arc<GlobalDataPath>, DataError> {
-        self.data_path_cache.global(source).map_err(DataError::from)
+        self.data_path_cache
+            .global(self, source)
+            .map_err(DataError::from)
     }
 
     fn local_path(&self, source: &str) -> Result<Arc<LocalDataPath>, DataError> {
-        self.data_path_cache.local(source).map_err(DataError::from)
+        self.data_path_cache
+            .local(self, source)
+            .map_err(DataError::from)
     }
 }
 

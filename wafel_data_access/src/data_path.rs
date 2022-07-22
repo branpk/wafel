@@ -1,12 +1,15 @@
-use std::{fmt, sync::Arc};
+use std::fmt;
 
-use wafel_data_type::{Address, DataType, DataTypeRef, IntValue, Value};
-use wafel_layout::DataLayout;
-use wafel_memory::{MemoryError, MemoryRead, MemoryWrite, SymbolLookup};
+use indexmap::IndexMap;
+use wafel_data_type::{Address, DataType, DataTypeRef, IntValue, TypeName, Value};
+use wafel_memory::{MemoryError, MemoryRead, MemoryWrite};
 
 use crate::{
     compile,
+    readers::read_value_impl,
+    DataError,
     DataPathError::{self, *},
+    MemoryLayout,
 };
 
 /// Internal representation of a global or local data path.
@@ -24,8 +27,8 @@ pub struct DataPathImpl<R> {
     ///
     /// This should be "concrete", i.e. not a TypeName.
     pub concrete_type: DataTypeRef,
-    /// A reference to the global DataLayout.
-    pub layout: Arc<DataLayout>,
+    /// The concrete type for each type name that appears in the type.
+    pub concrete_types: IndexMap<TypeName, DataTypeRef>,
 }
 
 /// An operation that is applied when evaluating a data path.
@@ -64,12 +67,8 @@ impl GlobalDataPath {
     /// Compile a global data path from source.
     ///
     /// See module documentation for syntax.
-    pub fn compile(
-        layout: &Arc<DataLayout>,
-        symbol_lookup: &impl SymbolLookup,
-        source: &str,
-    ) -> Result<Self, DataPathError> {
-        compile::data_path(layout, symbol_lookup, source)?.into_global()
+    pub fn compile(layout: &impl MemoryLayout, source: &str) -> Result<Self, DataPathError> {
+        compile::data_path(layout, source)?.into_global()
     }
 
     /// Get the source for the path.
@@ -90,15 +89,15 @@ impl GlobalDataPath {
     /// Note that this will read from memory if the path passes through a pointer.
     ///
     /// None will only be returned if `?` is used in the data path.
-    pub fn address(&self, memory: &impl MemoryRead) -> Result<Option<Address>, MemoryError> {
+    pub fn address(&self, memory: &impl MemoryRead) -> Result<Option<Address>, DataError> {
         self.address_impl(memory)
-            .map_err(|error| MemoryError::Context {
+            .map_err(|error| DataError::Context {
                 context: format!("while evaluating {}", self),
                 error: Box::new(error),
             })
     }
 
-    fn address_impl(&self, memory: &impl MemoryRead) -> Result<Option<Address>, MemoryError> {
+    fn address_impl(&self, memory: &impl MemoryRead) -> Result<Option<Address>, DataError> {
         let mut address: Address = self.0.root;
         for edge in &self.0.edges {
             match edge {
@@ -109,7 +108,7 @@ impl GlobalDataPath {
                 }
                 DataPathEdge::Deref => {
                     if address.is_null() {
-                        return Err(MemoryError::InvalidAddress);
+                        return Err(MemoryError::InvalidAddress.into());
                     }
                     address = memory.read_address(address)?;
                 }
@@ -124,24 +123,26 @@ impl GlobalDataPath {
     }
 
     /// Evaluate the path and return the value stored in the variable.
-    pub fn read(&self, memory: &impl MemoryRead) -> Result<Value, MemoryError> {
-        self.read_impl(memory)
-            .map_err(|error| MemoryError::Context {
-                context: format!("while reading {}", self),
-                error: Box::new(error),
-            })
+    pub fn read(&self, memory: &impl MemoryRead) -> Result<Value, DataError> {
+        self.read_impl(memory).map_err(|error| DataError::Context {
+            context: format!("while reading {}", self),
+            error: Box::new(error),
+        })
     }
 
-    fn read_impl(&self, memory: &impl MemoryRead) -> Result<Value, MemoryError> {
+    fn read_impl(&self, memory: &impl MemoryRead) -> Result<Value, DataError> {
         let address = self.address_impl(memory)?;
         if address.map_or(false, |a| a.is_null()) {
-            return Err(MemoryError::InvalidAddress);
+            return Err(MemoryError::InvalidAddress.into());
         }
         match address {
             Some(address) => {
-                let mut value = memory.read_value(address, &self.0.concrete_type, |type_name| {
-                    self.0.layout.data_type(type_name).ok().cloned()
-                })?;
+                let mut value = read_value_impl(
+                    memory,
+                    address,
+                    &self.0.concrete_type,
+                    &self.0.concrete_types,
+                )?;
                 if let Some(mask) = self.0.mask {
                     let full_value = value.try_as_int().expect("mask on non-integer type");
                     value = (full_value & mask).into();
@@ -157,9 +158,9 @@ impl GlobalDataPath {
         &self,
         memory: &mut M,
         value: Value,
-    ) -> Result<(), MemoryError> {
+    ) -> Result<(), DataError> {
         self.write_impl(memory, value)
-            .map_err(|error| MemoryError::Context {
+            .map_err(|error| DataError::Context {
                 context: format!("while writing {}", self),
                 error: Box::new(error),
             })
@@ -169,10 +170,10 @@ impl GlobalDataPath {
         &self,
         memory: &mut M,
         value: Value,
-    ) -> Result<(), MemoryError> {
+    ) -> Result<(), DataError> {
         let address = self.address_impl(memory)?;
         if address.map_or(false, |a| a.is_null()) {
-            return Err(MemoryError::InvalidAddress);
+            return Err(MemoryError::InvalidAddress.into());
         }
         match address {
             Some(address) => {
@@ -190,9 +191,10 @@ impl GlobalDataPath {
                         }
                     }
                     None => {
-                        memory.write_value(address, &self.0.concrete_type, value, |type_name| {
-                            self.0.layout.data_type(type_name).ok().cloned()
-                        })?;
+                        // memory.write_value(address, &self.0.concrete_type, value, |type_name| {
+                        //     self.0.layout.data_type(type_name).ok().cloned()
+                        // })?;
+                        todo!()
                     }
                 }
                 Ok(())
@@ -211,12 +213,8 @@ impl LocalDataPath {
     /// Compile a local data path from source.
     ///
     /// See module documentation for syntax.
-    pub fn compile(
-        layout: &Arc<DataLayout>,
-        symbol_lookup: &impl SymbolLookup,
-        source: &str,
-    ) -> Result<Self, DataPathError> {
-        compile::data_path(layout, symbol_lookup, source)?.into_local()
+    pub fn compile(layout: &impl MemoryLayout, source: &str) -> Result<Self, DataPathError> {
+        compile::data_path(layout, source)?.into_local()
     }
 
     /// Get the path's root data type.
@@ -254,12 +252,8 @@ impl DataPath {
     /// Compile a data path from source.
     ///
     /// See module documentation for syntax.
-    pub fn compile(
-        layout: &Arc<DataLayout>,
-        symbol_lookup: &impl SymbolLookup,
-        source: &str,
-    ) -> Result<Self, DataPathError> {
-        compile::data_path(layout, symbol_lookup, source)
+    pub fn compile(layout: &impl MemoryLayout, source: &str) -> Result<Self, DataPathError> {
+        compile::data_path(layout, source)
     }
 
     fn source(&self) -> &str {
@@ -316,7 +310,7 @@ fn concat_paths<R: Clone>(
                 .collect(),
             mask: path2.mask,
             concrete_type: path2.concrete_type.clone(),
-            layout: Arc::clone(&path1.layout),
+            concrete_types: path2.concrete_types.clone(),
         })
     } else {
         Err(ConcatTypeMismatch {

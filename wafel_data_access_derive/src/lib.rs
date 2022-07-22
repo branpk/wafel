@@ -41,6 +41,7 @@ fn generate_reader(input: &DeriveInput, reader_name: &Ident) -> TokenStream {
     });
 
     quote! {
+        #[derive(Debug, Clone)]
         #vis struct #reader_name {
             #(#reader_fields)*
         }

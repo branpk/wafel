@@ -1,7 +1,6 @@
 use core::fmt;
 use std::ops::Deref;
 
-use indexmap::IndexMap;
 use wafel_data_type::{
     Address, DataType, DataTypeRef, FloatType, FloatValue, IntType, IntValue, TypeName, Value,
 };
@@ -61,22 +60,6 @@ pub trait MemoryRead {
     /// The resulting address may be invalid or zero.
     fn read_address(&self, address: Address) -> Result<Address, MemoryError>;
 
-    /// Read a value of the given type.
-    ///
-    /// Any type names present in `data_type` are resolved using `resolve_type`.
-    ///
-    /// This method can handle all data types except for:
-    /// - Unsized arrays
-    /// - Unions
-    fn read_value(
-        &self,
-        address: Address,
-        data_type: &DataTypeRef,
-        mut resolve_type: impl FnMut(&TypeName) -> Option<DataTypeRef>,
-    ) -> Result<Value, MemoryError> {
-        read_value_impl(self, address, data_type, &mut resolve_type)
-    }
-
     /// Read a null terminated C string from the given address.
     fn read_string(&self, address: Address) -> Result<Vec<u8>, MemoryError> {
         let mut bytes = Vec::new();
@@ -94,55 +77,6 @@ pub trait MemoryRead {
 
     /// Returns the int type corresponding to a pointer (either U32 or U64).
     fn pointer_int_type(&self) -> IntType;
-}
-
-fn read_value_impl<M: MemoryRead + ?Sized>(
-    memory: &M,
-    address: Address,
-    data_type: &DataTypeRef,
-    resolve_type: &mut impl FnMut(&TypeName) -> Option<DataTypeRef>,
-) -> Result<Value, MemoryError> {
-    let value = match data_type.as_ref() {
-        DataType::Void => Value::None,
-        DataType::Int(int_type) => Value::Int(memory.read_int(address, *int_type)?),
-        DataType::Float(float_type) => Value::Float(memory.read_float(address, *float_type)?),
-        DataType::Pointer { .. } => Value::Address(memory.read_address(address)?),
-        DataType::Array {
-            base,
-            length,
-            stride,
-        } => match *length {
-            Some(length) => {
-                let values: Vec<Value> = (0..length)
-                    .map(|index| {
-                        read_value_impl(memory, address + index * *stride, base, resolve_type)
-                    })
-                    .collect::<Result<_, MemoryError>>()?;
-                Value::Array(values)
-            }
-            None => return Err(ReadUnsizedArray),
-        },
-        DataType::Struct { fields } => {
-            let mut field_values: IndexMap<String, Value> = IndexMap::new();
-            for (name, field) in fields {
-                let field_value = read_value_impl(
-                    memory,
-                    address + field.offset,
-                    &field.data_type,
-                    resolve_type,
-                )?;
-                field_values.insert(name.clone(), field_value);
-            }
-            Value::Struct(Box::new(field_values))
-        }
-        DataType::Union { .. } => return Err(ReadUnion),
-        DataType::Name(type_name) => {
-            let resolved_type =
-                resolve_type(type_name).ok_or_else(|| UndefinedTypeName(type_name.clone()))?;
-            read_value_impl(memory, address, &resolved_type, resolve_type)?
-        }
-    };
-    Ok(value)
 }
 
 /// Trait for a view of memory that allows writing values by address.

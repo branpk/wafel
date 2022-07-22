@@ -1,7 +1,7 @@
 use std::fmt;
 
+use wafel_data_access::MemoryLayout;
 use wafel_data_type::{DataTypeRef, FloatType, IntType};
-use wafel_layout::DataLayout;
 
 use crate::Error;
 
@@ -76,7 +76,7 @@ impl fmt::Display for DataType {
 }
 
 pub(crate) fn simplified_data_type(
-    layout: &DataLayout,
+    layout: &impl MemoryLayout,
     data_type: &DataTypeRef,
 ) -> Result<DataType, Error> {
     use wafel_data_type::DataType::*;
@@ -88,6 +88,8 @@ pub(crate) fn simplified_data_type(
         Array { .. } => DataType::Array,
         Struct { .. } => DataType::Struct,
         Union { .. } => DataType::Union,
-        Name(type_name) => simplified_data_type(layout, layout.data_type(type_name)?)?,
+        Name(type_name) => {
+            simplified_data_type(layout, layout.data_layout().data_type(type_name)?)?
+        }
     })
 }

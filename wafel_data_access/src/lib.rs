@@ -40,16 +40,17 @@
 
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 
-pub use data_path_types::*;
+pub use data_path::*;
 pub use error::*;
 pub use layout::*;
-pub use read_write::{DataReadable, DataReader, Reader};
+pub use traits::*;
 pub use wafel_data_access_derive::*;
 
 mod compile;
+mod data_path;
 mod data_path_cache;
-mod data_path_types;
 mod error;
 mod layout;
 mod parse;
-mod read_write;
+pub mod readers;
+mod traits;

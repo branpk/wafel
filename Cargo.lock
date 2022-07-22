@@ -2614,6 +2614,7 @@ dependencies = [
 name = "wafel_data_access"
 version = "0.1.0"
 dependencies = [
+ "indexmap",
  "wafel_data_access_derive",
  "wafel_data_type",
  "wafel_layout",
