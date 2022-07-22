@@ -84,6 +84,7 @@ where
     layout: &'m L,
     memory: &'m M,
     reader: Reader<GfxTreeNode>,
+    object_fields_reader: Reader<ObjectFields>,
     mtx_stack: MatrixStack,
     mod_mtx_stack: MatrixStack,
     master_lists: [Vec<MasterListEdit>; 8],
@@ -183,6 +184,13 @@ struct CameraState {
     roll: Angle,
 }
 
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("Object")]
+struct ObjectFields {
+    active_flags: i16,
+    o_anim_state: i32,
+}
+
 impl<'m, L, M, I> NodeRenderer<'m, L, M, I>
 where
     L: MemoryLayout,
@@ -202,6 +210,7 @@ where
             layout,
             memory,
             reader,
+            object_fields_reader: ObjectFields::reader(layout)?,
             mtx_stack: MatrixStack::default(),
             mod_mtx_stack: MatrixStack::default(),
             master_lists: Default::default(),
@@ -421,36 +430,26 @@ where
 
             if self.config.object_cull == ObjectCull::ShowAll && !render_node {
                 if let GfxTreeNode::Object(_) = &cur_node {
-                    let object_struct = self.layout.data_layout().data_type(&TypeName {
-                        namespace: Namespace::Struct,
-                        name: "Object".to_string(),
-                    })?;
-                    if let DataType::Struct { fields } = object_struct.as_ref() {
-                        if let Some(field) = fields.get("activeFlags") {
-                            let active_flags_offset = field.offset;
+                    let active_flags = self
+                        .object_fields_reader
+                        .read(self.memory, cur_addr)?
+                        .active_flags;
 
-                            let active_flags = self
-                                .memory
-                                .read_int(cur_addr + active_flags_offset, IntType::S16)?
-                                as i16;
+                    let active_flag_active = self
+                        .layout
+                        .data_layout()
+                        .constant("ACTIVE_FLAG_ACTIVE")?
+                        .value as i16;
+                    let active_flag_far_away = self
+                        .layout
+                        .data_layout()
+                        .constant("ACTIVE_FLAG_FAR_AWAY")?
+                        .value as i16;
 
-                            let active_flag_active = self
-                                .layout
-                                .data_layout()
-                                .constant("ACTIVE_FLAG_ACTIVE")?
-                                .value as i16;
-                            let active_flag_far_away =
-                                self.layout
-                                    .data_layout()
-                                    .constant("ACTIVE_FLAG_FAR_AWAY")?
-                                    .value as i16;
-
-                            if (active_flags & active_flag_active) != 0
-                                && (active_flags & active_flag_far_away) != 0
-                            {
-                                render_node = true;
-                            }
-                        }
+                    if (active_flags & active_flag_active) != 0
+                        && (active_flags & active_flag_far_away) != 0
+                    {
+                        render_node = true;
                     }
                 }
             }
@@ -844,22 +843,8 @@ where
                     }
 
                     if let Some(obj_addr) = obj_addr {
-                        let object_struct = self.layout.data_layout().data_type(&TypeName {
-                            namespace: Namespace::Struct,
-                            name: "Object".to_string(),
-                        })?;
-                        if let DataType::Struct { fields } = object_struct.as_ref() {
-                            if let Some(field) = fields.get("oAnimState") {
-                                let anim_state_offset = field.offset;
-
-                                let anim_state = self
-                                    .memory
-                                    .read_int(obj_addr + anim_state_offset, IntType::S32)?
-                                    as i32;
-
-                                selected_case = anim_state as i16;
-                            }
-                        }
+                        let fields = self.object_fields_reader.read(self.memory, obj_addr)?;
+                        selected_case = fields.o_anim_state as i16;
                     }
                 }
             }
