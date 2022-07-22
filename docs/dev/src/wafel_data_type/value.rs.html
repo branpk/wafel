@@ -646,6 +646,8 @@
 <span id="640">640</span>
 <span id="641">641</span>
 <span id="642">642</span>
+<span id="643">643</span>
+<span id="644">644</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Dynamically typed value used for reading and writing to memory.</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -668,7 +670,9 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// Having a single numeric type is convenient so that `Value` doesn&#39;t have to be generic</span>
 <span class="doccomment">/// on a `Memory` implementation.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(
+    <span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>, <span class="ident">Default</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>,
+)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Address</span>(<span class="kw">pub</span> <span class="ident">usize</span>);
 
 <span class="kw">impl</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Address</span> {
@@ -1289,5 +1293,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_data_type" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (9a7b7d5e5 2022-07-19)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_data_type" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (62b272d25 2022-07-21)" ></div>
 </body></html>

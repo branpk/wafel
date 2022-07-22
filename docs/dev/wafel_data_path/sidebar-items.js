@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":[["DataPath","Either a global or a local data path."],["DataPathCompileError",""],["DataPathError",""]],"struct":[["GlobalDataPath","A data path starting from a global variable address."],["LocalDataPath","A data path starting from a type, such as a specific struct."]]};

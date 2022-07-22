@@ -539,17 +539,6 @@
 <span id="533">533</span>
 <span id="534">534</span>
 <span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
-<span id="542">542</span>
-<span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">feature</span>(<span class="ident">stmt_expr_attributes</span>)]</span>
 <span class="attribute">#![<span class="ident">warn</span>(<span class="ident">missing_docs</span>, <span class="ident">missing_debug_implementations</span>, <span class="ident">rust_2018_idioms</span>)]</span>
 <span class="attribute">#![<span class="ident">allow</span>(
@@ -564,27 +553,21 @@
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>},
     <span class="ident">error::Error</span>,
-    <span class="ident">f32::consts::PI</span>,
     <span class="ident">num::Wrapping</span>,
-    <span class="ident">process</span>,
     <span class="ident">rc::Rc</span>,
-    <span class="ident">sync::Arc</span>,
     <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">Instant</span>},
 };
 
 <span class="kw">use</span> <span class="ident">custom_renderer</span>::{<span class="ident">CustomRenderer</span>, <span class="ident">Scene</span>};
 <span class="kw">use</span> <span class="ident">fast3d</span>::{<span class="ident">interpret::F3DRenderData</span>, <span class="ident">render::F3DRenderer</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">sm64_render_mod</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">wafel_api</span>::{<span class="ident">load_m64</span>, <span class="ident">Game</span>, <span class="ident">SaveState</span>, <span class="ident">Value</span>};
-<span class="kw">use</span> <span class="ident">wafel_data_path::GlobalDataPath</span>;
+<span class="kw">use</span> <span class="ident">wafel_api</span>::{<span class="ident">load_m64</span>, <span class="ident">Game</span>, <span class="ident">SaveState</span>};
 <span class="kw">use</span> <span class="ident">wafel_memory::GameMemory</span>;
 <span class="kw">use</span> <span class="ident">winit</span>::{
     <span class="ident">event</span>::{<span class="ident">ElementState</span>, <span class="ident">Event</span>, <span class="ident">VirtualKeyCode</span>, <span class="ident">WindowEvent</span>},
     <span class="ident">event_loop</span>::{<span class="ident">ControlFlow</span>, <span class="ident">EventLoop</span>},
     <span class="ident">window::WindowBuilder</span>,
 };
-
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::sm64_render_dl::render_sm64_dl</span>;
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">custom_renderer</span>;
 <span class="kw">mod</span> <span class="ident">sm64_gfx_render</span>;
@@ -594,14 +577,9 @@
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">prepare_render_data</span>(<span class="ident">game</span>: <span class="kw-2">&amp;</span><span class="ident">Game</span>, <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">SM64RenderConfig</span>) -&gt; <span class="ident">F3DRenderData</span> {
     <span class="kw">let</span> <span class="ident">memory</span> <span class="op">=</span> <span class="ident">game</span>.<span class="ident">memory</span>.<span class="ident">with_slot</span>(<span class="kw-2">&amp;</span><span class="ident">game</span>.<span class="ident">base_slot</span>);
-    <span class="kw">let</span> <span class="ident">get_path</span> <span class="op">=</span> <span class="op">|</span><span class="ident">source</span>: <span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">|</span> {
-        <span class="ident">GlobalDataPath::compile</span>(<span class="kw-2">&amp;</span><span class="ident">game</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="ident">game</span>.<span class="ident">memory</span>, <span class="ident">source</span>)
-            .<span class="ident">map</span>(<span class="ident">Arc::new</span>)
-            .<span class="ident">map_err</span>(<span class="ident">Into::into</span>)
-    };
 
-    <span class="comment">// render_sm64_with_config(&amp;memory, get_path, config).expect(&quot;failed to process display list&quot;)</span>
-    <span class="ident">sm64_gfx_render::test_render</span>(<span class="kw-2">&amp;</span><span class="ident">memory</span>, <span class="kw-2">&amp;</span><span class="ident">game</span>.<span class="ident">layout</span>, <span class="ident">get_path</span>, <span class="ident">config</span>)
+    <span class="comment">// render_sm64_with_config(&amp;game.layout, &amp;memory, config).expect(&quot;failed to process display list&quot;)</span>
+    <span class="ident">sm64_gfx_render::test_render</span>(<span class="kw-2">&amp;</span><span class="ident">game</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="ident">memory</span>, <span class="ident">config</span>)
         .<span class="ident">expect</span>(<span class="string">&quot;failed to process display list&quot;</span>)
 }
 
@@ -1097,5 +1075,5 @@
     });
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_viz" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (9a7b7d5e5 2022-07-19)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_viz" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (62b272d25 2022-07-21)" ></div>
 </body></html>

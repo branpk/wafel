@@ -152,11 +152,19 @@
 <span id="146">146</span>
 <span id="147">147</span>
 <span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">error</span>, <span class="ident">fmt</span>, <span class="ident">io</span>, <span class="ident">sync::Arc</span>};
 
-<span class="kw">use</span> <span class="ident">wafel_data_path</span>::{<span class="ident">DataPathError</span>, <span class="ident">GlobalDataPath</span>};
+<span class="kw">use</span> <span class="ident">wafel_data_access</span>::{<span class="ident">DataError</span>, <span class="ident">DataPathError</span>, <span class="ident">GlobalDataPath</span>};
 <span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">IntValue</span>, <span class="ident">Value</span>, <span class="ident">ValueTypeError</span>};
 <span class="kw">use</span> <span class="ident">wafel_layout</span>::{<span class="ident">DllLayoutError</span>, <span class="ident">LayoutLookupError</span>, <span class="ident">SM64LayoutError</span>};
 <span class="kw">use</span> <span class="ident">wafel_memory</span>::{<span class="ident">MemoryError</span>, <span class="ident">MemoryInitError</span>};
@@ -168,10 +176,11 @@
     <span class="ident">MemoryInitError</span>(<span class="ident">MemoryInitError</span>),
     <span class="ident">DataPathError</span>(<span class="ident">DataPathError</span>),
     <span class="ident">MemoryError</span>(<span class="ident">MemoryError</span>),
+    <span class="ident">DataError</span>(<span class="ident">DataError</span>),
     <span class="ident">ApplyEditError</span> {
         <span class="ident">path</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">GlobalDataPath</span><span class="op">&gt;</span>,
         <span class="ident">value</span>: <span class="ident">Value</span>,
-        <span class="ident">error</span>: <span class="ident">MemoryError</span>,
+        <span class="ident">error</span>: <span class="ident">DataError</span>,
     },
     <span class="ident">LayoutLookupError</span>(<span class="ident">LayoutLookupError</span>),
     <span class="ident">SaveStateMismatch</span>,
@@ -213,6 +222,7 @@
             <span class="ident">Error::MemoryInitError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
             <span class="ident">Error::DataPathError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
             <span class="ident">Error::MemoryError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
+            <span class="ident">Error::DataError</span>(<span class="ident">error</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
             <span class="ident">Error::ApplyEditError</span> { <span class="ident">path</span>, <span class="ident">value</span>, <span class="ident">error</span> } =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;while applying edit {} = {}:\n  {}&quot;</span>, <span class="ident">path</span>, <span class="ident">value</span>, <span class="ident">error</span>)
             }
@@ -300,6 +310,12 @@
         <span class="ident"><span class="self">Self</span>::ValueTypeError</span>(<span class="ident">v</span>)
     }
 }
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">DataError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">v</span>: <span class="ident">DataError</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::DataError</span>(<span class="ident">v</span>)
+    }
+}
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_api" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (9a7b7d5e5 2022-07-19)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_api" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (62b272d25 2022-07-21)" ></div>
 </body></html>

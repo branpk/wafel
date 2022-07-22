@@ -416,164 +416,10 @@
 <span id="410">410</span>
 <span id="411">411</span>
 <span id="412">412</span>
-<span id="413">413</span>
-<span id="414">414</span>
-<span id="415">415</span>
-<span id="416">416</span>
-<span id="417">417</span>
-<span id="418">418</span>
-<span id="419">419</span>
-<span id="420">420</span>
-<span id="421">421</span>
-<span id="422">422</span>
-<span id="423">423</span>
-<span id="424">424</span>
-<span id="425">425</span>
-<span id="426">426</span>
-<span id="427">427</span>
-<span id="428">428</span>
-<span id="429">429</span>
-<span id="430">430</span>
-<span id="431">431</span>
-<span id="432">432</span>
-<span id="433">433</span>
-<span id="434">434</span>
-<span id="435">435</span>
-<span id="436">436</span>
-<span id="437">437</span>
-<span id="438">438</span>
-<span id="439">439</span>
-<span id="440">440</span>
-<span id="441">441</span>
-<span id="442">442</span>
-<span id="443">443</span>
-<span id="444">444</span>
-<span id="445">445</span>
-<span id="446">446</span>
-<span id="447">447</span>
-<span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
-<span id="451">451</span>
-<span id="452">452</span>
-<span id="453">453</span>
-<span id="454">454</span>
-<span id="455">455</span>
-<span id="456">456</span>
-<span id="457">457</span>
-<span id="458">458</span>
-<span id="459">459</span>
-<span id="460">460</span>
-<span id="461">461</span>
-<span id="462">462</span>
-<span id="463">463</span>
-<span id="464">464</span>
-<span id="465">465</span>
-<span id="466">466</span>
-<span id="467">467</span>
-<span id="468">468</span>
-<span id="469">469</span>
-<span id="470">470</span>
-<span id="471">471</span>
-<span id="472">472</span>
-<span id="473">473</span>
-<span id="474">474</span>
-<span id="475">475</span>
-<span id="476">476</span>
-<span id="477">477</span>
-<span id="478">478</span>
-<span id="479">479</span>
-<span id="480">480</span>
-<span id="481">481</span>
-<span id="482">482</span>
-<span id="483">483</span>
-<span id="484">484</span>
-<span id="485">485</span>
-<span id="486">486</span>
-<span id="487">487</span>
-<span id="488">488</span>
-<span id="489">489</span>
-<span id="490">490</span>
-<span id="491">491</span>
-<span id="492">492</span>
-<span id="493">493</span>
-<span id="494">494</span>
-<span id="495">495</span>
-<span id="496">496</span>
-<span id="497">497</span>
-<span id="498">498</span>
-<span id="499">499</span>
-<span id="500">500</span>
-<span id="501">501</span>
-<span id="502">502</span>
-<span id="503">503</span>
-<span id="504">504</span>
-<span id="505">505</span>
-<span id="506">506</span>
-<span id="507">507</span>
-<span id="508">508</span>
-<span id="509">509</span>
-<span id="510">510</span>
-<span id="511">511</span>
-<span id="512">512</span>
-<span id="513">513</span>
-<span id="514">514</span>
-<span id="515">515</span>
-<span id="516">516</span>
-<span id="517">517</span>
-<span id="518">518</span>
-<span id="519">519</span>
-<span id="520">520</span>
-<span id="521">521</span>
-<span id="522">522</span>
-<span id="523">523</span>
-<span id="524">524</span>
-<span id="525">525</span>
-<span id="526">526</span>
-<span id="527">527</span>
-<span id="528">528</span>
-<span id="529">529</span>
-<span id="530">530</span>
-<span id="531">531</span>
-<span id="532">532</span>
-<span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
-<span id="542">542</span>
-<span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
-<span id="547">547</span>
-<span id="548">548</span>
-<span id="549">549</span>
-<span id="550">550</span>
-<span id="551">551</span>
-<span id="552">552</span>
-<span id="553">553</span>
-<span id="554">554</span>
-<span id="555">555</span>
-<span id="556">556</span>
-<span id="557">557</span>
-<span id="558">558</span>
-<span id="559">559</span>
-<span id="560">560</span>
-<span id="561">561</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">core::fmt</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">sync::Arc</span>};
-
-<span class="kw">use</span> <span class="ident">bitflags::bitflags</span>;
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">bitflags::bitflags</span>;
 <span class="kw">use</span> <span class="ident">fast3d::util::Angle</span>;
-<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">de::DeserializeOwned</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
-<span class="kw">use</span> <span class="ident">wafel_api</span>::{<span class="ident">Address</span>, <span class="ident">Error</span>, <span class="ident">IntType</span>, <span class="ident">Value</span>};
-<span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">DataType</span>, <span class="ident">DataTypeRef</span>, <span class="ident">Field</span>, <span class="ident">Namespace</span>, <span class="ident">TypeName</span>, <span class="ident">ValueSerializeWrapper</span>};
-<span class="kw">use</span> <span class="ident">wafel_layout::DataLayout</span>;
+<span class="kw">use</span> <span class="ident">wafel_api</span>::{<span class="ident">Address</span>, <span class="ident">IntType</span>};
+<span class="kw">use</span> <span class="ident">wafel_data_access</span>::{<span class="ident">DataError</span>, <span class="ident">DataReadable</span>, <span class="ident">DataReader</span>, <span class="ident">MemoryLayout</span>, <span class="ident">Reader</span>};
 <span class="kw">use</span> <span class="ident">wafel_memory::MemoryRead</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
@@ -643,21 +489,27 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNode&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNode</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;type&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">field_name</span>(<span class="string">&quot;type&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">ty</span>: <span class="ident">i16</span>,
-    <span class="kw">pub</span> <span class="ident">flags</span>: <span class="ident">GraphRenderFlags</span>,
+    <span class="kw">pub</span> <span class="ident">flags</span>: <span class="ident">i16</span>,
     <span class="kw">pub</span> <span class="ident">prev</span>: <span class="ident">Address</span>,
     <span class="kw">pub</span> <span class="ident">next</span>: <span class="ident">Address</span>,
     <span class="kw">pub</span> <span class="ident">parent</span>: <span class="ident">Address</span>,
     <span class="kw">pub</span> <span class="ident">children</span>: <span class="ident">Address</span>,
 }
 
+<span class="kw">impl</span> <span class="ident">GraphNode</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">flags</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">GraphRenderFlags</span> {
+        <span class="kw">unsafe</span> { <span class="ident">GraphRenderFlags::from_bits_unchecked</span>(<span class="self">self</span>.<span class="ident">flags</span>) }
+    }
+}
+
 <span class="macro">bitflags!</span> {
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">transparent</span>)]</span>
+    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">DataReadable</span>)]</span>
+    <span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphRenderFlags&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphRenderFlags</span>: <span class="ident">i16</span> {
         <span class="kw">const</span> <span class="ident">ACTIVE</span>         <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">0</span>;
         <span class="kw">const</span> <span class="ident">CHILDREN_FIRST</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>;
@@ -668,15 +520,15 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;FnGraphNode&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FnGraphNode</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">func</span>: <span class="ident">Address</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeRoot&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeRoot</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">area_index</span>: <span class="ident">u8</span>,
@@ -689,15 +541,15 @@
     <span class="kw">pub</span> <span class="ident">views</span>: <span class="ident">Address</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeOrthoProjection&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeOrthoProjection</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">scale</span>: <span class="ident">f32</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodePerspective&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodePerspective</span> {
     <span class="kw">pub</span> <span class="ident">fn_node</span>: <span class="ident">FnGraphNode</span>,
     <span class="kw">pub</span> <span class="ident">fov</span>: <span class="ident">f32</span>,
@@ -705,40 +557,41 @@
     <span class="kw">pub</span> <span class="ident">far</span>: <span class="ident">i16</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeMasterList&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeMasterList</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">list_heads</span>: [<span class="ident">Address</span>; <span class="number">8</span>],
     <span class="kw">pub</span> <span class="ident">list_tails</span>: [<span class="ident">Address</span>; <span class="number">8</span>],
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeStart&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeStart</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeLevelOfDetail&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeLevelOfDetail</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">min_distance</span>: <span class="ident">i16</span>,
     <span class="kw">pub</span> <span class="ident">max_distance</span>: <span class="ident">i16</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeSwitchCase&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeSwitchCase</span> {
     <span class="kw">pub</span> <span class="ident">fn_node</span>: <span class="ident">FnGraphNode</span>,
     <span class="kw">pub</span> <span class="ident">num_cases</span>: <span class="ident">i16</span>,
     <span class="kw">pub</span> <span class="ident">selected_case</span>: <span class="ident">i16</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeCamera&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeCamera</span> {
     <span class="kw">pub</span> <span class="ident">fn_node</span>: <span class="ident">FnGraphNode</span>,
+    <span class="attribute">#[<span class="ident">field_name</span>(<span class="string">&quot;config&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">camera</span>: <span class="ident">Address</span>,
     <span class="kw">pub</span> <span class="ident">pos</span>: [<span class="ident">f32</span>; <span class="number">3</span>],
     <span class="kw">pub</span> <span class="ident">focus</span>: [<span class="ident">f32</span>; <span class="number">3</span>],
@@ -747,8 +600,8 @@
     <span class="kw">pub</span> <span class="ident">roll_screen</span>: <span class="ident">Angle</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeTranslationRotation&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeTranslationRotation</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">display_list</span>: <span class="ident">Address</span>,
@@ -756,26 +609,26 @@
     <span class="kw">pub</span> <span class="ident">rotation</span>: [<span class="ident">Angle</span>; <span class="number">3</span>],
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeTranslation&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeTranslation</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">display_list</span>: <span class="ident">Address</span>,
     <span class="kw">pub</span> <span class="ident">translation</span>: [<span class="ident">i16</span>; <span class="number">3</span>],
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeRotation&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeRotation</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">display_list</span>: <span class="ident">Address</span>,
     <span class="kw">pub</span> <span class="ident">rotation</span>: [<span class="ident">Angle</span>; <span class="number">3</span>],
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;AnimInfo&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AnimInfo</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;animID&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">field_name</span>(<span class="string">&quot;animID&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">anim_id</span>: <span class="ident">i16</span>,
     <span class="kw">pub</span> <span class="ident">anim_y_trans</span>: <span class="ident">i16</span>,
     <span class="kw">pub</span> <span class="ident">cur_anim</span>: <span class="ident">Address</span>,
@@ -785,8 +638,8 @@
     <span class="kw">pub</span> <span class="ident">anim_accel</span>: <span class="ident">i32</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeObject&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeObject</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">shared_child</span>: <span class="ident">Address</span>,
@@ -796,45 +649,45 @@
     <span class="kw">pub</span> <span class="ident">pos</span>: [<span class="ident">f32</span>; <span class="number">3</span>],
     <span class="kw">pub</span> <span class="ident">scale</span>: [<span class="ident">f32</span>; <span class="number">3</span>],
     <span class="kw">pub</span> <span class="ident">anim_info</span>: <span class="ident">AnimInfo</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;unk4C&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">field_name</span>(<span class="string">&quot;unk4C&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">unk_4c</span>: <span class="ident">Address</span>,
     <span class="kw">pub</span> <span class="ident">throw_matrix</span>: <span class="ident">Address</span>,
     <span class="kw">pub</span> <span class="ident">camera_to_object</span>: [<span class="ident">f32</span>; <span class="number">3</span>],
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeAnimatedPart&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeAnimatedPart</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">display_list</span>: <span class="ident">Address</span>,
     <span class="kw">pub</span> <span class="ident">translation</span>: [<span class="ident">i16</span>; <span class="number">3</span>],
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeBillboard&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeBillboard</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">display_list</span>: <span class="ident">Address</span>,
     <span class="kw">pub</span> <span class="ident">translation</span>: [<span class="ident">i16</span>; <span class="number">3</span>],
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeDisplayList&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeDisplayList</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">display_list</span>: <span class="ident">Address</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeScale&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeScale</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">display_list</span>: <span class="ident">Address</span>,
     <span class="kw">pub</span> <span class="ident">scale</span>: <span class="ident">f32</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeShadow&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeShadow</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">shadow_scale</span>: <span class="ident">i16</span>,
@@ -842,29 +695,29 @@
     <span class="kw">pub</span> <span class="ident">shadow_type</span>: <span class="ident">u8</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeObjectParent&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeObjectParent</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">shared_child</span>: <span class="ident">Address</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeGenerated&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeGenerated</span> {
     <span class="kw">pub</span> <span class="ident">fn_node</span>: <span class="ident">FnGraphNode</span>,
     <span class="kw">pub</span> <span class="ident">parameter</span>: <span class="ident">u32</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeBackground&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeBackground</span> {
     <span class="kw">pub</span> <span class="ident">fn_node</span>: <span class="ident">FnGraphNode</span>,
     <span class="kw">pub</span> <span class="ident">background</span>: <span class="ident">i32</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeHeldObject&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeHeldObject</span> {
     <span class="kw">pub</span> <span class="ident">fn_node</span>: <span class="ident">FnGraphNode</span>,
     <span class="kw">pub</span> <span class="ident">player_index</span>: <span class="ident">i32</span>,
@@ -872,260 +725,109 @@
     <span class="kw">pub</span> <span class="ident">translation</span>: [<span class="ident">i16</span>; <span class="number">3</span>],
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">DataReadable</span>)]</span>
+<span class="attribute">#[<span class="ident">struct_name</span>(<span class="string">&quot;GraphNodeCullingRadius&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GraphNodeCullingRadius</span> {
     <span class="kw">pub</span> <span class="ident">node</span>: <span class="ident">GraphNode</span>,
     <span class="kw">pub</span> <span class="ident">culling_radius</span>: <span class="ident">i16</span>,
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GfxNodeReader</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span><span class="op">&gt;</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Fn</span>(<span class="ident">Address</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">GfxTreeNode</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;m</span><span class="op">&gt;</span>);
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span><span class="op">&gt;</span> <span class="ident">fmt::Debug</span> <span class="kw">for</span> <span class="ident">GfxNodeReader</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
-        <span class="ident">f</span>.<span class="ident">debug_struct</span>(<span class="string">&quot;GfxNodeReader&quot;</span>).<span class="ident">finish_non_exhaustive</span>()
-    }
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GfxTreeNodeReader</span> {
+    <span class="ident">root_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeRoot</span><span class="op">&gt;</span>,
+    <span class="ident">ortho_projection_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeOrthoProjection</span><span class="op">&gt;</span>,
+    <span class="ident">perspective_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodePerspective</span><span class="op">&gt;</span>,
+    <span class="ident">master_list_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeMasterList</span><span class="op">&gt;</span>,
+    <span class="ident">start_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeStart</span><span class="op">&gt;</span>,
+    <span class="ident">level_of_detail_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeLevelOfDetail</span><span class="op">&gt;</span>,
+    <span class="ident">switch_case_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeSwitchCase</span><span class="op">&gt;</span>,
+    <span class="ident">camera_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeCamera</span><span class="op">&gt;</span>,
+    <span class="ident">translation_rotation_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeTranslationRotation</span><span class="op">&gt;</span>,
+    <span class="ident">translation_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeTranslation</span><span class="op">&gt;</span>,
+    <span class="ident">rotation_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeRotation</span><span class="op">&gt;</span>,
+    <span class="ident">object_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeObject</span><span class="op">&gt;</span>,
+    <span class="ident">animated_part_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeAnimatedPart</span><span class="op">&gt;</span>,
+    <span class="ident">billboard_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeBillboard</span><span class="op">&gt;</span>,
+    <span class="ident">display_list_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeDisplayList</span><span class="op">&gt;</span>,
+    <span class="ident">scale_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeScale</span><span class="op">&gt;</span>,
+    <span class="ident">shadow_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeShadow</span><span class="op">&gt;</span>,
+    <span class="ident">object_parent_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeObjectParent</span><span class="op">&gt;</span>,
+    <span class="ident">generated_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeGenerated</span><span class="op">&gt;</span>,
+    <span class="ident">background_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeBackground</span><span class="op">&gt;</span>,
+    <span class="ident">held_object_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeHeldObject</span><span class="op">&gt;</span>,
+    <span class="ident">culling_radius_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GraphNodeCullingRadius</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span><span class="op">&gt;</span> <span class="ident">GfxNodeReader</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">addr</span>: <span class="ident">Address</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">GfxTreeNode</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>(<span class="ident">addr</span>)
-    }
-}
-
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_gfx_node_reader</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span><span class="op">&gt;</span>(
-    <span class="ident">memory</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m</span> <span class="kw">impl</span> <span class="ident">MemoryRead</span>,
-    <span class="ident">layout</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m</span> <span class="ident">DataLayout</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">GfxNodeReader</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">readers</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">get_node_readers</span>(<span class="ident">memory</span>, <span class="ident">layout</span>)<span class="question-mark">?</span>);
-    <span class="kw">let</span> <span class="ident">func</span> <span class="op">=</span> <span class="kw">move</span> <span class="op">|</span><span class="ident">addr</span><span class="op">|</span> {
-        <span class="kw">let</span> <span class="ident">readers</span> <span class="op">=</span> <span class="ident">Arc::clone</span>(<span class="kw-2">&amp;</span><span class="ident">readers</span>);
+<span class="kw">impl</span> <span class="ident">GfxTreeNodeReader</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">memory</span>: <span class="kw-2">&amp;</span><span class="kw">impl</span> <span class="ident">MemoryRead</span>, <span class="ident">addr</span>: <span class="ident">Address</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">GfxTreeNode</span>, <span class="ident">DataError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">type_id</span> <span class="op">=</span> <span class="ident">memory</span>.<span class="ident">read_int</span>(<span class="ident">addr</span>, <span class="ident">IntType::S16</span>)<span class="question-mark">?</span> <span class="kw">as</span> <span class="ident">i16</span>;
-        <span class="kw">let</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">readers</span>
-            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">type_id</span>)
-            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">unimplemented!</span>(<span class="string">&quot;gfx node type: {:#06X}&quot;</span>, <span class="ident">type_id</span>));
-        <span class="ident">reader</span>.<span class="ident">read</span>(<span class="ident">addr</span>)
-    };
-    <span class="prelude-val">Ok</span>(<span class="ident">GfxNodeReader</span>(<span class="ident">Box::new</span>(<span class="ident">func</span>)))
-}
-
-<span class="kw">fn</span> <span class="ident">get_node_readers</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span><span class="op">&gt;</span>(
-    <span class="ident">memory</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m</span> <span class="kw">impl</span> <span class="ident">MemoryRead</span>,
-    <span class="ident">layout</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m</span> <span class="ident">DataLayout</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">i16</span>, <span class="ident">GfxNodeReader</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-    <span class="prelude-val">Ok</span>([
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_ROOT&quot;</span>,
-            <span class="string">&quot;GraphNodeRoot&quot;</span>,
-            <span class="ident">GfxTreeNode::Root</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_ORTHO_PROJECTION&quot;</span>,
-            <span class="string">&quot;GraphNodeOrthoProjection&quot;</span>,
-            <span class="ident">GfxTreeNode::OrthoProjection</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_PERSPECTIVE&quot;</span>,
-            <span class="string">&quot;GraphNodePerspective&quot;</span>,
-            <span class="ident">GfxTreeNode::Perspective</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_MASTER_LIST&quot;</span>,
-            <span class="string">&quot;GraphNodeMasterList&quot;</span>,
-            <span class="ident">GfxTreeNode::MasterList</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_START&quot;</span>,
-            <span class="string">&quot;GraphNodeStart&quot;</span>,
-            <span class="ident">GfxTreeNode::Start</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_LEVEL_OF_DETAIL&quot;</span>,
-            <span class="string">&quot;GraphNodeLevelOfDetail&quot;</span>,
-            <span class="ident">GfxTreeNode::LevelOfDetail</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_SWITCH_CASE&quot;</span>,
-            <span class="string">&quot;GraphNodeSwitchCase&quot;</span>,
-            <span class="ident">GfxTreeNode::SwitchCase</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_CAMERA&quot;</span>,
-            <span class="string">&quot;GraphNodeCamera&quot;</span>,
-            <span class="ident">GfxTreeNode::Camera</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_TRANSLATION_ROTATION&quot;</span>,
-            <span class="string">&quot;GraphNodeTranslationRotation&quot;</span>,
-            <span class="ident">GfxTreeNode::TranslationRotation</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_TRANSLATION&quot;</span>,
-            <span class="string">&quot;GraphNodeTranslation&quot;</span>,
-            <span class="ident">GfxTreeNode::Translation</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_ROTATION&quot;</span>,
-            <span class="string">&quot;GraphNodeRotation&quot;</span>,
-            <span class="ident">GfxTreeNode::Rotation</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_OBJECT&quot;</span>,
-            <span class="string">&quot;GraphNodeObject&quot;</span>,
-            <span class="ident">GfxTreeNode::Object</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_ANIMATED_PART&quot;</span>,
-            <span class="string">&quot;GraphNodeAnimatedPart&quot;</span>,
-            <span class="ident">GfxTreeNode::AnimatedPart</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_BILLBOARD&quot;</span>,
-            <span class="string">&quot;GraphNodeBillboard&quot;</span>,
-            <span class="ident">GfxTreeNode::Billboard</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_DISPLAY_LIST&quot;</span>,
-            <span class="string">&quot;GraphNodeDisplayList&quot;</span>,
-            <span class="ident">GfxTreeNode::DisplayList</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_SCALE&quot;</span>,
-            <span class="string">&quot;GraphNodeScale&quot;</span>,
-            <span class="ident">GfxTreeNode::Scale</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_SHADOW&quot;</span>,
-            <span class="string">&quot;GraphNodeShadow&quot;</span>,
-            <span class="ident">GfxTreeNode::Shadow</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_OBJECT_PARENT&quot;</span>,
-            <span class="string">&quot;GraphNodeObjectParent&quot;</span>,
-            <span class="ident">GfxTreeNode::ObjectParent</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_GENERATED_LIST&quot;</span>,
-            <span class="string">&quot;GraphNodeGenerated&quot;</span>,
-            <span class="ident">GfxTreeNode::Generated</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_BACKGROUND&quot;</span>,
-            <span class="string">&quot;GraphNodeBackground&quot;</span>,
-            <span class="ident">GfxTreeNode::Background</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_HELD_OBJ&quot;</span>,
-            <span class="string">&quot;GraphNodeHeldObject&quot;</span>,
-            <span class="ident">GfxTreeNode::HeldObject</span>,
-        )<span class="question-mark">?</span>,
-        <span class="ident">get_node_reader_entry</span>(
-            <span class="ident">memory</span>,
-            <span class="ident">layout</span>,
-            <span class="string">&quot;GRAPH_NODE_TYPE_CULLING_RADIUS&quot;</span>,
-            <span class="string">&quot;GraphNodeCullingRadius&quot;</span>,
-            <span class="ident">GfxTreeNode::CullingRadius</span>,
-        )<span class="question-mark">?</span>,
-    ]
-    .<span class="ident">into_iter</span>()
-    .<span class="ident">collect</span>())
-}
-
-<span class="kw">fn</span> <span class="ident">get_node_reader_entry</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span>, <span class="ident">T</span>: <span class="ident">DeserializeOwned</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span>(
-    <span class="ident">memory</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m</span> <span class="kw">impl</span> <span class="ident">MemoryRead</span>,
-    <span class="ident">layout</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m</span> <span class="ident">DataLayout</span>,
-    <span class="ident">id_name</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>,
-    <span class="ident">struct_name</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>,
-    <span class="ident">variant</span>: <span class="kw">fn</span>(<span class="ident">T</span>) -&gt; <span class="ident">GfxTreeNode</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">i16</span>, <span class="ident">GfxNodeReader</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">resolve_type</span> <span class="op">=</span> <span class="op">|</span><span class="ident">type_name</span>: <span class="kw-2">&amp;</span><span class="ident">TypeName</span><span class="op">|</span> <span class="ident">layout</span>.<span class="ident">data_type</span>(<span class="ident">type_name</span>).<span class="ident">ok</span>().<span class="ident">cloned</span>();
-
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data_type</span> <span class="op">=</span> <span class="ident">Arc::clone</span>(<span class="ident">layout</span>.<span class="ident">data_type</span>(<span class="kw-2">&amp;</span><span class="ident">TypeName</span> {
-        <span class="ident">namespace</span>: <span class="ident">Namespace::Struct</span>,
-        <span class="ident">name</span>: <span class="ident">struct_name</span>.<span class="ident">into</span>(),
-    })<span class="question-mark">?</span>);
-
-    <span class="comment">// GraphNodeCamera contains a union, so replace it with void *camera</span>
-    <span class="kw">if</span> <span class="ident">struct_name</span> <span class="op">==</span> <span class="string">&quot;GraphNodeCamera&quot;</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">DataType::Struct</span> { <span class="ident">fields</span> } <span class="op">=</span> <span class="ident">data_type</span>.<span class="ident">as_ref</span>() {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">new_fields</span> <span class="op">=</span> <span class="ident">fields</span>.<span class="ident">clone</span>();
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">config</span>) <span class="op">=</span> <span class="ident">new_fields</span>.<span class="ident">remove</span>(<span class="string">&quot;config&quot;</span>) {
-                <span class="ident">new_fields</span>.<span class="ident">insert</span>(
-                    <span class="string">&quot;camera&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">Field</span> {
-                        <span class="ident">offset</span>: <span class="ident">config</span>.<span class="ident">offset</span>,
-                        <span class="ident">data_type</span>: <span class="ident">DataTypeRef::new</span>(<span class="ident">DataType::Pointer</span> {
-                            <span class="ident">base</span>: <span class="ident">DataTypeRef::new</span>(<span class="ident">DataType::Void</span>),
-                            <span class="ident">stride</span>: <span class="prelude-val">None</span>,
-                        }),
-                    },
-                );
-            }
-            <span class="ident">data_type</span> <span class="op">=</span> <span class="ident">DataTypeRef::new</span>(<span class="ident">DataType::Struct</span> { <span class="ident">fields</span>: <span class="ident">new_fields</span> });
+        <span class="attribute">#[<span class="ident">rustfmt::skip</span>]</span>
+        <span class="kw">match</span> <span class="ident">type_id</span> {
+            <span class="number">0x001</span> =&gt; <span class="self">self</span>.<span class="ident">root_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::Root</span>),
+            <span class="number">0x002</span> =&gt; <span class="self">self</span>.<span class="ident">ortho_projection_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::OrthoProjection</span>),
+            <span class="number">0x103</span> =&gt; <span class="self">self</span>.<span class="ident">perspective_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::Perspective</span>),
+            <span class="number">0x004</span> =&gt; <span class="self">self</span>.<span class="ident">master_list_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::MasterList</span>),
+            <span class="number">0x00A</span> =&gt; <span class="self">self</span>.<span class="ident">start_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::Start</span>),
+            <span class="number">0x00B</span> =&gt; <span class="self">self</span>.<span class="ident">level_of_detail_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::LevelOfDetail</span>),
+            <span class="number">0x10C</span> =&gt; <span class="self">self</span>.<span class="ident">switch_case_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::SwitchCase</span>),
+            <span class="number">0x114</span> =&gt; <span class="self">self</span>.<span class="ident">camera_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::Camera</span>),
+            <span class="number">0x015</span> =&gt; <span class="self">self</span>.<span class="ident">translation_rotation_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::TranslationRotation</span>),
+            <span class="number">0x016</span> =&gt; <span class="self">self</span>.<span class="ident">translation_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::Translation</span>),
+            <span class="number">0x017</span> =&gt; <span class="self">self</span>.<span class="ident">rotation_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::Rotation</span>),
+            <span class="number">0x018</span> =&gt; <span class="self">self</span>.<span class="ident">object_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::Object</span>),
+            <span class="number">0x019</span> =&gt; <span class="self">self</span>.<span class="ident">animated_part_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::AnimatedPart</span>),
+            <span class="number">0x01A</span> =&gt; <span class="self">self</span>.<span class="ident">billboard_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::Billboard</span>),
+            <span class="number">0x01B</span> =&gt; <span class="self">self</span>.<span class="ident">display_list_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::DisplayList</span>),
+            <span class="number">0x01C</span> =&gt; <span class="self">self</span>.<span class="ident">scale_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::Scale</span>),
+            <span class="number">0x028</span> =&gt; <span class="self">self</span>.<span class="ident">shadow_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::Shadow</span>),
+            <span class="number">0x029</span> =&gt; <span class="self">self</span>.<span class="ident">object_parent_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::ObjectParent</span>),
+            <span class="number">0x12A</span> =&gt; <span class="self">self</span>.<span class="ident">generated_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::Generated</span>),
+            <span class="number">0x12C</span> =&gt; <span class="self">self</span>.<span class="ident">background_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::Background</span>),
+            <span class="number">0x12E</span> =&gt; <span class="self">self</span>.<span class="ident">held_object_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::HeldObject</span>),
+            <span class="number">0x02F</span> =&gt; <span class="self">self</span>.<span class="ident">culling_radius_reader</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>).<span class="ident">map</span>(<span class="ident">GfxTreeNode::CullingRadius</span>),
+            <span class="kw">_</span> =&gt; <span class="macro">unimplemented!</span>(<span class="string">&quot;gfx node id: {:#X}&quot;</span>, <span class="ident">type_id</span>) <span class="comment">// TODO: Error handling</span>
         }
     }
-
-    <span class="kw">let</span> <span class="ident">func</span> <span class="op">=</span> <span class="kw">move</span> <span class="op">|</span><span class="ident">addr</span><span class="op">|</span> {
-        <span class="kw">let</span> <span class="ident">data_type</span> <span class="op">=</span> <span class="ident">Arc::clone</span>(<span class="kw-2">&amp;</span><span class="ident">data_type</span>);
-        <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">memory</span>.<span class="ident">read_value</span>(<span class="ident">addr</span>, <span class="kw-2">&amp;</span><span class="ident">data_type</span>, <span class="kw-2">&amp;</span><span class="ident">resolve_type</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">node</span> <span class="op">=</span> <span class="ident">value_to_struct</span>(<span class="ident">data</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">variant</span>(<span class="ident">node</span>))
-    };
-
-    <span class="prelude-val">Ok</span>((
-        <span class="ident">layout</span>.<span class="ident">constant</span>(<span class="ident">id_name</span>)<span class="question-mark">?</span>.<span class="ident">value</span> <span class="kw">as</span> <span class="ident">i16</span>,
-        <span class="ident">GfxNodeReader</span>(<span class="ident">Box::new</span>(<span class="ident">func</span>)),
-    ))
 }
 
-<span class="kw">fn</span> <span class="ident">value_to_struct</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">DeserializeOwned</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span>(<span class="ident">data</span>: <span class="ident">Value</span>) -&gt; <span class="ident">T</span> {
-    <span class="kw">let</span> <span class="ident">json</span> <span class="op">=</span>
-        <span class="ident">serde_json::to_string</span>(<span class="kw-2">&amp;</span><span class="ident">ValueSerializeWrapper</span>(<span class="kw-2">&amp;</span><span class="ident">data</span>)).<span class="ident">expect</span>(<span class="string">&quot;failed to serialize value&quot;</span>);
-    <span class="kw">let</span> <span class="ident">node</span>: <span class="ident">T</span> <span class="op">=</span> <span class="ident">serde_json::from_str</span>(<span class="kw-2">&amp;</span><span class="ident">json</span>).<span class="ident">expect</span>(<span class="string">&quot;failed to deserialize gfx node&quot;</span>);
-    <span class="ident">node</span>
+<span class="kw">impl</span> <span class="ident">DataReader</span> <span class="kw">for</span> <span class="ident">GfxTreeNodeReader</span> {
+    <span class="kw">type</span> <span class="ident">Value</span> <span class="op">=</span> <span class="ident">GfxTreeNode</span>;
+
+    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">memory</span>: <span class="kw-2">&amp;</span><span class="kw">impl</span> <span class="ident">MemoryRead</span>, <span class="ident">addr</span>: <span class="ident">Address</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Value</span>, <span class="ident">DataError</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">read</span>(<span class="ident">memory</span>, <span class="ident">addr</span>)
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">DataReadable</span> <span class="kw">for</span> <span class="ident">GfxTreeNode</span> {
+    <span class="kw">type</span> <span class="ident">Reader</span> <span class="op">=</span> <span class="ident">GfxTreeNodeReader</span>;
+
+    <span class="kw">fn</span> <span class="ident">reader</span>(<span class="ident">layout</span>: <span class="kw-2">&amp;</span><span class="kw">impl</span> <span class="ident">MemoryLayout</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Reader</span>, <span class="ident">DataError</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">GfxTreeNodeReader</span> {
+            <span class="ident">root_reader</span>: <span class="ident">GraphNodeRoot::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">ortho_projection_reader</span>: <span class="ident">GraphNodeOrthoProjection::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">perspective_reader</span>: <span class="ident">GraphNodePerspective::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">master_list_reader</span>: <span class="ident">GraphNodeMasterList::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">start_reader</span>: <span class="ident">GraphNodeStart::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">level_of_detail_reader</span>: <span class="ident">GraphNodeLevelOfDetail::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">switch_case_reader</span>: <span class="ident">GraphNodeSwitchCase::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">camera_reader</span>: <span class="ident">GraphNodeCamera::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">translation_rotation_reader</span>: <span class="ident">GraphNodeTranslationRotation::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">translation_reader</span>: <span class="ident">GraphNodeTranslation::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">rotation_reader</span>: <span class="ident">GraphNodeRotation::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">object_reader</span>: <span class="ident">GraphNodeObject::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">animated_part_reader</span>: <span class="ident">GraphNodeAnimatedPart::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">billboard_reader</span>: <span class="ident">GraphNodeBillboard::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">display_list_reader</span>: <span class="ident">GraphNodeDisplayList::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">scale_reader</span>: <span class="ident">GraphNodeScale::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">shadow_reader</span>: <span class="ident">GraphNodeShadow::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">object_parent_reader</span>: <span class="ident">GraphNodeObjectParent::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">generated_reader</span>: <span class="ident">GraphNodeGenerated::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">background_reader</span>: <span class="ident">GraphNodeBackground::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">held_object_reader</span>: <span class="ident">GraphNodeHeldObject::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+            <span class="ident">culling_radius_reader</span>: <span class="ident">GraphNodeCullingRadius::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
+        })
+    }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_viz" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (9a7b7d5e5 2022-07-19)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_viz" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (62b272d25 2022-07-21)" ></div>
 </body></html>

@@ -38,22 +38,52 @@
 <span id="32">32</span>
 <span id="33">33</span>
 <span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">borrow::Cow</span>, <span class="ident">error::Error</span>, <span class="ident">fmt</span>};
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::Value</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">DataType</span>, <span class="ident">Value</span>};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NotAnArrayOrPointerError</span>;
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">DataTypeError</span> {
+    <span class="ident">ExpectedType</span> {
+        <span class="ident">expected</span>: <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="ident">str</span><span class="op">&gt;</span>,
+        <span class="ident">actual</span>: <span class="ident">DataType</span>,
+    },
+    <span class="ident">NoSuchField</span> {
+        <span class="ident">name</span>: <span class="ident">String</span>,
+    },
+}
 
-<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">NotAnArrayOrPointerError</span> {
+<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">DataTypeError</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
-        <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;DataType::stride called on a non-array/pointer type&quot;</span>)
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">DataTypeError::ExpectedType</span> { <span class="ident">expected</span>, <span class="ident">actual</span> } =&gt; {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;expected {}, found {}&quot;</span>, <span class="ident">expected</span>, <span class="ident">actual</span>)
+            }
+            <span class="ident">DataTypeError::NoSuchField</span> { <span class="ident">name</span> } =&gt; {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;no such field: {}&quot;</span>, <span class="ident">name</span>)
+            }
+        }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Error</span> <span class="kw">for</span> <span class="ident">NotAnArrayOrPointerError</span> {}
+<span class="kw">impl</span> <span class="ident">Error</span> <span class="kw">for</span> <span class="ident">DataTypeError</span> {}
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ValueTypeError</span> {
@@ -73,5 +103,5 @@
 
 <span class="kw">impl</span> <span class="ident">Error</span> <span class="kw">for</span> <span class="ident">ValueTypeError</span> {}
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_data_type" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (9a7b7d5e5 2022-07-19)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_data_type" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (62b272d25 2022-07-21)" ></div>
 </body></html>

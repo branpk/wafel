@@ -450,28 +450,16 @@
 <span id="444">444</span>
 <span id="445">445</span>
 <span id="446">446</span>
-<span id="447">447</span>
-<span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
-<span id="451">451</span>
-<span id="452">452</span>
-<span id="453">453</span>
-<span id="454">454</span>
-<span id="455">455</span>
-<span id="456">456</span>
-<span id="457">457</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">sync::Arc</span>};
 
-<span class="kw">use</span> <span class="ident">wafel_data_path::DataPath</span>;
-<span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">Address</span>, <span class="ident">Value</span>};
-<span class="kw">use</span> <span class="ident">wafel_layout</span>::{<span class="ident">DataLayout</span>, <span class="ident">DllLayout</span>};
-<span class="kw">use</span> <span class="ident">wafel_memory</span>::{<span class="ident">DllGameMemory</span>, <span class="ident">GameMemory</span>, <span class="ident">MemoryRead</span>, <span class="ident">SymbolLookup</span>};
+<span class="kw">use</span> <span class="ident">wafel_data_access</span>::{<span class="ident">DataPath</span>, <span class="ident">MemoryLayout</span>, <span class="ident">MemoryLayoutImpl</span>};
+<span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">Address</span>, <span class="ident">IntType</span>, <span class="ident">Value</span>};
+<span class="kw">use</span> <span class="ident">wafel_layout::DllLayout</span>;
+<span class="kw">use</span> <span class="ident">wafel_memory</span>::{<span class="ident">DllGameMemory</span>, <span class="ident">GameMemory</span>, <span class="ident">MemoryRead</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">data_path_cache::DataPathCache</span>, <span class="ident">frame_log::read_frame_log</span>, <span class="ident">mario::mario_action_names</span>,
-    <span class="ident">read_object_hitboxes</span>, <span class="ident">read_surfaces</span>, <span class="ident">simplified_data_type</span>, <span class="ident">DataType</span>, <span class="ident">Error</span>, <span class="ident">Input</span>,
-    <span class="ident">ObjectHitbox</span>, <span class="ident">Surface</span>,
+    <span class="ident">frame_log::read_frame_log</span>, <span class="ident">mario::mario_action_names</span>, <span class="ident">read_object_hitboxes</span>, <span class="ident">read_surfaces</span>,
+    <span class="ident">simplified_data_type</span>, <span class="ident">DataType</span>, <span class="ident">Error</span>, <span class="ident">Input</span>, <span class="ident">ObjectHitbox</span>, <span class="ident">Surface</span>,
 };
 
 <span class="doccomment">/// An SM64 API that uses a traditional frame advance / save state model.</span>
@@ -509,12 +497,10 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Game</span> {
     <span class="ident">id</span>: <span class="ident">Arc</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">layout</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DataLayout</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">memory</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DllGameMemory</span><span class="op">&gt;</span>, <span class="comment">// FIXME: Remove pubs</span>
-    <span class="ident">symbols_by_address</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Address</span>, <span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">layout</span>: <span class="ident">MemoryLayoutImpl</span><span class="op">&lt;</span><span class="ident">DllGameMemory</span><span class="op">&gt;</span>, <span class="comment">// FIXME: Remove pub</span>
+    <span class="kw">pub</span> <span class="ident">memory</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DllGameMemory</span><span class="op">&gt;</span>,
     <span class="ident">base_slot_frame</span>: <span class="ident">u32</span>,
     <span class="kw">pub</span> <span class="ident">base_slot</span>: <span class="op">&lt;</span><span class="ident">DllGameMemory</span> <span class="kw">as</span> <span class="ident">GameMemory</span><span class="op">&gt;</span><span class="ident">::Slot</span>,
-    <span class="ident">data_path_cache</span>: <span class="ident">DataPathCache</span>,
     <span class="ident">rerecords</span>: <span class="ident">u32</span>,
 }
 
@@ -552,29 +538,21 @@
     <span class="doccomment">///   except this [Game], this is UB.</span>
     <span class="doccomment">/// - The DLL can easily execute arbitrary code.</span>
     <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">try_new</span>(<span class="ident">dll_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">layout</span> <span class="op">=</span> <span class="ident">DllLayout::read</span>(<span class="kw-2">&amp;</span><span class="ident">dll_path</span>)<span class="question-mark">?</span>.<span class="ident">data_layout</span>;
-        <span class="ident">layout</span>.<span class="ident">add_sm64_extras</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">layout</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">layout</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data_layout</span> <span class="op">=</span> <span class="ident">DllLayout::read</span>(<span class="kw-2">&amp;</span><span class="ident">dll_path</span>)<span class="question-mark">?</span>.<span class="ident">data_layout</span>;
+        <span class="ident">data_layout</span>.<span class="ident">add_sm64_extras</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">data_layout</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">data_layout</span>);
 
         <span class="kw">let</span> (<span class="ident">memory</span>, <span class="ident">base_slot</span>) <span class="op">=</span> <span class="ident">DllGameMemory::load</span>(<span class="ident">dll_path</span>, <span class="string">&quot;sm64_init&quot;</span>, <span class="string">&quot;sm64_update&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">memory</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">memory</span>);
 
-        <span class="kw">let</span> <span class="ident">symbols_by_address</span> <span class="op">=</span> <span class="ident">layout</span>
-            .<span class="ident">globals</span>
-            .<span class="ident">keys</span>()
-            .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">name</span><span class="op">|</span> <span class="ident">memory</span>.<span class="ident">symbol_address</span>(<span class="ident">name</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">addr</span><span class="op">|</span> (<span class="ident">addr</span>, <span class="ident">name</span>.<span class="ident">clone</span>())))
-            .<span class="ident">collect</span>();
-
-        <span class="kw">let</span> <span class="ident">data_path_cache</span> <span class="op">=</span> <span class="ident">DataPathCache::new</span>(<span class="kw-2">&amp;</span><span class="ident">memory</span>, <span class="kw-2">&amp;</span><span class="ident">layout</span>);
+        <span class="kw">let</span> <span class="ident">layout</span> <span class="op">=</span> <span class="ident">MemoryLayoutImpl::new</span>(<span class="kw-2">&amp;</span><span class="ident">data_layout</span>, <span class="kw-2">&amp;</span><span class="ident">memory</span>, <span class="ident">IntType::u_ptr_native</span>().<span class="ident">size</span>());
 
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">id</span>: <span class="ident">Arc::new</span>(()),
             <span class="ident">layout</span>,
             <span class="ident">memory</span>,
-            <span class="ident">symbols_by_address</span>,
             <span class="ident">base_slot_frame</span>: <span class="number">0</span>,
             <span class="ident">base_slot</span>,
-            <span class="ident">data_path_cache</span>,
             <span class="ident">rerecords</span>: <span class="number">0</span>,
         })
     }
@@ -600,7 +578,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns an error if the path fails to compile or reading from memory fails.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Value</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">data_path_cache</span>.<span class="ident">global</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">global_path</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">path</span>.<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">memory</span>.<span class="ident">with_slot</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">base_slot</span>))<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">value</span>)
     }
@@ -654,7 +632,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns an error if the path fails to compile or reading from memory fails.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_address</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Address</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">data_path_cache</span>.<span class="ident">global</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">global_path</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">path</span>.<span class="ident">address</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">memory</span>.<span class="ident">with_slot</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">base_slot</span>))<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">address</span>)
     }
@@ -663,7 +641,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns None if no global variable is at the address.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">address_to_symbol</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">address</span>: <span class="ident">Address</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">symbols_by_address</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">address</span>).<span class="ident">cloned</span>()
+        <span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">address_to_symbol</span>(<span class="ident">address</span>).<span class="ident">ok</span>()
     }
 
     <span class="doccomment">/// Return a simplified description of the type of the given variable.</span>
@@ -689,7 +667,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Panics if the path fails to compile or type resolution fails.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_data_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DataType</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">DataPath::compile</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">memory</span>, <span class="ident">path</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">DataPath::compile</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="ident">path</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">data_type</span> <span class="op">=</span> <span class="ident">path</span>.<span class="ident">concrete_type</span>();
         <span class="kw">let</span> <span class="ident">simplified</span> <span class="op">=</span> <span class="ident">simplified_data_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="ident">data_type</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">simplified</span>)
@@ -716,7 +694,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns an error if the data path fails to compile or the write fails.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_write</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="ident">Value</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">data_path_cache</span>.<span class="ident">global</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">global_path</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
         <span class="ident">path</span>.<span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">memory</span>.<span class="ident">with_slot_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">base_slot</span>), <span class="ident">value</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
@@ -820,13 +798,13 @@
     <span class="doccomment">/// Unless the name has a typo, it is likely that either Wafel is out of date or it is just</span>
     <span class="doccomment">/// a limitation of how Wafel obtains constants from the source.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_constant</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Value</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">constant</span>(<span class="ident">name</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">data_layout</span>().<span class="ident">constant</span>(<span class="ident">name</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">value</span>.<span class="ident">value</span>.<span class="ident">into</span>())
     }
 
     <span class="doccomment">/// Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`).</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mario_action_names</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="ident">mario_action_names</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>)
+        <span class="ident">mario_action_names</span>(<span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">data_layout</span>())
     }
 
     <span class="doccomment">/// Read the Wafel frame log for the previous frame advance.</span>
@@ -847,7 +825,7 @@
     <span class="doccomment">/// Returns an error if reading the frame log fails, e.g. it contains an invalid event type.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_frame_log</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Value</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">memory</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">memory</span>.<span class="ident">with_slot</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">base_slot</span>);
-        <span class="kw">let</span> <span class="ident">frame_log</span> <span class="op">=</span> <span class="ident">read_frame_log</span>(<span class="kw-2">&amp;</span><span class="ident">memory</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data_path_cache</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">frame_log</span> <span class="op">=</span> <span class="ident">read_frame_log</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="ident">memory</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">frame_log</span>)
     }
 
@@ -869,7 +847,7 @@
     <span class="doccomment">/// Returns an error if the read fails.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_surfaces</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Surface</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">memory</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">memory</span>.<span class="ident">with_slot</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">base_slot</span>);
-        <span class="kw">let</span> <span class="ident">surfaces</span> <span class="op">=</span> <span class="ident">read_surfaces</span>(<span class="kw-2">&amp;</span><span class="ident">memory</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data_path_cache</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">surfaces</span> <span class="op">=</span> <span class="ident">read_surfaces</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="ident">memory</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">surfaces</span>)
     }
 
@@ -891,7 +869,7 @@
     <span class="doccomment">/// Returns an error if the read fails.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_object_hitboxes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ObjectHitbox</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">memory</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">memory</span>.<span class="ident">with_slot</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">base_slot</span>);
-        <span class="kw">let</span> <span class="ident">hitboxes</span> <span class="op">=</span> <span class="ident">read_object_hitboxes</span>(<span class="kw-2">&amp;</span><span class="ident">memory</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data_path_cache</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">hitboxes</span> <span class="op">=</span> <span class="ident">read_object_hitboxes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="ident">memory</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">hitboxes</span>)
     }
 }
@@ -919,5 +897,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_api" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (9a7b7d5e5 2022-07-19)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_api" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (62b272d25 2022-07-21)" ></div>
 </body></html>

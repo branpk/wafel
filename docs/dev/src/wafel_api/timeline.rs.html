@@ -610,35 +610,22 @@
 <span id="604">604</span>
 <span id="605">605</span>
 <span id="606">606</span>
-<span id="607">607</span>
-<span id="608">608</span>
-<span id="609">609</span>
-<span id="610">610</span>
-<span id="611">611</span>
-<span id="612">612</span>
-<span id="613">613</span>
-<span id="614">614</span>
-<span id="615">615</span>
-<span id="616">616</span>
-<span id="617">617</span>
-<span id="618">618</span>
-<span id="619">619</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections::HashMap</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>},
     <span class="ident">time::Duration</span>,
 };
 
-<span class="kw">use</span> <span class="ident">wafel_data_path</span>::{<span class="ident">DataPath</span>, <span class="ident">GlobalDataPath</span>};
-<span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">Address</span>, <span class="ident">Value</span>};
-<span class="kw">use</span> <span class="ident">wafel_layout</span>::{<span class="ident">DataLayout</span>, <span class="ident">DllLayout</span>};
-<span class="kw">use</span> <span class="ident">wafel_memory</span>::{<span class="ident">DllGameMemory</span>, <span class="ident">DllSlotMemoryView</span>, <span class="ident">GameMemory</span>, <span class="ident">MemoryRead</span>, <span class="ident">SymbolLookup</span>};
+<span class="kw">use</span> <span class="ident">wafel_data_access</span>::{<span class="ident">DataPath</span>, <span class="ident">GlobalDataPath</span>, <span class="ident">MemoryLayout</span>, <span class="ident">MemoryLayoutImpl</span>};
+<span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">Address</span>, <span class="ident">IntType</span>, <span class="ident">Value</span>};
+<span class="kw">use</span> <span class="ident">wafel_layout::DllLayout</span>;
+<span class="kw">use</span> <span class="ident">wafel_memory</span>::{<span class="ident">DllGameMemory</span>, <span class="ident">DllSlotMemoryView</span>, <span class="ident">GameMemory</span>, <span class="ident">MemoryRead</span>};
 <span class="kw">use</span> <span class="ident">wafel_timeline</span>::{<span class="ident">GameController</span>, <span class="ident">GameTimeline</span>, <span class="ident">InvalidatedFrames</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">data_cache::DataCache</span>, <span class="ident">data_path_cache::DataPathCache</span>, <span class="ident">frame_log::read_frame_log</span>,
-    <span class="ident">mario::mario_action_names</span>, <span class="ident">read_object_hitboxes</span>, <span class="ident">read_surfaces</span>, <span class="ident">simplified_data_type</span>, <span class="ident">DataType</span>,
-    <span class="ident">Error</span>, <span class="ident">Input</span>, <span class="ident">ObjectHitbox</span>, <span class="ident">Surface</span>,
+    <span class="ident">data_cache::DataCache</span>, <span class="ident">frame_log::read_frame_log</span>, <span class="ident">mario::mario_action_names</span>,
+    <span class="ident">read_object_hitboxes</span>, <span class="ident">read_surfaces</span>, <span class="ident">simplified_data_type</span>, <span class="ident">DataType</span>, <span class="ident">Error</span>, <span class="ident">Input</span>,
+    <span class="ident">ObjectHitbox</span>, <span class="ident">Surface</span>,
 };
 
 <span class="doccomment">/// An SM64 API that allows reads and writes to arbitrary frames without frame advance or</span>
@@ -676,10 +663,8 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Timeline</span> {
     <span class="ident">memory</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DllGameMemory</span><span class="op">&gt;</span>,
-    <span class="ident">layout</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DataLayout</span><span class="op">&gt;</span>,
-    <span class="ident">symbols_by_address</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Address</span>, <span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="ident">layout</span>: <span class="ident">MemoryLayoutImpl</span><span class="op">&lt;</span><span class="ident">DllGameMemory</span><span class="op">&gt;</span>,
     <span class="ident">timeline</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">GameTimeline</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DllGameMemory</span><span class="op">&gt;</span>, <span class="ident">Controller</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">data_path_cache</span>: <span class="ident">DataPathCache</span>,
     <span class="ident">data_cache</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">DataCache</span><span class="op">&gt;</span>,
 }
 
@@ -717,32 +702,24 @@
     <span class="doccomment">///   except this [Timeline], this is UB.</span>
     <span class="doccomment">/// - The DLL can easily execute arbitrary code.</span>
     <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">try_new</span>(<span class="ident">dll_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">layout</span> <span class="op">=</span> <span class="ident">DllLayout::read</span>(<span class="kw-2">&amp;</span><span class="ident">dll_path</span>)<span class="question-mark">?</span>.<span class="ident">data_layout</span>;
-        <span class="ident">layout</span>.<span class="ident">add_sm64_extras</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">layout</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">layout</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data_layout</span> <span class="op">=</span> <span class="ident">DllLayout::read</span>(<span class="kw-2">&amp;</span><span class="ident">dll_path</span>)<span class="question-mark">?</span>.<span class="ident">data_layout</span>;
+        <span class="ident">data_layout</span>.<span class="ident">add_sm64_extras</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">data_layout</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">data_layout</span>);
 
         <span class="kw">let</span> (<span class="ident">memory</span>, <span class="ident">base_slot</span>) <span class="op">=</span> <span class="ident">DllGameMemory::load</span>(<span class="ident">dll_path</span>, <span class="string">&quot;sm64_init&quot;</span>, <span class="string">&quot;sm64_update&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">memory</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">memory</span>);
-
-        <span class="kw">let</span> <span class="ident">symbols_by_address</span> <span class="op">=</span> <span class="ident">layout</span>
-            .<span class="ident">globals</span>
-            .<span class="ident">keys</span>()
-            .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">name</span><span class="op">|</span> <span class="ident">memory</span>.<span class="ident">symbol_address</span>(<span class="ident">name</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">addr</span><span class="op">|</span> (<span class="ident">addr</span>, <span class="ident">name</span>.<span class="ident">clone</span>())))
-            .<span class="ident">collect</span>();
 
         <span class="kw">let</span> <span class="ident">controller</span> <span class="op">=</span> <span class="ident">Controller::new</span>();
 
         <span class="kw">let</span> <span class="ident">timeline</span> <span class="op">=</span> <span class="ident">GameTimeline::new</span>(<span class="ident">Arc::clone</span>(<span class="kw-2">&amp;</span><span class="ident">memory</span>), <span class="ident">base_slot</span>, <span class="ident">controller</span>, <span class="number">30</span>);
         <span class="kw">let</span> <span class="ident">timeline</span> <span class="op">=</span> <span class="ident">Mutex::new</span>(<span class="ident">timeline</span>);
 
-        <span class="kw">let</span> <span class="ident">data_path_cache</span> <span class="op">=</span> <span class="ident">DataPathCache::new</span>(<span class="kw-2">&amp;</span><span class="ident">memory</span>, <span class="kw-2">&amp;</span><span class="ident">layout</span>);
+        <span class="kw">let</span> <span class="ident">layout</span> <span class="op">=</span> <span class="ident">MemoryLayoutImpl::new</span>(<span class="kw-2">&amp;</span><span class="ident">data_layout</span>, <span class="kw-2">&amp;</span><span class="ident">memory</span>, <span class="ident">IntType::u_ptr_native</span>().<span class="ident">size</span>());
 
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">memory</span>,
             <span class="ident">layout</span>,
-            <span class="ident">symbols_by_address</span>,
             <span class="ident">timeline</span>,
-            <span class="ident">data_path_cache</span>,
             <span class="ident">data_cache</span>: <span class="ident">Mutex::new</span>(<span class="ident">DataCache::new</span>()),
         })
     }
@@ -809,10 +786,11 @@
     <span class="doccomment">/// - Reading from memory fails</span>
     <span class="doccomment">/// - A `write` on a previous frame failed</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">frame</span>: <span class="ident">u32</span>, <span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Value</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">data_path_cache</span>.<span class="ident">global</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">global_path</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data_cache</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">data_cache</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
 
-        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">data_cache</span>.<span class="ident">get</span>(<span class="ident">frame</span>, <span class="kw-2">&amp;</span><span class="ident">path</span>) {
+        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">data_cache</span>.<span class="ident">get</span>(<span class="ident">frame</span>, <span class="kw-2">&amp;</span><span class="ident">path</span>);
+        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">value</span> {
             <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
             <span class="prelude-val">None</span> =&gt; <span class="self">self</span>.<span class="ident">read_and_cache</span>(<span class="kw-2">&amp;mut</span> <span class="ident">data_cache</span>, <span class="ident">frame</span>, <span class="kw-2">&amp;</span><span class="ident">path</span>)<span class="question-mark">?</span>,
         };
@@ -892,7 +870,7 @@
     <span class="doccomment">/// - Reading from memory fails</span>
     <span class="doccomment">/// - A `write` on a previous frame failed</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_address</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">frame</span>: <span class="ident">u32</span>, <span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Address</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">data_path_cache</span>.<span class="ident">global</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">global_path</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">with_slot_memory</span>(<span class="ident">frame</span>, <span class="op">|</span><span class="ident">memory</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">path</span>.<span class="ident">address</span>(<span class="ident">memory</span>)<span class="question-mark">?</span>))
     }
 
@@ -900,7 +878,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns None if no global variable is at the address.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">address_to_symbol</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">address</span>: <span class="ident">Address</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">symbols_by_address</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">address</span>).<span class="ident">cloned</span>()
+        <span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">address_to_symbol</span>(<span class="ident">address</span>).<span class="ident">ok</span>()
     }
 
     <span class="doccomment">/// Return a simplified description of the type of the given variable.</span>
@@ -926,7 +904,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Panics if the path fails to compile or type resolution fails.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_data_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DataType</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">DataPath::compile</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">memory</span>, <span class="ident">path</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">DataPath::compile</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="ident">path</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">data_type</span> <span class="op">=</span> <span class="ident">path</span>.<span class="ident">concrete_type</span>();
         <span class="kw">let</span> <span class="ident">simplified</span> <span class="op">=</span> <span class="ident">simplified_data_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="ident">data_type</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">simplified</span>)
@@ -961,7 +939,7 @@
     <span class="doccomment">/// Instead, write errors will be returned if `read` is called on a frame later than or</span>
     <span class="doccomment">/// equal to `frame`.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_write</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">frame</span>: <span class="ident">u32</span>, <span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="ident">Value</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">data_path_cache</span>.<span class="ident">global</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">global_path</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">with_controller_mut</span>(<span class="op">|</span><span class="ident">controller</span><span class="op">|</span> <span class="ident">controller</span>.<span class="ident">write</span>(<span class="ident">frame</span>, <span class="kw-2">&amp;</span><span class="ident">path</span>, <span class="ident">value</span>));
         <span class="prelude-val">Ok</span>(())
     }
@@ -1012,7 +990,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns an error if the data path fails to compile.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_reset</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">frame</span>: <span class="ident">u32</span>, <span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">data_path_cache</span>.<span class="ident">global</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">global_path</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">with_controller_mut</span>(<span class="op">|</span><span class="ident">controller</span><span class="op">|</span> <span class="ident">controller</span>.<span class="ident">reset</span>(<span class="ident">frame</span>, <span class="kw-2">&amp;</span><span class="ident">path</span>));
         <span class="prelude-val">Ok</span>(())
     }
@@ -1076,13 +1054,13 @@
     <span class="doccomment">/// Unless the name has a typo, it is likely that either Wafel is out of date or it is just</span>
     <span class="doccomment">/// a limitation of how Wafel obtains constants from the source.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_constant</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Value</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">constant</span>(<span class="ident">name</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">data_layout</span>().<span class="ident">constant</span>(<span class="ident">name</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">value</span>.<span class="ident">value</span>.<span class="ident">into</span>())
     }
 
     <span class="doccomment">/// Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`).</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mario_action_names</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="ident">mario_action_names</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>)
+        <span class="ident">mario_action_names</span>(<span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">data_layout</span>())
     }
 
     <span class="doccomment">/// Read the Wafel frame log for the previous frame advance.</span>
@@ -1104,9 +1082,7 @@
     <span class="doccomment">/// Returns an error if reading the frame log fails, e.g. it contains an invalid event type,</span>
     <span class="doccomment">/// or if a `write` on a previous frame failed.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_frame_log</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">frame</span>: <span class="ident">u32</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Value</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">with_slot_memory</span>(<span class="ident">frame</span>, <span class="op">|</span><span class="ident">memory</span><span class="op">|</span> {
-            <span class="ident">read_frame_log</span>(<span class="ident">memory</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data_path_cache</span>)
-        })
+        <span class="self">self</span>.<span class="ident">with_slot_memory</span>(<span class="ident">frame</span>, <span class="op">|</span><span class="ident">memory</span><span class="op">|</span> <span class="ident">read_frame_log</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="ident">memory</span>))
     }
 
     <span class="doccomment">/// Read the currently loaded surfaces.</span>
@@ -1126,7 +1102,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns an error if the read fails or if a `write` on a previous frame failed.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_surfaces</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">frame</span>: <span class="ident">u32</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Surface</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">with_slot_memory</span>(<span class="ident">frame</span>, <span class="op">|</span><span class="ident">memory</span><span class="op">|</span> <span class="ident">read_surfaces</span>(<span class="ident">memory</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data_path_cache</span>))
+        <span class="self">self</span>.<span class="ident">with_slot_memory</span>(<span class="ident">frame</span>, <span class="op">|</span><span class="ident">memory</span><span class="op">|</span> <span class="ident">read_surfaces</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="ident">memory</span>))
     }
 
     <span class="doccomment">/// Read the hitboxes for active objects.</span>
@@ -1146,9 +1122,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns an error if the read fails or if a `write` on a previous frame failed.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_object_hitboxes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">frame</span>: <span class="ident">u32</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ObjectHitbox</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">with_slot_memory</span>(<span class="ident">frame</span>, <span class="op">|</span><span class="ident">memory</span><span class="op">|</span> {
-            <span class="ident">read_object_hitboxes</span>(<span class="ident">memory</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data_path_cache</span>)
-        })
+        <span class="self">self</span>.<span class="ident">with_slot_memory</span>(<span class="ident">frame</span>, <span class="op">|</span><span class="ident">memory</span><span class="op">|</span> <span class="ident">read_object_hitboxes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">layout</span>, <span class="ident">memory</span>))
     }
 }
 
@@ -1243,5 +1217,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_api" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (9a7b7d5e5 2022-07-19)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_api" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (62b272d25 2022-07-21)" ></div>
 </body></html>
