@@ -5,8 +5,8 @@ use bitflags::bitflags;
 use fast3d::util::Angle;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use wafel_api::{Address, Error, IntType, Value};
+use wafel_data_access::MemoryLayout;
 use wafel_data_type::{DataType, DataTypeRef, Field, Namespace, TypeName, ValueSerializeWrapper};
-use wafel_layout::DataLayout;
 use wafel_memory::MemoryRead;
 
 #[derive(Debug, Clone)]
@@ -327,10 +327,10 @@ impl<'m> GfxNodeReader<'m> {
 }
 
 pub fn get_gfx_node_reader<'m>(
+    layout: &'m impl MemoryLayout,
     memory: &'m impl MemoryRead,
-    layout: &'m DataLayout,
 ) -> Result<GfxNodeReader<'m>, Error> {
-    let readers = Arc::new(get_node_readers(memory, layout)?);
+    let readers = Arc::new(get_node_readers(layout, memory)?);
     let func = move |addr| {
         let readers = Arc::clone(&readers);
         let type_id = memory.read_int(addr, IntType::S16)? as i16;
@@ -343,160 +343,160 @@ pub fn get_gfx_node_reader<'m>(
 }
 
 fn get_node_readers<'m>(
+    layout: &'m impl MemoryLayout,
     memory: &'m impl MemoryRead,
-    layout: &'m DataLayout,
 ) -> Result<HashMap<i16, GfxNodeReader<'m>>, Error> {
     Ok([
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_ROOT",
             "GraphNodeRoot",
             GfxTreeNode::Root,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_ORTHO_PROJECTION",
             "GraphNodeOrthoProjection",
             GfxTreeNode::OrthoProjection,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_PERSPECTIVE",
             "GraphNodePerspective",
             GfxTreeNode::Perspective,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_MASTER_LIST",
             "GraphNodeMasterList",
             GfxTreeNode::MasterList,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_START",
             "GraphNodeStart",
             GfxTreeNode::Start,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_LEVEL_OF_DETAIL",
             "GraphNodeLevelOfDetail",
             GfxTreeNode::LevelOfDetail,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_SWITCH_CASE",
             "GraphNodeSwitchCase",
             GfxTreeNode::SwitchCase,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_CAMERA",
             "GraphNodeCamera",
             GfxTreeNode::Camera,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_TRANSLATION_ROTATION",
             "GraphNodeTranslationRotation",
             GfxTreeNode::TranslationRotation,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_TRANSLATION",
             "GraphNodeTranslation",
             GfxTreeNode::Translation,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_ROTATION",
             "GraphNodeRotation",
             GfxTreeNode::Rotation,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_OBJECT",
             "GraphNodeObject",
             GfxTreeNode::Object,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_ANIMATED_PART",
             "GraphNodeAnimatedPart",
             GfxTreeNode::AnimatedPart,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_BILLBOARD",
             "GraphNodeBillboard",
             GfxTreeNode::Billboard,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_DISPLAY_LIST",
             "GraphNodeDisplayList",
             GfxTreeNode::DisplayList,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_SCALE",
             "GraphNodeScale",
             GfxTreeNode::Scale,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_SHADOW",
             "GraphNodeShadow",
             GfxTreeNode::Shadow,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_OBJECT_PARENT",
             "GraphNodeObjectParent",
             GfxTreeNode::ObjectParent,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_GENERATED_LIST",
             "GraphNodeGenerated",
             GfxTreeNode::Generated,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_BACKGROUND",
             "GraphNodeBackground",
             GfxTreeNode::Background,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_HELD_OBJ",
             "GraphNodeHeldObject",
             GfxTreeNode::HeldObject,
         )?,
         get_node_reader_entry(
-            memory,
             layout,
+            memory,
             "GRAPH_NODE_TYPE_CULLING_RADIUS",
             "GraphNodeCullingRadius",
             GfxTreeNode::CullingRadius,
@@ -507,15 +507,16 @@ fn get_node_readers<'m>(
 }
 
 fn get_node_reader_entry<'m, T: DeserializeOwned + 'static>(
+    layout: &'m impl MemoryLayout,
     memory: &'m impl MemoryRead,
-    layout: &'m DataLayout,
     id_name: &'static str,
     struct_name: &'static str,
     variant: fn(T) -> GfxTreeNode,
 ) -> Result<(i16, GfxNodeReader<'m>), Error> {
-    let resolve_type = |type_name: &TypeName| layout.data_type(type_name).ok().cloned();
+    let resolve_type =
+        |type_name: &TypeName| layout.data_layout().data_type(type_name).ok().cloned();
 
-    let mut data_type = Arc::clone(layout.data_type(&TypeName {
+    let mut data_type = Arc::clone(layout.data_layout().data_type(&TypeName {
         namespace: Namespace::Struct,
         name: struct_name.into(),
     })?);
@@ -542,13 +543,14 @@ fn get_node_reader_entry<'m, T: DeserializeOwned + 'static>(
 
     let func = move |addr| {
         let data_type = Arc::clone(&data_type);
-        let data = memory.read_value(addr, &data_type, &resolve_type)?;
+        let reader = layout.data_type_reader(&data_type)?;
+        let data = reader.read(memory, addr)?;
         let node = value_to_struct(data);
         Ok(variant(node))
     };
 
     Ok((
-        layout.constant(id_name)?.value as i16,
+        layout.data_layout().constant(id_name)?.value as i16,
         GfxNodeReader(Box::new(func)),
     ))
 }

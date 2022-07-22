@@ -45,10 +45,10 @@ use crate::{
 #[derive(Debug)]
 pub struct Game {
     id: Arc<()>,
-    layout: MemoryLayoutImpl<DllGameMemory>,
-    memory: Arc<DllGameMemory>,
+    pub layout: MemoryLayoutImpl<DllGameMemory>, // FIXME: Remove pub
+    pub memory: Arc<DllGameMemory>,
     base_slot_frame: u32,
-    base_slot: <DllGameMemory as GameMemory>::Slot,
+    pub base_slot: <DllGameMemory as GameMemory>::Slot,
     rerecords: u32,
 }
 

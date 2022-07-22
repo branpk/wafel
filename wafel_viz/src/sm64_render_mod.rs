@@ -1,4 +1,4 @@
-use std::{f32::consts::PI, num::Wrapping, sync::Arc, vec};
+use std::{num::Wrapping, vec};
 
 use bytemuck::cast_slice;
 use fast3d::{
@@ -8,7 +8,7 @@ use fast3d::{
     util::{Angle, Matrixf},
 };
 use wafel_api::{Address, Error, IntType};
-use wafel_data_access::GlobalDataPath;
+use wafel_data_access::MemoryLayout;
 use wafel_memory::{MemoryError, MemoryRead};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -57,20 +57,28 @@ impl Default for ObjectCull {
 }
 
 pub fn render_sm64_with_config(
+    layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
-    mut get_path: impl FnMut(&str) -> Result<Arc<GlobalDataPath>, Error>,
     config: &SM64RenderConfig,
 ) -> Result<F3DRenderData, Error> {
-    if let Some(dl_addr) = get_dl_addr(memory, &mut get_path)? {
+    if let Some(dl_addr) = get_dl_addr(layout, memory)? {
         let view_transform = match config.camera {
             Camera::InGame => None,
             Camera::LookAt { pos, focus, roll } => {
-                let lakitu_pos = get_path("gLakituState.pos")?.read(memory)?.try_as_f32_3()?;
-                let lakitu_focus = get_path("gLakituState.focus")?
+                let lakitu_pos = layout
+                    .global_path("gLakituState.pos")?
                     .read(memory)?
                     .try_as_f32_3()?;
-                let lakitu_roll =
-                    Wrapping(get_path("gLakituState.roll")?.read(memory)?.try_as_int()? as i16);
+                let lakitu_focus = layout
+                    .global_path("gLakituState.focus")?
+                    .read(memory)?
+                    .try_as_f32_3()?;
+                let lakitu_roll = Wrapping(
+                    layout
+                        .global_path("gLakituState.roll")?
+                        .read(memory)?
+                        .try_as_int()? as i16,
+                );
 
                 if pos != focus && lakitu_pos != lakitu_focus {
                     let lakitu_view_mtx = Matrixf::look_at(lakitu_pos, lakitu_focus, lakitu_roll);
@@ -93,10 +101,10 @@ pub fn render_sm64_with_config(
 }
 
 pub fn get_dl_addr(
+    layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
-    mut get_path: impl FnMut(&str) -> Result<Arc<GlobalDataPath>, Error>,
 ) -> Result<Option<Address>, Error> {
-    let addr = get_path("gGfxPool?")?.read(memory)?;
+    let addr = layout.global_path("gGfxPool?")?.read(memory)?;
     if addr.is_none() {
         Ok(None)
     } else {

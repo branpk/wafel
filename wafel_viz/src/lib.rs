@@ -12,27 +12,21 @@
 use std::{
     collections::{HashMap, HashSet},
     error::Error,
-    f32::consts::PI,
     num::Wrapping,
-    process,
     rc::Rc,
-    sync::Arc,
     time::{Duration, Instant},
 };
 
 use custom_renderer::{CustomRenderer, Scene};
 use fast3d::{interpret::F3DRenderData, render::F3DRenderer};
 pub use sm64_render_mod::*;
-use wafel_api::{load_m64, Game, SaveState, Value};
-use wafel_data_access::GlobalDataPath;
+use wafel_api::{load_m64, Game, SaveState};
 use wafel_memory::GameMemory;
 use winit::{
     event::{ElementState, Event, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
-
-use crate::sm64_render_dl::render_sm64_dl;
 
 pub mod custom_renderer;
 mod sm64_gfx_render;
@@ -42,14 +36,9 @@ mod sm64_render_mod;
 
 pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderData {
     let memory = game.memory.with_slot(&game.base_slot);
-    let get_path = |source: &str| {
-        GlobalDataPath::compile(&game.layout, &game.memory, source)
-            .map(Arc::new)
-            .map_err(Into::into)
-    };
 
-    // render_sm64_with_config(&memory, get_path, config).expect("failed to process display list")
-    sm64_gfx_render::test_render(&memory, &game.layout, get_path, config)
+    // render_sm64_with_config(&game.layout, &memory, config).expect("failed to process display list")
+    sm64_gfx_render::test_render(&game.layout, &memory, config)
         .expect("failed to process display list")
 }
 

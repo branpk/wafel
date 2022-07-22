@@ -1,19 +1,17 @@
-use std::sync::Arc;
-
 use fast3d::{
     decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand},
     interpret::{interpret_f3d_display_list, F3DMemory, F3DRenderData},
 };
 use wafel_api::{Address, Error, IntType};
-use wafel_data_access::GlobalDataPath;
+use wafel_data_access::MemoryLayout;
 use wafel_memory::{MemoryError, MemoryRead};
 
 pub fn render_sm64_dl(
+    layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
-    mut get_path: impl FnMut(&str) -> Result<Arc<GlobalDataPath>, Error>,
     screen_size: (u32, u32),
 ) -> Result<F3DRenderData, Error> {
-    if let Some(root_addr) = get_dl_addr(memory, &mut get_path)? {
+    if let Some(root_addr) = get_dl_addr(layout, memory)? {
         let f3d_memory = F3DMemoryImpl { memory, root_addr };
         let render_data = interpret_f3d_display_list(&f3d_memory, screen_size, true)?;
 
@@ -24,10 +22,10 @@ pub fn render_sm64_dl(
 }
 
 fn get_dl_addr(
+    layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
-    mut get_path: impl FnMut(&str) -> Result<Arc<GlobalDataPath>, Error>,
 ) -> Result<Option<Address>, Error> {
-    let addr = get_path("gGfxPool?")?.read(memory)?;
+    let addr = layout.global_path("gGfxPool?")?.read(memory)?;
     if addr.is_none() {
         Ok(None)
     } else {

@@ -119,7 +119,7 @@ impl DataLayout {
         data_type: &DataTypeRef,
     ) -> Result<(), LayoutLookupError> {
         match data_type.as_ref() {
-            DataType::Pointer { base, .. } | DataType::Array { base, .. } => {
+            DataType::Array { base, .. } => {
                 self.insert_concrete_types(concrete_types, base)?;
             }
             DataType::Struct { fields } | DataType::Union { fields } => {
@@ -128,7 +128,13 @@ impl DataLayout {
                 }
             }
             DataType::Name(type_name) => {
-                concrete_types.insert(type_name.clone(), self.concrete_type(data_type)?);
+                let concrete_type = self.concrete_type(data_type)?;
+                if concrete_types
+                    .insert(type_name.clone(), concrete_type.clone())
+                    .is_none()
+                {
+                    self.insert_concrete_types(concrete_types, &concrete_type)?;
+                }
             }
             _ => {}
         }

@@ -1,6 +1,4 @@
-use std::{
-    collections::HashSet, iter::Peekable, mem, num::Wrapping, ops::Deref, process, sync::Arc,
-};
+use std::{iter::Peekable, mem, num::Wrapping, process};
 
 use bytemuck::{cast_slice, cast_slice_mut};
 use fast3d::{
@@ -9,11 +7,9 @@ use fast3d::{
     interpret::{interpret_f3d_display_list, F3DRenderData},
     util::{coss, sins, Angle, MatrixStack, Matrixf},
 };
-use itertools::Itertools;
 use wafel_api::{Address, Error, IntType, Value};
-use wafel_data_access::GlobalDataPath;
+use wafel_data_access::MemoryLayout;
 use wafel_data_type::{DataType, Namespace, TypeName};
-use wafel_layout::DataLayout;
 use wafel_memory::{MemoryError, MemoryRead};
 
 use crate::{
@@ -29,12 +25,11 @@ const CHECK_CALC_TRANSFORMS: bool = false;
 const ASSERT_CALC_TRANSFORMS: bool = false;
 
 pub fn test_render(
+    layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
-    layout: &DataLayout,
-    mut get_path: impl FnMut(&str) -> Result<Arc<GlobalDataPath>, Error>,
     config: &SM64RenderConfig,
 ) -> Result<F3DRenderData, Error> {
-    let dl_addr = get_dl_addr(memory, &mut get_path)?;
+    let dl_addr = get_dl_addr(layout, memory)?;
     let dl_addr = match dl_addr {
         Some(addr) => addr,
         None => return Ok(F3DRenderData::default()),
@@ -57,14 +52,14 @@ pub fn test_render(
         println!("\n\n");
     }
 
-    let pause_rendering = get_path("gWarpTransition.pauseRendering")?
+    let pause_rendering = layout
+        .global_path("gWarpTransition.pauseRendering")?
         .read(memory)?
         .try_as_int()?
         != 0;
-    let root_addr = get_path("gCurrentArea?.unk04")?.read(memory)?;
+    let root_addr = layout.global_path("gCurrentArea?.unk04")?.read(memory)?;
 
-    let mut renderer =
-        NodeRenderer::new(config, input_dl.into_iter(), memory, layout, &mut get_path)?;
+    let mut renderer = NodeRenderer::new(config, input_dl.into_iter(), layout, memory)?;
     renderer.render_game(root_addr, pause_rendering)?;
 
     let mut f3d_memory = F3DMemoryImpl::new(memory, Pointer::BufferOffset(0));
@@ -80,15 +75,14 @@ pub fn test_render(
 }
 
 #[derive(Debug)]
-struct NodeRenderer<'m, M, I, F>
+struct NodeRenderer<'m, L, M, I>
 where
     I: Iterator<Item = F3DCommand<Pointer>>,
 {
     config: &'m SM64RenderConfig,
     input_display_list: Peekable<I>,
+    layout: &'m L,
     memory: &'m M,
-    layout: &'m DataLayout,
-    get_path: F,
     reader: GfxNodeReader<'m>,
     mtx_stack: MatrixStack,
     mod_mtx_stack: MatrixStack,
@@ -189,26 +183,24 @@ struct CameraState {
     roll: Angle,
 }
 
-impl<'m, M, I, F> NodeRenderer<'m, M, I, F>
+impl<'m, L, M, I> NodeRenderer<'m, L, M, I>
 where
+    L: MemoryLayout,
     M: MemoryRead,
     I: Iterator<Item = F3DCommand<Pointer>>,
-    F: FnMut(&str) -> Result<Arc<GlobalDataPath>, Error>,
 {
     fn new(
         config: &'m SM64RenderConfig,
         input_display_list: I,
+        layout: &'m L,
         memory: &'m M,
-        layout: &'m DataLayout,
-        get_path: F,
     ) -> Result<Self, Error> {
-        let reader = get_gfx_node_reader(memory, layout)?;
+        let reader = get_gfx_node_reader(layout, memory)?;
         Ok(Self {
             config,
             input_display_list: input_display_list.peekable(),
-            memory,
             layout,
-            get_path,
+            memory,
             reader,
             mtx_stack: MatrixStack::default(),
             mod_mtx_stack: MatrixStack::default(),
@@ -334,14 +326,12 @@ where
     }
 
     fn set_animation_globals(&mut self, node: &AnimInfo) -> Result<(), Error> {
-        let animation_struct = self.layout.data_type(&TypeName {
+        let animation_struct = self.layout.data_layout().data_type(&TypeName {
             namespace: Namespace::Struct,
             name: "Animation".to_string(),
         })?;
-        let resolve_type = |type_name: &TypeName| self.layout.data_type(type_name).ok().cloned();
-        let anim = self
-            .memory
-            .read_value(node.cur_anim, animation_struct, resolve_type)?;
+        let reader = self.layout.data_type_reader(animation_struct)?;
+        let anim = reader.read(self.memory, node.cur_anim)?;
 
         let flags = anim.try_field("flags")?.try_as_int()? as i16;
 
@@ -410,7 +400,13 @@ where
 
         if !cur_node.node().parent.is_null() {
             let parent_type = self.memory.read_int(cur_node.node().parent, IntType::S16)?;
-            if parent_type == self.layout.constant("GRAPH_NODE_TYPE_SWITCH_CASE")?.value {
+            if parent_type
+                == self
+                    .layout
+                    .data_layout()
+                    .constant("GRAPH_NODE_TYPE_SWITCH_CASE")?
+                    .value
+            {
                 iterate_siblings = false;
             }
         }
@@ -425,7 +421,7 @@ where
 
             if self.config.object_cull == ObjectCull::ShowAll && !render_node {
                 if let GfxTreeNode::Object(_) = &cur_node {
-                    let object_struct = self.layout.data_type(&TypeName {
+                    let object_struct = self.layout.data_layout().data_type(&TypeName {
                         namespace: Namespace::Struct,
                         name: "Object".to_string(),
                     })?;
@@ -438,10 +434,16 @@ where
                                 .read_int(cur_addr + active_flags_offset, IntType::S16)?
                                 as i16;
 
-                            let active_flag_active =
-                                self.layout.constant("ACTIVE_FLAG_ACTIVE")?.value as i16;
+                            let active_flag_active = self
+                                .layout
+                                .data_layout()
+                                .constant("ACTIVE_FLAG_ACTIVE")?
+                                .value as i16;
                             let active_flag_far_away =
-                                self.layout.constant("ACTIVE_FLAG_FAR_AWAY")?.value as i16;
+                                self.layout
+                                    .data_layout()
+                                    .constant("ACTIVE_FLAG_FAR_AWAY")?
+                                    .value as i16;
 
                             if (active_flags & active_flag_active) != 0
                                 && (active_flags & active_flag_far_away) != 0
@@ -603,11 +605,14 @@ where
             }
         }
 
-        let pool_start = (self.get_path)("gGfxPool.buffer")?
+        let pool_start = self
+            .layout
+            .global_path("gGfxPool.buffer")?
             .address(self.memory)?
             .unwrap();
         let cmd_size = 2 * self.memory.pointer_int_type().size();
-        let pool_size = self.layout.constant("GFX_POOL_SIZE")?.value as usize * cmd_size;
+        let pool_size =
+            self.layout.data_layout().constant("GFX_POOL_SIZE")?.value as usize * cmd_size;
         let pool_end = pool_start + pool_size;
         let is_dynamic = |dl: Pointer| {
             if let Pointer::Address(addr) = dl {
@@ -758,6 +763,7 @@ where
     #[allow(dead_code)]
     fn symbol_name(&self, addr: Address) -> Option<String> {
         self.layout
+            .data_layout()
             .globals
             .iter()
             .find(|global| global.1.address == Some(addr.0 as u64))
@@ -823,7 +829,9 @@ where
             // TODO: Model shared between different objects (when not using geo_switch_anim_state)
 
             if !node.fn_node.func.is_null() {
-                let geo_switch_anim_state = (self.get_path)("geo_switch_anim_state")?
+                let geo_switch_anim_state = self
+                    .layout
+                    .global_path("geo_switch_anim_state")?
                     .address(self.memory)?
                     .unwrap();
 
@@ -836,7 +844,7 @@ where
                     }
 
                     if let Some(obj_addr) = obj_addr {
-                        let object_struct = self.layout.data_type(&TypeName {
+                        let object_struct = self.layout.data_layout().data_type(&TypeName {
                             namespace: Namespace::Struct,
                             name: "Object".to_string(),
                         })?;
@@ -1013,7 +1021,9 @@ where
     }
 
     fn is_mario(&mut self) -> Result<bool, Error> {
-        let mario_object = (self.get_path)("gMarioObject")?
+        let mario_object = self
+            .layout
+            .global_path("gMarioObject")?
             .read(self.memory)?
             .try_as_address()?;
         Ok(self.cur_object_addr == Some(mario_object))
