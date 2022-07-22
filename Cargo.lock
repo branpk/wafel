@@ -2585,6 +2585,7 @@ dependencies = [
  "wafel_data_type",
  "wafel_layout",
  "wafel_memory",
+ "wafel_sm64",
  "wafel_timeline",
 ]
 
@@ -2673,6 +2674,16 @@ dependencies = [
  "indexmap",
  "pyo3",
  "wafel_api",
+]
+
+[[package]]
+name = "wafel_sm64"
+version = "0.1.0"
+dependencies = [
+ "wafel_data_access",
+ "wafel_data_type",
+ "wafel_layout",
+ "wafel_memory",
 ]
 
 [[package]]

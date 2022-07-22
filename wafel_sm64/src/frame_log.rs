@@ -5,14 +5,15 @@ use wafel_data_type::{IntValue, Value};
 use wafel_layout::ConstantSource;
 use wafel_memory::MemoryRead;
 
-use crate::Error;
+use crate::SM64DataError;
 
 // TODO: Parse frame log into data structure
 
-pub(crate) fn read_frame_log(
+/// Read the libsm64-specific frame log, which tracks subframe events.
+pub fn read_frame_log(
     layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
-) -> Result<Vec<HashMap<String, Value>>, Error> {
+) -> Result<Vec<HashMap<String, Value>>, SM64DataError> {
     let event_type_source = ConstantSource::Enum {
         name: Some("FrameLogEventType".to_owned()),
     };
@@ -30,16 +31,17 @@ pub(crate) fn read_frame_log(
         .try_as_usize()?;
 
     (0..log_length)
-        .map(|i| -> Result<_, Error> {
+        .map(|i| -> Result<_, SM64DataError> {
             let event_type_value = layout
                 .global_path(&format!("gFrameLog[{}].type", i))?
                 .read(memory)?
                 .try_as_int()?;
             let event_type = event_types
                 .get(&event_type_value)
-                .ok_or(Error::InvalidFrameLogEventType(event_type_value))?;
+                .cloned()
+                .ok_or(SM64DataError::InvalidFrameLogEventType(event_type_value))?;
 
-            let variant_name = frame_log_event_variant_name(event_type);
+            let variant_name = frame_log_event_variant_name(&event_type);
             let mut event: HashMap<String, Value> = layout
                 .global_path(&format!("gFrameLog[{}].__anon.{}", i, variant_name))?
                 .read(memory)?
@@ -48,7 +50,7 @@ pub(crate) fn read_frame_log(
                 .into_iter()
                 .collect();
 
-            event.insert("type".to_owned(), Value::String(event_type.clone()));
+            event.insert("type".to_owned(), Value::String(event_type));
             Ok(event)
         })
         .collect()

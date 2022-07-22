@@ -4,11 +4,9 @@ use wafel_data_access::{DataPath, MemoryLayout, MemoryLayoutImpl};
 use wafel_data_type::{Address, Value};
 use wafel_layout::load_sm64_n64_layout;
 use wafel_memory::{EmptySymbolLookup, EmuMemory, MemoryRead};
+use wafel_sm64::{mario_action_names, read_object_hitboxes, read_surfaces, ObjectHitbox, Surface};
 
-use crate::{
-    mario::mario_action_names, read_object_hitboxes, read_surfaces, simplified_data_type, DataType,
-    Error, ObjectHitbox, SM64Version, Surface,
-};
+use crate::{simplified_data_type, DataType, Error, SM64Version};
 
 /// An SM64 API that attaches to a running emulator and can read/write to its
 /// memory.
@@ -245,7 +243,7 @@ impl Emu {
 
     /// Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`).
     pub fn mario_action_names(&self) -> HashMap<u32, String> {
-        mario_action_names(self.layout.data_layout())
+        mario_action_names(&self.layout)
     }
 
     /// Read the currently loaded surfaces.

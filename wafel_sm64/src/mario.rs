@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
-use wafel_layout::DataLayout;
+use wafel_data_access::MemoryLayout;
 
 /// Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`).
-pub(crate) fn mario_action_names(layout: &DataLayout) -> HashMap<u32, String> {
+pub fn mario_action_names(layout: &impl MemoryLayout) -> HashMap<u32, String> {
     layout
+        .data_layout()
         .constants
         .iter()
         .filter(|(name, _)| {

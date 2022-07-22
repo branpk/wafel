@@ -1,7 +1,6 @@
 //! Dynamically typed value used for reading and writing to memory.
 
 use std::{
-    array::IntoIter,
     collections::HashMap,
     convert::TryFrom,
     fmt,
@@ -551,7 +550,7 @@ impl<V: Into<Value>> From<HashMap<&str, V>> for Value {
 
 impl<T: Into<Value>, const N: usize> From<[(String, T); N]> for Value {
     fn from(v: [(String, T); N]) -> Self {
-        IntoIter::new(v).collect::<HashMap<_, _>>().into()
+        v.into_iter().collect::<HashMap<_, _>>().into()
     }
 }
 
@@ -569,7 +568,7 @@ impl<T: Into<Value>> From<Vec<(String, T)>> for Value {
 
 impl<T: Into<Value>, const N: usize> From<[(&str, T); N]> for Value {
     fn from(v: [(&str, T); N]) -> Self {
-        IntoIter::new(v).collect::<HashMap<_, _>>().into()
+        v.into_iter().collect::<HashMap<_, _>>().into()
     }
 }
 
@@ -587,7 +586,7 @@ impl<T: Into<Value>> From<Vec<(&str, T)>> for Value {
 
 impl<T: Into<Value>, const N: usize> From<[T; N]> for Value {
     fn from(v: [T; N]) -> Self {
-        Self::Array(IntoIter::new(v).map(|v| v.into()).collect())
+        Self::Array(v.into_iter().map(|v| v.into()).collect())
     }
 }
 

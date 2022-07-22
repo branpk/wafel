@@ -8,13 +8,12 @@ use wafel_data_access::{DataPath, GlobalDataPath, MemoryLayout, MemoryLayoutImpl
 use wafel_data_type::{Address, IntType, Value};
 use wafel_layout::DllLayout;
 use wafel_memory::{DllGameMemory, DllSlotMemoryView, GameMemory, MemoryRead};
+use wafel_sm64::{
+    mario_action_names, read_frame_log, read_object_hitboxes, read_surfaces, ObjectHitbox, Surface,
+};
 use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
 
-use crate::{
-    data_cache::DataCache, frame_log::read_frame_log, mario::mario_action_names,
-    read_object_hitboxes, read_surfaces, simplified_data_type, DataType, Error, Input,
-    ObjectHitbox, Surface,
-};
+use crate::{data_cache::DataCache, simplified_data_type, DataType, Error, Input};
 
 /// An SM64 API that allows reads and writes to arbitrary frames without frame advance or
 /// save states.
@@ -448,7 +447,7 @@ impl Timeline {
 
     /// Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`).
     pub fn mario_action_names(&self) -> HashMap<u32, String> {
-        mario_action_names(self.layout.data_layout())
+        mario_action_names(&self.layout)
     }
 
     /// Read the Wafel frame log for the previous frame advance.
@@ -470,7 +469,9 @@ impl Timeline {
     /// Returns an error if reading the frame log fails, e.g. it contains an invalid event type,
     /// or if a `write` on a previous frame failed.
     pub fn try_frame_log(&self, frame: u32) -> Result<Vec<HashMap<String, Value>>, Error> {
-        self.with_slot_memory(frame, |memory| read_frame_log(&self.layout, memory))
+        self.with_slot_memory(frame, |memory| {
+            read_frame_log(&self.layout, memory).map_err(Error::from)
+        })
     }
 
     /// Read the currently loaded surfaces.
@@ -490,7 +491,9 @@ impl Timeline {
     ///
     /// Returns an error if the read fails or if a `write` on a previous frame failed.
     pub fn try_surfaces(&self, frame: u32) -> Result<Vec<Surface>, Error> {
-        self.with_slot_memory(frame, |memory| read_surfaces(&self.layout, memory))
+        self.with_slot_memory(frame, |memory| {
+            read_surfaces(&self.layout, memory).map_err(Error::from)
+        })
     }
 
     /// Read the hitboxes for active objects.
@@ -510,7 +513,9 @@ impl Timeline {
     ///
     /// Returns an error if the read fails or if a `write` on a previous frame failed.
     pub fn try_object_hitboxes(&self, frame: u32) -> Result<Vec<ObjectHitbox>, Error> {
-        self.with_slot_memory(frame, |memory| read_object_hitboxes(&self.layout, memory))
+        self.with_slot_memory(frame, |memory| {
+            read_object_hitboxes(&self.layout, memory).map_err(Error::from)
+        })
     }
 }
 

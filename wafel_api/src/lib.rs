@@ -53,22 +53,17 @@ pub use error::*;
 pub use game::*;
 pub use lock::*;
 pub use m64::*;
-pub use object::*;
-pub use surface::*;
 pub use timeline::*;
 pub use wafel_data_type::{
     Address, FloatType, FloatValue, IntType, IntValue, Value, ValueTypeError,
 };
+pub use wafel_sm64::{ObjectHitbox, Surface};
 
 mod data_cache;
 mod data_type;
 mod emu;
 mod error;
-mod frame_log;
 mod game;
 mod lock;
 mod m64;
-mod mario;
-mod object;
-mod surface;
 mod timeline;

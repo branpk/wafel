@@ -1,7 +1,7 @@
 use wafel_data_access::{DataReadable, MemoryLayout};
 use wafel_memory::MemoryRead;
 
-use crate::Error;
+use crate::SM64DataError;
 
 /// Hitbox information for an SM64 object.
 #[derive(Debug, Clone)]
@@ -25,10 +25,11 @@ struct SM64ObjectFields {
     hitbox_radius: f32,
 }
 
-pub(crate) fn read_object_hitboxes(
+/// Read object hitboxes for all active objects.
+pub fn read_object_hitboxes(
     layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
-) -> Result<Vec<ObjectHitbox>, Error> {
+) -> Result<Vec<ObjectHitbox>, SM64DataError> {
     let object_pool_addr = layout.global_path("gObjectPool")?.address(memory)?.unwrap();
 
     let object_size = layout
@@ -37,7 +38,7 @@ pub(crate) fn read_object_hitboxes(
         .stride()
         .ok()
         .flatten()
-        .ok_or(Error::UnsizedObjectPoolArray)?;
+        .ok_or(SM64DataError::UnsizedObjectPoolArray)?;
 
     let reader = SM64ObjectFields::reader(layout)?;
     let active_flag_active = layout.data_layout().constant("ACTIVE_FLAG_ACTIVE")?.value as i16;

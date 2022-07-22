@@ -1,7 +1,7 @@
 use wafel_data_access::{DataReadable, MemoryLayout};
 use wafel_memory::MemoryRead;
 
-use crate::Error;
+use crate::SM64DataError;
 
 // TODO: Returns garbage after level is unloaded
 
@@ -23,10 +23,11 @@ struct SM64Surface {
     vertex3: [i16; 3],
 }
 
-pub(crate) fn read_surfaces(
+/// Read all surfaces.
+pub fn read_surfaces(
     layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
-) -> Result<Vec<Surface>, Error> {
+) -> Result<Vec<Surface>, SM64DataError> {
     let surface_pool_addr = layout.global_path("sSurfacePool?")?.read(memory)?;
     if surface_pool_addr.is_none() {
         return Ok(Vec::new());
@@ -44,7 +45,7 @@ pub(crate) fn read_surfaces(
         .stride()
         .ok()
         .flatten()
-        .ok_or(Error::UnsizedSurfacePoolPointer)?;
+        .ok_or(SM64DataError::UnsizedSurfacePoolPointer)?;
 
     let reader = SM64Surface::reader(layout)?;
 

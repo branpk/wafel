@@ -12,6 +12,7 @@ members = [
     "wafel_layout",
     "wafel_memory",
     "wafel_python",
+    "wafel_sm64",
     "wafel_timeline",
     "wafel_viz",
     "wafel_viz_tests",

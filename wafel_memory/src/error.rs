@@ -14,11 +14,6 @@ pub enum MemoryError {
     ValueTypeError(ValueTypeError),
     UndefinedTypeName(TypeName),
     UndefinedSymbol(String),
-    ReadUnsizedArray,
-    ReadUnion,
-    WriteExtraField(String),
-    WriteMissingField(String),
-    WriteUnion,
     InvalidAddress,
     WriteToStaticAddress,
     NonStaticAddressInStaticView,
@@ -36,21 +31,6 @@ impl fmt::Display for MemoryError {
             }
             MemoryError::UndefinedSymbol(name) => {
                 write!(f, "undefined symbol: {}", name)
-            }
-            MemoryError::ReadUnsizedArray => {
-                write!(f, "cannot read array with unknown length")
-            }
-            MemoryError::ReadUnion => {
-                write!(f, "cannot read union with unspecified variant")
-            }
-            MemoryError::WriteExtraField(name) => {
-                write!(f, "extra field when writing to struct: {}", name)
-            }
-            MemoryError::WriteMissingField(name) => {
-                write!(f, "missing field when writing to struct: {}", name)
-            }
-            MemoryError::WriteUnion => {
-                write!(f, "cannot write to union with unspecified variant")
             }
             MemoryError::InvalidAddress => write!(f, "null or invalid address"),
             MemoryError::WriteToStaticAddress => write!(f, "write to static address"),

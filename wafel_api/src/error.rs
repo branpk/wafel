@@ -3,9 +3,10 @@
 use std::{error, fmt, io, sync::Arc};
 
 use wafel_data_access::{DataError, DataPathError, GlobalDataPath};
-use wafel_data_type::{IntValue, Value, ValueTypeError};
+use wafel_data_type::{Value, ValueTypeError};
 use wafel_layout::{DllLayoutError, LayoutLookupError, SM64LayoutError};
 use wafel_memory::{MemoryError, MemoryInitError};
+use wafel_sm64::SM64DataError;
 
 #[derive(Debug, Clone)]
 pub enum Error {
@@ -15,6 +16,7 @@ pub enum Error {
     DataPathError(DataPathError),
     MemoryError(MemoryError),
     DataError(DataError),
+    SM64DataError(SM64DataError),
     ApplyEditError {
         path: Arc<GlobalDataPath>,
         value: Value,
@@ -23,9 +25,6 @@ pub enum Error {
     LayoutLookupError(LayoutLookupError),
     SaveStateMismatch,
     ValueTypeError(ValueTypeError),
-    InvalidFrameLogEventType(IntValue),
-    UnsizedSurfacePoolPointer,
-    UnsizedObjectPoolArray,
     M64ReadError {
         filename: String,
         error: Arc<io::Error>,
@@ -61,6 +60,7 @@ impl fmt::Display for Error {
             Error::DataPathError(error) => write!(f, "{}", error),
             Error::MemoryError(error) => write!(f, "{}", error),
             Error::DataError(error) => write!(f, "{}", error),
+            Error::SM64DataError(error) => write!(f, "{}", error),
             Error::ApplyEditError { path, value, error } => {
                 write!(f, "while applying edit {} = {}:\n  {}", path, value, error)
             }
@@ -69,15 +69,6 @@ impl fmt::Display for Error {
                 write!(f, "save state was created by a different Game instance")
             }
             Error::ValueTypeError(error) => write!(f, "{}", error),
-            Error::InvalidFrameLogEventType(value) => {
-                write!(f, "invalid frame log event type: {}", value)
-            }
-            Error::UnsizedSurfacePoolPointer => {
-                write!(f, "surface pool array does not have a stride")
-            }
-            Error::UnsizedObjectPoolArray => {
-                write!(f, "object pool array does not have a stride")
-            }
             Error::M64ReadError { filename, error } => {
                 write!(f, "failed to read {}:\n  {}", filename, error)
             }
@@ -152,5 +143,11 @@ impl From<ValueTypeError> for Error {
 impl From<DataError> for Error {
     fn from(v: DataError) -> Self {
         Self::DataError(v)
+    }
+}
+
+impl From<SM64DataError> for Error {
+    fn from(v: SM64DataError) -> Self {
+        Self::SM64DataError(v)
     }
 }
