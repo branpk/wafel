@@ -1,11 +1,11 @@
 use std::num::Wrapping;
 
-use fast3d::util::{atan2f, atan2s, coss, sins};
+use fast3d::util::{atan2s, coss, sins};
 use wafel_data_access::{DataReadable, MemoryLayout};
 use wafel_data_type::Angle;
 use wafel_memory::MemoryRead;
 
-use crate::{error::VizError, Camera, SM64RenderConfig};
+use crate::{error::VizError, Camera};
 
 #[derive(Debug, Clone, Default)]
 pub struct CameraControl {
@@ -24,6 +24,7 @@ struct DragStart {
 #[derive(Debug, Clone)]
 struct CameraOverride {
     angle: [Angle; 3],
+    dist: f32,
     focus: Focus,
 }
 
@@ -94,6 +95,25 @@ impl CameraControl {
             .or_else(|| self.in_game_camera.as_ref().map(|c| c.angle()))
     }
 
+    fn current_dist(&self) -> Option<f32> {
+        self.camera_override
+            .as_ref()
+            .map(|c| c.dist)
+            .or_else(|| self.in_game_camera.as_ref().map(|c| c.dist()))
+    }
+
+    fn get_or_init_override(&mut self) -> Option<&mut CameraOverride> {
+        if let Some(in_game_camera) = &self.in_game_camera {
+            Some(self.camera_override.get_or_insert_with(|| CameraOverride {
+                angle: in_game_camera.angle(),
+                dist: in_game_camera.dist(),
+                focus: Focus::InGame,
+            }))
+        } else {
+            None
+        }
+    }
+
     pub fn press_mouse_left(&mut self) {
         if self.drag_start.is_none() {
             if let (Some(mouse_pos), Some(angle)) = (self.mouse_pos, self.current_angle()) {
@@ -106,16 +126,32 @@ impl CameraControl {
         self.drag_start = None;
     }
 
+    pub fn scroll_wheel(&mut self, amount: f32) {
+        if let Some(mut dist) = self.current_dist() {
+            if dist > 0.001 {
+                let mut zoom = (dist / 1500.0).log(0.5);
+                zoom += amount / 5.0;
+                zoom = zoom.min(7.0);
+                dist = 0.5f32.powf(zoom) * 1500.0;
+
+                if let Some(camera_override) = self.get_or_init_override() {
+                    camera_override.dist = dist;
+                }
+            }
+        }
+    }
+
     pub fn lock_to_in_game_camera(&mut self) {
         self.drag_start = None;
         self.camera_override = None;
     }
 
     pub fn lock_to_mario(&mut self) {
-        if let Some(angle) = self.current_angle() {
+        if let (Some(angle), Some(dist)) = (self.current_angle(), self.current_dist()) {
             self.drag_start = None;
             self.camera_override = Some(CameraOverride {
                 angle,
+                dist,
                 focus: Focus::Mario,
             });
         }
@@ -149,13 +185,8 @@ impl CameraControl {
                 let yaw = yaw0 - Wrapping((drag[0] * 50.0) as i32 as i16);
                 let angle = [pitch, yaw, Wrapping(0)];
 
-                if let Some(camera_override) = &mut self.camera_override {
+                if let Some(camera_override) = self.get_or_init_override() {
                     camera_override.angle = angle;
-                } else {
-                    self.camera_override = Some(CameraOverride {
-                        angle,
-                        focus: Focus::InGame,
-                    });
                 }
             }
         }
@@ -168,11 +199,11 @@ impl CameraControl {
                 Focus::Override(pos) => pos,
             };
 
-            let xyz = in_game_camera.dist();
-            let xz = xyz * coss(pitch);
+            let r = camera_override.dist;
+            let xz = r * coss(pitch);
 
             let dx = xz * sins(yaw);
-            let dy = xyz * sins(pitch);
+            let dy = r * sins(pitch);
             let dz = xz * coss(yaw);
 
             let pos = [focus[0] - dx, focus[1] - dy, focus[2] - dz];

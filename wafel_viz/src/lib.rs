@@ -25,7 +25,7 @@ use sm64_gfx_render::test_render;
 use wafel_api::{load_m64, Game, SaveState};
 use wafel_memory::GameMemory;
 use winit::{
-    event::{ElementState, Event, MouseButton, VirtualKeyCode, WindowEvent},
+    event::{ElementState, Event, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -239,6 +239,13 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                 },
                 WindowEvent::CursorMoved { position, .. } => {
                     camera_control.move_mouse([position.x as f32, position.y as f32])
+                }
+                WindowEvent::MouseWheel { delta, .. } => {
+                    let amount = match delta {
+                        MouseScrollDelta::LineDelta(_, dy) => dy,
+                        MouseScrollDelta::PixelDelta(d) => (d.y / 30.0) as f32,
+                    };
+                    camera_control.scroll_wheel(amount);
                 }
                 WindowEvent::KeyboardInput { input, .. } => {
                     if let Some(key) = input.virtual_keycode {
