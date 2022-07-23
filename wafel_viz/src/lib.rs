@@ -48,7 +48,7 @@ pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderD
 
 pub fn test_dl() -> Result<(), Box<dyn Error>> {
     env_logger::init();
-    futures::executor::block_on(run(4001, None)).unwrap();
+    futures::executor::block_on(run(10092, None)).unwrap();
 
     let mut game = unsafe { Game::new("libsm64/sm64_us") };
     let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
@@ -254,7 +254,7 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                                 if key == VirtualKeyCode::Return {
                                     eprintln!("frame = {}", game.frame());
                                 }
-                                if key == VirtualKeyCode::Space {
+                                if key == VirtualKeyCode::Key1 {
                                     if held.contains(&VirtualKeyCode::Right) {
                                         held.remove(&VirtualKeyCode::Right);
                                     } else {
@@ -348,6 +348,27 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                             let memory = &memory;
                             let layout = &game.layout;
 
+                            let mut camera_move = [0.0, 0.0, 0.0];
+                            if held.contains(&VirtualKeyCode::S) {
+                                camera_move[0] += 1.0;
+                            }
+                            if held.contains(&VirtualKeyCode::A) {
+                                camera_move[0] -= 1.0;
+                            }
+                            if held.contains(&VirtualKeyCode::Space) {
+                                camera_move[1] += 1.0;
+                            }
+                            if held.contains(&VirtualKeyCode::LShift) {
+                                camera_move[1] -= 1.0;
+                            }
+                            if held.contains(&VirtualKeyCode::R) {
+                                camera_move[2] += 1.0;
+                            }
+                            if held.contains(&VirtualKeyCode::W) {
+                                camera_move[2] -= 1.0;
+                            }
+
+                            camera_control.update_movement(camera_move);
                             let camera = camera_control.update(layout, memory).unwrap();
 
                             let config = SM64RenderConfig {

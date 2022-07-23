@@ -1,6 +1,6 @@
-use std::num::Wrapping;
+use std::{collections::HashSet, num::Wrapping, time::Instant};
 
-use fast3d::util::{atan2s, coss, sins};
+use fast3d::util::{atan2s, coss, sins, Matrixf};
 use wafel_data_access::{DataReadable, MemoryLayout};
 use wafel_data_type::Angle;
 use wafel_memory::MemoryRead;
@@ -11,6 +11,8 @@ use crate::{error::VizError, Camera};
 pub struct CameraControl {
     mouse_pos: Option<[f32; 2]>,
     in_game_camera: Option<InGameCamera>,
+    mario_pos: Option<[f32; 3]>,
+    prev_update_movement: Option<Instant>,
     camera_override: Option<CameraOverride>,
     drag_start: Option<DragStart>,
 }
@@ -32,7 +34,7 @@ struct CameraOverride {
 enum Focus {
     InGame,
     Mario,
-    Override([f32; 3]),
+    Override { pos: [f32; 3], vel: [f32; 3] },
 }
 
 #[derive(Debug, Clone, DataReadable)]
@@ -102,6 +104,17 @@ impl CameraControl {
             .or_else(|| self.in_game_camera.as_ref().map(|c| c.dist()))
     }
 
+    fn current_focus(&self) -> Option<[f32; 3]> {
+        match &self.camera_override {
+            Some(camera_override) => match camera_override.focus {
+                Focus::InGame => self.in_game_camera.as_ref().map(|c| c.focus),
+                Focus::Mario => self.mario_pos,
+                Focus::Override { pos, .. } => Some(pos),
+            },
+            None => self.in_game_camera.as_ref().map(|c| c.focus),
+        }
+    }
+
     fn get_or_init_override(&mut self) -> Option<&mut CameraOverride> {
         if let Some(in_game_camera) = &self.in_game_camera {
             Some(self.camera_override.get_or_insert_with(|| CameraOverride {
@@ -131,11 +144,87 @@ impl CameraControl {
             if dist > 0.001 {
                 let mut zoom = (dist / 1500.0).log(0.5);
                 zoom += amount / 5.0;
-                zoom = zoom.min(7.0);
+                zoom = zoom.clamp(-5.0, 7.0);
                 dist = 0.5f32.powf(zoom) * 1500.0;
 
                 if let Some(camera_override) = self.get_or_init_override() {
                     camera_override.dist = dist;
+                }
+            }
+        }
+    }
+
+    pub fn update_movement(&mut self, move_dir: [f32; 3]) {
+        let now = Instant::now();
+        if let Some(prev) = self.prev_update_movement.replace(now) {
+            let dt = now.saturating_duration_since(prev).as_secs_f32();
+            if dt <= 0.0 {
+                return;
+            }
+
+            if move_dir == [0.0; 3]
+                && !matches!(
+                    self.camera_override.as_ref().map(|c| c.focus),
+                    Some(Focus::Override { .. })
+                )
+            {
+                return;
+            }
+
+            let [mut dx, mut dy, mut dz] = move_dir;
+            let mag = (dx * dx + dy * dy + dz * dz).sqrt();
+            if mag > 1.0 {
+                dx /= mag;
+                dy /= mag;
+                dz /= mag;
+            }
+
+            if let Some(focus) = self.current_focus() {
+                if let Some(camera_override) = self.get_or_init_override() {
+                    let max_speed = 50.0 * dt * camera_override.dist.sqrt();
+                    dx *= max_speed;
+                    dy *= max_speed;
+                    dz *= max_speed;
+
+                    let yaw_rotate = Matrixf::rotate_xyz_and_translate(
+                        [0.0, 0.0, 0.0],
+                        [
+                            Wrapping(0),
+                            Wrapping(-0x8000) + camera_override.angle[1],
+                            Wrapping(0),
+                        ],
+                    );
+
+                    let end_vel = &yaw_rotate * [dx, dy, dz, 0.0];
+                    let end_vel = [end_vel[0], end_vel[1], end_vel[2]];
+                    let accel = 10.0 * dt * camera_override.dist.sqrt();
+
+                    let mut cur_vel = match camera_override.focus {
+                        Focus::Override { vel, .. } => vel,
+                        _ => [0.0; 3],
+                    };
+
+                    let dvx = end_vel[0] - cur_vel[0];
+                    let dvy = end_vel[1] - cur_vel[1];
+                    let dvz = end_vel[2] - cur_vel[2];
+                    let dv = (dvx * dvx + dvy * dvy + dvz * dvz).sqrt();
+
+                    if dv <= accel + 0.0001 {
+                        cur_vel = end_vel;
+                    } else {
+                        cur_vel[0] += accel * dvx / dv;
+                        cur_vel[1] += accel * dvy / dv;
+                        cur_vel[2] += accel * dvz / dv;
+                    }
+
+                    camera_override.focus = Focus::Override {
+                        pos: [
+                            focus[0] + cur_vel[0],
+                            focus[1] + cur_vel[1],
+                            focus[2] + cur_vel[2],
+                        ],
+                        vel: cur_vel,
+                    };
                 }
             }
         }
@@ -148,7 +237,6 @@ impl CameraControl {
 
     pub fn lock_to_mario(&mut self) {
         if let (Some(angle), Some(dist)) = (self.current_angle(), self.current_dist()) {
-            self.drag_start = None;
             self.camera_override = Some(CameraOverride {
                 angle,
                 dist,
@@ -171,6 +259,7 @@ impl CameraControl {
             .global_path("gMarioState.pos")?
             .read(memory)?
             .try_as_f32_3()?;
+        self.mario_pos = Some(mario_pos);
 
         if let (Some(drag_state), Some(mouse_pos)) = (&self.drag_start, self.mouse_pos) {
             let drag = [
@@ -196,7 +285,7 @@ impl CameraControl {
             let focus = match camera_override.focus {
                 Focus::InGame => in_game_camera.focus,
                 Focus::Mario => mario_pos,
-                Focus::Override(pos) => pos,
+                Focus::Override { pos, .. } => pos,
             };
 
             let r = camera_override.dist;
