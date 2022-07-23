@@ -197,8 +197,6 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
     let mut held = HashSet::new();
     let mut last_update = Instant::now();
 
-    let mut fixed_camera_pos = None;
-
     let mut last_fps_time = Instant::now();
     let mut fps_count = 0;
 
@@ -264,15 +262,14 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                                     }
                                 }
                                 if key == VirtualKeyCode::C && !held.contains(&VirtualKeyCode::C) {
-                                    fixed_camera_pos =
-                                        Some(game.read("gLakituState.pos").as_f32_3());
+                                    camera_control.lock_to_in_game_camera();
+                                }
+                                if key == VirtualKeyCode::M && !held.contains(&VirtualKeyCode::M) {
+                                    camera_control.lock_to_mario();
                                 }
                                 held.insert(key);
                             }
                             ElementState::Released => {
-                                if key == VirtualKeyCode::C && held.contains(&VirtualKeyCode::C) {
-                                    fixed_camera_pos = None;
-                                }
                                 held.remove(&key);
                             }
                         }
