@@ -472,7 +472,7 @@ impl F3DRenderer {
         }
     }
 
-    pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>, output_size: (u32, u32)) {
+    pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>, output_size: [u32; 2]) {
         let mut current_pipeline = None;
 
         for command in &self.commands {
@@ -483,10 +483,10 @@ impl F3DRenderer {
             rp.set_viewport(x as f32, y as f32, w as f32, h as f32, 0.0, 1.0);
 
             let ScreenRectangle { x, y, w, h } = command.scissor;
-            let x0 = x.clamp(0, output_size.0 as i32);
-            let y0 = y.clamp(0, output_size.1 as i32);
-            let x1 = (x + w).clamp(0, output_size.0 as i32);
-            let y1 = (y + h).clamp(0, output_size.1 as i32);
+            let x0 = x.clamp(0, output_size[0] as i32);
+            let y0 = y.clamp(0, output_size[1] as i32);
+            let x1 = (x + w).clamp(0, output_size[0] as i32);
+            let y1 = (y + h).clamp(0, output_size[1] as i32);
             let w = x1 - x0;
             let h = y1 - y0;
             if w <= 0 || h <= 0 {

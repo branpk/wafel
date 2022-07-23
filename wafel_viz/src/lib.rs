@@ -18,18 +18,21 @@ use std::{
     time::{Duration, Instant},
 };
 
+use camera_control::CameraControl;
 use custom_renderer::{CustomRenderer, Scene};
 use fast3d::{interpret::F3DRenderData, render::F3DRenderer};
+use sm64_gfx_render::test_render;
 use wafel_api::{load_m64, Game, SaveState};
 use wafel_memory::GameMemory;
 use winit::{
-    event::{ElementState, Event, VirtualKeyCode, WindowEvent},
+    event::{ElementState, Event, MouseButton, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
 
 pub use config::*;
 
+mod camera_control;
 mod config;
 pub mod custom_renderer;
 mod error;
@@ -175,14 +178,16 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
 
     let output_format = wgpu::TextureFormat::Bgra8Unorm;
 
-    let mut config = wgpu::SurfaceConfiguration {
+    let mut surface_config = wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: output_format,
         width: init_window_size.width,
         height: init_window_size.height,
         present_mode: wgpu::PresentMode::Mailbox,
     };
-    surface.configure(&device, &config);
+    surface.configure(&device, &surface_config);
+
+    let mut camera_control = CameraControl::new();
 
     let mut renderer = F3DRenderer::new(&device);
 
@@ -218,14 +223,24 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
         match event {
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::Resized(size) => {
-                    config.width = size.width;
-                    config.height = size.height;
-                    if config.width != 0 && config.height != 0 {
-                        surface.configure(&device, &config);
+                    surface_config.width = size.width;
+                    surface_config.height = size.height;
+                    if surface_config.width != 0 && surface_config.height != 0 {
+                        surface.configure(&device, &surface_config);
                     }
                 }
                 WindowEvent::CloseRequested => {
                     *control_flow = ControlFlow::Exit;
+                }
+                WindowEvent::MouseInput { state, button, .. } => match (button, state) {
+                    (MouseButton::Left, ElementState::Pressed) => camera_control.press_mouse_left(),
+                    (MouseButton::Left, ElementState::Released) => {
+                        camera_control.release_mouse_left()
+                    }
+                    _ => {}
+                },
+                WindowEvent::CursorMoved { position, .. } => {
+                    camera_control.move_mouse([position.x as f32, position.y as f32])
                 }
                 WindowEvent::KeyboardInput { input, .. } => {
                     if let Some(key) = input.virtual_keycode {
@@ -266,7 +281,7 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                 _ => {}
             },
             Event::MainEventsCleared => {
-                if config.width != 0 && config.height != 0 {
+                if surface_config.width != 0 && surface_config.height != 0 {
                     let frame = surface
                         .get_current_texture()
                         .expect("failed to acquire next swap chain texture");
@@ -281,8 +296,8 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                         let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
                             label: None,
                             size: wgpu::Extent3d {
-                                width: config.width,
-                                height: config.height,
+                                width: surface_config.width,
+                                height: surface_config.height,
                                 depth_or_array_layers: 1,
                             },
                             mip_level_count: 1,
@@ -325,27 +340,20 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                         }
 
                         let render_data = arg_data.clone().unwrap_or_else(|| {
-                            // let pos = game.read("gLakituState.pos").as_f32_3();
-                            // let focus = game.read("gLakituState.focus").as_f32_3();
-                            // let roll =
-                            prepare_render_data(
-                                &game,
-                                &SM64RenderConfig {
-                                    screen_size: (config.width, config.height),
-                                    camera: fixed_camera_pos
-                                        .map(|pos| Camera::LookAt {
-                                            pos,
-                                            focus: game.read("gLakituState.focus").as_f32_3(),
-                                            roll: Wrapping(
-                                                game.read("gLakituState.roll").as_int() as i16
-                                            ),
-                                        })
-                                        .unwrap_or_default(),
-                                    object_cull: ObjectCull::ShowAll,
-                                    ..Default::default()
-                                },
-                                // &SM64RenderConfig::default(),
-                            )
+                            let memory = game.memory.with_slot(&game.base_slot);
+                            let memory = &memory;
+                            let layout = &game.layout;
+
+                            let camera = camera_control.update(layout, memory).unwrap();
+
+                            let config = SM64RenderConfig {
+                                screen_size: [surface_config.width, surface_config.height],
+                                camera,
+                                object_cull: ObjectCull::ShowAll,
+                                ..Default::default()
+                            };
+
+                            test_render(layout, memory, &config, true).unwrap()
                         });
                         renderer.prepare(&device, &queue, output_format, &render_data);
 
@@ -376,7 +384,7 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                                     },
                                 ),
                             });
-                            renderer.render(&mut rp, (config.width, config.height));
+                            renderer.render(&mut rp, [surface_config.width, surface_config.height]);
                         }
 
                         queue.submit([encoder.finish()]);

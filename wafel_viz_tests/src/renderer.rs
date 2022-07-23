@@ -70,7 +70,7 @@ impl Renderer {
 #[derive(Debug)]
 struct SizedRenderer {
     f3d_renderer: F3DRenderer,
-    output_size: (u32, u32),
+    output_size: [u32; 2],
     output_format: wgpu::TextureFormat,
     output_texture: wgpu::Texture,
     depth_texture: wgpu::Texture,
@@ -79,8 +79,8 @@ struct SizedRenderer {
 }
 
 impl SizedRenderer {
-    fn new(device: &wgpu::Device, output_size: (u32, u32)) -> Self {
-        assert!(output_size.0 > 0 && output_size.1 > 0);
+    fn new(device: &wgpu::Device, output_size: [u32; 2]) -> Self {
+        assert!(output_size[0] > 0 && output_size[1] > 0);
 
         let output_format = wgpu::TextureFormat::Rgba8Unorm;
 
@@ -89,8 +89,8 @@ impl SizedRenderer {
         let output_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
             size: wgpu::Extent3d {
-                width: output_size.0,
-                height: output_size.1,
+                width: output_size[0],
+                height: output_size[1],
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
@@ -100,14 +100,14 @@ impl SizedRenderer {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
         });
 
-        let unpadded_bytes_per_row = 4 * output_size.0;
+        let unpadded_bytes_per_row = 4 * output_size[0];
         let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
         let padding = (align - (unpadded_bytes_per_row % align)) % align;
         let padded_bytes_per_row = unpadded_bytes_per_row + padding;
 
         let output_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: None,
-            size: (padded_bytes_per_row * output_size.1) as u64,
+            size: (padded_bytes_per_row * output_size[1]) as u64,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -115,8 +115,8 @@ impl SizedRenderer {
         let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
             size: wgpu::Extent3d {
-                width: output_size.0,
-                height: output_size.1,
+                width: output_size[0],
+                height: output_size[1],
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
@@ -192,8 +192,8 @@ impl SizedRenderer {
                     },
                 },
                 wgpu::Extent3d {
-                    width: self.output_size.0,
-                    height: self.output_size.1,
+                    width: self.output_size[0],
+                    height: self.output_size[1],
                     depth_or_array_layers: 1,
                 },
             );
@@ -206,9 +206,9 @@ impl SizedRenderer {
 
         let image = {
             let buffer_view = buffer_slice.get_mapped_range();
-            let mut image = RgbImage::new(self.output_size.0, self.output_size.1);
-            for y in 0..self.output_size.1 {
-                for x in 0..self.output_size.0 {
+            let mut image = RgbImage::new(self.output_size[0], self.output_size[1]);
+            for y in 0..self.output_size[1] {
+                for x in 0..self.output_size[0] {
                     let i = (y * self.padded_bytes_per_row + 4 * x) as usize;
                     let rgb = *Rgb::from_slice(&buffer_view[i..i + 3]);
                     image.put_pixel(x, y, rgb);
