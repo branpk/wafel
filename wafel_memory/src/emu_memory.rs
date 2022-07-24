@@ -1,3 +1,5 @@
+use std::time::{Duration, Instant};
+
 use process_memory::{CopyAddress, Pid, ProcessHandle, PutAddress, TryIntoProcessHandle};
 use wafel_data_type::{Address, IntType};
 
@@ -31,6 +33,7 @@ pub struct EmuMemory {
     handle: ProcessHandleWrapper,
     base_address: usize,
     memory_size: usize,
+    cache: Option<Vec<u8>>,
 }
 
 impl EmuMemory {
@@ -44,129 +47,180 @@ impl EmuMemory {
         let handle = (pid as Pid)
             .try_into_process_handle()
             .map_err(|error| MemoryInitError::ProcessAttachError(error.into()))?;
+
         Ok(Self {
             handle: ProcessHandleWrapper(handle),
             base_address,
             memory_size,
+            cache: None,
         })
     }
 
-    fn validate_address(&self, address: Address, size: usize) -> Result<usize, MemoryError> {
-        let offset = address.0 & 0x3FFF_FFFF;
+    pub fn load_cache(&mut self, global_timer_addr: Address) -> Result<(), MemoryError> {
+        self.sync_to_game(global_timer_addr)?;
+
+        let cache = self.cache.get_or_insert_with(|| vec![0; self.memory_size]);
+        self.handle
+            .0
+            .copy_address(self.base_address, cache)
+            .map_err(|error| ProcessReadError(error.into()))?;
+
+        Ok(())
+    }
+
+    fn sync_to_game(&self, global_timer_addr: Address) -> Result<(), MemoryError> {
+        let process_addr = self.base_address + self.validate_offset(global_timer_addr, 4)?;
+
+        let mut initial: [u8; 4] = Default::default();
+        self.read_bytes_uncached(process_addr, &mut initial)?;
+
+        let start = Instant::now();
+        while start.elapsed() < Duration::from_secs_f32(1.0 / 30.0) {
+            let mut current: [u8; 4] = Default::default();
+            self.read_bytes_uncached(process_addr, &mut current)?;
+
+            if initial != current {
+                break;
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_offset(&self, addr: Address, size: usize) -> Result<usize, MemoryError> {
+        let offset = addr.0 & 0x3FFF_FFFF;
         if offset + size > self.memory_size {
             Err(InvalidAddress)
         } else {
-            Ok(self.base_address + offset)
+            Ok(offset)
         }
     }
 
-    fn read_bytes(&self, address: Address, buffer: &mut [u8]) -> Result<(), MemoryError> {
-        let process_address = self.validate_address(address, buffer.len())?;
+    fn read_bytes_uncached(
+        &self,
+        process_addr: usize,
+        buffer: &mut [u8],
+    ) -> Result<(), MemoryError> {
         self.handle
             .0
-            .copy_address(process_address, buffer)
+            .copy_address(process_addr, buffer)
             .map_err(|error| ProcessReadError(error.into()))?;
         Ok(())
     }
 
-    fn write_bytes(&self, address: Address, buffer: &[u8]) -> Result<(), MemoryError> {
-        let process_address = self.validate_address(address, buffer.len())?;
-        self.handle
-            .0
-            .put_address(process_address, buffer)
-            .map_err(|error| ProcessReadError(error.into()))?;
+    fn read_bytes(&self, addr: Address, buffer: &mut [u8]) -> Result<(), MemoryError> {
+        let offset = self.validate_offset(addr, buffer.len())?;
+        match &self.cache {
+            Some(cache) => {
+                buffer.copy_from_slice(&cache[offset..offset + buffer.len()]);
+            }
+            None => {
+                self.read_bytes_uncached(self.base_address + offset, buffer)?;
+            }
+        }
         Ok(())
     }
 
-    fn check_align(&self, address: Address, align: usize) -> Result<(), MemoryError> {
-        if address.0 % align == 0 {
+    fn write_bytes(&mut self, addr: Address, buffer: &[u8]) -> Result<(), MemoryError> {
+        let offset = self.validate_offset(addr, buffer.len())?;
+        self.handle
+            .0
+            .put_address(self.base_address + offset, buffer)
+            .map_err(|error| ProcessReadError(error.into()))?;
+        if let Some(cache) = &mut self.cache {
+            cache[offset..offset + buffer.len()].copy_from_slice(buffer);
+        }
+        Ok(())
+    }
+
+    fn check_align(&self, addr: Address, align: usize) -> Result<(), MemoryError> {
+        if addr.0 % align == 0 {
             Ok(())
         } else {
             Err(InvalidAddress)
         }
     }
 
-    fn swap_1(&self, address: Address) -> Address {
+    fn swap_1(&self, addr: Address) -> Address {
         if cfg!(target_endian = "big") {
-            address
+            addr
         } else {
-            let truncated = address.0 - address.0 % 4;
-            Address(truncated + 3 - address.0 % 4)
+            let truncated = addr.0 - addr.0 % 4;
+            Address(truncated + 3 - addr.0 % 4)
         }
     }
 
-    fn read_u8(&self, address: Address) -> Result<u8, MemoryError> {
-        self.check_align(address, 1)?;
-        let address = self.swap_1(address);
+    fn read_u8(&self, addr: Address) -> Result<u8, MemoryError> {
+        self.check_align(addr, 1)?;
+        let addr = self.swap_1(addr);
         let mut bytes = [0u8; 1];
-        self.read_bytes(address, &mut bytes)?;
+        self.read_bytes(addr, &mut bytes)?;
         Ok(u8::from_ne_bytes(bytes))
     }
 
-    fn write_u8(&self, address: Address, value: u8) -> Result<(), MemoryError> {
-        self.check_align(address, 1)?;
-        let address = self.swap_1(address);
+    fn write_u8(&mut self, addr: Address, value: u8) -> Result<(), MemoryError> {
+        self.check_align(addr, 1)?;
+        let addr = self.swap_1(addr);
         let bytes = value.to_ne_bytes();
-        self.write_bytes(address, &bytes)?;
+        self.write_bytes(addr, &bytes)?;
         Ok(())
     }
 
-    fn swap_2(&self, address: Address) -> Address {
+    fn swap_2(&self, addr: Address) -> Address {
         if cfg!(target_endian = "big") {
-            address
+            addr
         } else {
-            let truncated = address.0 - address.0 % 4;
-            Address(truncated + 2 - address.0 % 4)
+            let truncated = addr.0 - addr.0 % 4;
+            Address(truncated + 2 - addr.0 % 4)
         }
     }
 
-    fn read_u16(&self, address: Address) -> Result<u16, MemoryError> {
-        self.check_align(address, 2)?;
-        let address = self.swap_2(address);
+    fn read_u16(&self, addr: Address) -> Result<u16, MemoryError> {
+        self.check_align(addr, 2)?;
+        let addr = self.swap_2(addr);
         let mut bytes = [0u8; 2];
-        self.read_bytes(address, &mut bytes)?;
+        self.read_bytes(addr, &mut bytes)?;
         Ok(u16::from_ne_bytes(bytes))
     }
 
-    fn write_u16(&self, address: Address, value: u16) -> Result<(), MemoryError> {
-        self.check_align(address, 2)?;
-        let address = self.swap_2(address);
+    fn write_u16(&mut self, addr: Address, value: u16) -> Result<(), MemoryError> {
+        self.check_align(addr, 2)?;
+        let addr = self.swap_2(addr);
         let bytes = value.to_ne_bytes();
-        self.write_bytes(address, &bytes)?;
+        self.write_bytes(addr, &bytes)?;
         Ok(())
     }
 
-    fn read_u32(&self, address: Address) -> Result<u32, MemoryError> {
-        self.check_align(address, 4)?;
+    fn read_u32(&self, addr: Address) -> Result<u32, MemoryError> {
+        self.check_align(addr, 4)?;
         let mut bytes = [0u8; 4];
-        self.read_bytes(address, &mut bytes)?;
+        self.read_bytes(addr, &mut bytes)?;
         Ok(u32::from_ne_bytes(bytes))
     }
 
-    fn write_u32(&self, address: Address, value: u32) -> Result<(), MemoryError> {
-        self.check_align(address, 4)?;
+    fn write_u32(&mut self, addr: Address, value: u32) -> Result<(), MemoryError> {
+        self.check_align(addr, 4)?;
         let bytes = value.to_ne_bytes();
-        self.write_bytes(address, &bytes)?;
+        self.write_bytes(addr, &bytes)?;
         Ok(())
     }
 
-    fn read_u64(&self, address: Address) -> Result<u64, MemoryError> {
-        self.check_align(address, 4)?;
+    fn read_u64(&self, addr: Address) -> Result<u64, MemoryError> {
+        self.check_align(addr, 4)?;
         let mut bytes = [0u8; 8];
-        self.read_bytes(address, &mut bytes)?;
+        self.read_bytes(addr, &mut bytes)?;
         let upper = u32::from_ne_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
         let lower = u32::from_ne_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
         Ok((upper as u64) << 32 | lower as u64)
     }
 
-    fn write_u64(&self, address: Address, value: u64) -> Result<(), MemoryError> {
-        self.check_align(address, 4)?;
+    fn write_u64(&mut self, addr: Address, value: u64) -> Result<(), MemoryError> {
+        self.check_align(addr, 4)?;
         let upper = ((value >> 32) as u32).to_ne_bytes();
         let lower = (value as u32).to_ne_bytes();
         let bytes = [
             upper[0], upper[1], upper[2], upper[3], lower[0], lower[1], lower[2], lower[3],
         ];
-        self.write_bytes(address, &bytes)?;
+        self.write_bytes(addr, &bytes)?;
         Ok(())
     }
 }
@@ -215,35 +269,35 @@ impl MemoryRead for EmuMemory {
 impl MemoryWrite for EmuMemory {
     fn write_u8s(&mut self, addr: Address, buf: &[u8]) -> Result<(), MemoryError> {
         for (i, value) in buf.iter().copied().enumerate() {
-            (*self).write_u8(addr + i, value)?;
+            self.write_u8(addr + i, value)?;
         }
         Ok(())
     }
 
     fn write_u16s(&mut self, addr: Address, buf: &[u16]) -> Result<(), MemoryError> {
         for (i, value) in buf.iter().copied().enumerate() {
-            (*self).write_u16(addr + 2 * i, value)?;
+            self.write_u16(addr + 2 * i, value)?;
         }
         Ok(())
     }
 
     fn write_u32s(&mut self, addr: Address, buf: &[u32]) -> Result<(), MemoryError> {
         for (i, value) in buf.iter().copied().enumerate() {
-            (*self).write_u32(addr + 4 * i, value)?;
+            self.write_u32(addr + 4 * i, value)?;
         }
         Ok(())
     }
 
     fn write_u64s(&mut self, addr: Address, buf: &[u64]) -> Result<(), MemoryError> {
         for (i, value) in buf.iter().copied().enumerate() {
-            (*self).write_u64(addr + 8 * i, value)?;
+            self.write_u64(addr + 8 * i, value)?;
         }
         Ok(())
     }
 
     fn write_addrs(&mut self, addr: Address, buf: &[Address]) -> Result<(), MemoryError> {
         for (i, value) in buf.iter().copied().enumerate() {
-            (*self).write_u32(addr + 4 * i, value.0 as u32)?;
+            self.write_u32(addr + 4 * i, value.0 as u32)?;
         }
         Ok(())
     }

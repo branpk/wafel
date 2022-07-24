@@ -33,8 +33,8 @@ use crate::{simplified_data_type, DataType, Error, SM64Version};
 /// ```
 #[derive(Debug)]
 pub struct Emu {
-    layout: MemoryLayoutImpl<EmptySymbolLookup>,
-    memory: EmuMemory,
+    pub layout: MemoryLayoutImpl<EmptySymbolLookup>, // FIXME: Remove pubs
+    pub memory: EmuMemory,
 }
 
 impl Emu {

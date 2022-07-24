@@ -3,8 +3,7 @@ use std::{mem, num::Wrapping, process};
 use bytemuck::{cast_slice, cast_slice_mut};
 use fast3d::{
     cmd::{F3DCommand::*, *},
-    decode::decode_f3d_display_list,
-    interpret::{interpret_f3d_display_list, F3DRenderData},
+    interpret::{interpret_f3d_display_list, F3DMemory, F3DRenderData},
     util::{coss, sins, Angle, MatrixStack, Matrixf},
 };
 use wafel_api::{Address, IntType, Value};
@@ -15,8 +14,8 @@ use wafel_sm64::gfx::*;
 
 use crate::{
     error::VizError,
-    f3d_builder::{F3DBuilder, Pointer, RawDlIter},
-    Camera, ObjectCull, SM64RenderConfig,
+    f3d_builder::{F3DBuilder, Pointer, Segmented},
+    Camera, ObjectCull, VizConfig,
 };
 
 const DEBUG_PRINT: bool = false;
@@ -25,10 +24,10 @@ const DEBUG_CALC_TRANSFORMS: bool = false;
 const CHECK_CALC_TRANSFORMS: bool = false;
 const ASSERT_CALC_TRANSFORMS: bool = false;
 
-pub fn test_render(
+pub fn sm64_render(
     layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
-    config: &SM64RenderConfig,
+    config: &VizConfig,
     process_gfx: bool,
 ) -> Result<F3DRenderData, VizError> {
     let input_dl_addr = layout.global_path("gGfxPool?")?.read(memory)?;
@@ -37,17 +36,22 @@ pub fn test_render(
     }
     let input_dl_addr = input_dl_addr.try_as_address()?;
 
-    if DEBUG_PRINT {
-        println!("\n\n------- FRAME -------");
-        let cmds = decode_f3d_display_list(RawDlIter {
-            memory,
-            addr: input_dl_addr,
-        });
-        for cmd in cmds {
-            println!("  {:?}", cmd?);
-        }
-        println!("\n\n");
-    }
+    let mut seg_table: Vec<u32> = vec![0; 32];
+    let seg_table_addr = layout.symbol_address("sSegmentTable")?;
+    memory.read_u32s(seg_table_addr, seg_table.as_mut_slice())?;
+    let seg_table = Some(seg_table);
+
+    // if DEBUG_PRINT {
+    //     println!("\n\n------- FRAME -------");
+    //     let cmds = decode_f3d_display_list(RawDlIter {
+    //         memory,
+    //         addr: input_dl_addr,
+    //     });
+    //     for cmd in cmds {
+    //         println!("  {:?}", cmd?);
+    //     }
+    //     println!("\n\n");
+    // }
 
     let f3d_memory = if process_gfx {
         let pause_rendering = layout
@@ -57,11 +61,11 @@ pub fn test_render(
             != 0;
         let root_addr = layout.global_path("gCurrentArea?.unk04")?.read(memory)?;
 
-        let mut renderer = NodeRenderer::new(config, layout, memory, input_dl_addr)?;
+        let mut renderer = NodeRenderer::new(config, layout, memory, input_dl_addr, seg_table)?;
         renderer.render_game(root_addr, pause_rendering)?;
         renderer.output
     } else {
-        let mut builder = F3DBuilder::new(memory, input_dl_addr);
+        let mut builder = F3DBuilder::new(memory, input_dl_addr, seg_table);
         builder.push_remaining()?;
         builder
     };
@@ -76,7 +80,7 @@ pub fn test_render(
 
 #[derive(Debug)]
 struct NodeRenderer<'m, L, M: MemoryRead> {
-    config: &'m SM64RenderConfig,
+    config: &'m VizConfig,
     layout: &'m L,
     memory: &'m M,
     output: F3DBuilder<'m, M>,
@@ -108,12 +112,12 @@ struct NodeRenderer<'m, L, M: MemoryRead> {
 enum MasterListEdit {
     Copy {
         transform: Vec<i32>,
-        display_list: Address,
+        display_list: Pointer,
     },
-    Skip(Address),
+    Skip(Pointer),
     Insert {
         transform: Vec<i32>,
-        display_list: Address,
+        display_list: Pointer,
     },
     OptDynamic,
 }
@@ -193,17 +197,18 @@ where
     M: MemoryRead,
 {
     fn new(
-        config: &'m SM64RenderConfig,
+        config: &'m VizConfig,
         layout: &'m L,
         memory: &'m M,
         input_dl_addr: Address,
+        seg_table: Option<Vec<u32>>,
     ) -> Result<Self, VizError> {
         let reader = GfxTreeNode::reader(layout)?;
         Ok(Self {
             config,
             layout,
             memory,
-            output: F3DBuilder::new(memory, input_dl_addr),
+            output: F3DBuilder::new(memory, input_dl_addr, seg_table),
             reader,
             object_fields_reader: ObjectFields::reader(layout)?,
             mtx_stack: MatrixStack::default(),
@@ -239,6 +244,7 @@ where
     }
 
     fn append_display_list(&mut self, layer: i16, display_list: Address) {
+        let display_list = Pointer::Segmented(self.output.virt_to_phys(display_list));
         if self.is_node_rendered() {
             self.edit_master_list(
                 layer,
@@ -315,13 +321,16 @@ where
             y_trans as f32 / y_trans_divisor as f32
         };
 
+        let attribute = Segmented(anim.try_field("index")?.try_as_address()?);
+        let data = Segmented(anim.try_field("values")?.try_as_address()?);
+
         self.anim = Some(AnimState {
             ty,
             enabled: flags & (1 << 5) == 0,
             frame: node.anim_frame,
             translation_multiplier,
-            attribute: anim.try_field("index")?.try_as_address()?, // TODO: Seg to virt
-            data: anim.try_field("values")?.try_as_address()?,     // TODO: Seg to virt
+            attribute: self.output.seg_to_virt(attribute),
+            data: self.output.seg_to_virt(data),
         });
 
         Ok(())
@@ -554,13 +563,17 @@ where
 
                 while !dl_node_addr.is_null() {
                     let dl_node = self.read_display_list_node(dl_node_addr)?;
-                    self.output
-                        .expect(|cmd| cmd == mtx_cmd(dl_node.transform.into()))?;
-                    self.output
-                        .expect(|cmd| cmd == SPDisplayList(dl_node.display_list.into()))?;
 
-                    original_lists[layer as usize]
-                        .push((dl_node.transform.into(), dl_node.display_list.into()));
+                    let transform_ptr =
+                        Pointer::Segmented(self.output.virt_to_phys(dl_node.transform));
+                    self.output.expect(|cmd| cmd == mtx_cmd(transform_ptr))?;
+
+                    let display_list_ptr =
+                        Pointer::Segmented(self.output.virt_to_phys(dl_node.display_list));
+                    self.output
+                        .expect(|cmd| cmd == SPDisplayList(display_list_ptr))?;
+
+                    original_lists[layer as usize].push((transform_ptr, display_list_ptr));
 
                     dl_node_addr = dl_node.next;
                 }
@@ -576,8 +589,9 @@ where
         let pool_size =
             self.layout.data_layout().constant("GFX_POOL_SIZE")?.value as usize * cmd_size;
         let pool_end = pool_start + pool_size;
-        let is_dynamic = |dl: Pointer| {
-            if let Pointer::Address(addr) = dl {
+        let is_dynamic = |output: &F3DBuilder<'_, _>, dl: Pointer| {
+            if let Pointer::Segmented(segmented) = dl {
+                let addr = output.seg_to_virt(segmented);
                 addr >= pool_start && addr < pool_end
             } else {
                 false
@@ -611,7 +625,7 @@ where
                         let (mtx, dl) = actual_nodes
                             .next()
                             .copied()
-                            .filter(|&(_, dl)| dl == (*display_list).into())
+                            .filter(|&(_, dl)| dl == *display_list)
                             .expect("master list discrepancy");
 
                         if DEBUG_CALC_TRANSFORMS || self.config.camera != Camera::InGame {
@@ -625,7 +639,7 @@ where
                         actual_nodes
                             .next()
                             .copied()
-                            .filter(|&(_, dl)| dl == (*addr).into())
+                            .filter(|&(_, dl)| dl == *addr)
                             .expect("master list discrepancy");
                     }
                     MasterListEdit::Insert {
@@ -633,11 +647,11 @@ where
                         display_list,
                     } => {
                         let ptr = self.output.alloc_u32(cast_slice(transform));
-                        new_nodes.push((ptr, (*display_list).into()));
+                        new_nodes.push((ptr, *display_list));
                     }
                     MasterListEdit::OptDynamic => {
                         if let Some(&&(mtx, dl)) = actual_nodes.peek() {
-                            if is_dynamic(dl) {
+                            if is_dynamic(&self.output, dl) {
                                 if DEBUG_CALC_TRANSFORMS || self.config.camera != Camera::InGame {
                                     let orig_mtx = Matrixf::from_fixed(&self.read_fixed(mtx)?);
                                     let new_mtx = &mod_transform * &orig_mtx;
@@ -695,10 +709,12 @@ where
                     if old_mtx != new_mtx {
                         matches = false;
                         if ASSERT_CALC_TRANSFORMS {
+                            let transform_addr =
+                                self.output.seg_to_virt(old_node.1.segmented().unwrap());
                             eprintln!(
                                 "{}: mtx ({:?})\n{:?}\n{:?}",
                                 layer,
-                                self.symbol_name(old_node.1.addr().unwrap()),
+                                self.symbol_name(transform_addr),
                                 Matrixf::from_fixed(&old_mtx),
                                 Matrixf::from_fixed(&new_mtx),
                             );

@@ -3,7 +3,7 @@ use std::env;
 use fast3d::render::F3DRenderer;
 use image::{Pixel, Rgb, RgbImage};
 use wafel_api::Game;
-use wafel_viz::{prepare_render_data, SM64RenderConfig};
+use wafel_viz::{prepare_render_data, VizConfig};
 
 #[derive(Debug)]
 pub struct Renderer {
@@ -56,7 +56,7 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self, game: &Game, config: &SM64RenderConfig) -> RgbImage {
+    pub fn render(&mut self, game: &Game, config: &VizConfig) -> RgbImage {
         if self.sized.as_ref().map(|r| r.output_size) != Some(config.screen_size) {
             self.sized = None;
         }
@@ -142,7 +142,7 @@ impl SizedRenderer {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         game: &Game,
-        config: &SM64RenderConfig,
+        config: &VizConfig,
     ) -> RgbImage {
         let render_data = prepare_render_data(game, config);
         self.f3d_renderer

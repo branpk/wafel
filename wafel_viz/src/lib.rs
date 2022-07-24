@@ -21,8 +21,9 @@ use std::{
 use camera_control::CameraControl;
 use custom_renderer::{CustomRenderer, Scene};
 use fast3d::{interpret::F3DRenderData, render::F3DRenderer};
-use sm64_gfx_render::test_render;
-use wafel_api::{load_m64, Game, SaveState};
+use sm64_gfx_render::sm64_render;
+use wafel_api::{load_m64, Emu, Game, SM64Version, SaveState};
+use wafel_data_access::MemoryLayout;
 use wafel_memory::GameMemory;
 use winit::{
     event::{ElementState, Event, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowEvent},
@@ -39,10 +40,10 @@ mod error;
 mod f3d_builder;
 mod sm64_gfx_render;
 
-pub fn prepare_render_data(game: &Game, config: &SM64RenderConfig) -> F3DRenderData {
+pub fn prepare_render_data(game: &Game, config: &VizConfig) -> F3DRenderData {
     let memory = game.memory.with_slot(&game.base_slot);
 
-    sm64_gfx_render::test_render(&game.layout, &memory, config, true)
+    sm64_gfx_render::sm64_render(&game.layout, &memory, config, true)
         .expect("failed to process display list")
 }
 
@@ -58,7 +59,7 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
         game.advance();
     }
 
-    let config = SM64RenderConfig {
+    let config = VizConfig {
         camera: Camera::LookAt {
             pos: game.read("gLakituState.pos").as_f32_3(),
             focus: game.read("gLakituState.focus").as_f32_3(),
@@ -67,7 +68,7 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
         object_cull: ObjectCull::ShowAll,
         ..Default::default()
     };
-    let config = SM64RenderConfig::default();
+    let config = VizConfig::default();
 
     let count = 100;
     let start = Instant::now();
@@ -75,7 +76,7 @@ pub fn test_dl() -> Result<(), Box<dyn Error>> {
     for _ in 0..count {
         let memory = game.memory.with_slot(&game.base_slot);
 
-        let data = sm64_gfx_render::test_render(&game.layout, &memory, &config, true)
+        let data = sm64_gfx_render::sm64_render(&game.layout, &memory, &config, true)
             .expect("failed to process display list");
 
         assert_eq!(data.commands.len(), 127);
@@ -106,10 +107,10 @@ pub fn test(frame0: u32) -> Result<(), Box<dyn Error>> {
 }
 
 async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn Error>> {
+    let mut emu = Emu::attach(12404, 0x0050B110, SM64Version::US);
+
     let mut game = unsafe { Game::new("libsm64/sm64_us") };
-    // let (_, inputs) = load_m64("../sm64-bot/bad_bot.m64");
     let (_, inputs) = load_m64("wafel_viz_tests/input/120_u.m64");
-    // let (_, inputs) = load_m64("test_files/lod-test.m64");
 
     let mut save_states: HashMap<u32, Rc<SaveState>> = HashMap::new();
     let save_state_freq = 1000;
@@ -205,7 +206,6 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
 
         *control_flow = ControlFlow::Poll;
 
-        fps_count += 1;
         let elapsed = last_fps_time.elapsed();
         if elapsed.as_secs_f32() >= 1.0 {
             let title = format!(
@@ -344,9 +344,15 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                         }
 
                         let render_data = arg_data.clone().unwrap_or_else(|| {
-                            let memory = game.memory.with_slot(&game.base_slot);
-                            let memory = &memory;
-                            let layout = &game.layout;
+                            // let memory = game.memory.with_slot(&game.base_slot);
+                            // let memory = &memory;
+                            // let layout = &game.layout;
+
+                            emu.memory
+                                .load_cache(emu.layout.symbol_address("gGlobalTimer").unwrap())
+                                .unwrap();
+                            let memory = &emu.memory;
+                            let layout = &emu.layout;
 
                             let mut camera_move = [0.0, 0.0, 0.0];
                             if held.contains(&VirtualKeyCode::S) {
@@ -371,14 +377,20 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                             camera_control.update_movement(camera_move);
                             let camera = camera_control.update(layout, memory).unwrap();
 
-                            let config = SM64RenderConfig {
+                            let config = VizConfig {
                                 screen_size: [surface_config.width, surface_config.height],
                                 camera,
                                 object_cull: ObjectCull::ShowAll,
                                 ..Default::default()
                             };
 
-                            test_render(layout, memory, &config, true).unwrap()
+                            match sm64_render(layout, memory, &config, true) {
+                                Ok(render_data) => render_data,
+                                Err(error) => {
+                                    eprintln!("{}", error);
+                                    F3DRenderData::default()
+                                }
+                            }
                         });
                         renderer.prepare(&device, &queue, output_format, &render_data);
 
@@ -416,6 +428,7 @@ async fn run(frame0: u32, arg_data: Option<F3DRenderData>) -> Result<(), Box<dyn
                     }
 
                     frame.present();
+                    fps_count += 1;
                 }
             }
             _ => {}

@@ -1,13 +1,13 @@
 use wafel_data_type::Angle;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct SM64RenderConfig {
+pub struct VizConfig {
     pub screen_size: [u32; 2],
     pub camera: Camera,
     pub object_cull: ObjectCull,
 }
 
-impl Default for SM64RenderConfig {
+impl Default for VizConfig {
     fn default() -> Self {
         Self {
             screen_size: [320, 240],

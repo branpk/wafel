@@ -7,26 +7,23 @@ use fast3d::{
     interpret::F3DMemory,
 };
 use wafel_data_type::Address;
-use wafel_memory::MemoryRead;
+use wafel_memory::{MemoryError, MemoryRead};
 
 use crate::error::VizError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Pointer {
-    Address(Address),
+    Segmented(Segmented),
     BufferOffset(usize),
 }
 
-impl From<Address> for Pointer {
-    fn from(v: Address) -> Self {
-        Self::Address(v)
-    }
-}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct Segmented(pub Address);
 
 impl Pointer {
-    pub fn addr(self) -> Option<Address> {
+    pub fn segmented(self) -> Option<Segmented> {
         match self {
-            Pointer::Address(addr) => Some(addr),
+            Pointer::Segmented(segmented) => Some(segmented),
             _ => None,
         }
     }
@@ -35,13 +32,14 @@ impl Pointer {
 #[derive(Debug)]
 pub struct F3DBuilder<'m, M: MemoryRead> {
     memory: &'m M,
+    seg_table: Option<Vec<u32>>,
     input_dl: Peekable<F3DCommandIter<RawDlIter<'m, M>>>,
     dl_buffer: Vec<F3DCommand<Pointer>>,
     u32_buffer: Vec<u32>,
 }
 
 impl<'m, M: MemoryRead> F3DBuilder<'m, M> {
-    pub fn new(memory: &'m M, input_dl_addr: Address) -> Self {
+    pub fn new(memory: &'m M, input_dl_addr: Address, seg_table: Option<Vec<u32>>) -> Self {
         let input_dl = decode_f3d_display_list(RawDlIter {
             memory,
             addr: input_dl_addr,
@@ -49,6 +47,7 @@ impl<'m, M: MemoryRead> F3DBuilder<'m, M> {
         .peekable();
         Self {
             memory,
+            seg_table,
             input_dl,
             dl_buffer: Vec::new(),
             u32_buffer: Vec::new(),
@@ -88,6 +87,8 @@ impl<'m, M: MemoryRead> F3DBuilder<'m, M> {
             if f(cmd) {
                 self.input_dl.next();
                 return Ok(cmd);
+            } else {
+                // panic!("{:?}", cmd);
             }
         }
         Err(VizError::UnexpectedDisplayListCommand)
@@ -116,16 +117,27 @@ impl<'m, M: MemoryRead> F3DBuilder<'m, M> {
         ptr
     }
 
-    pub fn read_u32(&self, dst: &mut [u32], ptr: Pointer, offset: usize) -> Result<(), VizError> {
-        match ptr {
-            Pointer::Address(addr) => {
-                self.memory.read_u32s(addr + offset, dst)?;
-            }
-            Pointer::BufferOffset(offset) => {
-                dst.copy_from_slice(&self.u32_buffer[offset..offset + dst.len()]);
-            }
+    pub fn seg_to_virt(&self, segmented: Segmented) -> Address {
+        if let Some(seg_table) = &self.seg_table {
+            let addr = (segmented.0).0 as u32;
+            let segment = (addr & 0x1FFF_FFFF) >> 24;
+            let offset = addr & 0x00FF_FFFF;
+
+            let base = seg_table[segment as usize] | 0x8000_0000;
+            let base = Address(base as usize);
+
+            base + offset as usize
+        } else {
+            segmented.0
         }
-        Ok(())
+    }
+
+    pub fn virt_to_phys(&self, addr: Address) -> Segmented {
+        if self.seg_table.is_some() {
+            Segmented(Address(((addr.0 as u32) & 0x1FFF_FFFF) as usize))
+        } else {
+            Segmented(addr)
+        }
     }
 }
 
@@ -139,7 +151,7 @@ impl<'m, M: MemoryRead> F3DMemory for F3DBuilder<'m, M> {
     }
 
     fn read_dl(&self, ptr: Self::Ptr) -> Result<Self::DlIter<'_>, Self::Error> {
-        let addr = ptr.addr().expect("invalid display list pointer");
+        let addr = self.seg_to_virt(ptr.segmented().expect("invalid display list pointer"));
         let raw = RawDlIter {
             memory: self.memory,
             addr,
@@ -148,21 +160,22 @@ impl<'m, M: MemoryRead> F3DMemory for F3DBuilder<'m, M> {
     }
 
     fn read_u8(&self, dst: &mut [u8], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error> {
-        let addr = ptr.addr().expect("invalid u8 pointer");
+        let addr = self.seg_to_virt(ptr.segmented().expect("invalid u8 pointer"));
         self.memory.read_u8s(addr + offset, dst)?;
         Ok(())
     }
 
     fn read_u16(&self, dst: &mut [u16], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error> {
-        let addr = ptr.addr().expect("invalid u16 pointer");
+        let addr = self.seg_to_virt(ptr.segmented().expect("invalid u16 pointer"));
         self.memory.read_u16s(addr + offset, dst)?;
         Ok(())
     }
 
     fn read_u32(&self, dst: &mut [u32], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error> {
         match ptr {
-            Pointer::Address(addr) => {
-                self.memory.read_u32s(addr + offset, dst)?;
+            Pointer::Segmented(segmented) => {
+                self.memory
+                    .read_u32s(self.seg_to_virt(segmented) + offset, dst)?;
             }
             Pointer::BufferOffset(offset) => {
                 dst.copy_from_slice(&self.u32_buffer[offset..offset + dst.len()]);
@@ -191,8 +204,8 @@ impl<'a, 'm, M: MemoryRead> Iterator for DlIter<'a, 'm, M> {
 
 #[derive(Debug)]
 pub struct RawDlIter<'m, M> {
-    pub memory: &'m M,
-    pub addr: Address,
+    memory: &'m M,
+    addr: Address,
 }
 
 impl<'m, M: MemoryRead> RawDlIter<'m, M> {
@@ -204,7 +217,7 @@ impl<'m, M: MemoryRead> RawDlIter<'m, M> {
         self.addr += w_size;
 
         let w1 = self.memory.read_int(self.addr, w_type)? as u32;
-        let w1_ptr = Pointer::Address(self.memory.read_addr(self.addr)?);
+        let w1_ptr = Pointer::Segmented(Segmented(self.memory.read_addr(self.addr)?));
         self.addr += w_size;
 
         Ok(RawF3DCommand { w0, w1, w1_ptr })
