@@ -7,7 +7,7 @@ use std::{
 
 use image::{Rgb, RgbImage};
 use itertools::Itertools;
-use wafel_viz::{ObjectCull, SM64RenderConfig};
+use wafel_viz::SM64RenderConfig;
 
 use crate::{game_runner::GameRunner, renderer::Renderer, viz_tests::TestCase};
 
