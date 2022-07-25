@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["wafel_viz"] = [{"text":"impl&lt;'m, M:&nbsp;<a class=\"trait\" href=\"wafel_memory/traits/trait.MemoryRead.html\" title=\"trait wafel_memory::traits::MemoryRead\">MemoryRead</a>&gt; <a class=\"trait\" href=\"fast3d/interpret/trait.F3DMemory.html\" title=\"trait fast3d::interpret::F3DMemory\">F3DMemory</a> for <a class=\"struct\" href=\"wafel_viz/struct.F3DMemoryImpl.html\" title=\"struct wafel_viz::F3DMemoryImpl\">F3DMemoryImpl</a>&lt;'m, M&gt;","synthetic":false,"types":["wafel_viz::sm64_render_mod::F3DMemoryImpl"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
