@@ -26,6 +26,10 @@
 //! # [DataReadable] example
 //!
 //! ```no_run
+//! use wafel_data_access::{DataReadable, Reader, MemoryLayout, DataError};
+//! use wafel_data_type::Address;
+//! use wafel_memory::MemoryReadable;
+//!
 //! #[derive(Debug, Clone, DataReadable)]
 //! struct Surface {
 //!     normal: [f32; 3],
@@ -34,8 +38,15 @@
 //!     vertex3: [i16; 3],
 //! }
 //!
-//! let reader: Reader<Surface> = Surface::reader(&layout)?;
-//! let surface: Surface = reader.read(&memory, addr)?;
+//! fn read_surface(
+//!     layout: &impl MemoryLayout,
+//!     memory: &impl MemoryRead,
+//!     addr: Address
+//! ) -> Result<Surface, DataError> {
+//!     let reader: Reader<Surface> = Surface::reader(layout)?;
+//!     let surface: Surface = reader.read(memory, addr)?;
+//!     Ok(surface)
+//! }
 //! ```
 
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
