@@ -5,12 +5,7 @@ through a TAS without using save states, and displays relevant in-game data vari
 
 Wafel is not an emulator, but it does require a vanilla SM64 ROM to operate.
 
-This project is still a work in progress. The goal is to eventually replace Mupen64 as the
-primary tool for vanilla SM64 TASing, but the feature set is not quite there yet.
-
 Thanks to [sticks-stuff](https://github.com/sticks-stuff) for contributing the Wafel logo.
-
-Wafel is a backronym for **W**e **A**re **F**inally **E**mulator-**L**ess.
 
 ## Game versions
 
@@ -32,7 +27,7 @@ You can download the latest version from the [Releases page](https://github.com/
 ## Bugs and feature requests
 
 Please log bugs and feature requests on Github [here](https://github.com/branpk/wafel/issues/new).
-This increases visibility for other users, and I'm more likely to see them than on Discord.
+(For my own sanity and to avoid issues getting lost, please don't send them to me on discord.)
 
 ## Wafel as a library
 
@@ -66,11 +61,13 @@ Installing:
 - For Rust, include the dependency `wafel_api = { git = "https://github.com/branpk/wafel" }` (requires nightly).
 
 Rust documentation is available [here](https://branpk.github.io/wafel/docs/dev/wafel_api/).
-For Python, documentation is included in `wafel.pyi`, but you may also need to reference the
-Rust documentation.
 
-Wafel's low level code (beneath `wafel_api`) is also split up into Rust crates so that it can be
-used in other SM64 projects if needed.
+Python documentation and types are available [here](wafel_python/__init__.pyi),
+and your IDE should automatically display them. You may sometimes need to refer to the more detailed Rust documentation.
+
+If you want to build more complex things using Wafel's infrastructure, most of Wafel's code is split up into
+Rust crates that can be imported into your project. Documentation is above, and feel free to reach out to me with
+questions.
 
 ## Building
 
