@@ -7,7 +7,7 @@ use fast3d::{
     interpret::F3DMemory,
 };
 use wafel_data_type::Address;
-use wafel_memory::{MemoryError, MemoryRead};
+use wafel_memory::MemoryRead;
 
 use crate::error::VizError;
 

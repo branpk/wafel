@@ -2587,6 +2587,7 @@ dependencies = [
  "wafel_memory",
  "wafel_sm64",
  "wafel_timeline",
+ "wafel_viz",
 ]
 
 [[package]]
@@ -2701,18 +2702,28 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "bytemuck",
- "env_logger",
  "fast3d",
  "futures",
- "itertools",
  "serde",
- "serde_json",
- "wafel_api",
  "wafel_data_access",
  "wafel_data_type",
  "wafel_layout",
  "wafel_memory",
  "wafel_sm64",
+ "wgpu 0.12.0 (git+https://github.com/gfx-rs/wgpu)",
+]
+
+[[package]]
+name = "wafel_viz_demo"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "fast3d",
+ "pollster",
+ "wafel_api",
+ "wafel_data_access",
+ "wafel_memory",
+ "wafel_viz",
  "wgpu 0.12.0 (git+https://github.com/gfx-rs/wgpu)",
  "winit",
 ]
@@ -2727,6 +2738,7 @@ dependencies = [
  "itertools",
  "pollster",
  "wafel_api",
+ "wafel_memory",
  "wafel_viz",
  "wgpu 0.12.0 (git+https://github.com/gfx-rs/wgpu)",
 ]

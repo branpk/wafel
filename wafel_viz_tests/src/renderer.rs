@@ -3,7 +3,8 @@ use std::env;
 use fast3d::render::F3DRenderer;
 use image::{Pixel, Rgb, RgbImage};
 use wafel_api::Game;
-use wafel_viz::{prepare_render_data, VizConfig};
+use wafel_memory::GameMemory;
+use wafel_viz::{sm64_render, VizConfig};
 
 #[derive(Debug)]
 pub struct Renderer {
@@ -144,7 +145,13 @@ impl SizedRenderer {
         game: &Game,
         config: &VizConfig,
     ) -> RgbImage {
-        let render_data = prepare_render_data(game, config);
+        let render_data = sm64_render(
+            &game.layout,
+            &game.memory.with_slot(&game.base_slot),
+            config,
+            true,
+        )
+        .expect("failed to render game");
         self.f3d_renderer
             .prepare(device, queue, self.output_format, &render_data);
 

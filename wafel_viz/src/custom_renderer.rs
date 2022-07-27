@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use bytemuck::cast_slice;
 use serde::{Deserialize, Serialize};
 use wgpu::util::DeviceExt;

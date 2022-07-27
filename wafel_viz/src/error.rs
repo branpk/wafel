@@ -3,9 +3,8 @@
 use core::fmt;
 use std::error::Error;
 
-use wafel_api::ValueTypeError;
 use wafel_data_access::DataError;
-use wafel_data_type::DataTypeError;
+use wafel_data_type::{DataTypeError, ValueTypeError};
 use wafel_layout::LayoutLookupError;
 use wafel_memory::MemoryError;
 

@@ -1,4 +1,4 @@
-use std::{collections::HashSet, num::Wrapping, time::Instant};
+use std::{num::Wrapping, time::Instant};
 
 use fast3d::util::{atan2s, coss, sins, Matrixf};
 use wafel_data_access::{DataReadable, MemoryLayout};
@@ -154,7 +154,48 @@ impl CameraControl {
         }
     }
 
-    pub fn update_movement(&mut self, move_dir: [f32; 3]) {
+    pub fn update(
+        &mut self,
+        layout: &impl MemoryLayout,
+        memory: &impl MemoryRead,
+        move_dir: [f32; 3],
+    ) -> Result<(), VizError> {
+        let in_game_camera_addr = layout.symbol_address("gLakituState")?;
+        let in_game_camera: InGameCamera =
+            InGameCamera::reader(layout)?.read(memory, in_game_camera_addr)?;
+        self.in_game_camera = Some(in_game_camera);
+
+        let mario_pos = layout
+            .global_path("gMarioState.pos")?
+            .read(memory)?
+            .try_as_f32_3()?;
+        self.mario_pos = Some(mario_pos);
+
+        if let (Some(drag_state), Some(mouse_pos)) = (&self.drag_start, self.mouse_pos) {
+            let drag = [
+                mouse_pos[0] - drag_state.mouse_pos[0],
+                mouse_pos[1] - drag_state.mouse_pos[1],
+            ];
+            let drag_dist = (drag[0] * drag[0] + drag[1] * drag[1]).sqrt();
+            if self.camera_override.is_some() || drag_dist > 10.0 {
+                let [pitch0, yaw0, _] = drag_state.angle;
+                let pitch = (pitch0 - Wrapping((drag[1] * 50.0) as i32 as i16))
+                    .clamp(Wrapping(-0x3FF0), Wrapping(0x3FF0));
+                let yaw = yaw0 - Wrapping((drag[0] * 50.0) as i32 as i16);
+                let angle = [pitch, yaw, Wrapping(0)];
+
+                if let Some(camera_override) = self.get_or_init_override() {
+                    camera_override.angle = angle;
+                }
+            }
+        }
+
+        self.update_movement(move_dir);
+
+        Ok(())
+    }
+
+    fn update_movement(&mut self, move_dir: [f32; 3]) {
         let now = Instant::now();
         if let Some(prev) = self.prev_update_movement.replace(now) {
             let dt = now.saturating_duration_since(prev).as_secs_f32();
@@ -245,46 +286,16 @@ impl CameraControl {
         }
     }
 
-    pub fn update(
-        &mut self,
-        layout: &impl MemoryLayout,
-        memory: &impl MemoryRead,
-    ) -> Result<Camera, VizError> {
-        let in_game_camera_addr = layout.symbol_address("gLakituState")?;
-        let in_game_camera: InGameCamera =
-            InGameCamera::reader(layout)?.read(memory, in_game_camera_addr)?;
-        self.in_game_camera = Some(in_game_camera.clone());
-
-        let mario_pos = layout
-            .global_path("gMarioState.pos")?
-            .read(memory)?
-            .try_as_f32_3()?;
-        self.mario_pos = Some(mario_pos);
-
-        if let (Some(drag_state), Some(mouse_pos)) = (&self.drag_start, self.mouse_pos) {
-            let drag = [
-                mouse_pos[0] - drag_state.mouse_pos[0],
-                mouse_pos[1] - drag_state.mouse_pos[1],
-            ];
-            let drag_dist = (drag[0] * drag[0] + drag[1] * drag[1]).sqrt();
-            if self.camera_override.is_some() || drag_dist > 10.0 {
-                let [pitch0, yaw0, _] = drag_state.angle;
-                let pitch = (pitch0 - Wrapping((drag[1] * 50.0) as i32 as i16))
-                    .clamp(Wrapping(-0x3FF0), Wrapping(0x3FF0));
-                let yaw = yaw0 - Wrapping((drag[0] * 50.0) as i32 as i16);
-                let angle = [pitch, yaw, Wrapping(0)];
-
-                if let Some(camera_override) = self.get_or_init_override() {
-                    camera_override.angle = angle;
-                }
-            }
+    pub fn camera(&self) -> Camera {
+        if self.in_game_camera.is_none() || self.mario_pos.is_none() {
+            return Camera::InGame;
         }
 
         if let Some(camera_override) = &self.camera_override {
             let [pitch, yaw, _] = camera_override.angle;
             let focus = match camera_override.focus {
-                Focus::InGame => in_game_camera.focus,
-                Focus::Mario => mario_pos,
+                Focus::InGame => self.in_game_camera.as_ref().unwrap().focus,
+                Focus::Mario => self.mario_pos.unwrap(),
                 Focus::Override { pos, .. } => pos,
             };
 
@@ -297,13 +308,13 @@ impl CameraControl {
 
             let pos = [focus[0] - dx, focus[1] - dy, focus[2] - dz];
 
-            Ok(Camera::LookAt {
+            Camera::LookAt {
                 pos,
                 focus,
                 roll: Wrapping(0),
-            })
+            }
         } else {
-            Ok(Camera::InGame)
+            Camera::InGame
         }
     }
 }

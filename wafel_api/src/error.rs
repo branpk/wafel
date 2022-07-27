@@ -7,6 +7,7 @@ use wafel_data_type::{Value, ValueTypeError};
 use wafel_layout::{DllLayoutError, LayoutLookupError, SM64LayoutError};
 use wafel_memory::{MemoryError, MemoryInitError};
 use wafel_sm64::SM64DataError;
+use wafel_viz::VizError;
 
 #[derive(Debug, Clone)]
 pub enum Error {
@@ -17,6 +18,7 @@ pub enum Error {
     MemoryError(MemoryError),
     DataError(DataError),
     SM64DataError(SM64DataError),
+    VizError(VizError),
     ApplyEditError {
         path: Arc<GlobalDataPath>,
         value: Value,
@@ -61,6 +63,7 @@ impl fmt::Display for Error {
             Error::MemoryError(error) => write!(f, "{}", error),
             Error::DataError(error) => write!(f, "{}", error),
             Error::SM64DataError(error) => write!(f, "{}", error),
+            Error::VizError(error) => write!(f, "{}", error),
             Error::ApplyEditError { path, value, error } => {
                 write!(f, "while applying edit {} = {}:\n  {}", path, value, error)
             }
@@ -149,5 +152,11 @@ impl From<DataError> for Error {
 impl From<SM64DataError> for Error {
     fn from(v: SM64DataError) -> Self {
         Self::SM64DataError(v)
+    }
+}
+
+impl From<VizError> for Error {
+    fn from(v: VizError) -> Self {
+        Self::VizError(v)
     }
 }

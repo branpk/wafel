@@ -6,9 +6,8 @@ use fast3d::{
     interpret::{interpret_f3d_display_list, F3DMemory, F3DRenderData},
     util::{coss, sins, Angle, MatrixStack, Matrixf},
 };
-use wafel_api::{Address, IntType, Value};
 use wafel_data_access::{DataReadable, MemoryLayout, Reader};
-use wafel_data_type::{Namespace, TypeName};
+use wafel_data_type::{Address, IntType, Namespace, TypeName, Value};
 use wafel_memory::MemoryRead;
 use wafel_sm64::gfx::*;
 
@@ -36,10 +35,12 @@ pub fn sm64_render(
     }
     let input_dl_addr = input_dl_addr.try_as_address()?;
 
-    let mut seg_table: Vec<u32> = vec![0; 32];
-    let seg_table_addr = layout.symbol_address("sSegmentTable")?;
-    memory.read_u32s(seg_table_addr, seg_table.as_mut_slice())?;
-    let seg_table = Some(seg_table);
+    // TODO: Determine when seg table should be used
+    // let mut seg_table: Vec<u32> = vec![0; 32];
+    // let seg_table_addr = layout.symbol_address("sSegmentTable")?;
+    // memory.read_u32s(seg_table_addr, seg_table.as_mut_slice())?;
+    // let seg_table = Some(seg_table);
+    let seg_table = None;
 
     // if DEBUG_PRINT {
     //     println!("\n\n------- FRAME -------");
