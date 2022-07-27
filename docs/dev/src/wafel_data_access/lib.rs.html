@@ -72,6 +72,7 @@
 <span id="66">66</span>
 <span id="67">67</span>
 <span id="68">68</span>
+<span id="69">69</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Reading and writing structured data to memory.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! This crate provides two ways to access data:</span>
@@ -102,9 +103,10 @@
 <span class="doccomment">//! ```no_run</span>
 <span class="doccomment">//! use wafel_data_access::{DataReadable, Reader, MemoryLayout, DataError};</span>
 <span class="doccomment">//! use wafel_data_type::Address;</span>
-<span class="doccomment">//! use wafel_memory::MemoryReadable;</span>
+<span class="doccomment">//! use wafel_memory::MemoryRead;</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! #[derive(Debug, Clone, DataReadable)]</span>
+<span class="doccomment">//! #[struct_name(&quot;Surface&quot;)]</span>
 <span class="doccomment">//! struct Surface {</span>
 <span class="doccomment">//!     normal: [f32; 3],</span>
 <span class="doccomment">//!     vertex1: [i16; 3],</span>
@@ -141,5 +143,5 @@
 <span class="kw">mod</span> <span class="ident">traits</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">writers</span>;
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_data_access" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (7fe022f5a 2022-07-24)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_data_access" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (4d6d601c8 2022-07-26)" ></div>
 </body></html>
