@@ -28,9 +28,10 @@
 //! ```no_run
 //! use wafel_data_access::{DataReadable, Reader, MemoryLayout, DataError};
 //! use wafel_data_type::Address;
-//! use wafel_memory::MemoryReadable;
+//! use wafel_memory::MemoryRead;
 //!
 //! #[derive(Debug, Clone, DataReadable)]
+//! #[struct_name("Surface")]
 //! struct Surface {
 //!     normal: [f32; 3],
 //!     vertex1: [i16; 3],
