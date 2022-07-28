@@ -980,7 +980,7 @@ where
             .fov;
         let half_fov = Wrapping(((fov / 2.0 + 1.0) * 32768.0 / 180.0 + 0.5) as i16);
 
-        let h_screen_edge = -matrix.0[2][3] * sins(half_fov) / coss(half_fov);
+        let h_screen_edge = -matrix.cols[3][2] * sins(half_fov) / coss(half_fov);
 
         let mut culling_radius = 300;
         if !geo.is_null() {
@@ -989,17 +989,17 @@ where
             }
         }
 
-        if matrix.0[2][3] > -100.0 + culling_radius as f32 {
+        if matrix.cols[3][2] > -100.0 + culling_radius as f32 {
             return Ok(false);
         }
-        if matrix.0[2][3] < -20000.0 - culling_radius as f32 {
+        if matrix.cols[3][2] < -20000.0 - culling_radius as f32 {
             return Ok(false);
         }
 
-        if matrix.0[0][3] > h_screen_edge + culling_radius as f32 {
+        if matrix.cols[3][0] > h_screen_edge + culling_radius as f32 {
             return Ok(false);
         }
-        if matrix.0[0][3] < -h_screen_edge - culling_radius as f32 {
+        if matrix.cols[3][0] < -h_screen_edge - culling_radius as f32 {
             return Ok(false);
         }
 
@@ -1295,17 +1295,17 @@ where
                         .cur_object_throw_mtx
                         .clone()
                         .expect("no current object");
-                    throw.0[0][3] = self.mtx_stack.cur.0[0][3];
-                    throw.0[1][3] = self.mtx_stack.cur.0[1][3];
-                    throw.0[2][3] = self.mtx_stack.cur.0[2][3];
+                    throw.cols[3][0] = self.mtx_stack.cur.cols[3][0];
+                    throw.cols[3][1] = self.mtx_stack.cur.cols[3][1];
+                    throw.cols[3][2] = self.mtx_stack.cur.cols[3][2];
 
                     let mut mod_throw = self
                         .cur_object_mod_throw_mtx
                         .clone()
                         .expect("no current object");
-                    mod_throw.0[0][3] = self.mod_mtx_stack.cur.0[0][3];
-                    mod_throw.0[1][3] = self.mod_mtx_stack.cur.0[1][3];
-                    mod_throw.0[2][3] = self.mod_mtx_stack.cur.0[2][3];
+                    mod_throw.cols[3][0] = self.mod_mtx_stack.cur.cols[3][0];
+                    mod_throw.cols[3][1] = self.mod_mtx_stack.cur.cols[3][1];
+                    mod_throw.cols[3][2] = self.mod_mtx_stack.cur.cols[3][2];
 
                     let mtx = &(&throw * &translate) * &Matrixf::scale_vec3f(obj_node.scale);
                     self.mtx_stack.execute(&mtx, MatrixOp::Load, true);

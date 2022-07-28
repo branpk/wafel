@@ -89,16 +89,20 @@ pub fn atan2f(x: f32, y: f32) -> f32 {
 }
 
 #[derive(Clone, PartialEq, Default)]
-pub struct Matrixf(pub [[f32; 4]; 4]);
+pub struct Matrixf {
+    pub cols: [[f32; 4]; 4],
+}
 
 impl Matrixf {
     pub fn identity() -> Self {
-        Self([
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ])
+        Self {
+            cols: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ],
+        }
     }
 
     pub fn look_at(from: [f32; 3], to: [f32; 3], roll: Angle) -> Self {
@@ -140,29 +144,29 @@ impl Matrixf {
         y_col_y *= inv_length;
         z_col_y *= inv_length;
 
-        let mut mtx = [[0.0; 4]; 4];
+        let mut mtx = Matrixf::default();
 
-        mtx[0][0] = x_col_x;
-        mtx[0][1] = y_col_x;
-        mtx[0][2] = z_col_x;
-        mtx[0][3] = -(from[0] * x_col_x + from[1] * y_col_x + from[2] * z_col_x);
+        mtx.cols[0][0] = x_col_x;
+        mtx.cols[1][0] = y_col_x;
+        mtx.cols[2][0] = z_col_x;
+        mtx.cols[3][0] = -(from[0] * x_col_x + from[1] * y_col_x + from[2] * z_col_x);
 
-        mtx[1][0] = x_col_y;
-        mtx[1][1] = y_col_y;
-        mtx[1][2] = z_col_y;
-        mtx[1][3] = -(from[0] * x_col_y + from[1] * y_col_y + from[2] * z_col_y);
+        mtx.cols[0][1] = x_col_y;
+        mtx.cols[1][1] = y_col_y;
+        mtx.cols[2][1] = z_col_y;
+        mtx.cols[3][1] = -(from[0] * x_col_y + from[1] * y_col_y + from[2] * z_col_y);
 
-        mtx[2][0] = x_col_z;
-        mtx[2][1] = y_col_z;
-        mtx[2][2] = z_col_z;
-        mtx[2][3] = -(from[0] * x_col_z + from[1] * y_col_z + from[2] * z_col_z);
+        mtx.cols[0][2] = x_col_z;
+        mtx.cols[1][2] = y_col_z;
+        mtx.cols[2][2] = z_col_z;
+        mtx.cols[3][2] = -(from[0] * x_col_z + from[1] * y_col_z + from[2] * z_col_z);
 
-        mtx[3][0] = 0.0;
-        mtx[3][1] = 0.0;
-        mtx[3][2] = 0.0;
-        mtx[3][3] = 1.0;
+        mtx.cols[0][3] = 0.0;
+        mtx.cols[1][3] = 0.0;
+        mtx.cols[2][3] = 0.0;
+        mtx.cols[3][3] = 1.0;
 
-        Self(mtx)
+        mtx
     }
 
     /// fov_y is in radians
@@ -170,12 +174,12 @@ impl Matrixf {
         let mut mtx = Self::identity();
 
         let y_scale = (fov_y / 2.0).cos() / (fov_y / 2.0).sin();
-        mtx.0[0][0] = y_scale / aspect;
-        mtx.0[1][1] = y_scale;
-        mtx.0[2][2] = (near + far) / (near - far);
-        mtx.0[3][2] = -1.0;
-        mtx.0[2][3] = 2.0 * near * far / (near - far);
-        mtx.0[3][3] = 0.0;
+        mtx.cols[0][0] = y_scale / aspect;
+        mtx.cols[1][1] = y_scale;
+        mtx.cols[2][2] = (near + far) / (near - far);
+        mtx.cols[2][3] = -1.0;
+        mtx.cols[3][2] = 2.0 * near * far / (near - far);
+        mtx.cols[3][3] = 0.0;
 
         mtx
     }
@@ -183,10 +187,10 @@ impl Matrixf {
     pub fn translate(b: [f32; 3]) -> Self {
         let mut mtx = Matrixf::identity();
 
-        mtx.0[0][3] = b[0];
-        mtx.0[1][3] = b[1];
-        mtx.0[2][3] = b[2];
-        mtx.0[3][3] = 1.0;
+        mtx.cols[3][0] = b[0];
+        mtx.cols[3][1] = b[1];
+        mtx.cols[3][2] = b[2];
+        mtx.cols[3][3] = 1.0;
 
         mtx
     }
@@ -203,25 +207,25 @@ impl Matrixf {
 
         let mut mtx = Matrixf::default();
 
-        mtx.0[0][0] = cy * cz;
-        mtx.0[1][0] = cy * sz;
-        mtx.0[2][0] = -sy;
-        mtx.0[3][0] = 0.0;
+        mtx.cols[0][0] = cy * cz;
+        mtx.cols[0][1] = cy * sz;
+        mtx.cols[0][2] = -sy;
+        mtx.cols[0][3] = 0.0;
 
-        mtx.0[0][1] = sx * sy * cz - cx * sz;
-        mtx.0[1][1] = sx * sy * sz + cx * cz;
-        mtx.0[2][1] = sx * cy;
-        mtx.0[3][1] = 0.0;
+        mtx.cols[1][0] = sx * sy * cz - cx * sz;
+        mtx.cols[1][1] = sx * sy * sz + cx * cz;
+        mtx.cols[1][2] = sx * cy;
+        mtx.cols[1][3] = 0.0;
 
-        mtx.0[0][2] = cx * sy * cz + sx * sz;
-        mtx.0[1][2] = cx * sy * sz - sx * cz;
-        mtx.0[2][2] = cx * cy;
-        mtx.0[3][2] = 0.0;
+        mtx.cols[2][0] = cx * sy * cz + sx * sz;
+        mtx.cols[2][1] = cx * sy * sz - sx * cz;
+        mtx.cols[2][2] = cx * cy;
+        mtx.cols[2][3] = 0.0;
 
-        mtx.0[0][3] = b[0];
-        mtx.0[1][3] = b[1];
-        mtx.0[2][3] = b[2];
-        mtx.0[3][3] = 1.0;
+        mtx.cols[3][0] = b[0];
+        mtx.cols[3][1] = b[1];
+        mtx.cols[3][2] = b[2];
+        mtx.cols[3][3] = 1.0;
 
         mtx
     }
@@ -238,104 +242,104 @@ impl Matrixf {
 
         let mut mtx = Matrixf::default();
 
-        mtx.0[0][0] = cy * cz + sx * sy * sz;
-        mtx.0[0][1] = -cy * sz + sx * sy * cz;
-        mtx.0[0][2] = cx * sy;
-        mtx.0[0][3] = b[0];
+        mtx.cols[0][0] = cy * cz + sx * sy * sz;
+        mtx.cols[1][0] = -cy * sz + sx * sy * cz;
+        mtx.cols[2][0] = cx * sy;
+        mtx.cols[3][0] = b[0];
 
-        mtx.0[1][0] = cx * sz;
-        mtx.0[1][1] = cx * cz;
-        mtx.0[1][2] = -sx;
-        mtx.0[1][3] = b[1];
+        mtx.cols[0][1] = cx * sz;
+        mtx.cols[1][1] = cx * cz;
+        mtx.cols[2][1] = -sx;
+        mtx.cols[3][1] = b[1];
 
-        mtx.0[2][0] = -sy * cz + sx * cy * sz;
-        mtx.0[2][1] = sy * sz + sx * cy * cz;
-        mtx.0[2][2] = cx * cy;
-        mtx.0[2][3] = b[2];
+        mtx.cols[0][2] = -sy * cz + sx * cy * sz;
+        mtx.cols[1][2] = sy * sz + sx * cy * cz;
+        mtx.cols[2][2] = cx * cy;
+        mtx.cols[3][2] = b[2];
 
-        mtx.0[3][0] = 0.0;
-        mtx.0[3][1] = 0.0;
-        mtx.0[3][2] = 0.0;
-        mtx.0[3][3] = 1.0;
+        mtx.cols[0][3] = 0.0;
+        mtx.cols[1][3] = 0.0;
+        mtx.cols[2][3] = 0.0;
+        mtx.cols[3][3] = 1.0;
 
         mtx
     }
 
     pub fn rotate_xy(angle: Angle) -> Self {
         let mut temp = Self::identity();
-        temp.0[0][0] = coss(angle);
-        temp.0[1][0] = sins(angle);
-        temp.0[0][1] = -temp.0[1][0];
-        temp.0[1][1] = temp.0[0][0];
+        temp.cols[0][0] = coss(angle);
+        temp.cols[0][1] = sins(angle);
+        temp.cols[1][0] = -temp.cols[0][1];
+        temp.cols[1][1] = temp.cols[0][0];
         temp
     }
 
     pub fn scale_vec3f(s: [f32; 3]) -> Self {
         let mut mtx = Self::identity();
-        mtx.0[0][0] = s[0];
-        mtx.0[1][1] = s[1];
-        mtx.0[2][2] = s[2];
+        mtx.cols[0][0] = s[0];
+        mtx.cols[1][1] = s[1];
+        mtx.cols[2][2] = s[2];
         mtx
     }
 
     pub fn billboard(mtx: &Self, position: [f32; 3], angle: Angle) -> Self {
         let mut dest = Self::default();
 
-        dest.0[0][0] = coss(angle);
-        dest.0[1][0] = sins(angle);
-        dest.0[2][0] = 0.0;
-        dest.0[3][0] = 0.0;
+        dest.cols[0][0] = coss(angle);
+        dest.cols[0][1] = sins(angle);
+        dest.cols[0][2] = 0.0;
+        dest.cols[0][3] = 0.0;
 
-        dest.0[0][1] = -dest.0[1][0];
-        dest.0[1][1] = dest.0[0][0];
-        dest.0[2][1] = 0.0;
-        dest.0[3][1] = 0.0;
+        dest.cols[1][0] = -dest.cols[0][1];
+        dest.cols[1][1] = dest.cols[0][0];
+        dest.cols[1][2] = 0.0;
+        dest.cols[1][3] = 0.0;
 
-        dest.0[0][2] = 0.0;
-        dest.0[1][2] = 0.0;
-        dest.0[2][2] = 1.0;
-        dest.0[3][2] = 0.0;
+        dest.cols[2][0] = 0.0;
+        dest.cols[2][1] = 0.0;
+        dest.cols[2][2] = 1.0;
+        dest.cols[2][3] = 0.0;
 
-        dest.0[0][3] = mtx.0[0][0] * position[0]
-            + mtx.0[0][1] * position[1]
-            + mtx.0[0][2] * position[2]
-            + mtx.0[0][3];
-        dest.0[1][3] = mtx.0[1][0] * position[0]
-            + mtx.0[1][1] * position[1]
-            + mtx.0[1][2] * position[2]
-            + mtx.0[1][3];
-        dest.0[2][3] = mtx.0[2][0] * position[0]
-            + mtx.0[2][1] * position[1]
-            + mtx.0[2][2] * position[2]
-            + mtx.0[2][3];
-        dest.0[3][3] = 1.0;
+        dest.cols[3][0] = mtx.cols[0][0] * position[0]
+            + mtx.cols[1][0] * position[1]
+            + mtx.cols[2][0] * position[2]
+            + mtx.cols[3][0];
+        dest.cols[3][1] = mtx.cols[0][1] * position[0]
+            + mtx.cols[1][1] * position[1]
+            + mtx.cols[2][1] * position[2]
+            + mtx.cols[3][1];
+        dest.cols[3][2] = mtx.cols[0][2] * position[0]
+            + mtx.cols[1][2] * position[1]
+            + mtx.cols[2][2] * position[2]
+            + mtx.cols[3][2];
+        dest.cols[3][3] = 1.0;
 
         dest
     }
 
     pub fn pos_from_transform_mtx(&self, cam_mtx: &Matrixf) -> [f32; 3] {
-        let cam_x = cam_mtx.0[0][3] * cam_mtx.0[0][0]
-            + cam_mtx.0[1][3] * cam_mtx.0[1][0]
-            + cam_mtx.0[2][3] * cam_mtx.0[2][0];
-        let cam_y = cam_mtx.0[0][3] * cam_mtx.0[0][1]
-            + cam_mtx.0[1][3] * cam_mtx.0[1][1]
-            + cam_mtx.0[2][3] * cam_mtx.0[2][1];
-        let cam_z = cam_mtx.0[0][3] * cam_mtx.0[0][2]
-            + cam_mtx.0[1][3] * cam_mtx.0[1][2]
-            + cam_mtx.0[2][3] * cam_mtx.0[2][2];
+        let cam_x = cam_mtx.cols[3][0] * cam_mtx.cols[0][0]
+            + cam_mtx.cols[3][1] * cam_mtx.cols[0][1]
+            + cam_mtx.cols[3][2] * cam_mtx.cols[0][2];
+        let cam_y = cam_mtx.cols[3][0] * cam_mtx.cols[1][0]
+            + cam_mtx.cols[3][1] * cam_mtx.cols[1][1]
+            + cam_mtx.cols[3][2] * cam_mtx.cols[1][2];
+        let cam_z = cam_mtx.cols[3][0] * cam_mtx.cols[2][0]
+            + cam_mtx.cols[3][1] * cam_mtx.cols[2][1]
+            + cam_mtx.cols[3][2] * cam_mtx.cols[2][2];
 
         let mut dest = [0.0; 3];
-        dest[0] = self.0[0][3] * cam_mtx.0[0][0]
-            + self.0[1][3] * cam_mtx.0[1][0]
-            + self.0[2][3] * cam_mtx.0[2][0]
+        dest[0] = self.cols[3][0] * cam_mtx.cols[0][0]
+            + self.cols[3][1] * cam_mtx.cols[0][1]
+            + self.cols[3][2] * cam_mtx.cols[0][2]
             - cam_x;
-        dest[1] = self.0[0][3] * cam_mtx.0[0][1]
-            + self.0[1][3] * cam_mtx.0[1][1]
-            + self.0[2][3] * cam_mtx.0[2][1]
+        dest[1] = self.cols[3][0] * cam_mtx.cols[1][0]
+            + self.cols[3][1] * cam_mtx.cols[1][1]
+            + self.cols[3][2] * cam_mtx.cols[1][2]
             - cam_y;
-        dest[2] = self.0[0][3] * cam_mtx.0[0][2]
-            + self.0[1][3] * cam_mtx.0[1][2]
-            + self.0[2][3] * cam_mtx.0[2][2]
+        dest[2] = self.cols[3][0] * cam_mtx.cols[2][0]
+            + self.cols[3][1] * cam_mtx.cols[2][1]
+            + self.cols[3][2] * cam_mtx.cols[2][2]
             - cam_z;
 
         dest
@@ -344,12 +348,14 @@ impl Matrixf {
     pub fn from_fixed(m: &[i32]) -> Self {
         assert_eq!(m.len(), 16, "incorrect fixed point matrix size");
         let mut r = Self::default();
-        for i in [0, 2] {
-            for j in 0..4 {
+        for j in 0..4 {
+            for i in [0, 2] {
                 let int_part = m[j * 2 + i / 2] as u32;
                 let frac_part = m[8 + j * 2 + i / 2] as u32;
-                r.0[i][j] = ((int_part & 0xFFFF0000) | (frac_part >> 16)) as i32 as f32 / 65536.0;
-                r.0[i + 1][j] = ((int_part << 16) | (frac_part & 0xFFFF)) as i32 as f32 / 65536.0;
+                r.cols[j][i] =
+                    ((int_part & 0xFFFF0000) | (frac_part >> 16)) as i32 as f32 / 65536.0;
+                r.cols[j][i + 1] =
+                    ((int_part << 16) | (frac_part & 0xFFFF)) as i32 as f32 / 65536.0;
             }
         }
         r
@@ -357,10 +363,10 @@ impl Matrixf {
 
     pub fn to_fixed(&self) -> Vec<i32> {
         let mut r = vec![0; 16];
-        for i in [0, 2] {
-            for j in 0..4 {
-                let v1 = (self.0[i][j] * 65536.0) as i32 as u32;
-                let v2 = (self.0[i + 1][j] * 65536.0) as i32 as u32;
+        for j in 0..4 {
+            for i in [0, 2] {
+                let v1 = (self.cols[j][i] * 65536.0) as i32 as u32;
+                let v2 = (self.cols[j][i + 1] * 65536.0) as i32 as u32;
                 let frac_part = (v1 << 16) | (v2 & 0xFFFF);
                 let int_part = (v1 & 0xFFFF0000) | (v2 >> 16);
                 r[j * 2 + i / 2] = int_part as i32;
@@ -372,9 +378,9 @@ impl Matrixf {
 
     pub fn transpose(&self) -> Self {
         let mut r = Self::default();
-        for i in 0..4 {
-            for j in 0..4 {
-                r.0[i][j] = self.0[j][i];
+        for j in 0..4 {
+            for i in 0..4 {
+                r.cols[j][i] = self.cols[i][j];
             }
         }
         r
@@ -382,19 +388,19 @@ impl Matrixf {
 
     pub fn invert_isometry(&self) -> Matrixf {
         let mut rotation = self.clone();
-        rotation.0[0][3] = 0.0;
-        rotation.0[1][3] = 0.0;
-        rotation.0[2][3] = 0.0;
+        rotation.cols[3][0] = 0.0;
+        rotation.cols[3][1] = 0.0;
+        rotation.cols[3][2] = 0.0;
 
         let inv_rotation = rotation.transpose();
 
-        let translate = [self.0[0][3], self.0[1][3], self.0[2][3], 0.0];
+        let translate = [self.cols[3][0], self.cols[3][1], self.cols[3][2], 0.0];
         let new_translate = scalar_mul(&inv_rotation * translate, -1.0);
 
         let mut inv = inv_rotation;
-        inv.0[0][3] = new_translate[0];
-        inv.0[1][3] = new_translate[1];
-        inv.0[2][3] = new_translate[2];
+        inv.cols[3][0] = new_translate[0];
+        inv.cols[3][1] = new_translate[1];
+        inv.cols[3][2] = new_translate[2];
         inv
     }
 }
@@ -405,7 +411,7 @@ impl fmt::Debug for Matrixf {
         for i in 0..4 {
             write!(f, "  [ ")?;
             for j in 0..4 {
-                write!(f, "\t{:.3} ", self.0[i][j])?;
+                write!(f, "\t{:.3} ", self.cols[j][i])?;
             }
             writeln!(f, "\t]")?;
         }
@@ -422,7 +428,7 @@ impl ops::Mul<&Matrixf> for &Matrixf {
         for i in 0..4 {
             for j in 0..4 {
                 for k in 0..4 {
-                    out.0[i][j] += self.0[i][k] * rhs.0[k][j];
+                    out.cols[j][i] += self.cols[k][i] * rhs.cols[j][k];
                 }
             }
         }
@@ -437,7 +443,7 @@ impl ops::Mul<[f32; 4]> for &Matrixf {
         let mut out = [0.0; 4];
         for i in 0..4 {
             for k in 0..4 {
-                out[i] += self.0[i][k] * rhs[k];
+                out[i] += self.cols[k][i] * rhs[k];
             }
         }
         out
