@@ -81,14 +81,14 @@ pub fn sm64_gfx_render(
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GfxRenderOutput {
-    pub persp_mtx: Matrixf,
+    pub proj_mtx: Matrixf,
     pub view_mtx: Matrixf,
 }
 
 impl Default for GfxRenderOutput {
     fn default() -> Self {
         Self {
-            persp_mtx: Matrixf::identity(),
+            proj_mtx: Matrixf::identity(),
             view_mtx: Matrixf::identity(),
         }
     }
@@ -539,7 +539,7 @@ where
             let cmd = self.builder.expect(|cmd| matches!(cmd, SPMatrix { .. }))?;
             if let SPMatrix { matrix, .. } = &cmd {
                 let mtx = Matrixf::from_fixed(&self.read_fixed(*matrix)?);
-                self.output.persp_mtx = mtx;
+                self.output.proj_mtx = mtx;
             } else {
                 unreachable!();
             }
@@ -854,6 +854,30 @@ where
     }
 
     fn process_camera(&mut self, node: &GraphNodeCamera) -> Result<(), VizError> {
+        let cmd = self.builder.expect(|cmd| matches!(cmd, SPMatrix { .. }))?;
+        match self.config.camera {
+            Camera::InGame => {
+                self.builder.push_cmd(cmd);
+                if let SPMatrix { matrix, .. } = &cmd {
+                    let roll_mtx = Matrixf::from_fixed(&self.read_fixed(*matrix)?);
+                    self.output.proj_mtx = &self.output.proj_mtx * &roll_mtx;
+                } else {
+                    unreachable!();
+                }
+            }
+            Camera::LookAt { roll, .. } => {
+                let roll_mtx = Matrixf::rotate_xy(roll);
+                let ptr = self.builder.alloc_u32(cast_slice(&roll_mtx.to_fixed()));
+                self.builder.push_cmd(SPMatrix {
+                    matrix: ptr,
+                    mode: MatrixMode::Proj,
+                    op: MatrixOp::Mul,
+                    push: false,
+                });
+                self.output.proj_mtx = &self.output.proj_mtx * &roll_mtx;
+            }
+        };
+
         let camera_transform = Matrixf::look_at(node.pos, node.focus, node.roll);
         self.mtx_stack.push_mul(&camera_transform);
 
@@ -863,20 +887,7 @@ where
         };
         self.mod_mtx_stack.push_mul(&mod_camera_transform);
 
-        let cmd = self.builder.expect(|cmd| matches!(cmd, SPMatrix { .. }))?;
-        match self.config.camera {
-            Camera::InGame => self.builder.push_cmd(cmd),
-            Camera::LookAt { roll, .. } => {
-                let mtx = Matrixf::rotate_xy(roll);
-                let ptr = self.builder.alloc_u32(cast_slice(&mtx.to_fixed()));
-                self.builder.push_cmd(SPMatrix {
-                    matrix: ptr,
-                    mode: MatrixMode::Proj,
-                    op: MatrixOp::Mul,
-                    push: false,
-                });
-            }
-        };
+        self.output.view_mtx = mod_camera_transform;
 
         self.cur_camera = Some(node.clone());
         self.cur_camera_mtx = Some(self.mtx_stack.cur.clone());
