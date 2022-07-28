@@ -1,10 +1,9 @@
 use std::env;
 
-use fast3d::render::F3DRenderer;
 use image::{Pixel, Rgb, RgbImage};
 use wafel_api::Game;
 use wafel_memory::GameMemory;
-use wafel_viz::{sm64_render, VizConfig};
+use wafel_viz::{viz_render, VizConfig, VizRenderer};
 
 #[derive(Debug)]
 pub struct Renderer {
@@ -70,7 +69,7 @@ impl Renderer {
 
 #[derive(Debug)]
 struct SizedRenderer {
-    f3d_renderer: F3DRenderer,
+    viz_renderer: VizRenderer,
     output_size: [u32; 2],
     output_format: wgpu::TextureFormat,
     output_texture: wgpu::Texture,
@@ -85,7 +84,7 @@ impl SizedRenderer {
 
         let output_format = wgpu::TextureFormat::Rgba8Unorm;
 
-        let renderer = F3DRenderer::new(device);
+        let renderer = VizRenderer::new(device);
 
         let output_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
@@ -128,7 +127,7 @@ impl SizedRenderer {
         });
 
         Self {
-            f3d_renderer: renderer,
+            viz_renderer: renderer,
             output_size,
             output_format,
             output_texture,
@@ -145,14 +144,13 @@ impl SizedRenderer {
         game: &Game,
         config: &VizConfig,
     ) -> RgbImage {
-        let render_data = sm64_render(
+        let render_data = viz_render(
             &game.layout,
             &game.memory.with_slot(&game.base_slot),
             config,
-            true,
         )
         .expect("failed to render game");
-        self.f3d_renderer
+        self.viz_renderer
             .prepare(device, queue, self.output_format, &render_data);
 
         let mut encoder =
@@ -185,7 +183,7 @@ impl SizedRenderer {
                         stencil_ops: None,
                     }),
                 });
-                self.f3d_renderer.render(&mut rp, self.output_size);
+                self.viz_renderer.render(&mut rp, self.output_size);
             }
 
             encoder.copy_texture_to_buffer(

@@ -23,15 +23,15 @@ const DEBUG_CALC_TRANSFORMS: bool = false;
 const CHECK_CALC_TRANSFORMS: bool = false;
 const ASSERT_CALC_TRANSFORMS: bool = false;
 
-pub fn sm64_render(
+pub fn sm64_gfx_render(
     layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
     config: &VizConfig,
     process_gfx: bool,
-) -> Result<F3DRenderData, VizError> {
+) -> Result<(F3DRenderData, GfxRenderOutput), VizError> {
     let input_dl_addr = layout.global_path("gGfxPool?")?.read(memory)?;
     if input_dl_addr.is_none() {
-        return Ok(F3DRenderData::default());
+        return Ok((F3DRenderData::default(), GfxRenderOutput::default()));
     }
     let input_dl_addr = input_dl_addr.try_as_address()?;
 
@@ -54,7 +54,7 @@ pub fn sm64_render(
     //     println!("\n\n");
     // }
 
-    let f3d_memory = if process_gfx {
+    let (f3d_memory, render_output) = if process_gfx {
         let pause_rendering = layout
             .global_path("gWarpTransition.pauseRendering")?
             .read(memory)?
@@ -64,11 +64,11 @@ pub fn sm64_render(
 
         let mut renderer = NodeRenderer::new(config, layout, memory, input_dl_addr, seg_table)?;
         renderer.render_game(root_addr, pause_rendering)?;
-        renderer.output
+        (renderer.builder, renderer.output)
     } else {
         let mut builder = F3DBuilder::new(memory, input_dl_addr, seg_table);
         builder.push_remaining()?;
-        builder
+        (builder, GfxRenderOutput::default())
     };
 
     let render_data = interpret_f3d_display_list(&f3d_memory, config.screen_size, true)?;
@@ -76,7 +76,22 @@ pub fn sm64_render(
     if DEBUG_ONE_FRAME {
         process::exit(0);
     }
-    Ok(render_data)
+    Ok((render_data, render_output))
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GfxRenderOutput {
+    pub persp_mtx: Matrixf,
+    pub view_mtx: Matrixf,
+}
+
+impl Default for GfxRenderOutput {
+    fn default() -> Self {
+        Self {
+            persp_mtx: Matrixf::identity(),
+            view_mtx: Matrixf::identity(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -84,7 +99,8 @@ struct NodeRenderer<'m, L, M: MemoryRead> {
     config: &'m VizConfig,
     layout: &'m L,
     memory: &'m M,
-    output: F3DBuilder<'m, M>,
+    builder: F3DBuilder<'m, M>,
+    output: GfxRenderOutput,
     reader: Reader<GfxTreeNode>,
     object_fields_reader: Reader<ObjectFields>,
     mtx_stack: MatrixStack,
@@ -209,7 +225,8 @@ where
             config,
             layout,
             memory,
-            output: F3DBuilder::new(memory, input_dl_addr, seg_table),
+            builder: F3DBuilder::new(memory, input_dl_addr, seg_table),
+            output: GfxRenderOutput::default(),
             reader,
             object_fields_reader: ObjectFields::reader(layout)?,
             mtx_stack: MatrixStack::default(),
@@ -245,7 +262,7 @@ where
     }
 
     fn append_display_list(&mut self, layer: i16, display_list: Address) {
-        let display_list = Pointer::Segmented(self.output.virt_to_phys(display_list));
+        let display_list = Pointer::Segmented(self.builder.virt_to_phys(display_list));
         if self.is_node_rendered() {
             self.edit_master_list(
                 layer,
@@ -330,8 +347,8 @@ where
             enabled: flags & (1 << 5) == 0,
             frame: node.anim_frame,
             translation_multiplier,
-            attribute: self.output.seg_to_virt(attribute),
-            data: self.output.seg_to_virt(data),
+            attribute: self.builder.seg_to_virt(attribute),
+            data: self.builder.seg_to_virt(data),
         });
 
         Ok(())
@@ -340,7 +357,8 @@ where
     fn render_game(&mut self, root_addr: Value, pause_rendering: bool) -> Result<(), VizError> {
         if let Value::Address(root_addr) = root_addr {
             // Skip init_rcp and viewport/scissor override
-            self.output.push_until(|cmd| matches!(cmd, SPViewport(_)))?;
+            self.builder
+                .push_until(|cmd| matches!(cmd, SPViewport(_)))?;
 
             if !pause_rendering {
                 self.process_node(root_addr, false)?;
@@ -348,7 +366,7 @@ where
         }
 
         // Skip hud, in-game menu etc
-        self.output.push_remaining()?;
+        self.builder.push_remaining()?;
 
         Ok(())
     }
@@ -485,11 +503,12 @@ where
 
     fn process_root(&mut self, node: &GraphNodeRoot) -> Result<(), VizError> {
         // Skip viewport/scissor override
-        self.output.push_until(|cmd| matches!(cmd, SPViewport(_)))?;
+        self.builder
+            .push_until(|cmd| matches!(cmd, SPViewport(_)))?;
 
-        self.output
+        self.builder
             .push_expect(|cmd| matches!(cmd, SPViewport(_)))?;
-        self.output
+        self.builder
             .push_expect(|cmd| matches!(cmd, SPMatrix { .. }))?;
 
         self.cur_root = Some(node.clone());
@@ -503,9 +522,9 @@ where
         node: &GraphNodeOrthoProjection,
     ) -> Result<(), VizError> {
         if !node.node.children.is_null() {
-            self.output
+            self.builder
                 .push_expect(|cmd| matches!(cmd, SPPerspNormalize(_)))?;
-            self.output
+            self.builder
                 .push_expect(|cmd| matches!(cmd, SPMatrix { .. }))?;
             self.process_node_and_siblings(node.node.children)?;
         }
@@ -514,10 +533,18 @@ where
 
     fn process_perspective(&mut self, node: &GraphNodePerspective) -> Result<(), VizError> {
         if !node.fn_node.node.children.is_null() {
-            self.output
+            self.builder
                 .push_expect(|cmd| matches!(cmd, SPPerspNormalize(_)))?;
-            self.output
-                .push_expect(|cmd| matches!(cmd, SPMatrix { .. }))?;
+
+            let cmd = self.builder.expect(|cmd| matches!(cmd, SPMatrix { .. }))?;
+            if let SPMatrix { matrix, .. } = &cmd {
+                let mtx = Matrixf::from_fixed(&self.read_fixed(*matrix)?);
+                self.output.persp_mtx = mtx;
+            } else {
+                unreachable!();
+            }
+
+            self.builder.push_cmd(cmd);
 
             self.cur_perspective = Some(node.clone());
             self.process_node_and_siblings(node.fn_node.node.children)?;
@@ -539,8 +566,8 @@ where
     fn process_master_list_sub(&mut self, node: &GraphNodeMasterList) -> Result<(), VizError> {
         let z_buffer = node.node.flags().contains(GraphRenderFlags::Z_BUFFER);
         if z_buffer {
-            self.output.push_expect(|cmd| matches!(cmd, DPPipeSync))?;
-            self.output
+            self.builder.push_expect(|cmd| matches!(cmd, DPPipeSync))?;
+            self.builder
                 .push_expect(|cmd| matches!(cmd, SPSetGeometryMode(_)))?;
         }
 
@@ -559,19 +586,19 @@ where
             let mut dl_node_addr = node.list_heads[layer as usize];
             if !dl_node_addr.is_null() {
                 let render_mode = self.get_render_mode(layer, z_buffer);
-                self.output
+                self.builder
                     .expect(|cmd| cmd == DPSetRenderMode(render_mode))?;
 
                 while !dl_node_addr.is_null() {
                     let dl_node = self.read_display_list_node(dl_node_addr)?;
 
                     let transform_ptr =
-                        Pointer::Segmented(self.output.virt_to_phys(dl_node.transform));
-                    self.output.expect(|cmd| cmd == mtx_cmd(transform_ptr))?;
+                        Pointer::Segmented(self.builder.virt_to_phys(dl_node.transform));
+                    self.builder.expect(|cmd| cmd == mtx_cmd(transform_ptr))?;
 
                     let display_list_ptr =
-                        Pointer::Segmented(self.output.virt_to_phys(dl_node.display_list));
-                    self.output
+                        Pointer::Segmented(self.builder.virt_to_phys(dl_node.display_list));
+                    self.builder
                         .expect(|cmd| cmd == SPDisplayList(display_list_ptr))?;
 
                     original_lists[layer as usize].push((transform_ptr, display_list_ptr));
@@ -630,7 +657,7 @@ where
                             .expect("master list discrepancy");
 
                         if DEBUG_CALC_TRANSFORMS || self.config.camera != Camera::InGame {
-                            let ptr = self.output.alloc_u32(cast_slice(transform));
+                            let ptr = self.builder.alloc_u32(cast_slice(transform));
                             new_nodes.push((ptr, dl));
                         } else {
                             new_nodes.push((mtx, dl));
@@ -647,17 +674,17 @@ where
                         transform,
                         display_list,
                     } => {
-                        let ptr = self.output.alloc_u32(cast_slice(transform));
+                        let ptr = self.builder.alloc_u32(cast_slice(transform));
                         new_nodes.push((ptr, *display_list));
                     }
                     MasterListEdit::OptDynamic => {
                         if let Some(&&(mtx, dl)) = actual_nodes.peek() {
-                            if is_dynamic(&self.output, dl) {
+                            if is_dynamic(&self.builder, dl) {
                                 if DEBUG_CALC_TRANSFORMS || self.config.camera != Camera::InGame {
                                     let orig_mtx = Matrixf::from_fixed(&self.read_fixed(mtx)?);
                                     let new_mtx = &mod_transform * &orig_mtx;
                                     let ptr =
-                                        self.output.alloc_u32(cast_slice(&new_mtx.to_fixed()));
+                                        self.builder.alloc_u32(cast_slice(&new_mtx.to_fixed()));
                                     new_nodes.push((ptr, dl));
                                 } else {
                                     new_nodes.push((mtx, dl));
@@ -676,11 +703,11 @@ where
         for (layer, list) in new_lists.iter().enumerate() {
             if !list.is_empty() {
                 let render_mode = self.get_render_mode(layer as i16, z_buffer);
-                self.output.push_cmd(DPSetRenderMode(render_mode));
+                self.builder.push_cmd(DPSetRenderMode(render_mode));
 
                 for (mtx, dl) in list.iter().copied() {
-                    self.output.push_cmd(mtx_cmd(mtx));
-                    self.output.push_cmd(SPDisplayList(dl));
+                    self.builder.push_cmd(mtx_cmd(mtx));
+                    self.builder.push_cmd(SPDisplayList(dl));
                 }
             }
         }
@@ -711,7 +738,7 @@ where
                         matches = false;
                         if ASSERT_CALC_TRANSFORMS {
                             let transform_addr =
-                                self.output.seg_to_virt(old_node.1.segmented().unwrap());
+                                self.builder.seg_to_virt(old_node.1.segmented().unwrap());
                             eprintln!(
                                 "{}: mtx ({:?})\n{:?}\n{:?}",
                                 layer,
@@ -730,8 +757,8 @@ where
         }
 
         if z_buffer {
-            self.output.push_expect(|cmd| matches!(cmd, DPPipeSync))?;
-            self.output
+            self.builder.push_expect(|cmd| matches!(cmd, DPPipeSync))?;
+            self.builder
                 .push_expect(|cmd| matches!(cmd, SPClearGeometryMode(_)))?;
         }
 
@@ -751,7 +778,7 @@ where
     #[allow(dead_code)]
     fn read_fixed(&self, ptr: Pointer) -> Result<Vec<i32>, VizError> {
         let mut data = vec![0; 16];
-        self.output
+        self.builder
             .read_u32(cast_slice_mut(data.as_mut_slice()), ptr, 0)?;
         Ok(data)
     }
@@ -836,13 +863,13 @@ where
         };
         self.mod_mtx_stack.push_mul(&mod_camera_transform);
 
-        let cmd = self.output.expect(|cmd| matches!(cmd, SPMatrix { .. }))?;
+        let cmd = self.builder.expect(|cmd| matches!(cmd, SPMatrix { .. }))?;
         match self.config.camera {
-            Camera::InGame => self.output.push_cmd(cmd),
+            Camera::InGame => self.builder.push_cmd(cmd),
             Camera::LookAt { roll, .. } => {
                 let mtx = Matrixf::rotate_xy(roll);
-                let ptr = self.output.alloc_u32(cast_slice(&mtx.to_fixed()));
-                self.output.push_cmd(SPMatrix {
+                let ptr = self.builder.alloc_u32(cast_slice(&mtx.to_fixed()));
+                self.builder.push_cmd(SPMatrix {
                     matrix: ptr,
                     mode: MatrixMode::Proj,
                     op: MatrixOp::Mul,

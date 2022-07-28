@@ -44,7 +44,7 @@ pub fn run_tests(mut test_cases: Vec<TestCase>) -> Result<(), Box<dyn std::error
 
         let config = VizConfig {
             // object_cull: ObjectCull::ShowAll,
-            ..case.config
+            ..case.config.clone()
         };
         let actual = renderer.render(game, &config);
 

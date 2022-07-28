@@ -5,6 +5,7 @@ pub struct VizConfig {
     pub screen_size: [u32; 2],
     pub camera: Camera,
     pub object_cull: ObjectCull,
+    pub elements: Vec<Element>,
 }
 
 impl Default for VizConfig {
@@ -13,6 +14,7 @@ impl Default for VizConfig {
             screen_size: [320, 240],
             camera: Default::default(),
             object_cull: Default::default(),
+            elements: Default::default(),
         }
     }
 }
@@ -43,4 +45,15 @@ impl Default for ObjectCull {
     fn default() -> Self {
         Self::Normal
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Element {
+    Line(Line),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Line {
+    pub vertices: [[f32; 3]; 2],
+    pub color: [f32; 4],
 }

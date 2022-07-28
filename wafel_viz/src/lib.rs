@@ -5,11 +5,14 @@
 pub use camera_control::*;
 pub use config::*;
 pub use error::*;
-pub use sm64_gfx_render::*;
+pub use render_data::*;
+pub use renderer::*;
 
 mod camera_control;
 mod config;
 mod custom_renderer;
 mod error;
 mod f3d_builder;
+mod render_data;
+mod renderer;
 mod sm64_gfx_render;
