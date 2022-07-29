@@ -105,6 +105,10 @@ impl Matrixf {
         }
     }
 
+    pub fn from_rows(rows: [[f32; 4]; 4]) -> Self {
+        Self { cols: rows }.transpose()
+    }
+
     pub fn look_at(from: [f32; 3], to: [f32; 3], roll: Angle) -> Self {
         let mut dx = to[0] - from[0];
         let mut dz = to[2] - from[2];

@@ -84,7 +84,7 @@ impl SizedRenderer {
 
         let output_format = wgpu::TextureFormat::Rgba8Unorm;
 
-        let renderer = VizRenderer::new(device);
+        let renderer = VizRenderer::new(device, output_format);
 
         let output_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,

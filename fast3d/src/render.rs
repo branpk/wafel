@@ -3,6 +3,7 @@
 use std::{
     collections::HashMap,
     fmt::{self, Write},
+    ops::Range,
 };
 
 use bytemuck::cast_slice;
@@ -473,9 +474,18 @@ impl F3DRenderer {
     }
 
     pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>, output_size: [u32; 2]) {
+        self.render_command_range(rp, output_size, 0..self.commands.len());
+    }
+
+    pub fn render_command_range<'r>(
+        &'r self,
+        rp: &mut wgpu::RenderPass<'r>,
+        output_size: [u32; 2],
+        cmd_indices: Range<usize>,
+    ) {
         let mut current_pipeline = None;
 
-        for command in &self.commands {
+        for command in &self.commands[cmd_indices] {
             let ScreenRectangle { x, y, w, h } = command.viewport;
             if w == 0 || h == 0 {
                 continue;

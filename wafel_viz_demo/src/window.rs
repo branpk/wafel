@@ -6,7 +6,7 @@ use winit::{
 };
 
 pub trait App: Sized + 'static {
-    fn new(device: &wgpu::Device) -> Result<Self, Error>;
+    fn new(device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Result<Self, Error>;
 
     fn window_event(&mut self, event: &WindowEvent) -> Result<(), Error>;
 
@@ -84,7 +84,7 @@ async fn open_window_and_run_impl<A: App>() {
     };
     surface.configure(&device, &surface_config);
 
-    let mut app = handle_err(A::new(&device));
+    let mut app = handle_err(A::new(&device, output_format));
 
     window.set_visible(true);
     let mut first_render = false;

@@ -56,7 +56,7 @@ impl VizApp {
 }
 
 impl App for VizApp {
-    fn new(device: &wgpu::Device) -> Result<Self, Error> {
+    fn new(device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Result<Self, Error> {
         let game = unsafe { Game::try_new("libsm64/sm64_us")? };
         let (_, inputs) = try_load_m64("wafel_viz_tests/input/120_u.m64")?;
 
@@ -66,7 +66,7 @@ impl App for VizApp {
             save_states: HashMap::new(),
             camera_control: CameraControl::new(),
             held_keys: HashSet::new(),
-            viz_renderer: VizRenderer::new(device),
+            viz_renderer: VizRenderer::new(device, output_format),
             last_update: Instant::now(),
             time_since_game_advance: Duration::ZERO,
         };
@@ -211,12 +211,24 @@ impl App for VizApp {
             ..Default::default()
         };
 
-        let camera_pos = self.game.try_read("gLakituState.pos")?.try_as_f32_3()?;
-        let camera_focus = self.game.try_read("gLakituState.focus")?.try_as_f32_3()?;
-        config.elements.push(Element::Line(Line {
-            vertices: [camera_pos, camera_focus],
-            color: [1.0, 0.0, 0.0, 1.0],
-        }));
+        // let camera_pos = self.game.try_read("gLakituState.pos")?.try_as_f32_3()?;
+        // let camera_focus = self.game.try_read("gLakituState.focus")?.try_as_f32_3()?;
+        // config.elements.push(Element::Line(Line {
+        //     vertices: [camera_pos, camera_focus],
+        //     color: [1.0, 0.0, 0.0, 1.0],
+        // }));
+        for y in (-8000..=8000).step_by(1000) {
+            for t in (-8000..=8000).step_by(1000) {
+                config.elements.push(Element::Line(Line {
+                    vertices: [[t as f32, y as f32, -8000.0], [t as f32, y as f32, 8000.0]],
+                    color: [1.0, 1.0, 1.0, 1.0],
+                }));
+                config.elements.push(Element::Line(Line {
+                    vertices: [[-8000.0, y as f32, t as f32], [8000.0, y as f32, t as f32]],
+                    color: [1.0, 1.0, 1.0, 1.0],
+                }));
+            }
+        }
 
         let render_data = viz_render(
             &self.game.layout,
