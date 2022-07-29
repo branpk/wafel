@@ -2717,7 +2717,6 @@ dependencies = [
  "bitflags",
  "bytemuck",
  "fast3d",
- "futures",
  "serde",
  "wafel_data_access",
  "wafel_data_type",

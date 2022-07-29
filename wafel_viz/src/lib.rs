@@ -10,7 +10,6 @@ pub use renderer::*;
 
 mod camera_control;
 mod config;
-mod custom_renderer;
 mod error;
 mod f3d_builder;
 mod render_data;
