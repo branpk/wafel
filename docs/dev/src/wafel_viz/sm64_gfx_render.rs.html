@@ -1,10 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_viz/src/sm64_gfx_render.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>sm64_gfx_render.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../wafel_viz/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../wafel_viz/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../wafel_viz/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_viz/src/sm64_gfx_render.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>sm64_gfx_render.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../wafel_viz/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../wafel_viz/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../wafel_viz/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -1291,25 +1285,111 @@
 <span id="1285">1285</span>
 <span id="1286">1286</span>
 <span id="1287">1287</span>
+<span id="1288">1288</span>
+<span id="1289">1289</span>
+<span id="1290">1290</span>
+<span id="1291">1291</span>
+<span id="1292">1292</span>
+<span id="1293">1293</span>
+<span id="1294">1294</span>
+<span id="1295">1295</span>
+<span id="1296">1296</span>
+<span id="1297">1297</span>
+<span id="1298">1298</span>
+<span id="1299">1299</span>
+<span id="1300">1300</span>
+<span id="1301">1301</span>
+<span id="1302">1302</span>
+<span id="1303">1303</span>
+<span id="1304">1304</span>
+<span id="1305">1305</span>
+<span id="1306">1306</span>
+<span id="1307">1307</span>
+<span id="1308">1308</span>
+<span id="1309">1309</span>
+<span id="1310">1310</span>
+<span id="1311">1311</span>
+<span id="1312">1312</span>
+<span id="1313">1313</span>
+<span id="1314">1314</span>
+<span id="1315">1315</span>
+<span id="1316">1316</span>
+<span id="1317">1317</span>
+<span id="1318">1318</span>
+<span id="1319">1319</span>
+<span id="1320">1320</span>
+<span id="1321">1321</span>
+<span id="1322">1322</span>
+<span id="1323">1323</span>
+<span id="1324">1324</span>
+<span id="1325">1325</span>
+<span id="1326">1326</span>
+<span id="1327">1327</span>
+<span id="1328">1328</span>
+<span id="1329">1329</span>
+<span id="1330">1330</span>
+<span id="1331">1331</span>
+<span id="1332">1332</span>
+<span id="1333">1333</span>
+<span id="1334">1334</span>
+<span id="1335">1335</span>
+<span id="1336">1336</span>
+<span id="1337">1337</span>
+<span id="1338">1338</span>
+<span id="1339">1339</span>
+<span id="1340">1340</span>
+<span id="1341">1341</span>
+<span id="1342">1342</span>
+<span id="1343">1343</span>
+<span id="1344">1344</span>
+<span id="1345">1345</span>
+<span id="1346">1346</span>
+<span id="1347">1347</span>
+<span id="1348">1348</span>
+<span id="1349">1349</span>
+<span id="1350">1350</span>
+<span id="1351">1351</span>
+<span id="1352">1352</span>
+<span id="1353">1353</span>
+<span id="1354">1354</span>
+<span id="1355">1355</span>
+<span id="1356">1356</span>
+<span id="1357">1357</span>
+<span id="1358">1358</span>
+<span id="1359">1359</span>
+<span id="1360">1360</span>
+<span id="1361">1361</span>
+<span id="1362">1362</span>
+<span id="1363">1363</span>
+<span id="1364">1364</span>
+<span id="1365">1365</span>
+<span id="1366">1366</span>
+<span id="1367">1367</span>
+<span id="1368">1368</span>
+<span id="1369">1369</span>
+<span id="1370">1370</span>
+<span id="1371">1371</span>
+<span id="1372">1372</span>
+<span id="1373">1373</span>
+<span id="1374">1374</span>
+<span id="1375">1375</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">mem</span>, <span class="ident">num::Wrapping</span>, <span class="ident">process</span>};
 
 <span class="kw">use</span> <span class="ident">bytemuck</span>::{<span class="ident">cast_slice</span>, <span class="ident">cast_slice_mut</span>};
 <span class="kw">use</span> <span class="ident">fast3d</span>::{
     <span class="ident">cmd</span>::{<span class="ident">F3DCommand</span>::<span class="kw-2">*</span>, <span class="kw-2">*</span>},
-    <span class="ident">decode::decode_f3d_display_list</span>,
-    <span class="ident">interpret</span>::{<span class="ident">interpret_f3d_display_list</span>, <span class="ident">F3DRenderData</span>},
+    <span class="ident">interpret</span>::{<span class="ident">interpret_f3d_display_list</span>, <span class="ident">F3DMemory</span>, <span class="ident">F3DRenderData</span>},
     <span class="ident">util</span>::{<span class="ident">coss</span>, <span class="ident">sins</span>, <span class="ident">Angle</span>, <span class="ident">MatrixStack</span>, <span class="ident">Matrixf</span>},
 };
-<span class="kw">use</span> <span class="ident">wafel_api</span>::{<span class="ident">Address</span>, <span class="ident">IntType</span>, <span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">wafel_data_access</span>::{<span class="ident">DataReadable</span>, <span class="ident">MemoryLayout</span>, <span class="ident">Reader</span>};
-<span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">Namespace</span>, <span class="ident">TypeName</span>};
+<span class="kw">use</span> <span class="ident">wafel_data_type</span>::{<span class="ident">Address</span>, <span class="ident">IntType</span>, <span class="ident">Namespace</span>, <span class="ident">TypeName</span>, <span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">wafel_memory::MemoryRead</span>;
 <span class="kw">use</span> <span class="ident">wafel_sm64::gfx</span>::<span class="kw-2">*</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">error::VizError</span>,
-    <span class="ident">f3d_builder</span>::{<span class="ident">F3DBuilder</span>, <span class="ident">Pointer</span>, <span class="ident">RawDlIter</span>},
-    <span class="ident">Camera</span>, <span class="ident">ObjectCull</span>, <span class="ident">SM64RenderConfig</span>,
+    <span class="ident">f3d_builder</span>::{<span class="ident">F3DBuilder</span>, <span class="ident">Pointer</span>, <span class="ident">Segmented</span>},
+    <span class="ident">Camera</span>, <span class="ident">ObjectCull</span>, <span class="ident">SurfaceMode</span>, <span class="ident">VizConfig</span>,
 };
 
 <span class="kw">const</span> <span class="ident">DEBUG_PRINT</span>: <span class="ident">bool</span> <span class="op">=</span> <span class="bool-val">false</span>;
@@ -1318,31 +1398,38 @@
 <span class="kw">const</span> <span class="ident">CHECK_CALC_TRANSFORMS</span>: <span class="ident">bool</span> <span class="op">=</span> <span class="bool-val">false</span>;
 <span class="kw">const</span> <span class="ident">ASSERT_CALC_TRANSFORMS</span>: <span class="ident">bool</span> <span class="op">=</span> <span class="bool-val">false</span>;
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test_render</span>(
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">sm64_gfx_render</span>(
     <span class="ident">layout</span>: <span class="kw-2">&amp;</span><span class="kw">impl</span> <span class="ident">MemoryLayout</span>,
     <span class="ident">memory</span>: <span class="kw-2">&amp;</span><span class="kw">impl</span> <span class="ident">MemoryRead</span>,
-    <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">SM64RenderConfig</span>,
+    <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">VizConfig</span>,
     <span class="ident">process_gfx</span>: <span class="ident">bool</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">F3DRenderData</span>, <span class="ident">VizError</span><span class="op">&gt;</span> {
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">F3DRenderData</span>, <span class="ident">GfxRenderOutput</span>), <span class="ident">VizError</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">input_dl_addr</span> <span class="op">=</span> <span class="ident">layout</span>.<span class="ident">global_path</span>(<span class="string">&quot;gGfxPool?&quot;</span>)<span class="question-mark">?</span>.<span class="ident">read</span>(<span class="ident">memory</span>)<span class="question-mark">?</span>;
     <span class="kw">if</span> <span class="ident">input_dl_addr</span>.<span class="ident">is_none</span>() {
-        <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">F3DRenderData::default</span>());
+        <span class="kw">return</span> <span class="prelude-val">Ok</span>((<span class="ident">F3DRenderData::default</span>(), <span class="ident">GfxRenderOutput::default</span>()));
     }
     <span class="kw">let</span> <span class="ident">input_dl_addr</span> <span class="op">=</span> <span class="ident">input_dl_addr</span>.<span class="ident">try_as_address</span>()<span class="question-mark">?</span>;
 
-    <span class="kw">if</span> <span class="ident">DEBUG_PRINT</span> {
-        <span class="macro">println!</span>(<span class="string">&quot;\n\n------- FRAME -------&quot;</span>);
-        <span class="kw">let</span> <span class="ident">cmds</span> <span class="op">=</span> <span class="ident">decode_f3d_display_list</span>(<span class="ident">RawDlIter</span> {
-            <span class="ident">memory</span>,
-            <span class="ident">addr</span>: <span class="ident">input_dl_addr</span>,
-        });
-        <span class="kw">for</span> <span class="ident">cmd</span> <span class="kw">in</span> <span class="ident">cmds</span> {
-            <span class="macro">println!</span>(<span class="string">&quot;  {:?}&quot;</span>, <span class="ident">cmd</span><span class="question-mark">?</span>);
-        }
-        <span class="macro">println!</span>(<span class="string">&quot;\n\n&quot;</span>);
-    }
+    <span class="comment">// TODO: Determine when seg table should be used</span>
+    <span class="comment">// let mut seg_table: Vec&lt;u32&gt; = vec![0; 32];</span>
+    <span class="comment">// let seg_table_addr = layout.symbol_address(&quot;sSegmentTable&quot;)?;</span>
+    <span class="comment">// memory.read_u32s(seg_table_addr, seg_table.as_mut_slice())?;</span>
+    <span class="comment">// let seg_table = Some(seg_table);</span>
+    <span class="kw">let</span> <span class="ident">seg_table</span> <span class="op">=</span> <span class="prelude-val">None</span>;
 
-    <span class="kw">let</span> <span class="ident">f3d_memory</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">process_gfx</span> {
+    <span class="comment">// if DEBUG_PRINT {</span>
+    <span class="comment">//     println!(&quot;\n\n------- FRAME -------&quot;);</span>
+    <span class="comment">//     let cmds = decode_f3d_display_list(RawDlIter {</span>
+    <span class="comment">//         memory,</span>
+    <span class="comment">//         addr: input_dl_addr,</span>
+    <span class="comment">//     });</span>
+    <span class="comment">//     for cmd in cmds {</span>
+    <span class="comment">//         println!(&quot;  {:?}&quot;, cmd?);</span>
+    <span class="comment">//     }</span>
+    <span class="comment">//     println!(&quot;\n\n&quot;);</span>
+    <span class="comment">// }</span>
+
+    <span class="kw">let</span> (<span class="ident">f3d_memory</span>, <span class="ident">render_output</span>) <span class="op">=</span> <span class="kw">if</span> <span class="ident">process_gfx</span> {
         <span class="kw">let</span> <span class="ident">pause_rendering</span> <span class="op">=</span> <span class="ident">layout</span>
             .<span class="ident">global_path</span>(<span class="string">&quot;gWarpTransition.pauseRendering&quot;</span>)<span class="question-mark">?</span>
             .<span class="ident">read</span>(<span class="ident">memory</span>)<span class="question-mark">?</span>
@@ -1350,13 +1437,13 @@
             <span class="op">!</span><span class="op">=</span> <span class="number">0</span>;
         <span class="kw">let</span> <span class="ident">root_addr</span> <span class="op">=</span> <span class="ident">layout</span>.<span class="ident">global_path</span>(<span class="string">&quot;gCurrentArea?.unk04&quot;</span>)<span class="question-mark">?</span>.<span class="ident">read</span>(<span class="ident">memory</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">renderer</span> <span class="op">=</span> <span class="ident">NodeRenderer::new</span>(<span class="ident">config</span>, <span class="ident">layout</span>, <span class="ident">memory</span>, <span class="ident">input_dl_addr</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">renderer</span> <span class="op">=</span> <span class="ident">NodeRenderer::new</span>(<span class="ident">config</span>, <span class="ident">layout</span>, <span class="ident">memory</span>, <span class="ident">input_dl_addr</span>, <span class="ident">seg_table</span>)<span class="question-mark">?</span>;
         <span class="ident">renderer</span>.<span class="ident">render_game</span>(<span class="ident">root_addr</span>, <span class="ident">pause_rendering</span>)<span class="question-mark">?</span>;
-        <span class="ident">renderer</span>.<span class="ident">output</span>
+        (<span class="ident">renderer</span>.<span class="ident">builder</span>, <span class="ident">renderer</span>.<span class="ident">output</span>)
     } <span class="kw">else</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">F3DBuilder::new</span>(<span class="ident">memory</span>, <span class="ident">input_dl_addr</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">F3DBuilder::new</span>(<span class="ident">memory</span>, <span class="ident">input_dl_addr</span>, <span class="ident">seg_table</span>);
         <span class="ident">builder</span>.<span class="ident">push_remaining</span>()<span class="question-mark">?</span>;
-        <span class="ident">builder</span>
+        (<span class="ident">builder</span>, <span class="ident">GfxRenderOutput::default</span>())
     };
 
     <span class="kw">let</span> <span class="ident">render_data</span> <span class="op">=</span> <span class="ident">interpret_f3d_display_list</span>(<span class="kw-2">&amp;</span><span class="ident">f3d_memory</span>, <span class="ident">config</span>.<span class="ident">screen_size</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
@@ -1364,15 +1451,31 @@
     <span class="kw">if</span> <span class="ident">DEBUG_ONE_FRAME</span> {
         <span class="ident">process::exit</span>(<span class="number">0</span>);
     }
-    <span class="prelude-val">Ok</span>(<span class="ident">render_data</span>)
+    <span class="prelude-val">Ok</span>((<span class="ident">render_data</span>, <span class="ident">render_output</span>))
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GfxRenderOutput</span> {
+    <span class="kw">pub</span> <span class="ident">proj_mtx</span>: <span class="ident">Matrixf</span>,
+    <span class="kw">pub</span> <span class="ident">view_mtx</span>: <span class="ident">Matrixf</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">GfxRenderOutput</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">proj_mtx</span>: <span class="ident">Matrixf::identity</span>(),
+            <span class="ident">view_mtx</span>: <span class="ident">Matrixf::identity</span>(),
+        }
+    }
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">struct</span> <span class="ident">NodeRenderer</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span>, <span class="ident">L</span>, <span class="ident">M</span>: <span class="ident">MemoryRead</span><span class="op">&gt;</span> {
-    <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m</span> <span class="ident">SM64RenderConfig</span>,
+    <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m</span> <span class="ident">VizConfig</span>,
     <span class="ident">layout</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m</span> <span class="ident">L</span>,
     <span class="ident">memory</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m</span> <span class="ident">M</span>,
-    <span class="ident">output</span>: <span class="ident">F3DBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span>, <span class="ident">M</span><span class="op">&gt;</span>,
+    <span class="ident">builder</span>: <span class="ident">F3DBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span>, <span class="ident">M</span><span class="op">&gt;</span>,
+    <span class="ident">output</span>: <span class="ident">GfxRenderOutput</span>,
     <span class="ident">reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">GfxTreeNode</span><span class="op">&gt;</span>,
     <span class="ident">object_fields_reader</span>: <span class="ident">Reader</span><span class="op">&lt;</span><span class="ident">ObjectFields</span><span class="op">&gt;</span>,
     <span class="ident">mtx_stack</span>: <span class="ident">MatrixStack</span>,
@@ -1401,12 +1504,12 @@
 <span class="kw">enum</span> <span class="ident">MasterListEdit</span> {
     <span class="ident">Copy</span> {
         <span class="ident">transform</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span>,
-        <span class="ident">display_list</span>: <span class="ident">Address</span>,
+        <span class="ident">display_list</span>: <span class="ident">Pointer</span>,
     },
-    <span class="ident">Skip</span>(<span class="ident">Address</span>),
+    <span class="ident">Skip</span>(<span class="ident">Pointer</span>),
     <span class="ident">Insert</span> {
         <span class="ident">transform</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span>,
-        <span class="ident">display_list</span>: <span class="ident">Address</span>,
+        <span class="ident">display_list</span>: <span class="ident">Pointer</span>,
     },
     <span class="ident">OptDynamic</span>,
 }
@@ -1478,6 +1581,8 @@
 <span class="kw">struct</span> <span class="ident">ObjectFields</span> {
     <span class="ident">active_flags</span>: <span class="ident">i16</span>,
     <span class="ident">o_anim_state</span>: <span class="ident">i32</span>,
+    <span class="ident">collision_data</span>: <span class="ident">Address</span>,
+    <span class="ident">behavior</span>: <span class="ident">Address</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span>, <span class="ident">L</span>, <span class="ident">M</span><span class="op">&gt;</span> <span class="ident">NodeRenderer</span><span class="op">&lt;</span><span class="lifetime">&#39;m</span>, <span class="ident">L</span>, <span class="ident">M</span><span class="op">&gt;</span>
@@ -1486,17 +1591,19 @@
     <span class="ident">M</span>: <span class="ident">MemoryRead</span>,
 {
     <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m</span> <span class="ident">SM64RenderConfig</span>,
+        <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m</span> <span class="ident">VizConfig</span>,
         <span class="ident">layout</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m</span> <span class="ident">L</span>,
         <span class="ident">memory</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m</span> <span class="ident">M</span>,
         <span class="ident">input_dl_addr</span>: <span class="ident">Address</span>,
+        <span class="ident">seg_table</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">VizError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">GfxTreeNode::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">config</span>,
             <span class="ident">layout</span>,
             <span class="ident">memory</span>,
-            <span class="ident">output</span>: <span class="ident">F3DBuilder::new</span>(<span class="ident">memory</span>, <span class="ident">input_dl_addr</span>),
+            <span class="ident">builder</span>: <span class="ident">F3DBuilder::new</span>(<span class="ident">memory</span>, <span class="ident">input_dl_addr</span>, <span class="ident">seg_table</span>),
+            <span class="ident">output</span>: <span class="ident">GfxRenderOutput::default</span>(),
             <span class="ident">reader</span>,
             <span class="ident">object_fields_reader</span>: <span class="ident">ObjectFields::reader</span>(<span class="ident">layout</span>)<span class="question-mark">?</span>,
             <span class="ident">mtx_stack</span>: <span class="ident">MatrixStack::default</span>(),
@@ -1531,7 +1638,32 @@
             <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">is_active</span> <span class="op">!</span><span class="op">=</span> <span class="prelude-val">Some</span>(<span class="bool-val">false</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">append_display_list</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">layer</span>: <span class="ident">i16</span>, <span class="ident">display_list</span>: <span class="ident">Address</span>) {
+    <span class="kw">fn</span> <span class="ident">append_display_list</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">layer</span>: <span class="ident">i16</span>, <span class="ident">display_list</span>: <span class="ident">Address</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">VizError</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">visible</span> <span class="op">=</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">surface_mode</span> <span class="op">==</span> <span class="ident">SurfaceMode::Visual</span> {
+            <span class="bool-val">true</span>
+        } <span class="kw">else</span> {
+            <span class="kw">let</span> <span class="ident">is_surface</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">cur_object_addr</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">addr</span>) =&gt; {
+                    <span class="kw">let</span> <span class="ident">object</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">object_fields_reader</span>.<span class="ident">read</span>(<span class="self">self</span>.<span class="ident">memory</span>, <span class="ident">addr</span>)<span class="question-mark">?</span>;
+                    <span class="ident">object</span>.<span class="ident">collision_data</span>.<span class="ident">is_not_null</span>()
+                        <span class="op">|</span><span class="op">|</span> <span class="ident">object</span>.<span class="ident">behavior</span> <span class="op">==</span> <span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">symbol_address</span>(<span class="string">&quot;bhvStaticObject&quot;</span>)<span class="question-mark">?</span>
+                }
+                <span class="prelude-val">None</span> =&gt; <span class="bool-val">true</span>,
+            };
+            <span class="op">!</span><span class="ident">is_surface</span>
+        };
+
+        <span class="kw">if</span> <span class="ident">visible</span> {
+            <span class="self">self</span>.<span class="ident">append_display_list_unconditional</span>(<span class="ident">layer</span>, <span class="ident">display_list</span>);
+        } <span class="kw">else</span> {
+            <span class="self">self</span>.<span class="ident">skip_display_list</span>(<span class="ident">layer</span>, <span class="ident">display_list</span>);
+        }
+
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">fn</span> <span class="ident">append_display_list_unconditional</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">layer</span>: <span class="ident">i16</span>, <span class="ident">display_list</span>: <span class="ident">Address</span>) {
+        <span class="kw">let</span> <span class="ident">display_list</span> <span class="op">=</span> <span class="ident">Pointer::Segmented</span>(<span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">virt_to_phys</span>(<span class="ident">display_list</span>));
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_node_rendered</span>() {
             <span class="self">self</span>.<span class="ident">edit_master_list</span>(
                 <span class="ident">layer</span>,
@@ -1548,6 +1680,13 @@
                     <span class="ident">display_list</span>,
                 },
             );
+        }
+    }
+
+    <span class="kw">fn</span> <span class="ident">skip_display_list</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">layer</span>: <span class="ident">i16</span>, <span class="ident">display_list</span>: <span class="ident">Address</span>) {
+        <span class="kw">let</span> <span class="ident">display_list</span> <span class="op">=</span> <span class="ident">Pointer::Segmented</span>(<span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">virt_to_phys</span>(<span class="ident">display_list</span>));
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_node_rendered</span>() {
+            <span class="self">self</span>.<span class="ident">edit_master_list</span>(<span class="ident">layer</span>, <span class="ident">MasterListEdit::Skip</span>(<span class="ident">display_list</span>));
         }
     }
 
@@ -1608,13 +1747,16 @@
             <span class="ident">y_trans</span> <span class="kw">as</span> <span class="ident">f32</span> <span class="op">/</span> <span class="ident">y_trans_divisor</span> <span class="kw">as</span> <span class="ident">f32</span>
         };
 
+        <span class="kw">let</span> <span class="ident">attribute</span> <span class="op">=</span> <span class="ident">Segmented</span>(<span class="ident">anim</span>.<span class="ident">try_field</span>(<span class="string">&quot;index&quot;</span>)<span class="question-mark">?</span>.<span class="ident">try_as_address</span>()<span class="question-mark">?</span>);
+        <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">Segmented</span>(<span class="ident">anim</span>.<span class="ident">try_field</span>(<span class="string">&quot;values&quot;</span>)<span class="question-mark">?</span>.<span class="ident">try_as_address</span>()<span class="question-mark">?</span>);
+
         <span class="self">self</span>.<span class="ident">anim</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">AnimState</span> {
             <span class="ident">ty</span>,
             <span class="ident">enabled</span>: <span class="ident">flags</span> <span class="op">&amp;</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">5</span>) <span class="op">==</span> <span class="number">0</span>,
             <span class="ident">frame</span>: <span class="ident">node</span>.<span class="ident">anim_frame</span>,
             <span class="ident">translation_multiplier</span>,
-            <span class="ident">attribute</span>: <span class="ident">anim</span>.<span class="ident">try_field</span>(<span class="string">&quot;index&quot;</span>)<span class="question-mark">?</span>.<span class="ident">try_as_address</span>()<span class="question-mark">?</span>, <span class="comment">// TODO: Seg to virt</span>
-            <span class="ident">data</span>: <span class="ident">anim</span>.<span class="ident">try_field</span>(<span class="string">&quot;values&quot;</span>)<span class="question-mark">?</span>.<span class="ident">try_as_address</span>()<span class="question-mark">?</span>,     <span class="comment">// TODO: Seg to virt</span>
+            <span class="ident">attribute</span>: <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">seg_to_virt</span>(<span class="ident">attribute</span>),
+            <span class="ident">data</span>: <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">seg_to_virt</span>(<span class="ident">data</span>),
         });
 
         <span class="prelude-val">Ok</span>(())
@@ -1623,7 +1765,8 @@
     <span class="kw">fn</span> <span class="ident">render_game</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">root_addr</span>: <span class="ident">Value</span>, <span class="ident">pause_rendering</span>: <span class="ident">bool</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">VizError</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Value::Address</span>(<span class="ident">root_addr</span>) <span class="op">=</span> <span class="ident">root_addr</span> {
             <span class="comment">// Skip init_rcp and viewport/scissor override</span>
-            <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">push_until</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">SPViewport</span>(<span class="kw">_</span>)))<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="ident">builder</span>
+                .<span class="ident">push_until</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">SPViewport</span>(<span class="kw">_</span>)))<span class="question-mark">?</span>;
 
             <span class="kw">if</span> <span class="op">!</span><span class="ident">pause_rendering</span> {
                 <span class="self">self</span>.<span class="ident">process_node</span>(<span class="ident">root_addr</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
@@ -1631,7 +1774,7 @@
         }
 
         <span class="comment">// Skip hud, in-game menu etc</span>
-        <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">push_remaining</span>()<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">push_remaining</span>()<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
@@ -1768,11 +1911,12 @@
 
     <span class="kw">fn</span> <span class="ident">process_root</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">node</span>: <span class="kw-2">&amp;</span><span class="ident">GraphNodeRoot</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">VizError</span><span class="op">&gt;</span> {
         <span class="comment">// Skip viewport/scissor override</span>
-        <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">push_until</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">SPViewport</span>(<span class="kw">_</span>)))<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">builder</span>
+            .<span class="ident">push_until</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">SPViewport</span>(<span class="kw">_</span>)))<span class="question-mark">?</span>;
 
-        <span class="self">self</span>.<span class="ident">output</span>
+        <span class="self">self</span>.<span class="ident">builder</span>
             .<span class="ident">push_expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">SPViewport</span>(<span class="kw">_</span>)))<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">output</span>
+        <span class="self">self</span>.<span class="ident">builder</span>
             .<span class="ident">push_expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">SPMatrix</span> { .. }))<span class="question-mark">?</span>;
 
         <span class="self">self</span>.<span class="ident">cur_root</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">node</span>.<span class="ident">clone</span>());
@@ -1786,9 +1930,9 @@
         <span class="ident">node</span>: <span class="kw-2">&amp;</span><span class="ident">GraphNodeOrthoProjection</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">VizError</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="op">!</span><span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">children</span>.<span class="ident">is_null</span>() {
-            <span class="self">self</span>.<span class="ident">output</span>
+            <span class="self">self</span>.<span class="ident">builder</span>
                 .<span class="ident">push_expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">SPPerspNormalize</span>(<span class="kw">_</span>)))<span class="question-mark">?</span>;
-            <span class="self">self</span>.<span class="ident">output</span>
+            <span class="self">self</span>.<span class="ident">builder</span>
                 .<span class="ident">push_expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">SPMatrix</span> { .. }))<span class="question-mark">?</span>;
             <span class="self">self</span>.<span class="ident">process_node_and_siblings</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">children</span>)<span class="question-mark">?</span>;
         }
@@ -1797,10 +1941,18 @@
 
     <span class="kw">fn</span> <span class="ident">process_perspective</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">node</span>: <span class="kw-2">&amp;</span><span class="ident">GraphNodePerspective</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">VizError</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="op">!</span><span class="ident">node</span>.<span class="ident">fn_node</span>.<span class="ident">node</span>.<span class="ident">children</span>.<span class="ident">is_null</span>() {
-            <span class="self">self</span>.<span class="ident">output</span>
+            <span class="self">self</span>.<span class="ident">builder</span>
                 .<span class="ident">push_expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">SPPerspNormalize</span>(<span class="kw">_</span>)))<span class="question-mark">?</span>;
-            <span class="self">self</span>.<span class="ident">output</span>
-                .<span class="ident">push_expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">SPMatrix</span> { .. }))<span class="question-mark">?</span>;
+
+            <span class="kw">let</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">SPMatrix</span> { .. }))<span class="question-mark">?</span>;
+            <span class="kw">if</span> <span class="kw">let</span> <span class="ident">SPMatrix</span> { <span class="ident">matrix</span>, .. } <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">cmd</span> {
+                <span class="kw">let</span> <span class="ident">mtx</span> <span class="op">=</span> <span class="ident">Matrixf::from_fixed</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">read_fixed</span>(<span class="kw-2">*</span><span class="ident">matrix</span>)<span class="question-mark">?</span>);
+                <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">proj_mtx</span> <span class="op">=</span> <span class="ident">mtx</span>;
+            } <span class="kw">else</span> {
+                <span class="macro">unreachable!</span>();
+            }
+
+            <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">push_cmd</span>(<span class="ident">cmd</span>);
 
             <span class="self">self</span>.<span class="ident">cur_perspective</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">node</span>.<span class="ident">clone</span>());
             <span class="self">self</span>.<span class="ident">process_node_and_siblings</span>(<span class="ident">node</span>.<span class="ident">fn_node</span>.<span class="ident">node</span>.<span class="ident">children</span>)<span class="question-mark">?</span>;
@@ -1822,8 +1974,8 @@
     <span class="kw">fn</span> <span class="ident">process_master_list_sub</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">node</span>: <span class="kw-2">&amp;</span><span class="ident">GraphNodeMasterList</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">VizError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">z_buffer</span> <span class="op">=</span> <span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">flags</span>().<span class="ident">contains</span>(<span class="ident">GraphRenderFlags::Z_BUFFER</span>);
         <span class="kw">if</span> <span class="ident">z_buffer</span> {
-            <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">push_expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">DPPipeSync</span>))<span class="question-mark">?</span>;
-            <span class="self">self</span>.<span class="ident">output</span>
+            <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">push_expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">DPPipeSync</span>))<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="ident">builder</span>
                 .<span class="ident">push_expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">SPSetGeometryMode</span>(<span class="kw">_</span>)))<span class="question-mark">?</span>;
         }
 
@@ -1842,18 +1994,22 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">dl_node_addr</span> <span class="op">=</span> <span class="ident">node</span>.<span class="ident">list_heads</span>[<span class="ident">layer</span> <span class="kw">as</span> <span class="ident">usize</span>];
             <span class="kw">if</span> <span class="op">!</span><span class="ident">dl_node_addr</span>.<span class="ident">is_null</span>() {
                 <span class="kw">let</span> <span class="ident">render_mode</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_render_mode</span>(<span class="ident">layer</span>, <span class="ident">z_buffer</span>);
-                <span class="self">self</span>.<span class="ident">output</span>
+                <span class="self">self</span>.<span class="ident">builder</span>
                     .<span class="ident">expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="ident">cmd</span> <span class="op">==</span> <span class="ident">DPSetRenderMode</span>(<span class="ident">render_mode</span>))<span class="question-mark">?</span>;
 
                 <span class="kw">while</span> <span class="op">!</span><span class="ident">dl_node_addr</span>.<span class="ident">is_null</span>() {
                     <span class="kw">let</span> <span class="ident">dl_node</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">read_display_list_node</span>(<span class="ident">dl_node_addr</span>)<span class="question-mark">?</span>;
-                    <span class="self">self</span>.<span class="ident">output</span>
-                        .<span class="ident">expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="ident">cmd</span> <span class="op">==</span> <span class="ident">mtx_cmd</span>(<span class="ident">dl_node</span>.<span class="ident">transform</span>.<span class="ident">into</span>()))<span class="question-mark">?</span>;
-                    <span class="self">self</span>.<span class="ident">output</span>
-                        .<span class="ident">expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="ident">cmd</span> <span class="op">==</span> <span class="ident">SPDisplayList</span>(<span class="ident">dl_node</span>.<span class="ident">display_list</span>.<span class="ident">into</span>()))<span class="question-mark">?</span>;
 
-                    <span class="ident">original_lists</span>[<span class="ident">layer</span> <span class="kw">as</span> <span class="ident">usize</span>]
-                        .<span class="ident">push</span>((<span class="ident">dl_node</span>.<span class="ident">transform</span>.<span class="ident">into</span>(), <span class="ident">dl_node</span>.<span class="ident">display_list</span>.<span class="ident">into</span>()));
+                    <span class="kw">let</span> <span class="ident">transform_ptr</span> <span class="op">=</span>
+                        <span class="ident">Pointer::Segmented</span>(<span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">virt_to_phys</span>(<span class="ident">dl_node</span>.<span class="ident">transform</span>));
+                    <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="ident">cmd</span> <span class="op">==</span> <span class="ident">mtx_cmd</span>(<span class="ident">transform_ptr</span>))<span class="question-mark">?</span>;
+
+                    <span class="kw">let</span> <span class="ident">display_list_ptr</span> <span class="op">=</span>
+                        <span class="ident">Pointer::Segmented</span>(<span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">virt_to_phys</span>(<span class="ident">dl_node</span>.<span class="ident">display_list</span>));
+                    <span class="self">self</span>.<span class="ident">builder</span>
+                        .<span class="ident">expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="ident">cmd</span> <span class="op">==</span> <span class="ident">SPDisplayList</span>(<span class="ident">display_list_ptr</span>))<span class="question-mark">?</span>;
+
+                    <span class="ident">original_lists</span>[<span class="ident">layer</span> <span class="kw">as</span> <span class="ident">usize</span>].<span class="ident">push</span>((<span class="ident">transform_ptr</span>, <span class="ident">display_list_ptr</span>));
 
                     <span class="ident">dl_node_addr</span> <span class="op">=</span> <span class="ident">dl_node</span>.<span class="ident">next</span>;
                 }
@@ -1869,8 +2025,9 @@
         <span class="kw">let</span> <span class="ident">pool_size</span> <span class="op">=</span>
             <span class="self">self</span>.<span class="ident">layout</span>.<span class="ident">data_layout</span>().<span class="ident">constant</span>(<span class="string">&quot;GFX_POOL_SIZE&quot;</span>)<span class="question-mark">?</span>.<span class="ident">value</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">*</span> <span class="ident">cmd_size</span>;
         <span class="kw">let</span> <span class="ident">pool_end</span> <span class="op">=</span> <span class="ident">pool_start</span> <span class="op">+</span> <span class="ident">pool_size</span>;
-        <span class="kw">let</span> <span class="ident">is_dynamic</span> <span class="op">=</span> <span class="op">|</span><span class="ident">dl</span>: <span class="ident">Pointer</span><span class="op">|</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Pointer::Address</span>(<span class="ident">addr</span>) <span class="op">=</span> <span class="ident">dl</span> {
+        <span class="kw">let</span> <span class="ident">is_dynamic</span> <span class="op">=</span> <span class="op">|</span><span class="ident">output</span>: <span class="kw-2">&amp;</span><span class="ident">F3DBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="kw">_</span><span class="op">&gt;</span>, <span class="ident">dl</span>: <span class="ident">Pointer</span><span class="op">|</span> {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Pointer::Segmented</span>(<span class="ident">segmented</span>) <span class="op">=</span> <span class="ident">dl</span> {
+                <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">output</span>.<span class="ident">seg_to_virt</span>(<span class="ident">segmented</span>);
                 <span class="ident">addr</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">pool_start</span> <span class="op">&amp;&amp;</span> <span class="ident">addr</span> <span class="op">&lt;</span> <span class="ident">pool_end</span>
             } <span class="kw">else</span> {
                 <span class="bool-val">false</span>
@@ -1904,11 +2061,11 @@
                         <span class="kw">let</span> (<span class="ident">mtx</span>, <span class="ident">dl</span>) <span class="op">=</span> <span class="ident">actual_nodes</span>
                             .<span class="ident">next</span>()
                             .<span class="ident">copied</span>()
-                            .<span class="ident">filter</span>(<span class="op">|</span><span class="kw-2">&amp;</span>(<span class="kw">_</span>, <span class="ident">dl</span>)<span class="op">|</span> <span class="ident">dl</span> <span class="op">==</span> (<span class="kw-2">*</span><span class="ident">display_list</span>).<span class="ident">into</span>())
+                            .<span class="ident">filter</span>(<span class="op">|</span><span class="kw-2">&amp;</span>(<span class="kw">_</span>, <span class="ident">dl</span>)<span class="op">|</span> <span class="ident">dl</span> <span class="op">==</span> <span class="kw-2">*</span><span class="ident">display_list</span>)
                             .<span class="ident">expect</span>(<span class="string">&quot;master list discrepancy&quot;</span>);
 
                         <span class="kw">if</span> <span class="ident">DEBUG_CALC_TRANSFORMS</span> <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">camera</span> <span class="op">!</span><span class="op">=</span> <span class="ident">Camera::InGame</span> {
-                            <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">alloc_u32</span>(<span class="ident">cast_slice</span>(<span class="ident">transform</span>));
+                            <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">alloc_u32</span>(<span class="ident">cast_slice</span>(<span class="ident">transform</span>));
                             <span class="ident">new_nodes</span>.<span class="ident">push</span>((<span class="ident">ptr</span>, <span class="ident">dl</span>));
                         } <span class="kw">else</span> {
                             <span class="ident">new_nodes</span>.<span class="ident">push</span>((<span class="ident">mtx</span>, <span class="ident">dl</span>));
@@ -1918,24 +2075,24 @@
                         <span class="ident">actual_nodes</span>
                             .<span class="ident">next</span>()
                             .<span class="ident">copied</span>()
-                            .<span class="ident">filter</span>(<span class="op">|</span><span class="kw-2">&amp;</span>(<span class="kw">_</span>, <span class="ident">dl</span>)<span class="op">|</span> <span class="ident">dl</span> <span class="op">==</span> (<span class="kw-2">*</span><span class="ident">addr</span>).<span class="ident">into</span>())
+                            .<span class="ident">filter</span>(<span class="op">|</span><span class="kw-2">&amp;</span>(<span class="kw">_</span>, <span class="ident">dl</span>)<span class="op">|</span> <span class="ident">dl</span> <span class="op">==</span> <span class="kw-2">*</span><span class="ident">addr</span>)
                             .<span class="ident">expect</span>(<span class="string">&quot;master list discrepancy&quot;</span>);
                     }
                     <span class="ident">MasterListEdit::Insert</span> {
                         <span class="ident">transform</span>,
                         <span class="ident">display_list</span>,
                     } =&gt; {
-                        <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">alloc_u32</span>(<span class="ident">cast_slice</span>(<span class="ident">transform</span>));
-                        <span class="ident">new_nodes</span>.<span class="ident">push</span>((<span class="ident">ptr</span>, (<span class="kw-2">*</span><span class="ident">display_list</span>).<span class="ident">into</span>()));
+                        <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">alloc_u32</span>(<span class="ident">cast_slice</span>(<span class="ident">transform</span>));
+                        <span class="ident">new_nodes</span>.<span class="ident">push</span>((<span class="ident">ptr</span>, <span class="kw-2">*</span><span class="ident">display_list</span>));
                     }
                     <span class="ident">MasterListEdit::OptDynamic</span> =&gt; {
                         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="op">&amp;&amp;</span>(<span class="ident">mtx</span>, <span class="ident">dl</span>)) <span class="op">=</span> <span class="ident">actual_nodes</span>.<span class="ident">peek</span>() {
-                            <span class="kw">if</span> <span class="ident">is_dynamic</span>(<span class="ident">dl</span>) {
+                            <span class="kw">if</span> <span class="ident">is_dynamic</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">builder</span>, <span class="ident">dl</span>) {
                                 <span class="kw">if</span> <span class="ident">DEBUG_CALC_TRANSFORMS</span> <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">camera</span> <span class="op">!</span><span class="op">=</span> <span class="ident">Camera::InGame</span> {
                                     <span class="kw">let</span> <span class="ident">orig_mtx</span> <span class="op">=</span> <span class="ident">Matrixf::from_fixed</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">read_fixed</span>(<span class="ident">mtx</span>)<span class="question-mark">?</span>);
                                     <span class="kw">let</span> <span class="ident">new_mtx</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">mod_transform</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">orig_mtx</span>;
                                     <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span>
-                                        <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">alloc_u32</span>(<span class="ident">cast_slice</span>(<span class="kw-2">&amp;</span><span class="ident">new_mtx</span>.<span class="ident">to_fixed</span>()));
+                                        <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">alloc_u32</span>(<span class="ident">cast_slice</span>(<span class="kw-2">&amp;</span><span class="ident">new_mtx</span>.<span class="ident">to_fixed</span>()));
                                     <span class="ident">new_nodes</span>.<span class="ident">push</span>((<span class="ident">ptr</span>, <span class="ident">dl</span>));
                                 } <span class="kw">else</span> {
                                     <span class="ident">new_nodes</span>.<span class="ident">push</span>((<span class="ident">mtx</span>, <span class="ident">dl</span>));
@@ -1954,11 +2111,11 @@
         <span class="kw">for</span> (<span class="ident">layer</span>, <span class="ident">list</span>) <span class="kw">in</span> <span class="ident">new_lists</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
             <span class="kw">if</span> <span class="op">!</span><span class="ident">list</span>.<span class="ident">is_empty</span>() {
                 <span class="kw">let</span> <span class="ident">render_mode</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_render_mode</span>(<span class="ident">layer</span> <span class="kw">as</span> <span class="ident">i16</span>, <span class="ident">z_buffer</span>);
-                <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">push_cmd</span>(<span class="ident">DPSetRenderMode</span>(<span class="ident">render_mode</span>));
+                <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">push_cmd</span>(<span class="ident">DPSetRenderMode</span>(<span class="ident">render_mode</span>));
 
                 <span class="kw">for</span> (<span class="ident">mtx</span>, <span class="ident">dl</span>) <span class="kw">in</span> <span class="ident">list</span>.<span class="ident">iter</span>().<span class="ident">copied</span>() {
-                    <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">push_cmd</span>(<span class="ident">mtx_cmd</span>(<span class="ident">mtx</span>));
-                    <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">push_cmd</span>(<span class="ident">SPDisplayList</span>(<span class="ident">dl</span>));
+                    <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">push_cmd</span>(<span class="ident">mtx_cmd</span>(<span class="ident">mtx</span>));
+                    <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">push_cmd</span>(<span class="ident">SPDisplayList</span>(<span class="ident">dl</span>));
                 }
             }
         }
@@ -1988,10 +2145,12 @@
                     <span class="kw">if</span> <span class="ident">old_mtx</span> <span class="op">!</span><span class="op">=</span> <span class="ident">new_mtx</span> {
                         <span class="ident">matches</span> <span class="op">=</span> <span class="bool-val">false</span>;
                         <span class="kw">if</span> <span class="ident">ASSERT_CALC_TRANSFORMS</span> {
+                            <span class="kw">let</span> <span class="ident">transform_addr</span> <span class="op">=</span>
+                                <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">seg_to_virt</span>(<span class="ident">old_node</span>.<span class="number">1</span>.<span class="ident">segmented</span>().<span class="ident">unwrap</span>());
                             <span class="macro">eprintln!</span>(
                                 <span class="string">&quot;{}: mtx ({:?})\n{:?}\n{:?}&quot;</span>,
                                 <span class="ident">layer</span>,
-                                <span class="self">self</span>.<span class="ident">symbol_name</span>(<span class="ident">old_node</span>.<span class="number">1</span>.<span class="ident">addr</span>().<span class="ident">unwrap</span>()),
+                                <span class="self">self</span>.<span class="ident">symbol_name</span>(<span class="ident">transform_addr</span>),
                                 <span class="ident">Matrixf::from_fixed</span>(<span class="kw-2">&amp;</span><span class="ident">old_mtx</span>),
                                 <span class="ident">Matrixf::from_fixed</span>(<span class="kw-2">&amp;</span><span class="ident">new_mtx</span>),
                             );
@@ -2006,8 +2165,8 @@
         }
 
         <span class="kw">if</span> <span class="ident">z_buffer</span> {
-            <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">push_expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">DPPipeSync</span>))<span class="question-mark">?</span>;
-            <span class="self">self</span>.<span class="ident">output</span>
+            <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">push_expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">DPPipeSync</span>))<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="ident">builder</span>
                 .<span class="ident">push_expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">SPClearGeometryMode</span>(<span class="kw">_</span>)))<span class="question-mark">?</span>;
         }
 
@@ -2027,7 +2186,7 @@
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="kw">fn</span> <span class="ident">read_fixed</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ptr</span>: <span class="ident">Pointer</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span>, <span class="ident">VizError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">16</span>];
-        <span class="self">self</span>.<span class="ident">output</span>
+        <span class="self">self</span>.<span class="ident">builder</span>
             .<span class="ident">read_u32</span>(<span class="ident">cast_slice_mut</span>(<span class="ident">data</span>.<span class="ident">as_mut_slice</span>()), <span class="ident">ptr</span>, <span class="number">0</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">data</span>)
     }
@@ -2103,6 +2262,30 @@
     }
 
     <span class="kw">fn</span> <span class="ident">process_camera</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">node</span>: <span class="kw-2">&amp;</span><span class="ident">GraphNodeCamera</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">VizError</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">SPMatrix</span> { .. }))<span class="question-mark">?</span>;
+        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">camera</span> {
+            <span class="ident">Camera::InGame</span> =&gt; {
+                <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">push_cmd</span>(<span class="ident">cmd</span>);
+                <span class="kw">if</span> <span class="kw">let</span> <span class="ident">SPMatrix</span> { <span class="ident">matrix</span>, .. } <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">cmd</span> {
+                    <span class="kw">let</span> <span class="ident">roll_mtx</span> <span class="op">=</span> <span class="ident">Matrixf::from_fixed</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">read_fixed</span>(<span class="kw-2">*</span><span class="ident">matrix</span>)<span class="question-mark">?</span>);
+                    <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">proj_mtx</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">output</span>.<span class="ident">proj_mtx</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">roll_mtx</span>;
+                } <span class="kw">else</span> {
+                    <span class="macro">unreachable!</span>();
+                }
+            }
+            <span class="ident">Camera::LookAt</span> { <span class="ident">roll</span>, .. } =&gt; {
+                <span class="kw">let</span> <span class="ident">roll_mtx</span> <span class="op">=</span> <span class="ident">Matrixf::rotate_xy</span>(<span class="ident">roll</span>);
+                <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">alloc_u32</span>(<span class="ident">cast_slice</span>(<span class="kw-2">&amp;</span><span class="ident">roll_mtx</span>.<span class="ident">to_fixed</span>()));
+                <span class="self">self</span>.<span class="ident">builder</span>.<span class="ident">push_cmd</span>(<span class="ident">SPMatrix</span> {
+                    <span class="ident">matrix</span>: <span class="ident">ptr</span>,
+                    <span class="ident">mode</span>: <span class="ident">MatrixMode::Proj</span>,
+                    <span class="ident">op</span>: <span class="ident">MatrixOp::Mul</span>,
+                    <span class="ident">push</span>: <span class="bool-val">false</span>,
+                });
+                <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">proj_mtx</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">output</span>.<span class="ident">proj_mtx</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">roll_mtx</span>;
+            }
+        };
+
         <span class="kw">let</span> <span class="ident">camera_transform</span> <span class="op">=</span> <span class="ident">Matrixf::look_at</span>(<span class="ident">node</span>.<span class="ident">pos</span>, <span class="ident">node</span>.<span class="ident">focus</span>, <span class="ident">node</span>.<span class="ident">roll</span>);
         <span class="self">self</span>.<span class="ident">mtx_stack</span>.<span class="ident">push_mul</span>(<span class="kw-2">&amp;</span><span class="ident">camera_transform</span>);
 
@@ -2112,20 +2295,7 @@
         };
         <span class="self">self</span>.<span class="ident">mod_mtx_stack</span>.<span class="ident">push_mul</span>(<span class="kw-2">&amp;</span><span class="ident">mod_camera_transform</span>);
 
-        <span class="kw">let</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">expect</span>(<span class="op">|</span><span class="ident">cmd</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">cmd</span>, <span class="ident">SPMatrix</span> { .. }))<span class="question-mark">?</span>;
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">camera</span> {
-            <span class="ident">Camera::InGame</span> =&gt; <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">push_cmd</span>(<span class="ident">cmd</span>),
-            <span class="ident">Camera::LookAt</span> { <span class="ident">roll</span>, .. } =&gt; {
-                <span class="kw">let</span> <span class="ident">mtx</span> <span class="op">=</span> <span class="ident">Matrixf::rotate_xy</span>(<span class="ident">roll</span>);
-                <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">alloc_u32</span>(<span class="ident">cast_slice</span>(<span class="kw-2">&amp;</span><span class="ident">mtx</span>.<span class="ident">to_fixed</span>()));
-                <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">push_cmd</span>(<span class="ident">SPMatrix</span> {
-                    <span class="ident">matrix</span>: <span class="ident">ptr</span>,
-                    <span class="ident">mode</span>: <span class="ident">MatrixMode::Proj</span>,
-                    <span class="ident">op</span>: <span class="ident">MatrixOp::Mul</span>,
-                    <span class="ident">push</span>: <span class="bool-val">false</span>,
-                });
-            }
-        };
+        <span class="self">self</span>.<span class="ident">output</span>.<span class="ident">view_mtx</span> <span class="op">=</span> <span class="ident">mod_camera_transform</span>;
 
         <span class="self">self</span>.<span class="ident">cur_camera</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">node</span>.<span class="ident">clone</span>());
         <span class="self">self</span>.<span class="ident">cur_camera_mtx</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">mtx_stack</span>.<span class="ident">cur</span>.<span class="ident">clone</span>());
@@ -2157,7 +2327,7 @@
         <span class="self">self</span>.<span class="ident">mod_mtx_stack</span>.<span class="ident">push_mul</span>(<span class="kw-2">&amp;</span><span class="ident">mtx</span>);
 
         <span class="kw">if</span> <span class="op">!</span><span class="ident">node</span>.<span class="ident">display_list</span>.<span class="ident">is_null</span>() {
-            <span class="self">self</span>.<span class="ident">append_display_list</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">flags</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">8</span>, <span class="ident">node</span>.<span class="ident">display_list</span>);
+            <span class="self">self</span>.<span class="ident">append_display_list</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">flags</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">8</span>, <span class="ident">node</span>.<span class="ident">display_list</span>)<span class="question-mark">?</span>;
         }
         <span class="self">self</span>.<span class="ident">process_node_and_siblings</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">children</span>)<span class="question-mark">?</span>;
 
@@ -2177,7 +2347,7 @@
         <span class="self">self</span>.<span class="ident">mod_mtx_stack</span>.<span class="ident">push_mul</span>(<span class="kw-2">&amp;</span><span class="ident">mtx</span>);
 
         <span class="kw">if</span> <span class="op">!</span><span class="ident">node</span>.<span class="ident">display_list</span>.<span class="ident">is_null</span>() {
-            <span class="self">self</span>.<span class="ident">append_display_list</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">flags</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">8</span>, <span class="ident">node</span>.<span class="ident">display_list</span>);
+            <span class="self">self</span>.<span class="ident">append_display_list</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">flags</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">8</span>, <span class="ident">node</span>.<span class="ident">display_list</span>)<span class="question-mark">?</span>;
         }
         <span class="self">self</span>.<span class="ident">process_node_and_siblings</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">children</span>)<span class="question-mark">?</span>;
 
@@ -2193,7 +2363,7 @@
         <span class="self">self</span>.<span class="ident">mod_mtx_stack</span>.<span class="ident">push_mul</span>(<span class="kw-2">&amp;</span><span class="ident">mtx</span>);
 
         <span class="kw">if</span> <span class="op">!</span><span class="ident">node</span>.<span class="ident">display_list</span>.<span class="ident">is_null</span>() {
-            <span class="self">self</span>.<span class="ident">append_display_list</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">flags</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">8</span>, <span class="ident">node</span>.<span class="ident">display_list</span>);
+            <span class="self">self</span>.<span class="ident">append_display_list</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">flags</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">8</span>, <span class="ident">node</span>.<span class="ident">display_list</span>)<span class="question-mark">?</span>;
         }
         <span class="self">self</span>.<span class="ident">process_node_and_siblings</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">children</span>)<span class="question-mark">?</span>;
 
@@ -2218,7 +2388,7 @@
             .<span class="ident">fov</span>;
         <span class="kw">let</span> <span class="ident">half_fov</span> <span class="op">=</span> <span class="ident">Wrapping</span>(((<span class="ident">fov</span> <span class="op">/</span> <span class="number">2.0</span> <span class="op">+</span> <span class="number">1.0</span>) <span class="op">*</span> <span class="number">32768.0</span> <span class="op">/</span> <span class="number">180.0</span> <span class="op">+</span> <span class="number">0.5</span>) <span class="kw">as</span> <span class="ident">i16</span>);
 
-        <span class="kw">let</span> <span class="ident">h_screen_edge</span> <span class="op">=</span> <span class="op">-</span><span class="ident">matrix</span>.<span class="number">0</span>[<span class="number">2</span>][<span class="number">3</span>] <span class="op">*</span> <span class="ident">sins</span>(<span class="ident">half_fov</span>) <span class="op">/</span> <span class="ident">coss</span>(<span class="ident">half_fov</span>);
+        <span class="kw">let</span> <span class="ident">h_screen_edge</span> <span class="op">=</span> <span class="op">-</span><span class="ident">matrix</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">2</span>] <span class="op">*</span> <span class="ident">sins</span>(<span class="ident">half_fov</span>) <span class="op">/</span> <span class="ident">coss</span>(<span class="ident">half_fov</span>);
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">culling_radius</span> <span class="op">=</span> <span class="number">300</span>;
         <span class="kw">if</span> <span class="op">!</span><span class="ident">geo</span>.<span class="ident">is_null</span>() {
@@ -2227,17 +2397,17 @@
             }
         }
 
-        <span class="kw">if</span> <span class="ident">matrix</span>.<span class="number">0</span>[<span class="number">2</span>][<span class="number">3</span>] <span class="op">&gt;</span> <span class="op">-</span><span class="number">100.0</span> <span class="op">+</span> <span class="ident">culling_radius</span> <span class="kw">as</span> <span class="ident">f32</span> {
+        <span class="kw">if</span> <span class="ident">matrix</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">2</span>] <span class="op">&gt;</span> <span class="op">-</span><span class="number">100.0</span> <span class="op">+</span> <span class="ident">culling_radius</span> <span class="kw">as</span> <span class="ident">f32</span> {
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>);
         }
-        <span class="kw">if</span> <span class="ident">matrix</span>.<span class="number">0</span>[<span class="number">2</span>][<span class="number">3</span>] <span class="op">&lt;</span> <span class="op">-</span><span class="number">20000.0</span> <span class="op">-</span> <span class="ident">culling_radius</span> <span class="kw">as</span> <span class="ident">f32</span> {
+        <span class="kw">if</span> <span class="ident">matrix</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">2</span>] <span class="op">&lt;</span> <span class="op">-</span><span class="number">20000.0</span> <span class="op">-</span> <span class="ident">culling_radius</span> <span class="kw">as</span> <span class="ident">f32</span> {
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>);
         }
 
-        <span class="kw">if</span> <span class="ident">matrix</span>.<span class="number">0</span>[<span class="number">0</span>][<span class="number">3</span>] <span class="op">&gt;</span> <span class="ident">h_screen_edge</span> <span class="op">+</span> <span class="ident">culling_radius</span> <span class="kw">as</span> <span class="ident">f32</span> {
+        <span class="kw">if</span> <span class="ident">matrix</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">0</span>] <span class="op">&gt;</span> <span class="ident">h_screen_edge</span> <span class="op">+</span> <span class="ident">culling_radius</span> <span class="kw">as</span> <span class="ident">f32</span> {
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>);
         }
-        <span class="kw">if</span> <span class="ident">matrix</span>.<span class="number">0</span>[<span class="number">0</span>][<span class="number">3</span>] <span class="op">&lt;</span> <span class="op">-</span><span class="ident">h_screen_edge</span> <span class="op">-</span> <span class="ident">culling_radius</span> <span class="kw">as</span> <span class="ident">f32</span> {
+        <span class="kw">if</span> <span class="ident">matrix</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">0</span>] <span class="op">&lt;</span> <span class="op">-</span><span class="ident">h_screen_edge</span> <span class="op">-</span> <span class="ident">culling_radius</span> <span class="kw">as</span> <span class="ident">f32</span> {
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>);
         }
 
@@ -2407,7 +2577,7 @@
         <span class="self">self</span>.<span class="ident">mod_mtx_stack</span>.<span class="ident">push_mul</span>(<span class="kw-2">&amp;</span><span class="ident">transform</span>);
 
         <span class="kw">if</span> <span class="op">!</span><span class="ident">node</span>.<span class="ident">display_list</span>.<span class="ident">is_null</span>() {
-            <span class="self">self</span>.<span class="ident">append_display_list</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">flags</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">8</span>, <span class="ident">node</span>.<span class="ident">display_list</span>);
+            <span class="self">self</span>.<span class="ident">append_display_list</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">flags</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">8</span>, <span class="ident">node</span>.<span class="ident">display_list</span>)<span class="question-mark">?</span>;
         }
         <span class="self">self</span>.<span class="ident">process_node_and_siblings</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">children</span>)<span class="question-mark">?</span>;
 
@@ -2448,7 +2618,7 @@
         }
 
         <span class="kw">if</span> <span class="op">!</span><span class="ident">node</span>.<span class="ident">display_list</span>.<span class="ident">is_null</span>() {
-            <span class="self">self</span>.<span class="ident">append_display_list</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">flags</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">8</span>, <span class="ident">node</span>.<span class="ident">display_list</span>);
+            <span class="self">self</span>.<span class="ident">append_display_list</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">flags</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">8</span>, <span class="ident">node</span>.<span class="ident">display_list</span>)<span class="question-mark">?</span>;
         }
         <span class="self">self</span>.<span class="ident">process_node_and_siblings</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">children</span>)<span class="question-mark">?</span>;
 
@@ -2459,7 +2629,7 @@
 
     <span class="kw">fn</span> <span class="ident">process_display_list</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">node</span>: <span class="kw-2">&amp;</span><span class="ident">GraphNodeDisplayList</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">VizError</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="op">!</span><span class="ident">node</span>.<span class="ident">display_list</span>.<span class="ident">is_null</span>() {
-            <span class="self">self</span>.<span class="ident">append_display_list</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">flags</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">8</span>, <span class="ident">node</span>.<span class="ident">display_list</span>);
+            <span class="self">self</span>.<span class="ident">append_display_list</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">flags</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">8</span>, <span class="ident">node</span>.<span class="ident">display_list</span>)<span class="question-mark">?</span>;
         }
         <span class="self">self</span>.<span class="ident">process_node_and_siblings</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">children</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
@@ -2471,7 +2641,7 @@
         <span class="self">self</span>.<span class="ident">mod_mtx_stack</span>.<span class="ident">push_mul</span>(<span class="kw-2">&amp;</span><span class="ident">mtx</span>);
 
         <span class="kw">if</span> <span class="op">!</span><span class="ident">node</span>.<span class="ident">display_list</span>.<span class="ident">is_null</span>() {
-            <span class="self">self</span>.<span class="ident">append_display_list</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">flags</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">8</span>, <span class="ident">node</span>.<span class="ident">display_list</span>);
+            <span class="self">self</span>.<span class="ident">append_display_list</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">flags</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">8</span>, <span class="ident">node</span>.<span class="ident">display_list</span>)<span class="question-mark">?</span>;
         }
         <span class="self">self</span>.<span class="ident">process_node_and_siblings</span>(<span class="ident">node</span>.<span class="ident">node</span>.<span class="ident">children</span>)<span class="question-mark">?</span>;
 
@@ -2533,17 +2703,17 @@
                         .<span class="ident">cur_object_throw_mtx</span>
                         .<span class="ident">clone</span>()
                         .<span class="ident">expect</span>(<span class="string">&quot;no current object&quot;</span>);
-                    <span class="ident">throw</span>.<span class="number">0</span>[<span class="number">0</span>][<span class="number">3</span>] <span class="op">=</span> <span class="self">self</span>.<span class="ident">mtx_stack</span>.<span class="ident">cur</span>.<span class="number">0</span>[<span class="number">0</span>][<span class="number">3</span>];
-                    <span class="ident">throw</span>.<span class="number">0</span>[<span class="number">1</span>][<span class="number">3</span>] <span class="op">=</span> <span class="self">self</span>.<span class="ident">mtx_stack</span>.<span class="ident">cur</span>.<span class="number">0</span>[<span class="number">1</span>][<span class="number">3</span>];
-                    <span class="ident">throw</span>.<span class="number">0</span>[<span class="number">2</span>][<span class="number">3</span>] <span class="op">=</span> <span class="self">self</span>.<span class="ident">mtx_stack</span>.<span class="ident">cur</span>.<span class="number">0</span>[<span class="number">2</span>][<span class="number">3</span>];
+                    <span class="ident">throw</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">0</span>] <span class="op">=</span> <span class="self">self</span>.<span class="ident">mtx_stack</span>.<span class="ident">cur</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">0</span>];
+                    <span class="ident">throw</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">1</span>] <span class="op">=</span> <span class="self">self</span>.<span class="ident">mtx_stack</span>.<span class="ident">cur</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">1</span>];
+                    <span class="ident">throw</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">2</span>] <span class="op">=</span> <span class="self">self</span>.<span class="ident">mtx_stack</span>.<span class="ident">cur</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">2</span>];
 
                     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mod_throw</span> <span class="op">=</span> <span class="self">self</span>
                         .<span class="ident">cur_object_mod_throw_mtx</span>
                         .<span class="ident">clone</span>()
                         .<span class="ident">expect</span>(<span class="string">&quot;no current object&quot;</span>);
-                    <span class="ident">mod_throw</span>.<span class="number">0</span>[<span class="number">0</span>][<span class="number">3</span>] <span class="op">=</span> <span class="self">self</span>.<span class="ident">mod_mtx_stack</span>.<span class="ident">cur</span>.<span class="number">0</span>[<span class="number">0</span>][<span class="number">3</span>];
-                    <span class="ident">mod_throw</span>.<span class="number">0</span>[<span class="number">1</span>][<span class="number">3</span>] <span class="op">=</span> <span class="self">self</span>.<span class="ident">mod_mtx_stack</span>.<span class="ident">cur</span>.<span class="number">0</span>[<span class="number">1</span>][<span class="number">3</span>];
-                    <span class="ident">mod_throw</span>.<span class="number">0</span>[<span class="number">2</span>][<span class="number">3</span>] <span class="op">=</span> <span class="self">self</span>.<span class="ident">mod_mtx_stack</span>.<span class="ident">cur</span>.<span class="number">0</span>[<span class="number">2</span>][<span class="number">3</span>];
+                    <span class="ident">mod_throw</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">0</span>] <span class="op">=</span> <span class="self">self</span>.<span class="ident">mod_mtx_stack</span>.<span class="ident">cur</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">0</span>];
+                    <span class="ident">mod_throw</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">1</span>] <span class="op">=</span> <span class="self">self</span>.<span class="ident">mod_mtx_stack</span>.<span class="ident">cur</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">1</span>];
+                    <span class="ident">mod_throw</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">2</span>] <span class="op">=</span> <span class="self">self</span>.<span class="ident">mod_mtx_stack</span>.<span class="ident">cur</span>.<span class="ident">cols</span>[<span class="number">3</span>][<span class="number">2</span>];
 
                     <span class="kw">let</span> <span class="ident">mtx</span> <span class="op">=</span> <span class="kw-2">&amp;</span>(<span class="kw-2">&amp;</span><span class="ident">throw</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">translate</span>) <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">Matrixf::scale_vec3f</span>(<span class="ident">obj_node</span>.<span class="ident">scale</span>);
                     <span class="self">self</span>.<span class="ident">mtx_stack</span>.<span class="ident">execute</span>(<span class="kw-2">&amp;</span><span class="ident">mtx</span>, <span class="ident">MatrixOp::Load</span>, <span class="bool-val">true</span>);
@@ -2579,5 +2749,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_viz" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (4d6d601c8 2022-07-26)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_viz" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (0f4bcadb4 2022-07-30)" ></div></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["Camera",""],["ObjectCull",""]],"fn":[["custom_render_test",""],["prepare_render_data",""],["test",""],["test_dl",""]],"mod":[["custom_renderer",""]],"struct":[["SM64RenderConfig",""]]};
+window.SIDEBAR_ITEMS = {"enum":[["Camera",""],["Element",""],["ObjectCull",""],["SurfaceMode",""],["VizError",""]],"fn":[["sm64_render",""],["viz_render",""]],"struct":[["CameraControl",""],["Line",""],["VizConfig",""],["VizRenderData",""],["VizRenderer",""]]};

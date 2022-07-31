@@ -13,6 +13,7 @@ sourcesIndex["wafel_layout"] = {"name":"","files":["data_layout.rs","dll_layout.
 sourcesIndex["wafel_memory"] = {"name":"","files":["dll_memory.rs","dll_slot_impl.rs","emu_memory.rs","error.rs","lib.rs","traits.rs","unique_dll.rs"]};
 sourcesIndex["wafel_sm64"] = {"name":"","files":["error.rs","frame_log.rs","gfx.rs","lib.rs","mario.rs","object.rs","surface.rs"]};
 sourcesIndex["wafel_timeline"] = {"name":"","files":["controller.rs","lib.rs","slots.rs","timeline.rs"]};
-sourcesIndex["wafel_viz"] = {"name":"","files":["config.rs","custom_renderer.rs","error.rs","f3d_builder.rs","lib.rs","sm64_gfx_render.rs"]};
+sourcesIndex["wafel_viz"] = {"name":"","files":["camera_control.rs","config.rs","error.rs","f3d_builder.rs","lib.rs","render_data.rs","renderer.rs","sm64_gfx_render.rs"]};
+sourcesIndex["wafel_viz_demo"] = {"name":"","files":["main.rs","window.rs"]};
 sourcesIndex["wafel_viz_tests"] = {"name":"","files":["game_runner.rs","main.rs","renderer.rs","run_tests.rs","viz_tests.rs"]};
 createSourceSidebar();
