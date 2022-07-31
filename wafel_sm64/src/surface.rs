@@ -14,6 +14,34 @@ pub struct Surface {
     pub vertices: [[i16; 3]; 3],
 }
 
+/// An SM64 surface type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SurfaceType {
+    /// Normal is pointing somewhat upward.
+    Floor,
+    /// Normal is pointing somewhat downward.
+    Ceiling,
+    /// Normal is almost horizontal and points more in the X direction.
+    WallXProj,
+    /// Normal is almost horizontal and points more in the Z direction.
+    WallZProj,
+}
+
+impl Surface {
+    /// Return the type of the surface (floor/wall/ceiling).
+    pub fn ty(&self) -> SurfaceType {
+        if self.normal[1] > 0.01 {
+            SurfaceType::Floor
+        } else if self.normal[1] < -0.01 {
+            SurfaceType::Ceiling
+        } else if self.normal[0] < -0.707 || self.normal[0] > 0.707 {
+            SurfaceType::WallXProj
+        } else {
+            SurfaceType::WallZProj
+        }
+    }
+}
+
 #[derive(Debug, Clone, DataReadable)]
 #[struct_name("Surface")]
 struct SM64Surface {
