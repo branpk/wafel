@@ -14,7 +14,7 @@ use wafel_sm64::gfx::*;
 use crate::{
     error::VizError,
     f3d_builder::{F3DBuilder, Pointer, Segmented},
-    Camera, ObjectCull, VizConfig,
+    Camera, ObjectCull, SurfaceMode, VizConfig,
 };
 
 const DEBUG_PRINT: bool = false;
@@ -206,6 +206,8 @@ struct CameraState {
 struct ObjectFields {
     active_flags: i16,
     o_anim_state: i32,
+    collision_data: Address,
+    behavior: Address,
 }
 
 impl<'m, L, M> NodeRenderer<'m, L, M>
@@ -261,7 +263,31 @@ where
             && self.is_active != Some(false)
     }
 
-    fn append_display_list(&mut self, layer: i16, display_list: Address) {
+    fn append_display_list(&mut self, layer: i16, display_list: Address) -> Result<(), VizError> {
+        let visible = if self.config.surface_mode == SurfaceMode::Visual {
+            true
+        } else {
+            let is_surface = match self.cur_object_addr {
+                Some(addr) => {
+                    let object = self.object_fields_reader.read(self.memory, addr)?;
+                    object.collision_data.is_not_null()
+                        || object.behavior == self.layout.symbol_address("bhvStaticObject")?
+                }
+                None => true,
+            };
+            !is_surface
+        };
+
+        if visible {
+            self.append_display_list_unconditional(layer, display_list);
+        } else {
+            self.skip_display_list(layer, display_list);
+        }
+
+        Ok(())
+    }
+
+    fn append_display_list_unconditional(&mut self, layer: i16, display_list: Address) {
         let display_list = Pointer::Segmented(self.builder.virt_to_phys(display_list));
         if self.is_node_rendered() {
             self.edit_master_list(
@@ -279,6 +305,13 @@ where
                     display_list,
                 },
             );
+        }
+    }
+
+    fn skip_display_list(&mut self, layer: i16, display_list: Address) {
+        let display_list = Pointer::Segmented(self.builder.virt_to_phys(display_list));
+        if self.is_node_rendered() {
+            self.edit_master_list(layer, MasterListEdit::Skip(display_list));
         }
     }
 
@@ -919,7 +952,7 @@ where
         self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags >> 8, node.display_list);
+            self.append_display_list(node.node.flags >> 8, node.display_list)?;
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -939,7 +972,7 @@ where
         self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags >> 8, node.display_list);
+            self.append_display_list(node.node.flags >> 8, node.display_list)?;
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -955,7 +988,7 @@ where
         self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags >> 8, node.display_list);
+            self.append_display_list(node.node.flags >> 8, node.display_list)?;
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -1169,7 +1202,7 @@ where
         self.mod_mtx_stack.push_mul(&transform);
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags >> 8, node.display_list);
+            self.append_display_list(node.node.flags >> 8, node.display_list)?;
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -1210,7 +1243,7 @@ where
         }
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags >> 8, node.display_list);
+            self.append_display_list(node.node.flags >> 8, node.display_list)?;
         }
         self.process_node_and_siblings(node.node.children)?;
 
@@ -1221,7 +1254,7 @@ where
 
     fn process_display_list(&mut self, node: &GraphNodeDisplayList) -> Result<(), VizError> {
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags >> 8, node.display_list);
+            self.append_display_list(node.node.flags >> 8, node.display_list)?;
         }
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
@@ -1233,7 +1266,7 @@ where
         self.mod_mtx_stack.push_mul(&mtx);
 
         if !node.display_list.is_null() {
-            self.append_display_list(node.node.flags >> 8, node.display_list);
+            self.append_display_list(node.node.flags >> 8, node.display_list)?;
         }
         self.process_node_and_siblings(node.node.children)?;
 

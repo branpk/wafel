@@ -61,6 +61,11 @@ impl Address {
     pub fn is_null(self) -> bool {
         self.0 == 0
     }
+
+    /// Returns true if the address is not null (equal to zero).
+    pub fn is_not_null(self) -> bool {
+        !self.is_null()
+    }
 }
 
 /// A dynamically typed value.

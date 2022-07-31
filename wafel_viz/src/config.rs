@@ -5,6 +5,7 @@ pub struct VizConfig {
     pub screen_size: [u32; 2],
     pub camera: Camera,
     pub object_cull: ObjectCull,
+    pub surface_mode: SurfaceMode,
     pub elements: Vec<Element>,
 }
 
@@ -14,6 +15,7 @@ impl Default for VizConfig {
             screen_size: [320, 240],
             camera: Default::default(),
             object_cull: Default::default(),
+            surface_mode: Default::default(),
             elements: Default::default(),
         }
     }
@@ -44,6 +46,19 @@ pub enum ObjectCull {
 impl Default for ObjectCull {
     fn default() -> Self {
         Self::Normal
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SurfaceMode {
+    Visual,
+    Physical,
+    None,
+}
+
+impl Default for SurfaceMode {
+    fn default() -> Self {
+        Self::Visual
     }
 }
 
