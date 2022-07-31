@@ -15,6 +15,7 @@ members = [
     "wafel_sm64",
     "wafel_timeline",
     "wafel_viz",
+    "wafel_viz_demo",
     "wafel_viz_tests",
 ]
 resolver = "2"

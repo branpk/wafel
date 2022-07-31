@@ -3,15 +3,16 @@
 use core::fmt;
 use std::error::Error;
 
-use wafel_api::ValueTypeError;
 use wafel_data_access::DataError;
-use wafel_data_type::DataTypeError;
+use wafel_data_type::{DataTypeError, ValueTypeError};
 use wafel_layout::LayoutLookupError;
 use wafel_memory::MemoryError;
+use wafel_sm64::SM64DataError;
 
 #[derive(Debug, Clone)]
 pub enum VizError {
     DataError(DataError),
+    SM64DataError(SM64DataError),
     UnexpectedDisplayListCommand,
 }
 
@@ -19,6 +20,7 @@ impl fmt::Display for VizError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             VizError::DataError(error) => write!(f, "{}", error),
+            VizError::SM64DataError(error) => write!(f, "{}", error),
             VizError::UnexpectedDisplayListCommand => {
                 write!(f, "unexpected display list command (probably wafel bug)")
             }
@@ -55,5 +57,11 @@ impl From<DataTypeError> for VizError {
 impl From<ValueTypeError> for VizError {
     fn from(v: ValueTypeError) -> Self {
         Self::DataError(v.into())
+    }
+}
+
+impl From<SM64DataError> for VizError {
+    fn from(v: SM64DataError) -> Self {
+        Self::SM64DataError(v)
     }
 }

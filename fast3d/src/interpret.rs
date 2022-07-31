@@ -50,7 +50,7 @@ pub trait F3DMemory {
 /// self-contained [F3DRenderData] object.
 pub fn interpret_f3d_display_list<M: F3DMemory>(
     memory: &M,
-    screen_size: (u32, u32),
+    screen_size: [u32; 2],
     z_is_from_0_to_1: bool,
 ) -> Result<F3DRenderData, M::Error> {
     let mut interpreter = Interpreter {
@@ -68,7 +68,7 @@ pub fn interpret_f3d_display_list<M: F3DMemory>(
 #[derivative(Default(bound = ""))]
 struct Interpreter<'m, M: F3DMemory> {
     memory: Option<&'m M>,
-    screen_size: (u32, u32),
+    screen_size: [u32; 2],
     z_is_from_0_to_1: bool,
     result: F3DRenderData,
 
@@ -128,15 +128,15 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
     }
 
     fn aspect(&self) -> f32 {
-        self.screen_size.0 as f32 / self.screen_size.1 as f32
+        self.screen_size[0] as f32 / self.screen_size[1] as f32
     }
 
     fn screen_scale_x(&self) -> f32 {
-        self.screen_size.0 as f32 / 320.0
+        self.screen_size[0] as f32 / 320.0
     }
 
     fn screen_scale_y(&self) -> f32 {
-        self.screen_size.1 as f32 / 240.0
+        self.screen_size[1] as f32 / 240.0
     }
 
     fn vertex(&self, index: u32) -> Vertex {
@@ -203,8 +203,8 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
             None => ScreenRectangle {
                 x: 0,
                 y: 0,
-                w: self.screen_size.0 as i32,
-                h: self.screen_size.1 as i32,
+                w: self.screen_size[0] as i32,
+                h: self.screen_size[1] as i32,
             },
         }
     }
@@ -229,8 +229,8 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
             None => ScreenRectangle {
                 x: 0,
                 y: 0,
-                w: self.screen_size.0 as i32,
-                h: self.screen_size.1 as i32,
+                w: self.screen_size[0] as i32,
+                h: self.screen_size[1] as i32,
             },
         }
     }
@@ -631,8 +631,8 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         let viewport = ScreenRectangle {
             x: 0,
             y: 0,
-            w: self.screen_size.0 as i32,
-            h: self.screen_size.1 as i32,
+            w: self.screen_size[0] as i32,
+            h: self.screen_size[1] as i32,
         };
         let scissor = self.scissor_screen();
         let textures = self.load_textures(&pipeline)?;
@@ -741,8 +741,8 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
             let viewport = ScreenRectangle {
                 x: 0,
                 y: 0,
-                w: self.screen_size.0 as i32,
-                h: self.screen_size.1 as i32,
+                w: self.screen_size[0] as i32,
+                h: self.screen_size[1] as i32,
             };
             let scissor = self.scissor_screen();
 

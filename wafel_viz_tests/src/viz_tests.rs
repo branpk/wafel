@@ -1,6 +1,6 @@
 use std::env;
 
-use wafel_viz::SM64RenderConfig;
+use wafel_viz::VizConfig;
 
 #[derive(Debug, Clone)]
 pub struct TestCase {
@@ -8,7 +8,7 @@ pub struct TestCase {
     pub game_version: &'static str,
     pub m64: &'static str,
     pub frame: u32,
-    pub config: SM64RenderConfig,
+    pub config: VizConfig,
 }
 
 fn u120(cases: &mut Vec<TestCase>) {
@@ -18,7 +18,7 @@ fn u120(cases: &mut Vec<TestCase>) {
             game_version: "us",
             m64: "120_u",
             frame,
-            config: SM64RenderConfig::default(),
+            config: VizConfig::default(),
         })
     };
     case("u120_000000_power_on", 0);
@@ -195,8 +195,8 @@ fn res(cases: &mut Vec<TestCase>) {
             game_version: "us",
             m64: "120_u",
             frame,
-            config: SM64RenderConfig {
-                screen_size: (800, 500),
+            config: VizConfig {
+                screen_size: [800, 500],
                 ..Default::default()
             },
         });
@@ -205,8 +205,8 @@ fn res(cases: &mut Vec<TestCase>) {
             game_version: "us",
             m64: "120_u",
             frame,
-            config: SM64RenderConfig {
-                screen_size: (400, 600),
+            config: VizConfig {
+                screen_size: [400, 600],
                 ..Default::default()
             },
         });
@@ -215,8 +215,8 @@ fn res(cases: &mut Vec<TestCase>) {
             game_version: "us",
             m64: "120_u",
             frame,
-            config: SM64RenderConfig {
-                screen_size: (160, 120),
+            config: VizConfig {
+                screen_size: [160, 120],
                 ..Default::default()
             },
         });
@@ -260,7 +260,7 @@ fn reg(cases: &mut Vec<TestCase>) {
                 game_version: version,
                 m64: "cross_version",
                 frame,
-                config: SM64RenderConfig::default(),
+                config: VizConfig::default(),
             });
         }
     };

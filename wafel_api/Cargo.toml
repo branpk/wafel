@@ -10,6 +10,7 @@ wafel_layout = { path = "../wafel_layout" }
 wafel_memory = { path = "../wafel_memory" }
 wafel_sm64 = { path = "../wafel_sm64" }
 wafel_timeline = { path = "../wafel_timeline" }
+wafel_viz = { path = "../wafel_viz" }
 deepsize = "0.2.0"
 lru = "0.7.7"
 pwbox = "0.4.0"

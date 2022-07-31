@@ -1,14 +1,14 @@
 [package]
-name = "wafel_viz_tests"
+name = "wafel_viz_demo"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 env_logger = "0.9.0"
-image = "0.24.2"
+pollster = "0.2.5"
 wafel_api = { path = "../wafel_api" }
+wafel_data_access = { path = "../wafel_data_access" }
+wafel_memory = { path = "../wafel_memory" }
 wafel_viz = { path = "../wafel_viz" }
 wgpu = { git = "https://github.com/gfx-rs/wgpu" }
-pollster = "0.2.5"
-itertools = "0.10.3"
-wafel_memory = { version = "0.1.0", path = "../wafel_memory" }
+winit = "0.26.1"

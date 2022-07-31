@@ -1,9 +1,9 @@
 use std::env;
 
-use fast3d::render::F3DRenderer;
 use image::{Pixel, Rgb, RgbImage};
 use wafel_api::Game;
-use wafel_viz::{prepare_render_data, SM64RenderConfig};
+use wafel_memory::GameMemory;
+use wafel_viz::{viz_render, VizConfig, VizRenderer};
 
 #[derive(Debug)]
 pub struct Renderer {
@@ -56,7 +56,7 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self, game: &Game, config: &SM64RenderConfig) -> RgbImage {
+    pub fn render(&mut self, game: &Game, config: &VizConfig) -> RgbImage {
         if self.sized.as_ref().map(|r| r.output_size) != Some(config.screen_size) {
             self.sized = None;
         }
@@ -69,8 +69,8 @@ impl Renderer {
 
 #[derive(Debug)]
 struct SizedRenderer {
-    f3d_renderer: F3DRenderer,
-    output_size: (u32, u32),
+    viz_renderer: VizRenderer,
+    output_size: [u32; 2],
     output_format: wgpu::TextureFormat,
     output_texture: wgpu::Texture,
     depth_texture: wgpu::Texture,
@@ -79,18 +79,18 @@ struct SizedRenderer {
 }
 
 impl SizedRenderer {
-    fn new(device: &wgpu::Device, output_size: (u32, u32)) -> Self {
-        assert!(output_size.0 > 0 && output_size.1 > 0);
+    fn new(device: &wgpu::Device, output_size: [u32; 2]) -> Self {
+        assert!(output_size[0] > 0 && output_size[1] > 0);
 
         let output_format = wgpu::TextureFormat::Rgba8Unorm;
 
-        let renderer = F3DRenderer::new(device);
+        let renderer = VizRenderer::new(device, output_format);
 
         let output_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
             size: wgpu::Extent3d {
-                width: output_size.0,
-                height: output_size.1,
+                width: output_size[0],
+                height: output_size[1],
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
@@ -100,14 +100,14 @@ impl SizedRenderer {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
         });
 
-        let unpadded_bytes_per_row = 4 * output_size.0;
+        let unpadded_bytes_per_row = 4 * output_size[0];
         let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
         let padding = (align - (unpadded_bytes_per_row % align)) % align;
         let padded_bytes_per_row = unpadded_bytes_per_row + padding;
 
         let output_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: None,
-            size: (padded_bytes_per_row * output_size.1) as u64,
+            size: (padded_bytes_per_row * output_size[1]) as u64,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -115,8 +115,8 @@ impl SizedRenderer {
         let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
             size: wgpu::Extent3d {
-                width: output_size.0,
-                height: output_size.1,
+                width: output_size[0],
+                height: output_size[1],
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
@@ -127,7 +127,7 @@ impl SizedRenderer {
         });
 
         Self {
-            f3d_renderer: renderer,
+            viz_renderer: renderer,
             output_size,
             output_format,
             output_texture,
@@ -142,10 +142,15 @@ impl SizedRenderer {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         game: &Game,
-        config: &SM64RenderConfig,
+        config: &VizConfig,
     ) -> RgbImage {
-        let render_data = prepare_render_data(game, config);
-        self.f3d_renderer
+        let render_data = viz_render(
+            &game.layout,
+            &game.memory.with_slot(&game.base_slot),
+            config,
+        )
+        .expect("failed to render game");
+        self.viz_renderer
             .prepare(device, queue, self.output_format, &render_data);
 
         let mut encoder =
@@ -178,7 +183,7 @@ impl SizedRenderer {
                         stencil_ops: None,
                     }),
                 });
-                self.f3d_renderer.render(&mut rp, self.output_size);
+                self.viz_renderer.render(&mut rp, self.output_size);
             }
 
             encoder.copy_texture_to_buffer(
@@ -192,8 +197,8 @@ impl SizedRenderer {
                     },
                 },
                 wgpu::Extent3d {
-                    width: self.output_size.0,
-                    height: self.output_size.1,
+                    width: self.output_size[0],
+                    height: self.output_size[1],
                     depth_or_array_layers: 1,
                 },
             );
@@ -206,9 +211,9 @@ impl SizedRenderer {
 
         let image = {
             let buffer_view = buffer_slice.get_mapped_range();
-            let mut image = RgbImage::new(self.output_size.0, self.output_size.1);
-            for y in 0..self.output_size.1 {
-                for x in 0..self.output_size.0 {
+            let mut image = RgbImage::new(self.output_size[0], self.output_size[1]);
+            for y in 0..self.output_size[1] {
+                for x in 0..self.output_size[0] {
                     let i = (y * self.padded_bytes_per_row + 4 * x) as usize;
                     let rgb = *Rgb::from_slice(&buffer_view[i..i + 3]);
                     image.put_pixel(x, y, rgb);

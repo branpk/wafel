@@ -155,9 +155,23 @@ checksum = "37ccbd214614c6783386c1af30caf03192f17891059cecc394b4fb119e363de3"
 
 [[package]]
 name = "bytemuck"
-version = "1.10.0"
+version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c53dfa917ec274df8ed3c572698f381a24eef2efba9492d797301b72b6db408a"
+checksum = "a5377c8865e74a160d21f29c2d40669f53286db6eab59b88540cbb12ffc8b835"
+dependencies = [
+ "bytemuck_derive",
+]
+
+[[package]]
+name = "bytemuck_derive"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfd2f4180c5721da6335cc9e9061cce522b87a35e51cc57636d28d22a9863c80"
+dependencies = [
+ "proc-macro2 1.0.40",
+ "quote 1.0.20",
+ "syn 1.0.98",
+]
 
 [[package]]
 name = "byteorder"
@@ -2587,6 +2601,7 @@ dependencies = [
  "wafel_memory",
  "wafel_sm64",
  "wafel_timeline",
+ "wafel_viz",
 ]
 
 [[package]]
@@ -2701,18 +2716,26 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "bytemuck",
- "env_logger",
  "fast3d",
- "futures",
- "itertools",
  "serde",
- "serde_json",
- "wafel_api",
  "wafel_data_access",
  "wafel_data_type",
  "wafel_layout",
  "wafel_memory",
  "wafel_sm64",
+ "wgpu 0.12.0 (git+https://github.com/gfx-rs/wgpu)",
+]
+
+[[package]]
+name = "wafel_viz_demo"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "pollster",
+ "wafel_api",
+ "wafel_data_access",
+ "wafel_memory",
+ "wafel_viz",
  "wgpu 0.12.0 (git+https://github.com/gfx-rs/wgpu)",
  "winit",
 ]
@@ -2722,11 +2745,11 @@ name = "wafel_viz_tests"
 version = "0.1.0"
 dependencies = [
  "env_logger",
- "fast3d",
  "image 0.24.2",
  "itertools",
  "pollster",
  "wafel_api",
+ "wafel_memory",
  "wafel_viz",
  "wgpu 0.12.0 (git+https://github.com/gfx-rs/wgpu)",
 ]
