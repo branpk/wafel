@@ -204,7 +204,7 @@ impl VizRenderer {
     ) {
         self.render_data = None;
 
-        let post_z_buf_index = data
+        let first_z_buf_index = data
             .f3d_render_data
             .commands
             .iter()
@@ -214,7 +214,7 @@ impl VizRenderer {
                 pipeline.depth_compare
             })
             .map(|(i, _)| i + 1)
-            .last()
+            .next()
             .unwrap_or(0);
 
         self.f3d_renderer
@@ -255,8 +255,8 @@ impl VizRenderer {
         });
 
         self.render_data = Some(RenderData {
-            f3d_pre_cmds: 0..post_z_buf_index,
-            f3d_post_cmds: post_z_buf_index..data.f3d_render_data.commands.len(),
+            f3d_pre_cmds: 0..first_z_buf_index,
+            f3d_post_cmds: first_z_buf_index..data.f3d_render_data.commands.len(),
             transform_bind_group,
             color_line_vertex_buffer: (
                 color_line_vertex_data.len() as u32,
