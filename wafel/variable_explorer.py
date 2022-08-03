@@ -31,6 +31,7 @@ FIXED_TABS = [
   TabId('Input'),
   TabId('Mario'),
   TabId('Misc'),
+  TabId('Viz (WIP)'),
   TabId('Subframe'),
   TabId('Objects'),
 ]
@@ -320,6 +321,40 @@ class VariableExplorer:
     ig.columns(1)
     ig.end_child()
 
+  def render_viz_tab(self) -> None:
+    _, self.model.viz_enabled = ig.checkbox('Enabled', self.model.viz_enabled)
+    ig.separator()
+    if self.model.viz_enabled:
+      config = self.model.viz_config
+      label_width = 80
+      value_width = 100
+
+      def dropdown(label, options, option_labels, value):
+        ig.push_item_width(label_width)
+        ig.selectable(label, width=label_width)
+        ig.pop_item_width()
+        ig.same_line()
+
+        ig.push_item_width(value_width)
+        index = options.index(value)
+        _, index = ig.combo(f'##{label}', index, option_labels)
+        ig.pop_item_width()
+
+        return options[index]
+
+      config['object_cull'] = dropdown(
+        'Object cull',
+        ['Normal', 'ShowAll'],
+        ['normal', 'show all'],
+        config.get('object_cull') or 'ShowAll',
+      )
+      config['surface_mode'] = dropdown(
+        'Surfaces',
+        ['Visual', 'Physical', 'None'],
+        ['visual', 'physical', 'none'],
+        config.get('surface_mode') or 'Physical',
+      )
+
   def render_frame_log_tab(self) -> None:
     frame_offset = use_state('frame-offset', 1)
     round_numbers = use_state('round-numbers', True)
@@ -393,6 +428,8 @@ class VariableExplorer:
       self.render_objects_tab()
     elif tab.name == 'Input':
       self.render_input_tab(tab)
+    elif tab.name == 'Viz (WIP)':
+      self.render_viz_tab()
     elif tab.name == 'Subframe':
       self.render_frame_log_tab()
     else:

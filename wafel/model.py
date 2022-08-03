@@ -18,6 +18,8 @@ class Model:
     self.pipeline: Pipeline
     self.rotational_camera_yaw = 0
     self.input_up_yaw: Optional[int] = None
+    self.viz_enabled = False
+    self.viz_config: dict = {}
 
   def load(self, game_version: str, edits: Dict[Variable, object]) -> None:
     self._load_game_version(game_version, 0)

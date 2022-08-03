@@ -1,9 +1,9 @@
 from typing import *
+import json
 
 from wafel_core import Scene, Viewport, BirdsEyeCamera, RotateCamera, QuarterStep, VizRenderData
 
 from wafel.model import Model
-import wafel.config as config
 from wafel.util import *
 
 
@@ -18,6 +18,26 @@ def take_scenes() -> Tuple[List[Scene], List[VizRenderData]]:
   return result
 
 
+def get_viz_config(
+  model: Model,
+  viewport: Viewport,
+  camera: RotateCamera,
+) -> dict:
+  config = {
+    'screen_top_left': [int(viewport.x), int(viewport.y)],
+    'screen_size': [int(viewport.width), int(viewport.height)],
+    'camera': {
+      'LookAt': {
+        'pos': camera.pos,
+        'focus': camera.target,
+        'roll': 0, # TODO: Roll (and fov?)
+      }
+    },
+  }
+  config.update(model.viz_config)
+  return config
+
+
 def render_game(
   model: Model,
   viewport: Viewport,
@@ -27,6 +47,14 @@ def render_game(
   hovered_surface: Optional[int] = None,
   hidden_surfaces: Set[int] = set(),
 ) -> None:
+  if model.viz_enabled and isinstance(camera, RotateCamera):
+    viz_config = get_viz_config(model, viewport, camera)
+    viz_config_json = json.dumps(viz_config)
+    viz_scene = model.pipeline.render(model.selected_frame, viz_config_json)
+    if viz_scene is not None:
+      viz_scenes.append(viz_scene)
+      return
+
   scene = Scene()
   scene.viewport = viewport
   scene.camera = camera
@@ -63,12 +91,6 @@ def render_game(
 
   scene.object_paths = [mario_path]
 
-  use_viz = isinstance(camera, RotateCamera)
-  if use_viz:
-    viz_scene = model.pipeline.render(model.selected_frame, scene)
-    if viz_scene is not None:
-      viz_scenes.append(viz_scene)
-      return
   scenes.append(scene)
 
 

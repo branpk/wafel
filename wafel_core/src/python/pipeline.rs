@@ -15,7 +15,7 @@ use crate::{
 use lazy_static::lazy_static;
 use pyo3::{prelude::*, types::PyBytes};
 use std::{collections::HashMap, sync::Mutex};
-use wafel_api::{Value, VizRenderData};
+use wafel_api::Value;
 use wafel_viz::VizConfig;
 
 lazy_static! {
@@ -436,11 +436,12 @@ impl PyPipeline {
         })
     }
 
-    /// Render the game for [wafel_viz].
-    pub fn render(&self, frame: u32, scene: &Scene) -> PyResult<Option<PyVizRenderData>> {
+    /// Render the game for [wafel_viz] using `config_json` for [VizConfig].
+    pub fn render(&self, frame: u32, config_json: &str) -> PyResult<Option<PyVizRenderData>> {
         let timeline = self.get().pipeline.timeline();
 
-        let config = scene.to_viz_config();
+        let config: VizConfig =
+            serde_json::from_str(config_json).expect("failed to parse viz config json");
         let render_data = timeline.try_render(frame, &config).ok();
 
         Ok(render_data.map(|inner| PyVizRenderData { inner }))

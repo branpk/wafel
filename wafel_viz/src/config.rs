@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
 use wafel_data_type::Angle;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct VizConfig {
     pub screen_top_left: [u32; 2],
     pub screen_size: [u32; 2],
@@ -23,7 +25,7 @@ impl Default for VizConfig {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum Camera {
     InGame,
     LookAt {
@@ -39,7 +41,7 @@ impl Default for Camera {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ObjectCull {
     Normal,
     ShowAll,
@@ -51,7 +53,7 @@ impl Default for ObjectCull {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SurfaceMode {
     Visual,
     Physical,
@@ -64,12 +66,12 @@ impl Default for SurfaceMode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Element {
     Line(Line),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Line {
     pub vertices: [[f32; 3]; 2],
     pub color: [f32; 4],

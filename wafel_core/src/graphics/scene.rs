@@ -2,8 +2,7 @@
 
 use crate::geo::{direction_to_pitch_yaw, StoredPoint3f, StoredVector3f};
 use pyo3::prelude::*;
-use std::{collections::HashSet, num::Wrapping};
-use wafel_viz::{self as viz, VizConfig};
+use std::collections::HashSet;
 
 /// An object representing the state of the game for the purposes of rendering a game view.
 ///
@@ -35,29 +34,6 @@ pub struct Scene {
     /// The detailed paths of object movement across multiple frames.
     #[pyo3(get, set)]
     pub object_paths: Vec<ObjectPath>,
-}
-
-impl Scene {
-    /// Return a [VizConfig] to use when rendering the scene using [wafel_viz].
-    pub fn to_viz_config(&self) -> VizConfig {
-        let screen_top_left = [self.viewport.x as u32, self.viewport.y as u32];
-        let screen_size = [self.viewport.width as u32, self.viewport.height as u32];
-        let camera = match &self.camera {
-            Camera::Rotate(camera) => viz::Camera::LookAt {
-                pos: [camera.pos.x, camera.pos.y, camera.pos.z],
-                focus: [camera.target.x, camera.target.y, camera.target.z],
-                roll: Wrapping(0),
-            },
-            Camera::BirdsEye(_) => unimplemented!(),
-        };
-        VizConfig {
-            screen_top_left,
-            screen_size,
-            camera,
-            object_cull: viz::ObjectCull::ShowAll,
-            ..Default::default()
-        }
-    }
 }
 
 #[pymethods]
