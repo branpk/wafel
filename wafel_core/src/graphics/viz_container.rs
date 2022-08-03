@@ -1,3 +1,4 @@
+use wafel_api::VizRenderData;
 use wafel_viz::VizRenderer;
 
 use super::scene::Scene;
@@ -21,7 +22,8 @@ impl VizContainer {
         output_view: &wgpu::TextureView,
         output_size: (u32, u32),
         output_format: wgpu::TextureFormat,
-        scenes: &[&Scene],
+        scenes: &[VizRenderData],
     ) {
+        // for scene in scenes {}
     }
 }

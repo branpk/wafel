@@ -1,6 +1,6 @@
 use super::{
     value::{py_object_to_value, value_to_py_object},
-    PyAddress, PyEditRange, PyObjectBehavior, PyVariable,
+    PyAddress, PyEditRange, PyObjectBehavior, PyVariable, PyVizRenderData,
 };
 use crate::{
     error::Error,
@@ -15,7 +15,8 @@ use crate::{
 use lazy_static::lazy_static;
 use pyo3::{prelude::*, types::PyBytes};
 use std::{collections::HashMap, sync::Mutex};
-use wafel_api::Value;
+use wafel_api::{Value, VizRenderData};
+use wafel_viz::VizConfig;
 
 lazy_static! {
     static ref VALID_PIPELINES: Mutex<Vec<Py<PyPipeline>>> = Mutex::new(Vec::new());
@@ -433,5 +434,14 @@ impl PyPipeline {
             nodes,
             root_index: 0,
         })
+    }
+
+    pub fn render(&self, frame: u32, scene: &Scene) -> PyResult<PyVizRenderData> {
+        let timeline = self.get().pipeline.timeline();
+
+        let config = scene.to_viz_config();
+        let render_data = timeline.try_render(frame, &config).map_err(Error::from)?;
+
+        Ok(PyVizRenderData { inner: render_data })
     }
 }

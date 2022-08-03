@@ -177,12 +177,6 @@ impl PyObjectProtocol for Address {
 
 #[pyclass]
 #[derive(Debug)]
-pub struct VizRenderData {
-    inner: api::VizRenderData,
-}
-
-#[pyclass]
-#[derive(Debug)]
 pub struct Surface {
     inner: api::Surface,
 }

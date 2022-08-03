@@ -9,7 +9,7 @@ use pyo3::{prelude::*, wrap_pyfunction};
 use sm64::{AdjustedStick, IntendedStick};
 use std::num::Wrapping;
 pub use variable::*;
-use wafel_api::{try_lock_libsm64, try_unlock_libsm64};
+use wafel_api::{try_lock_libsm64, try_unlock_libsm64, VizRenderData};
 pub use window::*;
 
 mod error;
@@ -62,6 +62,7 @@ fn wafel_core(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(stick_adjusted_to_intended))?;
     m.add_wrapped(wrap_pyfunction!(stick_adjusted_to_raw_euclidean))?;
     m.add_wrapped(wrap_pyfunction!(stick_intended_to_raw_heuristic))?;
+    m.add_class::<PyVizRenderData>()?;
     Ok(())
 }
 
@@ -182,4 +183,11 @@ pub fn stick_intended_to_raw_heuristic(
         squished,
         Wrapping(relative_to),
     )
+}
+
+/// Render data for wafel_viz
+#[pyclass(name = "VizRenderData")]
+#[derive(Debug, Clone)]
+pub struct PyVizRenderData {
+    pub(crate) inner: VizRenderData,
 }

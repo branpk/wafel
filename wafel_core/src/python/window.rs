@@ -9,6 +9,7 @@ use crate::{
 use image::ImageFormat;
 use pyo3::prelude::*;
 use std::{slice, time::Instant};
+use wafel_api::VizRenderData;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -16,7 +17,7 @@ use winit::{
     window::WindowBuilder,
 };
 
-use super::log;
+use super::{log, PyVizRenderData};
 
 /// Open a window, call `update_fn` on each frame, and render the UI and scene(s).
 pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()> {
@@ -121,8 +122,11 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
                         let output_size = (config.width, config.height);
                         imgui_input.set_display_size(py, output_size)?;
 
-                        let (py_imgui_draw_data, scenes): (&PyAny, Vec<Scene>) =
-                            update_fn.as_ref(py).call0()?.extract()?;
+                        let (py_imgui_draw_data, scenes, viz_scenes): (
+                            &PyAny,
+                            Vec<Scene>,
+                            Vec<PyVizRenderData>,
+                        ) = update_fn.as_ref(py).call0()?.extract()?;
                         let imgui_draw_data =
                             extract_imgui_draw_data(&imgui_config, py_imgui_draw_data)?;
 
@@ -132,26 +136,17 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
                                 .texture
                                 .create_view(&wgpu::TextureViewDescriptor::default());
 
-                            let mut old_scenes = Vec::new();
-                            let mut viz_scenes = Vec::new();
-
-                            for scene in &scenes {
-                                if matches!(scene.camera, Camera::Rotate(_)) {
-                                    viz_scenes.push(scene);
-                                } else {
-                                    old_scenes.push(scene);
-                                }
-                            }
-
                             renderer.render(
                                 &device,
                                 &queue,
                                 &output_view,
                                 output_size,
                                 config.format,
-                                &old_scenes,
+                                &scenes,
                             );
 
+                            let viz_scenes: Vec<VizRenderData> =
+                                viz_scenes.into_iter().map(|s| s.inner).collect();
                             viz_container.render(
                                 &device,
                                 &queue,
