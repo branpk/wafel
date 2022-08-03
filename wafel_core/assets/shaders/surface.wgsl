@@ -1,21 +1,21 @@
 struct Transform {
-    matrix: mat4x4<f32>;
+    mtx: mat4x4<f32>,
 };
 
-[[group(0), binding(0)]] var<uniform> r_proj: Transform;
-[[group(0), binding(1)]] var<uniform> r_view: Transform;
+@group(0) @binding(0) var<uniform> r_proj: Transform;
+@group(0) @binding(1) var<uniform> r_view: Transform;
 
 struct VertexOutput {
-    [[builtin(position)]] position: vec4<f32>;
-    [[location(0)]] bary: vec3<f32>;
-    [[location(1)]] color: vec4<f32>;
+    @builtin(position) position: vec4<f32>,
+    @location(0) bary: vec3<f32>,
+    @location(1) color: vec4<f32>,
 };
 
-[[stage(vertex)]]
+@vertex
 fn vs_main(
-    [[builtin(vertex_index)]] vertex_index: u32,
-    [[location(0)]] pos: vec3<f32>,
-    [[location(1)]] color: vec4<f32>,
+    @builtin(vertex_index) vertex_index: u32,
+    @location(0) pos: vec3<f32>,
+    @location(1) color: vec4<f32>,
 ) -> VertexOutput {
     var bary_vertices: array<vec3<f32>, 3> = array<vec3<f32>, 3>(
         vec3<f32>(1.0, 0.0, 0.0),
@@ -23,14 +23,14 @@ fn vs_main(
         vec3<f32>(0.0, 0.0, 1.0),
     );
     return VertexOutput(
-        r_proj.matrix * r_view.matrix * vec4<f32>(pos, 1.0),
+        r_proj.mtx * r_view.mtx * vec4<f32>(pos, 1.0),
         bary_vertices[vertex_index % 3u],
         color,
     );
 }
 
-[[stage(fragment)]]
-fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
+@fragment
+fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var b: f32 = 0.8;
 
     var inner_bary: vec3<f32> = vec3<f32>(
