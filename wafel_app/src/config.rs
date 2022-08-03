@@ -3,7 +3,8 @@ use std::path::Path;
 use wafel_api::SM64Version;
 
 pub(crate) fn libsm64_path(version: SM64Version) -> String {
-    format!("libsm64/sm64_{}.dll", version.to_string().to_lowercase())
+    // TODO
+    format!("libsm64/libsm64_{}.so", version.to_string().to_lowercase())
 }
 
 pub(crate) fn libsm64_locked_path(version: SM64Version) -> String {
