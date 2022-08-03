@@ -346,13 +346,13 @@ class VariableExplorer:
         'Object cull',
         ['Normal', 'ShowAll'],
         ['normal', 'show all'],
-        config.get('object_cull') or 'ShowAll',
+        config['object_cull'],
       )
       config['surface_mode'] = dropdown(
         'Surfaces',
         ['Visual', 'Physical', 'None'],
         ['visual', 'physical', 'none'],
-        config.get('surface_mode') or 'Physical',
+        config['surface_mode'],
       )
 
   def render_frame_log_tab(self) -> None:
