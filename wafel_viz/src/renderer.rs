@@ -170,6 +170,8 @@ pub struct VizRenderer {
 
 #[derive(Debug)]
 struct RenderData {
+    screen_top_left: [u32; 2],
+    screen_size: [u32; 2],
     f3d_pre_cmds: Range<usize>,
     f3d_post_cmds: Range<usize>,
     transform_bind_group: wgpu::BindGroup,
@@ -270,6 +272,8 @@ impl VizRenderer {
         });
 
         self.render_data = Some(RenderData {
+            screen_top_left: data.f3d_render_data.screen_top_left,
+            screen_size: data.f3d_render_data.screen_size,
             f3d_pre_cmds: 0..first_z_buf_index,
             f3d_post_cmds: first_z_buf_index..data.f3d_render_data.commands.len(),
             transform_bind_group,
@@ -286,9 +290,10 @@ impl VizRenderer {
         device: &wgpu::Device,
         data: &VizRenderData,
     ) -> wgpu::BindGroup {
+        let screen_size = data.f3d_render_data.screen_size;
         let render_output = data.render_output.as_ref().expect("missing gfx output");
 
-        let aspect = data.screen_size[0] as f32 / data.screen_size[1] as f32;
+        let aspect = screen_size[0] as f32 / screen_size[1] as f32;
         let x_scale = (320.0 / 240.0) / aspect;
         let proj_modify = Matrixf::from_rows([
             [x_scale, 0.0, 0.0, 0.0],
@@ -339,6 +344,13 @@ impl VizRenderer {
         if let Some(render_data) = &self.render_data {
             self.f3d_renderer
                 .render_command_range(rp, render_data.f3d_pre_cmds.clone());
+
+            let vx = render_data.screen_top_left[0];
+            let vy = render_data.screen_top_left[1];
+            let vw = render_data.screen_size[0];
+            let vh = render_data.screen_size[1];
+            rp.set_viewport(vx as f32, vy as f32, vw as f32, vh as f32, 0.0, 1.0);
+            rp.set_scissor_rect(vx, vy, vw, vh);
 
             rp.set_pipeline(&self.surface_pipeline);
             rp.set_bind_group(0, &render_data.transform_bind_group, &[]);

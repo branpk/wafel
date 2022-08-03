@@ -437,12 +437,12 @@ impl PyPipeline {
     }
 
     /// Render the game for [wafel_viz].
-    pub fn render(&self, frame: u32, scene: &Scene) -> PyResult<PyVizRenderData> {
+    pub fn render(&self, frame: u32, scene: &Scene) -> PyResult<Option<PyVizRenderData>> {
         let timeline = self.get().pipeline.timeline();
 
         let config = scene.to_viz_config();
-        let render_data = timeline.try_render(frame, &config).map_err(Error::from)?;
+        let render_data = timeline.try_render(frame, &config).ok();
 
-        Ok(PyVizRenderData { inner: render_data })
+        Ok(render_data.map(|inner| PyVizRenderData { inner }))
     }
 }

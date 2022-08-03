@@ -2,6 +2,7 @@ use wafel_data_type::Angle;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VizConfig {
+    pub screen_top_left: [u32; 2],
     pub screen_size: [u32; 2],
     pub camera: Camera,
     pub object_cull: ObjectCull,
@@ -12,6 +13,7 @@ pub struct VizConfig {
 impl Default for VizConfig {
     fn default() -> Self {
         Self {
+            screen_top_left: [0, 0],
             screen_size: [320, 240],
             camera: Default::default(),
             object_cull: Default::default(),

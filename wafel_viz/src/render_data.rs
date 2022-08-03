@@ -10,7 +10,6 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VizRenderData {
-    pub(crate) screen_size: [u32; 2],
     pub(crate) f3d_render_data: F3DRenderData,
     pub(crate) render_output: Option<GfxRenderOutput>,
     pub(crate) elements: Vec<Element>,
@@ -20,7 +19,6 @@ pub struct VizRenderData {
 impl From<F3DRenderData> for VizRenderData {
     fn from(data: F3DRenderData) -> Self {
         Self {
-            screen_size: data.screen_size,
             f3d_render_data: data,
             render_output: None,
             elements: Vec::new(),
@@ -32,9 +30,11 @@ impl From<F3DRenderData> for VizRenderData {
 pub fn sm64_render(
     layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
+    screen_top_left: [u32; 2],
     screen_size: [u32; 2],
 ) -> Result<F3DRenderData, VizError> {
     let config = VizConfig {
+        screen_top_left,
         screen_size,
         ..Default::default()
     };
@@ -56,7 +56,6 @@ pub fn viz_render(
     };
 
     Ok(VizRenderData {
-        screen_size: config.screen_size,
         f3d_render_data,
         render_output: Some(render_output),
         elements: config.elements.clone(),

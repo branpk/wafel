@@ -65,9 +65,11 @@ def render_game(
 
   use_viz = isinstance(camera, RotateCamera)
   if use_viz:
-    viz_scenes.append(model.pipeline.render(model.selected_frame, scene))
-  else:
-    scenes.append(scene)
+    viz_scene = model.pipeline.render(model.selected_frame, scene)
+    if viz_scene is not None:
+      viz_scenes.append(viz_scene)
+      return
+  scenes.append(scene)
 
 
 __all__ = [

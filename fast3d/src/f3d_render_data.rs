@@ -5,6 +5,8 @@ use std::collections::HashMap;
 /// Vertices are already transformed to screen space.
 #[derive(Debug, Clone, PartialEq)]
 pub struct F3DRenderData {
+    /// The offset of the screen from the top left corner in pixels.
+    pub screen_top_left: [u32; 2],
     /// The screen size in pixels.
     pub screen_size: [u32; 2],
     /// Pipeline modes that are used by the commands.
@@ -17,8 +19,9 @@ pub struct F3DRenderData {
 
 impl F3DRenderData {
     /// Create an empty F3DRenderData.
-    pub fn new(screen_size: [u32; 2]) -> Self {
+    pub fn new(screen_top_left: [u32; 2], screen_size: [u32; 2]) -> Self {
         Self {
+            screen_top_left,
             screen_size,
             pipelines: HashMap::new(),
             textures: HashMap::new(),

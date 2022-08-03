@@ -50,6 +50,7 @@ pub trait F3DMemory {
 /// self-contained [F3DRenderData] object.
 pub fn interpret_f3d_display_list<M: F3DMemory>(
     memory: &M,
+    screen_top_left: [u32; 2],
     screen_size: [u32; 2],
     z_is_from_0_to_1: bool,
 ) -> Result<F3DRenderData, M::Error> {
@@ -57,7 +58,7 @@ pub fn interpret_f3d_display_list<M: F3DMemory>(
         memory: Some(memory),
         screen_size,
         z_is_from_0_to_1,
-        result: Some(F3DRenderData::new(screen_size)),
+        result: Some(F3DRenderData::new(screen_top_left, screen_size)),
         ..Default::default()
     };
     interpreter.interpret(memory.root_dl()?)?;

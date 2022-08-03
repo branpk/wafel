@@ -17,6 +17,7 @@ pub struct F3DRenderer {
     texture_bind_group_layout: wgpu::BindGroupLayout,
     texture_bind_groups: HashMap<TextureIndex, wgpu::BindGroup>,
     pipelines: HashMap<PipelineId, wgpu::RenderPipeline>,
+    screen_top_left: [u32; 2],
     screen_size: [u32; 2],
     commands: Vec<DrawCommand<wgpu::Buffer>>,
 }
@@ -117,6 +118,7 @@ impl F3DRenderer {
             texture_bind_group_layout,
             texture_bind_groups: HashMap::new(),
             pipelines: HashMap::new(),
+            screen_top_left: [0, 0],
             screen_size: [320, 240],
             commands: Vec::new(),
         }
@@ -464,6 +466,7 @@ impl F3DRenderer {
             self.prepare_texture_bind_group(device, queue, texture_index, texture);
         }
 
+        self.screen_top_left = data.screen_top_left;
         self.screen_size = data.screen_size;
 
         self.commands.clear();
@@ -493,7 +496,14 @@ impl F3DRenderer {
             if w == 0 || h == 0 {
                 continue;
             }
-            rp.set_viewport(x as f32, y as f32, w as f32, h as f32, 0.0, 1.0);
+            rp.set_viewport(
+                x as f32 + self.screen_top_left[0] as f32,
+                y as f32 + self.screen_top_left[1] as f32,
+                w as f32,
+                h as f32,
+                0.0,
+                1.0,
+            );
 
             let ScreenRectangle { x, y, w, h } = command.scissor;
             let x0 = x.clamp(0, self.screen_size[0] as i32);
@@ -505,7 +515,12 @@ impl F3DRenderer {
             if w <= 0 || h <= 0 {
                 continue;
             }
-            rp.set_scissor_rect(x as u32, y as u32, w as u32, h as u32);
+            rp.set_scissor_rect(
+                x as u32 + self.screen_top_left[0],
+                y as u32 + self.screen_top_left[1],
+                w as u32,
+                h as u32,
+            );
 
             if current_pipeline != Some(command.pipeline) {
                 current_pipeline = Some(command.pipeline);

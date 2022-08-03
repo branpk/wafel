@@ -32,7 +32,7 @@ pub fn sm64_gfx_render(
     let input_dl_addr = layout.global_path("gGfxPool?")?.read(memory)?;
     if input_dl_addr.is_none() {
         return Ok((
-            F3DRenderData::new(config.screen_size),
+            F3DRenderData::new(config.screen_top_left, config.screen_size),
             GfxRenderOutput::default(),
         ));
     }
@@ -74,7 +74,12 @@ pub fn sm64_gfx_render(
         (builder, GfxRenderOutput::default())
     };
 
-    let render_data = interpret_f3d_display_list(&f3d_memory, config.screen_size, true)?;
+    let render_data = interpret_f3d_display_list(
+        &f3d_memory,
+        config.screen_top_left,
+        config.screen_size,
+        true,
+    )?;
 
     if DEBUG_ONE_FRAME {
         process::exit(0);
