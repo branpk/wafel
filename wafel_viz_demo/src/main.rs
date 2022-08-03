@@ -73,7 +73,7 @@ impl App for VizApp {
             time_since_game_advance: Duration::ZERO,
         };
 
-        while app.game.frame() < 1639 {
+        while app.game.frame() < 0 {
             app.frame_advance()?;
         }
 

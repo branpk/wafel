@@ -673,7 +673,7 @@ where
         let mut new_lists: [Vec<(Pointer, Pointer)>; 8] = Default::default();
 
         let mut mod_transform = Matrixf::identity();
-        if self.config.camera != Camera::InGame {
+        if self.used_camera() != Camera::InGame {
             if let (Some(camera_mtx), Some(mod_camera_mtx)) =
                 (&self.cur_camera_mtx, &self.cur_mod_camera_mtx)
             {
@@ -697,7 +697,7 @@ where
                             .filter(|&(_, dl)| dl == *display_list)
                             .expect("master list discrepancy");
 
-                        if DEBUG_CALC_TRANSFORMS || self.config.camera != Camera::InGame {
+                        if DEBUG_CALC_TRANSFORMS || self.used_camera() != Camera::InGame {
                             let ptr = self.builder.alloc_u32(cast_slice(transform));
                             new_nodes.push((ptr, dl));
                         } else {
@@ -721,7 +721,7 @@ where
                     MasterListEdit::OptDynamic => {
                         if let Some(&&(mtx, dl)) = actual_nodes.peek() {
                             if is_dynamic(&self.builder, dl) {
-                                if DEBUG_CALC_TRANSFORMS || self.config.camera != Camera::InGame {
+                                if DEBUG_CALC_TRANSFORMS || self.used_camera() != Camera::InGame {
                                     let orig_mtx = Matrixf::from_fixed(&self.read_fixed(mtx)?);
                                     let new_mtx = &mod_transform * &orig_mtx;
                                     let ptr =
@@ -895,8 +895,10 @@ where
     }
 
     fn process_camera(&mut self, node: &GraphNodeCamera) -> Result<(), VizError> {
+        let used_camera = self.used_camera();
+
         let cmd = self.builder.expect(|cmd| matches!(cmd, SPMatrix { .. }))?;
-        match self.config.camera {
+        match used_camera {
             Camera::InGame => {
                 self.builder.push_cmd(cmd);
                 if let SPMatrix { matrix, .. } = &cmd {
@@ -922,7 +924,7 @@ where
         let camera_transform = Matrixf::look_at(node.pos, node.focus, node.roll);
         self.mtx_stack.push_mul(&camera_transform);
 
-        let mod_camera_transform = match self.config.camera {
+        let mod_camera_transform = match used_camera {
             Camera::InGame => camera_transform.clone(),
             Camera::LookAt { pos, focus, .. } => Matrixf::look_at(pos, focus, node.roll),
         };
@@ -1093,8 +1095,17 @@ where
         Ok(None)
     }
 
+    fn used_camera(&self) -> Camera {
+        if let Camera::LookAt { pos, focus, .. } = self.config.camera {
+            if pos == focus {
+                return Camera::InGame;
+            }
+        }
+        self.config.camera
+    }
+
     fn mod_camera(&self) -> CameraState {
-        match self.config.camera {
+        match self.used_camera() {
             Camera::InGame => {
                 let camera = self.cur_camera.as_ref().expect("no current camera");
                 CameraState {

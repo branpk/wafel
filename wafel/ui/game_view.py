@@ -187,7 +187,7 @@ def use_rotational_camera(
   yaw = use_state('yaw', 0.0)
   zoom = use_state('zoom', 0.0)
   prev_frame_time = use_state_with('prev-frame-time', time.time)
-  lock_to_in_game = use_state('lock-to-in-game', False)
+  lock_to_in_game = use_state('lock-to-in-game', True)
 
   delta_time = time.time() - prev_frame_time.value
   prev_frame_time.value = time.time()
@@ -207,6 +207,7 @@ def use_rotational_camera(
   if drag_amount != (0.0, 0.0) or wheel_amount != 0.0:
     lock_to_in_game.value = False
 
+  camera_pos = None
   if lock_to_in_game.value:
     target_pos = cast(Vec3f, model.get(model.selected_frame, 'gLakituState.focus'))
     target.value = target_pos
@@ -266,11 +267,12 @@ def use_rotational_camera(
   if ig.disableable_button('Lakitu', enabled=not lock_to_in_game.value):
     lock_to_in_game.value = True
 
-  camera_pos = (
-    target_pos[0] - offset * face_direction[0],
-    target_pos[1] - offset * face_direction[1],
-    target_pos[2] - offset * face_direction[2],
-  )
+  if not lock_to_in_game.value or camera_pos is None:
+    camera_pos = (
+      target_pos[0] - offset * face_direction[0],
+      target_pos[1] - offset * face_direction[1],
+      target_pos[2] - offset * face_direction[2],
+    )
 
   camera = core.RotateCamera()
   camera.pos = camera_pos
