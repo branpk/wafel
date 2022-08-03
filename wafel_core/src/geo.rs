@@ -3,7 +3,7 @@
 use std::ops::Deref;
 
 use bytemuck::{Pod, Zeroable};
-use pyo3::{types::PyTuple, FromPyObject, IntoPy, PyObject};
+// use pyo3::{types::PyTuple, FromPyObject, IntoPy, PyObject};
 
 /// 4x4 f32 matrix
 pub type Matrix4f = nalgebra::Matrix4<f32>;
@@ -76,18 +76,18 @@ impl Default for StoredPoint3f {
     }
 }
 
-impl<'p> FromPyObject<'p> for StoredPoint3f {
-    fn extract(object: &'p pyo3::PyAny) -> pyo3::PyResult<Self> {
-        let coords: [f32; 3] = object.extract()?;
-        Ok(Self(Point3f::new(coords[0], coords[1], coords[2])))
-    }
-}
-
-impl IntoPy<PyObject> for StoredPoint3f {
-    fn into_py(self, py: pyo3::Python<'_>) -> PyObject {
-        PyTuple::new(py, &[self.x, self.y, self.z]).into_py(py)
-    }
-}
+// impl<'p> FromPyObject<'p> for StoredPoint3f {
+//     fn extract(object: &'p pyo3::PyAny) -> pyo3::PyResult<Self> {
+//         let coords: [f32; 3] = object.extract()?;
+//         Ok(Self(Point3f::new(coords[0], coords[1], coords[2])))
+//     }
+// }
+//
+// impl IntoPy<PyObject> for StoredPoint3f {
+//     fn into_py(self, py: pyo3::Python<'_>) -> PyObject {
+//         PyTuple::new(py, &[self.x, self.y, self.z]).into_py(py)
+//     }
+// }
 
 /// Convert a direction to its pitch and yaw in radians.
 pub fn direction_to_pitch_yaw(dir: &Vector3f) -> (f32, f32) {

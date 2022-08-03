@@ -2,6 +2,7 @@ __pycache__
 *.pyd
 .mypy_cache
 .vscode
+.DS_STORE
 
 /build
 /dist
@@ -13,3 +14,6 @@ __pycache__
 /imgui.ini
 /target
 *.egg-info
+desktop.ini
+/wafel_viz_tests/output/
+/wafel_viz_tests/index.html

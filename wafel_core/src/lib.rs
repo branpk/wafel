@@ -15,5 +15,5 @@ pub use sm64::*;
 mod error;
 mod geo;
 mod graphics;
-mod python;
+// mod python;
 mod sm64;

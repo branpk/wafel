@@ -2657,7 +2657,6 @@ dependencies = [
  "indexmap",
  "lazy_static",
  "nalgebra",
- "pyo3",
  "serde",
  "serde_json",
  "tracing",
