@@ -3,14 +3,28 @@ use std::collections::HashMap;
 /// An object containing processed render data from a display list.
 ///
 /// Vertices are already transformed to screen space.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct F3DRenderData {
+    /// The screen size in pixels.
+    pub screen_size: [u32; 2],
     /// Pipeline modes that are used by the commands.
     pub pipelines: HashMap<PipelineId, PipelineInfo>,
     /// Textures that are used by the commands.
     pub textures: HashMap<TextureIndex, TextureState>,
     /// The draw calls to issue.
     pub commands: Vec<DrawCommand<Vec<f32>>>,
+}
+
+impl F3DRenderData {
+    /// Create an empty F3DRenderData.
+    pub fn new(screen_size: [u32; 2]) -> Self {
+        Self {
+            screen_size,
+            pipelines: HashMap::new(),
+            textures: HashMap::new(),
+            commands: Vec::new(),
+        }
+    }
 }
 
 /// An id for the pipeline state of a draw call.

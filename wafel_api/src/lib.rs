@@ -58,6 +58,7 @@ pub use wafel_data_type::{
     Address, Angle, FloatType, FloatValue, IntType, IntValue, Value, ValueTypeError,
 };
 pub use wafel_sm64::{ObjectHitbox, Surface};
+pub use wafel_viz::VizRenderData;
 
 mod data_cache;
 mod data_type;

@@ -5,8 +5,12 @@ use wafel_data_type::{Address, Value};
 use wafel_layout::load_sm64_n64_layout;
 use wafel_memory::{EmptySymbolLookup, EmuMemory, MemoryRead};
 use wafel_sm64::{mario_action_names, read_object_hitboxes, read_surfaces, ObjectHitbox, Surface};
+use wafel_viz::{viz_render, VizConfig, VizRenderData};
 
 use crate::{simplified_data_type, DataType, Error, SM64Version};
+
+// TODO: Add to python API:
+// - render
 
 /// An SM64 API that attaches to a running emulator and can read/write to its
 /// memory.
@@ -33,8 +37,8 @@ use crate::{simplified_data_type, DataType, Error, SM64Version};
 /// ```
 #[derive(Debug)]
 pub struct Emu {
-    pub layout: MemoryLayoutImpl<EmptySymbolLookup>, // FIXME: Remove pubs
-    pub memory: EmuMemory,
+    layout: MemoryLayoutImpl<EmptySymbolLookup>,
+    memory: EmuMemory,
 }
 
 impl Emu {
@@ -239,6 +243,28 @@ impl Emu {
     pub fn try_constant(&self, name: &str) -> Result<Value, Error> {
         let value = self.layout.data_layout().constant(name)?;
         Ok(value.value.into())
+    }
+
+    /// Render the game to a [VizRenderData] object, which can be displayed using
+    /// [wafel_viz].
+    ///
+    /// # Panics
+    ///
+    /// Panics if rendering fails (most likely a bug in [wafel_viz]).
+    pub fn render(&self, config: &VizConfig) -> Result<VizRenderData, Error> {
+        match self.try_render(config) {
+            Ok(render_data) => Ok(render_data),
+            Err(error) => panic!("Error:\n  failed to render:\n  {}\n", error),
+        }
+    }
+
+    /// Render the game to a [VizRenderData] object, which can be displayed using
+    /// [wafel_viz].
+    ///
+    /// Returns an error if rendering fails (most likely a bug in [wafel_viz]).
+    pub fn try_render(&self, config: &VizConfig) -> Result<VizRenderData, Error> {
+        let render_data = viz_render(&self.layout, &self.memory, config)?;
+        Ok(render_data)
     }
 
     /// Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`).

@@ -7,8 +7,12 @@ use wafel_memory::{DllGameMemory, GameMemory, MemoryRead};
 use wafel_sm64::{
     mario_action_names, read_frame_log, read_object_hitboxes, read_surfaces, ObjectHitbox, Surface,
 };
+use wafel_viz::{viz_render, VizConfig, VizRenderData};
 
 use crate::{simplified_data_type, DataType, Error, Input};
+
+// TODO: Add to python API:
+// - render
 
 /// An SM64 API that uses a traditional frame advance / save state model.
 ///
@@ -348,6 +352,29 @@ impl Game {
     pub fn try_constant(&self, name: &str) -> Result<Value, Error> {
         let value = self.layout.data_layout().constant(name)?;
         Ok(value.value.into())
+    }
+
+    /// Render the game to a [VizRenderData] object, which can be displayed using
+    /// [wafel_viz].
+    ///
+    /// # Panics
+    ///
+    /// Panics if rendering fails (most likely a bug in [wafel_viz]).
+    pub fn render(&self, config: &VizConfig) -> Result<VizRenderData, Error> {
+        match self.try_render(config) {
+            Ok(render_data) => Ok(render_data),
+            Err(error) => panic!("Error:\n  failed to render:\n  {}\n", error),
+        }
+    }
+
+    /// Render the game to a [VizRenderData] object, which can be displayed using
+    /// [wafel_viz].
+    ///
+    /// Returns an error if rendering fails (most likely a bug in [wafel_viz]).
+    pub fn try_render(&self, config: &VizConfig) -> Result<VizRenderData, Error> {
+        let memory = self.memory.with_slot(&self.base_slot);
+        let render_data = viz_render(&self.layout, &memory, config)?;
+        Ok(render_data)
     }
 
     /// Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`).

@@ -57,6 +57,7 @@ pub fn interpret_f3d_display_list<M: F3DMemory>(
         memory: Some(memory),
         screen_size,
         z_is_from_0_to_1,
+        result: Some(F3DRenderData::new(screen_size)),
         ..Default::default()
     };
     interpreter.interpret(memory.root_dl()?)?;
@@ -70,7 +71,7 @@ struct Interpreter<'m, M: F3DMemory> {
     memory: Option<&'m M>,
     screen_size: [u32; 2],
     z_is_from_0_to_1: bool,
-    result: F3DRenderData,
+    result: Option<F3DRenderData>,
 
     color_image: Option<Image<M::Ptr>>,
     depth_image: Option<M::Ptr>,
@@ -120,7 +121,7 @@ struct TextureMemory<Ptr> {
 impl<'m, M: F3DMemory> Interpreter<'m, M> {
     fn finish(mut self) -> Result<F3DRenderData, M::Error> {
         self.flush()?;
-        Ok(self.result)
+        Ok(self.result.unwrap())
     }
 
     fn memory(&self) -> &M {
@@ -167,14 +168,13 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         pipeline_info: PipelineInfo,
         textures: [Option<TextureIndex>; 2],
     ) {
+        let result = self.result.as_mut().unwrap();
+
         let pipeline = PipelineId(pipeline_info);
-        self.result
-            .pipelines
-            .entry(pipeline)
-            .or_insert(pipeline_info);
+        result.pipelines.entry(pipeline).or_insert(pipeline_info);
 
         if self.num_vertices > 0 {
-            self.result.commands.push(DrawCommand {
+            result.commands.push(DrawCommand {
                 viewport,
                 scissor,
                 pipeline,
@@ -374,8 +374,9 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
             },
         };
 
-        let texture_index = TextureIndex(self.result.textures.len() as u32);
-        self.result.textures.insert(texture_index, texture);
+        let result = self.result.as_mut().unwrap();
+        let texture_index = TextureIndex(result.textures.len() as u32);
+        result.textures.insert(texture_index, texture);
 
         let tmem = self.texture_memory.get_mut(&tile_params.tmem).unwrap();
         tmem.loaded.insert(fmt, texture_index);
@@ -384,7 +385,8 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
     }
 
     fn texture_mut(&mut self, texture_index: TextureIndex) -> &mut TextureState {
-        self.result.textures.get_mut(&texture_index).unwrap()
+        let result = self.result.as_mut().unwrap();
+        result.textures.get_mut(&texture_index).unwrap()
     }
 
     fn transform_pos(&self, vtx: &Vertex) -> [f32; 4] {

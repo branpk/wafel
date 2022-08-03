@@ -1,8 +1,8 @@
 use crate::{
     graphics::scene::Scene,
     graphics::{
-        ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, ImguiRenderer, Renderer,
-        IMGUI_FONT_TEXTURE_ID,
+        scene::Camera, ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, ImguiRenderer,
+        Renderer, VizContainer, IMGUI_FONT_TEXTURE_ID,
     },
     python::ImguiInput,
 };
@@ -83,6 +83,7 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
         let imgui_config = load_imgui_config()?;
         let imgui_renderer = ImguiRenderer::new(&device, &queue, config.format, &imgui_config);
         let mut renderer = Renderer::new(&device, config.format);
+        let mut viz_container = VizContainer::new(&device, config.format);
 
         window.set_visible(true);
 
@@ -131,13 +132,33 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
                                 .texture
                                 .create_view(&wgpu::TextureViewDescriptor::default());
 
+                            let mut old_scenes = Vec::new();
+                            let mut viz_scenes = Vec::new();
+
+                            for scene in &scenes {
+                                if matches!(scene.camera, Camera::Rotate(_)) {
+                                    viz_scenes.push(scene);
+                                } else {
+                                    old_scenes.push(scene);
+                                }
+                            }
+
                             renderer.render(
                                 &device,
                                 &queue,
                                 &output_view,
                                 output_size,
                                 config.format,
-                                &scenes,
+                                &old_scenes,
+                            );
+
+                            viz_container.render(
+                                &device,
+                                &queue,
+                                &output_view,
+                                output_size,
+                                config.format,
+                                &viz_scenes,
                             );
 
                             imgui_renderer.render(

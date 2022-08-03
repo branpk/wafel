@@ -2,8 +2,7 @@ use std::env;
 
 use image::{Pixel, Rgb, RgbImage};
 use wafel_api::Game;
-use wafel_memory::GameMemory;
-use wafel_viz::{viz_render, VizConfig, VizRenderer};
+use wafel_viz::{VizConfig, VizRenderer};
 
 #[derive(Debug)]
 pub struct Renderer {
@@ -144,12 +143,7 @@ impl SizedRenderer {
         game: &Game,
         config: &VizConfig,
     ) -> RgbImage {
-        let render_data = viz_render(
-            &game.layout,
-            &game.memory.with_slot(&game.base_slot),
-            config,
-        )
-        .expect("failed to render game");
+        let render_data = game.render(config).expect("failed to render game");
         self.viz_renderer
             .prepare(device, queue, self.output_format, &render_data);
 

@@ -2,7 +2,10 @@
 
 pub use imgui::*;
 pub use renderer::*;
+pub use viz_container::*;
 
 mod imgui;
 mod renderer;
 pub mod scene;
+mod viz_container;
+pub mod viz_scene;

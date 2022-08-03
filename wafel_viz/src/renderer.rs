@@ -204,6 +204,21 @@ impl VizRenderer {
     ) {
         self.render_data = None;
 
+        if data.render_output.is_some() {
+            self.prepare_viz(device, queue, output_format, data);
+        } else {
+            self.f3d_renderer
+                .prepare(device, queue, output_format, &data.f3d_render_data);
+        }
+    }
+
+    fn prepare_viz(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        output_format: wgpu::TextureFormat,
+        data: &VizRenderData,
+    ) {
         let first_z_buf_index = data
             .f3d_render_data
             .commands
@@ -271,6 +286,8 @@ impl VizRenderer {
         device: &wgpu::Device,
         data: &VizRenderData,
     ) -> wgpu::BindGroup {
+        let render_output = data.render_output.as_ref().expect("missing gfx output");
+
         let aspect = data.screen_size[0] as f32 / data.screen_size[1] as f32;
         let x_scale = (320.0 / 240.0) / aspect;
         let proj_modify = Matrixf::from_rows([
@@ -279,7 +296,7 @@ impl VizRenderer {
             [0.0, 0.0, 0.5, 0.5],
             [0.0, 0.0, 0.0, 1.0],
         ]);
-        let proj_mtx = &proj_modify * &data.render_output.proj_mtx;
+        let proj_mtx = &proj_modify * &render_output.proj_mtx;
 
         let proj_mtx_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: None,
@@ -288,7 +305,7 @@ impl VizRenderer {
         });
         let view_mtx_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: None,
-            contents: cast_slice(&data.render_output.view_mtx.cols),
+            contents: cast_slice(&render_output.view_mtx.cols),
             usage: wgpu::BufferUsages::UNIFORM,
         });
 
@@ -341,6 +358,8 @@ impl VizRenderer {
                 output_size,
                 render_data.f3d_post_cmds.clone(),
             );
+        } else {
+            self.f3d_renderer.render(rp, output_size);
         }
     }
 }

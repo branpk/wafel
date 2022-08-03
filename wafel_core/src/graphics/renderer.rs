@@ -165,7 +165,7 @@ impl Renderer {
         output_view: &wgpu::TextureView,
         output_size: (u32, u32),
         output_format: wgpu::TextureFormat,
-        scenes: &[Scene],
+        scenes: &[&Scene],
     ) {
         if self
             .multisample_texture

@@ -8,13 +8,25 @@ use crate::{
     ColorVertex, Element, SurfaceMode, VizConfig, VizError,
 };
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct VizRenderData {
     pub(crate) screen_size: [u32; 2],
     pub(crate) f3d_render_data: F3DRenderData,
-    pub(crate) render_output: GfxRenderOutput,
+    pub(crate) render_output: Option<GfxRenderOutput>,
     pub(crate) elements: Vec<Element>,
     pub(crate) surface_vertices: Vec<ColorVertex>,
+}
+
+impl From<F3DRenderData> for VizRenderData {
+    fn from(data: F3DRenderData) -> Self {
+        Self {
+            screen_size: data.screen_size,
+            f3d_render_data: data,
+            render_output: None,
+            elements: Vec::new(),
+            surface_vertices: Vec::new(),
+        }
+    }
 }
 
 pub fn sm64_render(
@@ -46,7 +58,7 @@ pub fn viz_render(
     Ok(VizRenderData {
         screen_size: config.screen_size,
         f3d_render_data,
-        render_output,
+        render_output: Some(render_output),
         elements: config.elements.clone(),
         surface_vertices,
     })

@@ -31,7 +31,10 @@ pub fn sm64_gfx_render(
 ) -> Result<(F3DRenderData, GfxRenderOutput), VizError> {
     let input_dl_addr = layout.global_path("gGfxPool?")?.read(memory)?;
     if input_dl_addr.is_none() {
-        return Ok((F3DRenderData::default(), GfxRenderOutput::default()));
+        return Ok((
+            F3DRenderData::new(config.screen_size),
+            GfxRenderOutput::default(),
+        ));
     }
     let input_dl_addr = input_dl_addr.try_as_address()?;
 

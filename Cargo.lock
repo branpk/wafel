@@ -2570,6 +2570,7 @@ dependencies = [
  "tracing-log",
  "tracing-subscriber",
  "wafel_api",
+ "wafel_viz",
  "wgpu",
  "winit",
 ]

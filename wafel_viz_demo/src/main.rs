@@ -233,11 +233,7 @@ impl App for VizApp {
         //     }
         // }
 
-        let render_data = viz_render(
-            &self.game.layout,
-            &self.game.memory.with_slot(&self.game.base_slot),
-            &config,
-        )?;
+        let render_data = self.game.render(&config)?;
 
         self.viz_renderer
             .prepare(device, queue, output_format, &render_data);
