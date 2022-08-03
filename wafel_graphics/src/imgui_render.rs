@@ -16,7 +16,8 @@ pub struct ImguiRenderer {
 
 /// Per-frame draw data for [ImguiRenderer].
 pub struct ImguiPerFrameData {
-    output_size: (u32, u32),
+    output_size: [u32; 2],
+    framebuffer_scale: [f32; 2],
     proj_bind_group: wgpu::BindGroup,
     draw_lists: Vec<DrawList>,
 }
@@ -237,7 +238,7 @@ impl ImguiRenderer {
     pub fn prepare(
         &self,
         device: &wgpu::Device,
-        output_size: (u32, u32),
+        output_size: [u32; 2],
         draw_data: &imgui::DrawData,
     ) -> ImguiPerFrameData {
         let [w, h] = draw_data.display_size;
@@ -292,6 +293,7 @@ impl ImguiRenderer {
 
         ImguiPerFrameData {
             output_size,
+            framebuffer_scale: draw_data.framebuffer_scale,
             proj_bind_group,
             draw_lists,
         }
@@ -318,10 +320,15 @@ impl ImguiRenderer {
                         let [mut clip_x0, mut clip_y0, mut clip_x1, mut clip_y1] =
                             cmd_params.clip_rect;
 
-                        clip_x0 = clip_x0.min(data.output_size.0 as f32);
-                        clip_y0 = clip_y0.min(data.output_size.1 as f32);
-                        clip_x1 = clip_x1.min(data.output_size.0 as f32);
-                        clip_y1 = clip_y1.min(data.output_size.1 as f32);
+                        clip_x0 *= data.framebuffer_scale[0];
+                        clip_x1 *= data.framebuffer_scale[0];
+                        clip_y0 *= data.framebuffer_scale[1];
+                        clip_y1 *= data.framebuffer_scale[1];
+
+                        clip_x0 = clip_x0.min(data.output_size[0] as f32);
+                        clip_y0 = clip_y0.min(data.output_size[1] as f32);
+                        clip_x1 = clip_x1.min(data.output_size[0] as f32);
+                        clip_y1 = clip_y1.min(data.output_size[1] as f32);
 
                         if clip_x0 >= clip_x1 || clip_y0 >= clip_y1 {
                             continue;

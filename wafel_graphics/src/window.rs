@@ -132,7 +132,7 @@ async fn run(mut render_app: Box<dyn FnMut(&imgui::Ui<'_>)>) {
 
                         let imgui_per_frame_data = imgui_renderer.prepare(
                             &device,
-                            (config.width, config.height),
+                            [config.width, config.height],
                             imgui_draw_data,
                         );
 
