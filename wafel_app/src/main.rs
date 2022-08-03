@@ -1,11 +1,6 @@
 //! Logic and UI for the Wafel application.
 
-#![warn(
-    missing_docs,
-    missing_debug_implementations,
-    rust_2018_idioms,
-    unreachable_pub
-)]
+#![warn(missing_docs, missing_debug_implementations)]
 
 use app::App;
 use log::LevelFilter;
