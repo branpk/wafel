@@ -40,6 +40,7 @@ pub struct Scene {
 impl Scene {
     /// Return a [VizConfig] to use when rendering the scene using [wafel_viz].
     pub fn to_viz_config(&self) -> VizConfig {
+        let screen_size = [self.viewport.width as u32, self.viewport.height as u32];
         let camera = match &self.camera {
             Camera::Rotate(camera) => viz::Camera::LookAt {
                 pos: [camera.pos.x, camera.pos.y, camera.pos.z],
@@ -49,7 +50,7 @@ impl Scene {
             Camera::BirdsEye(_) => unimplemented!(),
         };
         VizConfig {
-            screen_size: [320, 240],
+            screen_size,
             camera,
             object_cull: viz::ObjectCull::ShowAll,
             ..Default::default()

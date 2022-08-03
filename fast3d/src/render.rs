@@ -17,6 +17,7 @@ pub struct F3DRenderer {
     texture_bind_group_layout: wgpu::BindGroupLayout,
     texture_bind_groups: HashMap<TextureIndex, wgpu::BindGroup>,
     pipelines: HashMap<PipelineId, wgpu::RenderPipeline>,
+    screen_size: [u32; 2],
     commands: Vec<DrawCommand<wgpu::Buffer>>,
 }
 
@@ -116,6 +117,7 @@ impl F3DRenderer {
             texture_bind_group_layout,
             texture_bind_groups: HashMap::new(),
             pipelines: HashMap::new(),
+            screen_size: [320, 240],
             commands: Vec::new(),
         }
     }
@@ -462,6 +464,8 @@ impl F3DRenderer {
             self.prepare_texture_bind_group(device, queue, texture_index, texture);
         }
 
+        self.screen_size = data.screen_size;
+
         self.commands.clear();
         for command in &data.commands {
             let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -473,14 +477,13 @@ impl F3DRenderer {
         }
     }
 
-    pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>, output_size: [u32; 2]) {
-        self.render_command_range(rp, output_size, 0..self.commands.len());
+    pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>) {
+        self.render_command_range(rp, 0..self.commands.len());
     }
 
     pub fn render_command_range<'r>(
         &'r self,
         rp: &mut wgpu::RenderPass<'r>,
-        output_size: [u32; 2],
         cmd_indices: Range<usize>,
     ) {
         let mut current_pipeline = None;
@@ -493,10 +496,10 @@ impl F3DRenderer {
             rp.set_viewport(x as f32, y as f32, w as f32, h as f32, 0.0, 1.0);
 
             let ScreenRectangle { x, y, w, h } = command.scissor;
-            let x0 = x.clamp(0, output_size[0] as i32);
-            let y0 = y.clamp(0, output_size[1] as i32);
-            let x1 = (x + w).clamp(0, output_size[0] as i32);
-            let y1 = (y + h).clamp(0, output_size[1] as i32);
+            let x0 = x.clamp(0, self.screen_size[0] as i32);
+            let y0 = y.clamp(0, self.screen_size[1] as i32);
+            let x1 = (x + w).clamp(0, self.screen_size[0] as i32);
+            let y1 = (y + h).clamp(0, self.screen_size[1] as i32);
             let w = x1 - x0;
             let h = y1 - y0;
             if w <= 0 || h <= 0 {

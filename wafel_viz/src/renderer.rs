@@ -335,13 +335,10 @@ impl VizRenderer {
         })
     }
 
-    pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>, output_size: [u32; 2]) {
+    pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>) {
         if let Some(render_data) = &self.render_data {
-            self.f3d_renderer.render_command_range(
-                rp,
-                output_size,
-                render_data.f3d_pre_cmds.clone(),
-            );
+            self.f3d_renderer
+                .render_command_range(rp, render_data.f3d_pre_cmds.clone());
 
             rp.set_pipeline(&self.surface_pipeline);
             rp.set_bind_group(0, &render_data.transform_bind_group, &[]);
@@ -353,13 +350,10 @@ impl VizRenderer {
             rp.set_vertex_buffer(0, render_data.color_line_vertex_buffer.1.slice(..));
             rp.draw(0..render_data.color_line_vertex_buffer.0, 0..1);
 
-            self.f3d_renderer.render_command_range(
-                rp,
-                output_size,
-                render_data.f3d_post_cmds.clone(),
-            );
+            self.f3d_renderer
+                .render_command_range(rp, render_data.f3d_post_cmds.clone());
         } else {
-            self.f3d_renderer.render(rp, output_size);
+            self.f3d_renderer.render(rp);
         }
     }
 }

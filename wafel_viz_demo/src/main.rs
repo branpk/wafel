@@ -277,7 +277,7 @@ impl App for VizApp {
                 }),
             });
 
-            self.viz_renderer.render(&mut rp, output_size);
+            self.viz_renderer.render(&mut rp);
         }
 
         queue.submit([encoder.finish()]);
