@@ -436,6 +436,7 @@ impl PyPipeline {
         })
     }
 
+    /// Render the game for [wafel_viz].
     pub fn render(&self, frame: u32, scene: &Scene) -> PyResult<PyVizRenderData> {
         let timeline = self.get().pipeline.timeline();
 

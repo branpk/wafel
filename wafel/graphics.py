@@ -1,6 +1,6 @@
 from typing import *
 
-from wafel_core import Scene, Viewport, BirdsEyeCamera, RotateCamera, QuarterStep
+from wafel_core import Scene, Viewport, BirdsEyeCamera, RotateCamera, QuarterStep, VizRenderData
 
 from wafel.model import Model
 import wafel.config as config
@@ -8,11 +8,13 @@ from wafel.util import *
 
 
 scenes: List[Scene] = []
+viz_scenes: List[VizRenderData] = []
 
-def take_scenes() -> List[Scene]:
-  global scenes
-  result = scenes
+def take_scenes() -> Tuple[List[Scene], List[VizRenderData]]:
+  global scenes, viz_scenes
+  result = (scenes, viz_scenes)
   scenes = []
+  viz_scenes = []
   return result
 
 
@@ -61,7 +63,11 @@ def render_game(
 
   scene.object_paths = [mario_path]
 
-  scenes.append(scene)
+  use_viz = isinstance(camera, RotateCamera)
+  if use_viz:
+    viz_scenes.append(model.pipeline.render(model.selected_frame, scene))
+  else:
+    scenes.append(scene)
 
 
 __all__ = [

@@ -13,7 +13,7 @@ import wafel.graphics as graphics
 first_render = True
 
 
-def _render_window(render: Callable[[str], None]) -> Tuple[object, List[core.Scene]]:
+def _render_window(render: Callable[[str], None]) -> Tuple[object, List[core.Scene], List[core.VizRenderData]]:
   global first_render
 
   # TODO: clipboard length
@@ -46,7 +46,7 @@ def _render_window(render: Callable[[str], None]) -> Tuple[object, List[core.Sce
   draw_data = ig.get_draw_data()
   # ig_renderer.render(draw_data)
 
-  return draw_data, graphics.take_scenes(), []
+  return draw_data, *graphics.take_scenes()
 
 
 def open_window_and_run(render: Callable[[str], None], maximize = False) -> None:
