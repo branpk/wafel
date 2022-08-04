@@ -1,20 +1,28 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct OrthoCameraControl {
     mouse_pos: Option<[f32; 2]>,
     mario_pos: Option<[f32; 3]>,
-    focus: Focus,
-    span_v: f32,
+    state: CameraState,
     drag_start: Option<DragStart>,
 }
 
-impl Default for OrthoCameraControl {
+#[derive(Debug, Clone)]
+struct CameraState {
+    focus: Focus,
+    forward_pos: Option<f32>,
+    forward: [f32; 3],
+    upward: [f32; 3],
+    span_v: f32,
+}
+
+impl Default for CameraState {
     fn default() -> Self {
         Self {
-            mouse_pos: None,
-            mario_pos: None,
             focus: Focus::default(),
+            forward_pos: None,
+            forward: [0.0, -1.0, 0.0],
+            upward: [1.0, 0.0, 0.0],
             span_v: 3200.0,
-            drag_start: None,
         }
     }
 }
@@ -46,13 +54,15 @@ impl OrthoCameraControl {
     }
 
     fn current_focus(&self) -> Option<[f32; 3]> {
-        match self.focus {
+        match self.state.focus {
             Focus::Mario => self.mario_pos,
             Focus::Pos(pos) => Some(pos),
         }
     }
 
-    fn screen_to_world(&self, pos: [f32; 2]) -> Option<[f32; 3]> {}
+    fn screen_to_world(&self, pos: [f32; 2]) -> Option<[f32; 3]> {
+        todo!()
+    }
 
     pub fn press_mouse_left(&mut self) {
         if self.drag_start.is_none() {

@@ -4,7 +4,7 @@ use bytemuck::{cast_slice, cast_slice_mut};
 use fast3d::{
     cmd::{F3DCommand::*, *},
     interpret::{interpret_f3d_display_list, F3DMemory, F3DRenderData},
-    util::{coss, cross, sins, Angle, MatrixStack, Matrixf},
+    util::{coss, cross, normalize_vec3, sins, Angle, MatrixStack, Matrixf},
 };
 use wafel_data_access::{DataReadable, MemoryLayout, Reader};
 use wafel_data_type::{Address, IntType, Namespace, TypeName, Value};
@@ -949,6 +949,8 @@ where
                 upward,
                 ..
             } => {
+                let forward = normalize_vec3(forward);
+                let upward = normalize_vec3(upward);
                 let rightward = cross(forward, upward);
                 let rotate = Matrixf::from_rows_vec3([rightward, upward, forward]);
                 let translate = Matrixf::translate([-pos[0], -pos[1], -pos[2]]);

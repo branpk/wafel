@@ -12,6 +12,7 @@ mod config;
 mod error;
 mod f3d_builder;
 // mod ortho_camera_control;
+mod ortho_camera_control;
 mod render_data;
 mod renderer;
 mod rotate_camera_control;
