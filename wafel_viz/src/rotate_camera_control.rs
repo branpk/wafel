@@ -8,7 +8,7 @@ use wafel_memory::MemoryRead;
 use crate::{error::VizError, Camera};
 
 #[derive(Debug, Clone, Default)]
-pub struct CameraControl {
+pub struct PerspCameraControl {
     mouse_pos: Option<[f32; 2]>,
     in_game_camera: Option<InGameCamera>,
     mario_pos: Option<[f32; 3]>,
@@ -81,7 +81,7 @@ impl Default for Focus {
     }
 }
 
-impl CameraControl {
+impl PerspCameraControl {
     pub fn new() -> Self {
         Self::default()
     }

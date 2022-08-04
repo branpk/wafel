@@ -4,7 +4,7 @@ use bytemuck::{cast_slice, cast_slice_mut};
 use fast3d::{
     cmd::{F3DCommand::*, *},
     interpret::{interpret_f3d_display_list, F3DMemory, F3DRenderData},
-    util::{coss, sins, Angle, MatrixStack, Matrixf},
+    util::{coss, cross, sins, Angle, MatrixStack, Matrixf},
 };
 use wafel_data_access::{DataReadable, MemoryLayout, Reader};
 use wafel_data_type::{Address, IntType, Namespace, TypeName, Value};
@@ -919,6 +919,19 @@ where
                 });
                 self.output.proj_mtx = &self.output.proj_mtx * &roll_mtx;
             }
+            Camera::Ortho { span_v, .. } => {
+                let aspect = self.config.screen_size[0] as f32 / self.config.screen_size[1] as f32;
+                let span_h = aspect * span_v;
+                let proj_mtx = Matrixf::scale_vec3f([2.0 / span_h, 2.0 / span_v, 1.0 / 40_000.0]);
+                let ptr = self.builder.alloc_u32(cast_slice(&proj_mtx.to_fixed()));
+                self.builder.push_cmd(SPMatrix {
+                    matrix: ptr,
+                    mode: MatrixMode::Proj,
+                    op: MatrixOp::Load,
+                    push: false,
+                });
+                self.output.proj_mtx = proj_mtx;
+            }
         };
 
         let camera_transform = Matrixf::look_at(node.pos, node.focus, node.roll);
@@ -927,6 +940,17 @@ where
         let mod_camera_transform = match used_camera {
             Camera::InGame => camera_transform.clone(),
             Camera::LookAt { pos, focus, .. } => Matrixf::look_at(pos, focus, node.roll),
+            Camera::Ortho {
+                pos,
+                forward,
+                upward,
+                ..
+            } => {
+                let rightward = cross(forward, upward);
+                let rotate = Matrixf::from_rows_vec3([rightward, upward, forward]);
+                let translate = Matrixf::translate([-pos[0], -pos[1], -pos[2]]);
+                &rotate * &translate
+            }
         };
         self.mod_mtx_stack.push_mul(&mod_camera_transform);
 
@@ -1104,17 +1128,14 @@ where
         self.config.camera
     }
 
-    fn mod_camera(&self) -> CameraState {
+    fn mod_camera_roll(&self) -> Angle {
         match self.used_camera() {
             Camera::InGame => {
                 let camera = self.cur_camera.as_ref().expect("no current camera");
-                CameraState {
-                    pos: camera.pos,
-                    focus: camera.focus,
-                    roll: camera.roll,
-                }
+                camera.roll
             }
-            Camera::LookAt { pos, focus, roll } => CameraState { pos, focus, roll },
+            Camera::LookAt { roll, .. } => roll,
+            Camera::Ortho { .. } => Wrapping(0),
         }
     }
 
@@ -1133,7 +1154,7 @@ where
                 self.mtx_stack.execute(&mtx, MatrixOp::Load, true);
 
                 let mod_mtx =
-                    Matrixf::billboard(&self.mod_mtx_stack.cur, node.pos, self.mod_camera().roll);
+                    Matrixf::billboard(&self.mod_mtx_stack.cur, node.pos, self.mod_camera_roll());
                 self.mod_mtx_stack.execute(&mod_mtx, MatrixOp::Load, true);
             } else {
                 let transform = Matrixf::rotate_zxy_and_translate(node.pos, node.angle);
@@ -1245,7 +1266,7 @@ where
         self.mtx_stack.execute(&mtx, MatrixOp::Load, true);
 
         let mod_mtx =
-            Matrixf::billboard(&self.mod_mtx_stack.cur, translation, self.mod_camera().roll);
+            Matrixf::billboard(&self.mod_mtx_stack.cur, translation, self.mod_camera_roll());
         self.mod_mtx_stack.execute(&mod_mtx, MatrixOp::Load, true);
 
         let mut cur_obj = self.cur_object.clone();

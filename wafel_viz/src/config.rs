@@ -33,6 +33,12 @@ pub enum Camera {
         focus: [f32; 3],
         roll: Angle,
     },
+    Ortho {
+        pos: [f32; 3],
+        forward: [f32; 3],
+        upward: [f32; 3],
+        span_v: f32,
+    },
 }
 
 impl Default for Camera {

@@ -109,6 +109,15 @@ impl Matrixf {
         Self { cols: rows }.transpose()
     }
 
+    pub fn from_rows_vec3(rows: [[f32; 3]; 3]) -> Self {
+        Self::from_rows([
+            [rows[0][0], rows[0][1], rows[0][2], 0.0],
+            [rows[1][0], rows[1][1], rows[1][2], 0.0],
+            [rows[2][0], rows[2][1], rows[2][2], 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ])
+    }
+
     pub fn look_at(from: [f32; 3], to: [f32; 3], roll: Angle) -> Self {
         let mut dx = to[0] - from[0];
         let mut dz = to[2] - from[2];
@@ -475,6 +484,14 @@ pub fn normalize(v: [f32; 4]) -> [f32; 4] {
 
 pub fn dot(v: [f32; 4], w: [f32; 4]) -> f32 {
     v[0] * w[0] + v[1] * w[1] + v[2] * w[2] + v[3] * w[3]
+}
+
+pub fn cross(v: [f32; 3], w: [f32; 3]) -> [f32; 3] {
+    [
+        v[1] * w[2] - v[2] * w[1],
+        v[2] * w[0] - v[0] * w[2],
+        v[0] * w[1] - v[1] * w[0],
+    ]
 }
 
 pub fn scalar_mul(v: [f32; 4], s: f32) -> [f32; 4] {

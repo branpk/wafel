@@ -9,7 +9,8 @@ use std::{
 use wafel_api::{try_load_m64, Error, Game, Input, SaveState};
 use wafel_memory::GameMemory;
 use wafel_viz::{
-    viz_render, CameraControl, Element, Line, ObjectCull, SurfaceMode, VizConfig, VizRenderer,
+    viz_render, Camera, Element, Line, ObjectCull, PerspCameraControl, SurfaceMode, VizConfig,
+    VizRenderer,
 };
 use window::{open_window_and_run, App};
 use winit::event::{ElementState, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowEvent};
@@ -25,7 +26,7 @@ struct VizApp {
     game: Game,
     inputs: Vec<Input>,
     save_states: HashMap<u32, Rc<SaveState>>,
-    camera_control: CameraControl,
+    camera_control: PerspCameraControl,
     held_keys: HashSet<VirtualKeyCode>,
     viz_renderer: VizRenderer,
     last_update: Instant,
@@ -66,14 +67,14 @@ impl App for VizApp {
             game,
             inputs,
             save_states: HashMap::new(),
-            camera_control: CameraControl::new(),
+            camera_control: PerspCameraControl::new(),
             held_keys: HashSet::new(),
             viz_renderer: VizRenderer::new(device, output_format),
             last_update: Instant::now(),
             time_since_game_advance: Duration::ZERO,
         };
 
-        while app.game.frame() < 0 {
+        while app.game.frame() < 1651 {
             app.frame_advance()?;
         }
 
@@ -206,11 +207,21 @@ impl App for VizApp {
         output_format: wgpu::TextureFormat,
         output_size: [u32; 2],
     ) -> Result<(), Error> {
+        let camera = self.camera_control.camera();
+
+        let mario_pos = self.game.try_read("gMarioState.pos")?.try_as_f32_3()?;
+        let camera = Camera::Ortho {
+            pos: [mario_pos[0], mario_pos[1] + 10.0, mario_pos[2]],
+            forward: [0.0, -1.0, 0.0],
+            upward: [1.0, 0.0, 0.0],
+            span_v: 3200.0,
+        };
+
         let mut config = VizConfig {
             screen_size: output_size,
-            camera: self.camera_control.camera(),
+            camera,
             object_cull: ObjectCull::ShowAll,
-            surface_mode: SurfaceMode::Physical,
+            surface_mode: SurfaceMode::Visual,
             ..Default::default()
         };
 
