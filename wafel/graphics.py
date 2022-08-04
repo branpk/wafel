@@ -21,18 +21,33 @@ def take_scenes() -> Tuple[List[Scene], List[VizRenderData]]:
 def get_viz_config(
   model: Model,
   viewport: Viewport,
-  camera: RotateCamera,
+  camera: Union[BirdsEyeCamera, RotateCamera],
+  use_in_game_camera: bool,
 ) -> dict:
-  config = {
-    'screen_top_left': [int(viewport.x), int(viewport.y)],
-    'screen_size': [int(viewport.width), int(viewport.height)],
-    'camera': {
+  if use_in_game_camera:
+    camera = 'InGame'
+  elif isinstance(camera, RotateCamera):
+    camera = {
       'LookAt': {
         'pos': camera.pos,
         'focus': camera.target,
         'roll': 0, # TODO: Roll (and fov?)
       }
-    },
+    }
+  else:
+    camera = {
+      'Ortho': {
+        'pos': camera.pos,
+        'forward': [0, -1, 0],
+        'upward': [1, 0, 0],
+        'span_v': camera.span_y,
+      }
+    }
+
+  config = {
+    'screen_top_left': [int(viewport.x), int(viewport.y)],
+    'screen_size': [int(viewport.width), int(viewport.height)],
+    'camera': camera,
   }
   config.update(model.viz_config)
   return config
@@ -43,12 +58,13 @@ def render_game(
   viewport: Viewport,
   camera: Union[BirdsEyeCamera, RotateCamera],
   show_camera_target: bool,
+  use_in_game_camera: bool,
   wall_hitbox_radius: float,
   hovered_surface: Optional[int] = None,
   hidden_surfaces: Set[int] = set(),
 ) -> None:
-  if model.viz_enabled and isinstance(camera, RotateCamera):
-    viz_config = get_viz_config(model, viewport, camera)
+  if model.viz_enabled:
+    viz_config = get_viz_config(model, viewport, camera, use_in_game_camera)
     viz_config_json = json.dumps(viz_config)
     viz_scene = model.pipeline.render(model.selected_frame, viz_config_json)
     if viz_scene is not None:

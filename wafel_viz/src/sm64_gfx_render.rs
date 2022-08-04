@@ -920,7 +920,7 @@ where
                 self.output.proj_mtx = &self.output.proj_mtx * &roll_mtx;
             }
             Camera::Ortho { span_v, .. } => {
-                let aspect = self.config.screen_size[0] as f32 / self.config.screen_size[1] as f32;
+                let aspect = 320.0 / 240.0;
                 let span_h = aspect * span_v;
                 let span_z = 40_000.0;
                 let scale = Matrixf::scale_vec3f([2.0 / span_h, 2.0 / span_v, 2.0 / span_z]);

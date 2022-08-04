@@ -179,7 +179,7 @@ def trace_ray(model: Model, ray: Tuple[Vec3f, Vec3f]) -> Optional[int]:
 def use_rotational_camera(
   framebuffer_size: Tuple[int, int],
   model: Model,
-) -> Tuple[core.RotateCamera, bool]:
+) -> Tuple[core.RotateCamera, bool, bool]:
   mouse_state = use_state('mouse-state', MouseTracker()).value
   target: Ref[Optional[Vec3f]] = use_state('target', None)
   target_vel: Ref[Optional[Vec3f]] = use_state('target-vel', None)
@@ -281,7 +281,7 @@ def use_rotational_camera(
 
   show_camera_target = target.value is not None and not lock_to_in_game.value
 
-  return camera, show_camera_target
+  return camera, show_camera_target, lock_to_in_game.value
 
 
 def render_game_view_rotate(
@@ -295,7 +295,7 @@ def render_game_view_rotate(
   ig.push_id(id)
 
   log.timer.begin('overlay')
-  camera, show_camera_target = use_rotational_camera(framebuffer_size, model)
+  camera, show_camera_target, use_in_game_camera = use_rotational_camera(framebuffer_size, model)
   model.rotational_camera_yaw = int(camera.yaw * 0x8000 / math.pi)
   log.timer.end()
 
@@ -310,6 +310,7 @@ def render_game_view_rotate(
     get_viewport(framebuffer_size),
     camera,
     show_camera_target,
+    use_in_game_camera,
     wall_hitbox_radius,
     hovered_surface=hovered_surface,
     hidden_surfaces=hidden_surfaces,
@@ -464,6 +465,7 @@ def render_game_view_birds_eye(
     model,
     viewport,
     camera,
+    False,
     False,
     wall_hitbox_radius,
     hovered_surface=hovered_surface,
