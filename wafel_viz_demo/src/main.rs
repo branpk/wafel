@@ -211,7 +211,7 @@ impl App for VizApp {
 
         let mario_pos = self.game.try_read("gMarioState.pos")?.try_as_f32_3()?;
         let camera = Camera::Ortho {
-            pos: [mario_pos[0], mario_pos[1] + 10.0, mario_pos[2]],
+            pos: [mario_pos[0], mario_pos[1] + 500.0, mario_pos[2]],
             forward: [0.0, -1.0, 0.0],
             upward: [1.0, 0.0, 0.0],
             span_v: 3200.0,

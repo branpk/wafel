@@ -922,7 +922,10 @@ where
             Camera::Ortho { span_v, .. } => {
                 let aspect = self.config.screen_size[0] as f32 / self.config.screen_size[1] as f32;
                 let span_h = aspect * span_v;
-                let proj_mtx = Matrixf::scale_vec3f([2.0 / span_h, 2.0 / span_v, 1.0 / 40_000.0]);
+                let span_z = 40_000.0;
+                let scale = Matrixf::scale_vec3f([2.0 / span_h, 2.0 / span_v, 2.0 / span_z]);
+                let translate = Matrixf::translate([0.0, 0.0, -1.0]);
+                let proj_mtx = &translate * &scale;
                 let ptr = self.builder.alloc_u32(cast_slice(&proj_mtx.to_fixed()));
                 self.builder.push_cmd(SPMatrix {
                     matrix: ptr,
