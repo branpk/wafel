@@ -67,7 +67,12 @@ pub fn sm64_gfx_render(
 
         let mut renderer = NodeRenderer::new(config, layout, memory, input_dl_addr, seg_table)?;
         renderer.render_game(root_addr, pause_rendering)?;
-        (renderer.builder, renderer.output)
+
+        let mut output = renderer.output;
+        output.proj_mtx = Matrixf::from_fixed(&output.proj_mtx.to_fixed());
+        output.view_mtx = Matrixf::from_fixed(&output.view_mtx.to_fixed());
+
+        (renderer.builder, output)
     } else {
         let mut builder = F3DBuilder::new(memory, input_dl_addr, seg_table);
         builder.push_remaining()?;
