@@ -3,7 +3,7 @@
 #![allow(missing_docs)]
 
 use core::fmt;
-use std::{mem, num::Wrapping, ops};
+use std::{num::Wrapping, ops};
 
 use bytemuck::cast_slice_mut;
 
@@ -606,25 +606,6 @@ pub struct Vertex {
     pub pos: [i16; 3],
     pub uv: [i16; 2],
     pub cn: [u8; 4],
-}
-
-pub fn read_vertices<M: F3DMemory>(
-    memory: &M,
-    ptr: M::Ptr,
-    offset: usize,
-    count: usize,
-) -> Result<Vec<Vertex>, M::Error> {
-    let stride = mem::size_of::<Vertex>();
-    let mut vs = Vec::new();
-    for i in 0..count {
-        let mut v = Vertex::default();
-        let voffset = offset + i * stride;
-        memory.read_u16(cast_slice_mut(&mut v.pos), ptr, voffset)?;
-        memory.read_u16(cast_slice_mut(&mut v.uv), ptr, voffset + 8)?;
-        memory.read_u8(cast_slice_mut(&mut v.cn), ptr, voffset + 12)?;
-        vs.push(v);
-    }
-    Ok(vs)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

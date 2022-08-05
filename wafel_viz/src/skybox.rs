@@ -1,5 +1,5 @@
 use fast3d::util::{atan2s, Matrixf, Vertex};
-use wafel_data_access::{DataReadable, MemoryLayout};
+use wafel_data_access::MemoryLayout;
 use wafel_data_type::{Address, Angle};
 use wafel_memory::MemoryRead;
 use wafel_sm64::gfx::GraphNodeBackground;

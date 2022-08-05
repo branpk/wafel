@@ -1393,17 +1393,18 @@ where
 
     fn process_background(&mut self, node: &GraphNodeBackground) -> Result<(), VizError> {
         if !node.fn_node.func.is_null() {
-            let lakitu_state = self.lakitu_state_for_background()?;
-            let display_list = skybox_main(
-                &mut self.builder,
-                self.layout,
-                self.memory,
-                node,
-                &lakitu_state,
-            )?;
-            let layer = node.fn_node.node.flags >> 8;
-            self.skip_dynamic_list(layer);
-            self.append_display_list_pointer(layer, display_list)?;
+            // let lakitu_state = self.lakitu_state_for_background()?;
+            // let display_list = skybox_main(
+            //     &mut self.builder,
+            //     self.layout,
+            //     self.memory,
+            //     node,
+            //     &lakitu_state,
+            // )?;
+            // let layer = node.fn_node.node.flags >> 8;
+            // self.skip_dynamic_list(layer);
+            // self.append_display_list_pointer(layer, display_list)?;
+            self.append_opt_dynamic_list(node.fn_node.node.flags >> 8);
         } else {
             self.append_opt_dynamic_list(0);
         };

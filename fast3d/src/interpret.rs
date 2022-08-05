@@ -9,6 +9,7 @@
 use core::fmt;
 use std::{collections::HashMap, mem};
 
+use bytemuck::cast_slice_mut;
 use derivative::Derivative;
 
 pub use crate::f3d_render_data::*;
@@ -42,6 +43,35 @@ pub trait F3DMemory {
     fn read_u16(&self, dst: &mut [u16], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error>;
     /// Reads dst.len() u32s from memory, starting at ptr + offset (in bytes).
     fn read_u32(&self, dst: &mut [u32], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error>;
+
+    /// Reads dst.len() vertices from memory, starting at ptr + offset (in bytes).
+    ///
+    /// Callers should use `read_vertices` instead.
+    fn read_vertices_default(
+        &self,
+        dst: &mut [Vertex],
+        ptr: Self::Ptr,
+        offset: usize,
+    ) -> Result<(), Self::Error> {
+        let stride = 16;
+        for (i, v) in dst.iter_mut().enumerate() {
+            let voffset = offset + i * stride;
+            self.read_u16(cast_slice_mut(&mut v.pos), ptr, voffset)?;
+            self.read_u16(cast_slice_mut(&mut v.uv), ptr, voffset + 8)?;
+            self.read_u8(cast_slice_mut(&mut v.cn), ptr, voffset + 12)?;
+        }
+        Ok(())
+    }
+
+    /// Reads dst.len() vertices from memory, starting at ptr + offset (in bytes).
+    fn read_vertices(
+        &self,
+        dst: &mut [Vertex],
+        ptr: Self::Ptr,
+        offset: usize,
+    ) -> Result<(), Self::Error> {
+        self.read_vertices_default(dst, ptr, offset)
+    }
 }
 
 /// Processes `memory.root_dl()` and returns draw data in a simpler to render and
@@ -814,8 +844,13 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                     self.lights[index] = read_light(self.memory(), light)?;
                 }
                 SPVertex { v, n, v0 } => {
-                    let offset = v0 as usize * mem::size_of::<Vertex>();
-                    self.vertices = read_vertices(self.memory(), v, offset, n as usize)?;
+                    let offset = v0 as usize * 16;
+
+                    let mut vertices = mem::take(&mut self.vertices);
+                    vertices.resize(n as usize, Vertex::default());
+                    self.memory().read_vertices(&mut vertices, v, offset)?;
+
+                    self.vertices = vertices;
                 }
                 SPDisplayList(ptr) => {
                     let child_dl = self.memory.unwrap().read_dl(ptr)?;
