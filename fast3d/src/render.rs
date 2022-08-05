@@ -311,11 +311,11 @@ impl F3DRenderer {
             fragment: Some(wgpu::FragmentState {
                 module: &shader_module,
                 entry_point: "fs_main",
-                targets: &[wgpu::ColorTargetState {
+                targets: &[Some(wgpu::ColorTargetState {
                     format: output_format,
                     blend: Some(wgpu::BlendState::ALPHA_BLENDING).filter(|_| p.blend),
                     write_mask: wgpu::ColorWrites::all(),
-                }],
+                })],
             }),
             multiview: None,
         });

@@ -107,11 +107,11 @@ fn create_color_line_pipeline(
         fragment: Some(wgpu::FragmentState {
             module: &shader_module,
             entry_point: "fs_main",
-            targets: &[wgpu::ColorTargetState {
+            targets: &[Some(wgpu::ColorTargetState {
                 format: output_format,
                 blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                 write_mask: wgpu::ColorWrites::ALL,
-            }],
+            })],
         }),
         multiview: None,
     })
@@ -149,11 +149,11 @@ fn create_surface_pipeline(
         fragment: Some(wgpu::FragmentState {
             module: &shader_module,
             entry_point: "fs_main",
-            targets: &[wgpu::ColorTargetState {
+            targets: &[Some(wgpu::ColorTargetState {
                 format: output_format,
                 blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                 write_mask: wgpu::ColorWrites::ALL,
-            }],
+            })],
         }),
         multiview: None,
     })
