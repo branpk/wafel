@@ -287,15 +287,6 @@ where
     }
 
     fn append_display_list(&mut self, layer: i16, display_list: Address) -> Result<(), VizError> {
-        let display_list = Pointer::Segmented(self.builder.virt_to_phys(display_list));
-        self.append_display_list_pointer(layer, display_list)
-    }
-
-    fn append_display_list_pointer(
-        &mut self,
-        layer: i16,
-        display_list: Pointer,
-    ) -> Result<(), VizError> {
         let visible = if self.config.surface_mode == SurfaceMode::Visual {
             true
         } else {
@@ -319,7 +310,8 @@ where
         Ok(())
     }
 
-    fn append_display_list_unconditional(&mut self, layer: i16, display_list: Pointer) {
+    fn append_display_list_unconditional(&mut self, layer: i16, display_list: Address) {
+        let display_list = Pointer::Segmented(self.builder.virt_to_phys(display_list));
         if self.is_node_rendered() {
             self.edit_master_list(
                 layer,
@@ -339,7 +331,8 @@ where
         }
     }
 
-    fn skip_display_list(&mut self, layer: i16, display_list: Pointer) {
+    fn skip_display_list(&mut self, layer: i16, display_list: Address) {
+        let display_list = Pointer::Segmented(self.builder.virt_to_phys(display_list));
         if self.is_node_rendered() {
             self.edit_master_list(layer, MasterListEdit::Skip(display_list));
         }
@@ -351,10 +344,17 @@ where
         }
     }
 
-    fn skip_dynamic_list(&mut self, layer: i16) {
+    fn append_dynamic_list(&mut self, layer: i16, display_list: Pointer) {
         if self.is_node_rendered() {
             self.edit_master_list(layer, MasterListEdit::SkipDynamic);
         }
+        self.edit_master_list(
+            layer,
+            MasterListEdit::Insert {
+                transform: self.mod_mtx_stack.cur.to_fixed(),
+                display_list,
+            },
+        )
     }
 
     fn get_render_mode(&self, layer: i16, z_buffer: bool) -> RenderMode {
@@ -1393,18 +1393,15 @@ where
 
     fn process_background(&mut self, node: &GraphNodeBackground) -> Result<(), VizError> {
         if !node.fn_node.func.is_null() {
-            // let lakitu_state = self.lakitu_state_for_background()?;
-            // let display_list = skybox_main(
-            //     &mut self.builder,
-            //     self.layout,
-            //     self.memory,
-            //     node,
-            //     &lakitu_state,
-            // )?;
-            // let layer = node.fn_node.node.flags >> 8;
-            // self.skip_dynamic_list(layer);
-            // self.append_display_list_pointer(layer, display_list)?;
-            self.append_opt_dynamic_list(node.fn_node.node.flags >> 8);
+            let lakitu_state = self.lakitu_state_for_background()?;
+            let display_list = skybox_main(
+                &mut self.builder,
+                self.layout,
+                self.memory,
+                node,
+                &lakitu_state,
+            )?;
+            self.append_dynamic_list(node.fn_node.node.flags >> 8, display_list);
         } else {
             self.append_opt_dynamic_list(0);
         };

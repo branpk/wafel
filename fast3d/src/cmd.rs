@@ -696,6 +696,21 @@ impl From<F3DWrapMode> for u8 {
     }
 }
 
+impl F3DWrapMode {
+    pub const WRAP: Self = Self {
+        mirror: false,
+        clamp: false,
+    };
+    pub const MIRROR: Self = Self {
+        mirror: true,
+        clamp: false,
+    };
+    pub const CLAMP: Self = Self {
+        mirror: false,
+        clamp: true,
+    };
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TextureBlock {
     pub uls: u32,
@@ -714,6 +729,11 @@ pub struct TileSize {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TileIndex(pub u8);
+
+impl TileIndex {
+    pub const LOAD: TileIndex = TileIndex(7);
+    pub const RENDER: TileIndex = TileIndex(0);
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PrimDepth {

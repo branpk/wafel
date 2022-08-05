@@ -5,6 +5,7 @@ use fast3d::{
     cmd::F3DCommand,
     decode::{decode_f3d_display_list, F3DCommandIter, RawF3DCommand},
     interpret::F3DMemory,
+    util::Vertex,
 };
 use wafel_data_type::Address;
 use wafel_memory::MemoryRead;
@@ -34,8 +35,10 @@ pub struct F3DBuilder<'m, M: MemoryRead> {
     memory: &'m M,
     seg_table: Option<Vec<u32>>,
     input_dl: Peekable<F3DCommandIter<RawDlIter<'m, M>>>,
+    root_dl: Vec<F3DCommand<Pointer>>,
     dl_buffer: Vec<F3DCommand<Pointer>>,
     u32_buffer: Vec<u32>,
+    vertex_buffer: Vec<Vertex>,
 }
 
 impl<'m, M: MemoryRead> F3DBuilder<'m, M> {
@@ -49,13 +52,15 @@ impl<'m, M: MemoryRead> F3DBuilder<'m, M> {
             memory,
             seg_table,
             input_dl,
+            root_dl: Vec::new(),
             dl_buffer: Vec::new(),
             u32_buffer: Vec::new(),
+            vertex_buffer: Vec::new(),
         }
     }
 
     pub fn push_cmd(&mut self, cmd: F3DCommand<Pointer>) {
-        self.dl_buffer.push(cmd);
+        self.root_dl.push(cmd);
     }
 
     pub fn push_until(
@@ -111,9 +116,21 @@ impl<'m, M: MemoryRead> F3DBuilder<'m, M> {
         Ok(())
     }
 
+    pub fn alloc_dl(&mut self, buf: &[F3DCommand<Pointer>]) -> Pointer {
+        let ptr = Pointer::BufferOffset(self.dl_buffer.len());
+        self.dl_buffer.extend(buf);
+        ptr
+    }
+
     pub fn alloc_u32(&mut self, buf: &[u32]) -> Pointer {
         let ptr = Pointer::BufferOffset(self.u32_buffer.len());
         self.u32_buffer.extend(buf);
+        ptr
+    }
+
+    pub fn alloc_vertices(&mut self, buf: &[Vertex]) -> Pointer {
+        let ptr = Pointer::BufferOffset(self.vertex_buffer.len());
+        self.vertex_buffer.extend(buf);
         ptr
     }
 
@@ -147,16 +164,23 @@ impl<'m, M: MemoryRead> F3DMemory for F3DBuilder<'m, M> {
     type DlIter<'a> = DlIter<'a, 'm, M> where Self: 'a;
 
     fn root_dl(&self) -> Result<Self::DlIter<'_>, Self::Error> {
-        Ok(DlIter::FromBuffer(self.dl_buffer.iter()))
+        Ok(DlIter::FromBuffer(self.root_dl.iter()))
     }
 
     fn read_dl(&self, ptr: Self::Ptr) -> Result<Self::DlIter<'_>, Self::Error> {
-        let addr = self.seg_to_virt(ptr.segmented().expect("invalid display list pointer"));
-        let raw = RawDlIter {
-            memory: self.memory,
-            addr,
-        };
-        Ok(DlIter::FromRaw(decode_f3d_display_list(raw)))
+        match ptr {
+            Pointer::Segmented(seg) => {
+                let addr = self.seg_to_virt(seg);
+                let raw = RawDlIter {
+                    memory: self.memory,
+                    addr,
+                };
+                Ok(DlIter::FromRaw(decode_f3d_display_list(raw)))
+            }
+            Pointer::BufferOffset(offset) => {
+                Ok(DlIter::FromBuffer(self.dl_buffer[offset..].iter()))
+            }
+        }
     }
 
     fn read_u8(&self, dst: &mut [u8], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error> {
@@ -179,6 +203,21 @@ impl<'m, M: MemoryRead> F3DMemory for F3DBuilder<'m, M> {
             }
             Pointer::BufferOffset(offset) => {
                 dst.copy_from_slice(&self.u32_buffer[offset..offset + dst.len()]);
+            }
+        }
+        Ok(())
+    }
+
+    fn read_vertices(
+        &self,
+        dst: &mut [Vertex],
+        ptr: Self::Ptr,
+        offset: usize,
+    ) -> Result<(), Self::Error> {
+        match ptr {
+            Pointer::Segmented(_) => self.read_vertices_default(dst, ptr, offset)?,
+            Pointer::BufferOffset(offset) => {
+                dst.copy_from_slice(&self.vertex_buffer[offset..offset + dst.len()]);
             }
         }
         Ok(())

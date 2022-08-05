@@ -1,4 +1,11 @@
-use fast3d::util::{atan2s, Matrixf, Vertex};
+use bytemuck::cast_slice;
+use fast3d::{
+    cmd::{
+        ComponentSize, F3DCommand, Image, ImageFormat, MatrixMode, MatrixOp, TextureBlock,
+        TileIndex, TileParams,
+    },
+    util::{atan2s, Matrixf, Vertex},
+};
 use wafel_data_access::MemoryLayout;
 use wafel_data_type::{Address, Angle};
 use wafel_memory::MemoryRead;
@@ -95,7 +102,11 @@ fn get_top_left_tile_idx(scaled_x: i32, scaled_y: i32) -> i32 {
     tile_row * SKYBOX_COLS + tile_col
 }
 
-fn make_skybox_rect(tile_index: i32, color_index: i8) -> Vec<Vertex> {
+fn make_skybox_rect<M: MemoryRead>(
+    builder: &mut F3DBuilder<'_, M>,
+    tile_index: i32,
+    color_index: i8,
+) -> Pointer {
     let x = (tile_index % SKYBOX_COLS * SKYBOX_TILE_WIDTH) as i16;
     let y = (SKYBOX_HEIGHT - tile_index / SKYBOX_COLS * SKYBOX_TILE_HEIGHT) as i16;
 
@@ -107,7 +118,7 @@ fn make_skybox_rect(tile_index: i32, color_index: i8) -> Vec<Vertex> {
         255,
     ];
 
-    vec![
+    builder.alloc_vertices(&[
         Vertex {
             pos: [x, y, -1],
             uv: [0, 0],
@@ -132,31 +143,80 @@ fn make_skybox_rect(tile_index: i32, color_index: i8) -> Vec<Vertex> {
             uv: [31 << 5, 0],
             cn: color,
         },
-    ]
+    ])
+}
+
+fn calc_dxt(width: u32, b_txl: u32) -> u32 {
+    let words = u32::max(1, width * b_txl / 8);
+    ((1 << 11) + words - 1) / words
+}
+
+fn load_block_texture(
+    dl: &mut Vec<F3DCommand<Pointer>>,
+    width: u32,
+    height: u32,
+    format: ImageFormat,
+    image: Pointer,
+) {
+    use F3DCommand::*;
+
+    dl.push(DPSetTextureImage(Image {
+        fmt: format,
+        size: ComponentSize::Bits16,
+        width: 1,
+        img: image,
+    }));
+    dl.push(DPTileSync);
+    dl.push(DPSetTile(
+        TileIndex::LOAD,
+        TileParams {
+            fmt: format,
+            size: ComponentSize::Bits16,
+            ..Default::default()
+        },
+    ));
+    dl.push(DPLoadSync);
+    dl.push(DPLoadBlock(
+        TileIndex::LOAD,
+        TextureBlock {
+            uls: 0,
+            ult: 0,
+            lrs: width * height - 1,
+            dxt: calc_dxt(width, 2),
+        },
+    ));
 }
 
 fn draw_skybox_tile_grid<M: MemoryRead>(
     builder: &mut F3DBuilder<'_, M>,
+    dl: &mut Vec<F3DCommand<Pointer>>,
     layout: &impl MemoryLayout,
     memory: &M,
     background: i8,
     skybox: &Skybox,
     color_index: i8,
 ) -> Result<(), VizError> {
+    use F3DCommand::*;
+
     for row in 0..3 {
         for col in 0..3 {
             let tile_index = skybox.upper_left_tile + row * SKYBOX_COLS + col;
             let texture_list =
                 builder.seg_to_virt(Segmented(read_skybox_texture(layout, background)?));
-            let texture =
-                memory.read_addr(texture_list + tile_index as usize * layout.pointer_size())?;
-            let vertices = make_skybox_rect(tile_index, color_index);
+            let texture = Segmented(
+                memory.read_addr(texture_list + tile_index as usize * layout.pointer_size())?,
+            );
+            let vertices = make_skybox_rect(builder, tile_index, color_index);
 
-            todo!()
-
-            // gLoadBlockTexture((*dlist)++, 32, 32, G_IM_FMT_RGBA, texture);
-            // gSPVertex((*dlist)++, VIRTUAL_TO_PHYSICAL(vertices), 4, 0);
-            // gSPDisplayList((*dlist)++, dl_draw_quad_verts_0123);
+            load_block_texture(dl, 32, 32, ImageFormat::Rgba, Pointer::Segmented(texture));
+            dl.push(SPVertex {
+                v: vertices,
+                n: 4,
+                v0: 0,
+            });
+            dl.push(SPDisplayList(Pointer::Segmented(Segmented(
+                layout.symbol_address("dl_draw_quad_verts_0123")?,
+            ))));
         }
     }
     Ok(())
@@ -179,16 +239,43 @@ fn init_skybox_display_list<M: MemoryRead>(
     background: i8,
     color_index: i8,
 ) -> Result<Pointer, VizError> {
-    let ortho = create_skybox_ortho_matrix(skybox);
+    use F3DCommand::*;
 
-    // gSPDisplayList(dlist++, dl_skybox_begin);
-    // gSPMatrix(dlist++, VIRTUAL_TO_PHYSICAL(ortho), G_MTX_PROJECTION | G_MTX_MUL | G_MTX_NOPUSH);
-    // gSPDisplayList(dlist++, dl_skybox_tile_tex_settings);
-    draw_skybox_tile_grid(builder, layout, memory, background, skybox, color_index)?;
-    // gSPDisplayList(dlist++, dl_skybox_end);
-    // gSPEndDisplayList(dlist);
+    let mut dl = Vec::new();
 
-    Ok(todo!())
+    dl.push(SPDisplayList(Pointer::Segmented(Segmented(
+        layout.symbol_address("dl_skybox_begin")?,
+    ))));
+
+    let ortho = create_skybox_ortho_matrix(skybox).to_fixed();
+    let matrix = builder.alloc_u32(cast_slice(&ortho));
+    dl.push(SPMatrix {
+        matrix,
+        mode: MatrixMode::Proj,
+        op: MatrixOp::Mul,
+        push: false,
+    });
+
+    dl.push(SPDisplayList(Pointer::Segmented(Segmented(
+        layout.symbol_address("dl_skybox_tile_tex_settings")?,
+    ))));
+
+    draw_skybox_tile_grid(
+        builder,
+        &mut dl,
+        layout,
+        memory,
+        background,
+        skybox,
+        color_index,
+    )?;
+
+    dl.push(SPDisplayList(Pointer::Segmented(Segmented(
+        layout.symbol_address("dl_skybox_end")?,
+    ))));
+    dl.push(SPEndDisplayList);
+
+    Ok(builder.alloc_dl(&dl))
 }
 
 fn create_skybox_facing_camera<M: MemoryRead>(
