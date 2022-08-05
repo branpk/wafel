@@ -11,8 +11,11 @@
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 #![allow(clippy::map_entry, clippy::needless_range_loop)]
 
+pub use error::*;
+
 pub mod cmd;
 pub mod decode;
+mod error;
 mod f3d_render_data;
 pub mod interpret;
 #[cfg(any(feature = "wgpu", doc))]

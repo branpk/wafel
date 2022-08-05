@@ -3,6 +3,7 @@
 use core::fmt;
 use std::error::Error;
 
+use fast3d::F3DError;
 use wafel_data_access::DataError;
 use wafel_data_type::{DataTypeError, ValueTypeError};
 use wafel_layout::LayoutLookupError;
@@ -13,6 +14,7 @@ use wafel_sm64::SM64DataError;
 pub enum VizError {
     DataError(DataError),
     SM64DataError(SM64DataError),
+    F3DError(F3DError),
     UnexpectedDisplayListCommand,
 }
 
@@ -21,6 +23,7 @@ impl fmt::Display for VizError {
         match self {
             VizError::DataError(error) => write!(f, "{}", error),
             VizError::SM64DataError(error) => write!(f, "{}", error),
+            VizError::F3DError(error) => write!(f, "{}", error),
             VizError::UnexpectedDisplayListCommand => {
                 write!(f, "unexpected display list command (probably wafel bug)")
             }
@@ -63,5 +66,11 @@ impl From<ValueTypeError> for VizError {
 impl From<SM64DataError> for VizError {
     fn from(v: SM64DataError) -> Self {
         Self::SM64DataError(v)
+    }
+}
+
+impl From<F3DError> for VizError {
+    fn from(v: F3DError) -> Self {
+        Self::F3DError(v)
     }
 }

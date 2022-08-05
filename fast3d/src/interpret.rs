@@ -4,8 +4,6 @@
 //! After implementing [F3DMemory] for loading vertex/texture/dls/etc data from memory,
 //! [interpret_f3d_display_list] can be called.
 //!
-//! Currently this [interpret_f3d_display_list] panics on invalid display lists.
-//!
 //! Note: this module is not complete and may have errors.
 
 use core::fmt;
@@ -14,7 +12,7 @@ use std::{collections::HashMap, mem};
 use derivative::Derivative;
 
 pub use crate::f3d_render_data::*;
-use crate::{cmd::*, util::*};
+use crate::{cmd::*, util::*, F3DError};
 
 /// A trait with methods for reading from game memory.
 ///
@@ -27,7 +25,7 @@ pub trait F3DMemory {
     /// image.
     type Ptr: fmt::Debug + Copy + PartialEq;
     /// Error that can be thrown when reading from memory.
-    type Error;
+    type Error: From<F3DError>;
     /// An iterator over a display list that is read from memory.
     type DlIter<'a>: Iterator<Item = Result<F3DCommand<Self::Ptr>, Self::Error>>
     where
@@ -141,11 +139,11 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         self.screen_size[1] as f32 / 240.0
     }
 
-    fn vertex(&self, index: u32) -> Vertex {
-        *self
+    fn vertex(&self, index: u32) -> Result<Vertex, M::Error> {
+        Ok(*self
             .vertices
             .get(index as usize)
-            .expect("invalid vertex index")
+            .ok_or(F3DError::InvalidVertexIndex)?)
     }
 
     fn flush(&mut self) -> Result<(), M::Error> {
@@ -346,7 +344,7 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         let tmem = self
             .texture_memory
             .get(&tile_params.tmem)
-            .expect("invalid tmem offset");
+            .ok_or(F3DError::InvalidTMemOffset)?;
 
         let line_size_bytes = tile_params.line * 8;
         let size_bytes = tmem.image.size.num_bits() * (tmem.block.lrs + 1) / 8;
@@ -558,18 +556,18 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         }
     }
 
-    fn draw_triangle(&mut self, v0: u32, v1: u32, v2: u32) {
+    fn draw_triangle(&mut self, v0: u32, v1: u32, v2: u32) -> Result<(), M::Error> {
         if self.geometry_mode.contains(GeometryModes::CULL_BACK)
             && self.geometry_mode.contains(GeometryModes::CULL_FRONT)
         {
-            return;
+            return Ok(());
         }
 
         let pipeline = self.pipeline_state();
         let input_comps = self.get_color_input_components();
 
         for vi in [v0, v1, v2] {
-            let vtx = self.vertex(vi);
+            let vtx = self.vertex(vi)?;
 
             let pos = self.transform_pos(&vtx);
             self.push_pos(pos);
@@ -583,6 +581,8 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
 
             self.num_vertices += 1;
         }
+
+        Ok(())
     }
 
     fn fill_rectangle(&mut self, mut rect: Rectangle<u32>) -> Result<(), M::Error> {
@@ -827,7 +827,7 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                     break;
                 }
                 SPOneTriangle { v0, v1, v2, .. } => {
-                    self.draw_triangle(v0, v1, v2);
+                    self.draw_triangle(v0, v1, v2)?;
                 }
                 SPPopMatrix(mode) => {
                     self.flush()?;
@@ -911,10 +911,9 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                     self.fog_color = color;
                 }
                 DPSetFillColor(fill_color) => {
-                    assert_eq!(
-                        fill_color[0], fill_color[1],
-                        "multiple fill colors not implemented"
-                    );
+                    if fill_color[0] != fill_color[1] {
+                        return Err(F3DError::MultipleFillColors.into());
+                    }
                     self.fill_color = fill_color[0];
                 }
                 DPFillRectangle(rect) => {
@@ -928,7 +927,7 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
                     self.flush()?;
 
                     let tile_params = &self.tile_params[tile.0 as usize];
-                    let image = self.texture_image.expect("missing call to SetTextureImage");
+                    let image = self.texture_image.ok_or(F3DError::MissingSetTextureImage)?;
 
                     self.texture_memory.insert(
                         tile_params.tmem,

@@ -8,15 +8,13 @@
 //! Since some commands have multiple parts, the former returns a [DecodeResult],
 //! which may require additional raw commands to complete.
 //!
-//! Currently these functions panic on invalid commands.
-//!
 //! Note: this module is not complete and may have errors.
 
 #![allow(missing_docs)]
 
 use std::fmt;
 
-use crate::cmd::*;
+use crate::{cmd::*, F3DError};
 
 /// A raw Fast3D command for decoding.
 ///
@@ -132,7 +130,9 @@ impl<Ptr> DecodeResult<Ptr> {
 /// Decodes a raw Fast3D command.
 ///
 /// This returns a [DecodeResult] since the command may be incomplete.
-pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeResult<Ptr> {
+pub fn decode_f3d_command<Ptr: Copy>(
+    raw_command: RawF3DCommand<Ptr>,
+) -> Result<DecodeResult<Ptr>, F3DError> {
     use F3DCommand::*;
 
     let w0 = raw_command.w0;
@@ -140,7 +140,9 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
     let w1p = raw_command.w1_ptr;
     let cmd = w0 >> 24;
 
-    DecodeResult::Complete(match cmd {
+    let err = F3DError::InvalidCommand([w0, w1]);
+
+    Ok(DecodeResult::Complete(match cmd {
         0x00 => NoOp,
 
         // DMA commands
@@ -148,8 +150,8 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
             let p = ((w0 >> 16) & 0xFF) as u8;
             SPMatrix {
                 matrix: w1p,
-                mode: (p & 0x01).try_into().unwrap(),
-                op: (p & 0x02).try_into().unwrap(),
+                mode: (p & 0x01).try_into().map_err(|_| err.clone())?,
+                op: (p & 0x02).try_into().map_err(|_| err.clone())?,
                 push: p & 0x04 != 0,
             }
         }
@@ -185,7 +187,7 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
             v2: (w1 & 0xFF) / 10,
             flag: w1 >> 24,
         },
-        0xBD => SPPopMatrix(((w1 & 0x01) as u8).try_into().unwrap()),
+        0xBD => SPPopMatrix(((w1 & 0x01) as u8).try_into().map_err(|_| err.clone())?),
         0xBC => {
             let index = w0 & 0xFF;
             match index {
@@ -213,26 +215,26 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
             let shift = (w0 >> 8) & 0xFF;
             let data = (w1 >> shift) as u8;
             match shift {
-                4 => DPSetAlphaDither(data.try_into().unwrap()),
-                6 => DPSetColorDither(data.try_into().unwrap()),
+                4 => DPSetAlphaDither(data.try_into().map_err(|_| err.clone())?),
+                6 => DPSetColorDither(data.try_into().map_err(|_| err.clone())?),
                 8 => DPSetCombineKey(data != 0),
-                9 => DPSetTextureConvert(data.try_into().unwrap()),
-                12 => DPSetTextureFilter(data.try_into().unwrap()),
-                14 => DPSetTextureLUT(data.try_into().unwrap()),
+                9 => DPSetTextureConvert(data.try_into().map_err(|_| err.clone())?),
+                12 => DPSetTextureFilter(data.try_into().map_err(|_| err.clone())?),
+                14 => DPSetTextureLUT(data.try_into().map_err(|_| err.clone())?),
                 16 => DPSetTextureLOD(data != 0),
-                17 => DPSetTextureDetail(data.try_into().unwrap()),
+                17 => DPSetTextureDetail(data.try_into().map_err(|_| err.clone())?),
                 19 => DPSetTexturePersp(data != 0),
-                20 => DPSetCycleType(data.try_into().unwrap()),
-                23 => DPPipelineMode(data.try_into().unwrap()),
+                20 => DPSetCycleType(data.try_into().map_err(|_| err.clone())?),
+                23 => DPPipelineMode(data.try_into().map_err(|_| err.clone())?),
                 _ => Unknown(raw_command),
             }
         }
         0xB9 => {
             let shift = (w0 >> 8) & 0xFF;
             match shift {
-                0 => DPSetAlphaCompare(((w1 >> shift) as u8).try_into().unwrap()),
-                2 => DPSetDepthSource(((w1 >> shift) as u8).try_into().unwrap()),
-                3 => DPSetRenderMode(w1.try_into().unwrap()),
+                0 => DPSetAlphaCompare(((w1 >> shift) as u8).try_into().map_err(|_| err.clone())?),
+                2 => DPSetDepthSource(((w1 >> shift) as u8).try_into().map_err(|_| err.clone())?),
+                3 => DPSetRenderMode(w1.try_into().map_err(|_| err.clone())?),
                 _ => Unknown(raw_command),
             }
         }
@@ -245,15 +247,23 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
 
         // RDP commands
         0xFF => DPSetColorImage(Image {
-            fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
-            size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
+            fmt: (((w0 >> 21) & 0x7) as u8)
+                .try_into()
+                .map_err(|_| err.clone())?,
+            size: (((w0 >> 19) & 0x3) as u8)
+                .try_into()
+                .map_err(|_| err.clone())?,
             width: (w0 & 0xFFF) + 1,
             img: w1p,
         }),
         0xFE => DPSetDepthImage(w1p),
         0xFD => DPSetTextureImage(Image {
-            fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
-            size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
+            fmt: (((w0 >> 21) & 0x7) as u8)
+                .try_into()
+                .map_err(|_| err.clone())?,
+            size: (((w0 >> 19) & 0x3) as u8)
+                .try_into()
+                .map_err(|_| err.clone())?,
             width: (w0 & 0xFFF) + 1,
             img: w1p,
         }),
@@ -283,10 +293,10 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
                 (w1 & 0x7) as u8,
             ];
             DPSetCombineMode(CombineMode {
-                color1: cc1.try_into().unwrap(),
-                alpha1: ac1.try_into().unwrap(),
-                color2: cc2.try_into().unwrap(),
-                alpha2: ac2.try_into().unwrap(),
+                color1: cc1.try_into().map_err(|_| err.clone())?,
+                alpha1: ac1.try_into().map_err(|_| err.clone())?,
+                color2: cc2.try_into().map_err(|_| err.clone())?,
+                alpha2: ac2.try_into().map_err(|_| err.clone())?,
             })
         }
         0xFB => DPSetEnvColor(Rgba32 {
@@ -326,8 +336,12 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
         0xF5 => DPSetTile(
             TileIndex(((w1 >> 24) & 0x7) as u8),
             TileParams {
-                fmt: (((w0 >> 21) & 0x7) as u8).try_into().unwrap(),
-                size: (((w0 >> 19) & 0x3) as u8).try_into().unwrap(),
+                fmt: (((w0 >> 21) & 0x7) as u8)
+                    .try_into()
+                    .map_err(|_| err.clone())?,
+                size: (((w0 >> 19) & 0x3) as u8)
+                    .try_into()
+                    .map_err(|_| err.clone())?,
                 line: (w0 >> 9) & 0x1FF,
                 tmem: w0 & 0x1FF,
                 palette: (w1 >> 20) & 0xF,
@@ -376,7 +390,9 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
             dz: (w1 & 0xFFFF) as u16,
         }),
         0xED => DPSetScissor(
-            (((w1 >> 24) & 0xFF) as u8).try_into().unwrap(),
+            (((w1 >> 24) & 0xFF) as u8)
+                .try_into()
+                .map_err(|_| err.clone())?,
             Rectangle {
                 ulx: ((w0 >> 12) & 0xFFF) as u16,
                 uly: (w0 & 0xFFF) as u16,
@@ -392,7 +408,7 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
         0xE7 => DPPipeSync,
         0xE6 => DPLoadSync,
         0xE5 => {
-            return DecodeResult::TextureRectangle1 {
+            return Ok(DecodeResult::TextureRectangle1 {
                 flip: true,
                 rect: Rectangle {
                     ulx: (w1 >> 12) & 0xFFF,
@@ -401,10 +417,10 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
                     lry: w0 & 0xFFF,
                 },
                 tile: TileIndex(((w1 >> 24) & 0x7) as u8),
-            };
+            });
         }
         0xE4 => {
-            return DecodeResult::TextureRectangle1 {
+            return Ok(DecodeResult::TextureRectangle1 {
                 flip: false,
                 rect: Rectangle {
                     ulx: (w1 >> 12) & 0xFFF,
@@ -413,10 +429,10 @@ pub fn decode_f3d_command<Ptr: Copy>(raw_command: RawF3DCommand<Ptr>) -> DecodeR
                     lry: w0 & 0xFFF,
                 },
                 tile: TileIndex(((w1 >> 24) & 0x7) as u8),
-            };
+            });
         }
         _ => Unknown(raw_command),
-    })
+    }))
 }
 
 /// Decodes a stream of [RawF3DCommand]s into a stream of [F3DCommand]s.
@@ -439,13 +455,14 @@ impl<Ptr, E, I> F3DCommandIter<I>
 where
     Ptr: Copy,
     I: Iterator<Item = Result<RawF3DCommand<Ptr>, E>>,
+    E: From<F3DError>,
 {
     fn next_impl(
         &mut self,
         raw_command: Result<RawF3DCommand<Ptr>, E>,
     ) -> Result<F3DCommand<Ptr>, E> {
         let raw_command = raw_command?;
-        let mut result = decode_f3d_command(raw_command);
+        let mut result = decode_f3d_command(raw_command)?;
         while !result.is_complete() {
             match self.raw_dl.next() {
                 Some(raw_command_cont) => {
@@ -464,6 +481,7 @@ impl<Ptr, E, I> Iterator for F3DCommandIter<I>
 where
     Ptr: Copy,
     I: Iterator<Item = Result<RawF3DCommand<Ptr>, E>>,
+    E: From<F3DError>,
 {
     type Item = Result<F3DCommand<Ptr>, E>;
 
