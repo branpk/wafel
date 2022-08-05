@@ -197,6 +197,52 @@ impl Matrixf {
         mtx
     }
 
+    //     void guOrthoF(float m[4][4], float left, float right, float bottom, float top, float near, float far,
+    //         float scale) {
+    // int row;
+    // int col;
+    // guMtxIdentF(m);
+    // m[0][0] = 2 / (right - left);
+    // m[1][1] = 2 / (top - bottom);
+    // m[2][2] = -2 / (far - near);
+    // m[3][0] = -(right + left) / (right - left);
+    // m[3][1] = -(top + bottom) / (top - bottom);
+    // m[3][2] = -(far + near) / (far - near);
+    // m[3][3] = 1;
+    // for (row = 0; row < 4; row++) {
+    //   for (col = 0; col < 4; col++) {
+    //       m[row][col] *= scale;
+    //   }
+    // }
+    // }
+
+    pub fn ortho(
+        left: f32,
+        right: f32,
+        bottom: f32,
+        top: f32,
+        near: f32,
+        far: f32,
+        scale: f32,
+    ) -> Self {
+        let mut m = Self::identity();
+
+        m.cols[0][0] = 2.0 / (right - left);
+        m.cols[1][1] = 2.0 / (top - bottom);
+        m.cols[2][2] = -2.0 / (far - near);
+        m.cols[3][0] = -(right + left) / (right - left);
+        m.cols[3][1] = -(top + bottom) / (top - bottom);
+        m.cols[3][2] = -(far + near) / (far - near);
+        m.cols[3][3] = 1.0;
+
+        for i in 0..4 {
+            for j in 0..4 {
+                m.cols[i][j] *= scale;
+            }
+        }
+        m
+    }
+
     pub fn translate(b: [f32; 3]) -> Self {
         let mut mtx = Matrixf::identity();
 
@@ -558,7 +604,6 @@ pub fn read_viewport<M: F3DMemory>(
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Vertex {
     pub pos: [i16; 3],
-    pub padding: u16,
     pub uv: [i16; 2],
     pub cn: [u8; 4],
 }

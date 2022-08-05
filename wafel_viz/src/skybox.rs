@@ -1,0 +1,238 @@
+use fast3d::util::{atan2s, Matrixf, Vertex};
+use wafel_data_access::{DataReadable, MemoryLayout};
+use wafel_data_type::{Address, Angle};
+use wafel_memory::MemoryRead;
+use wafel_sm64::gfx::GraphNodeBackground;
+
+use crate::{
+    f3d_builder::{F3DBuilder, Pointer, Segmented},
+    VizError,
+};
+
+#[allow(dead_code)]
+pub fn skybox_main<M: MemoryRead>(
+    builder: &mut F3DBuilder<'_, M>,
+    layout: &impl MemoryLayout,
+    memory: &M,
+    node: &GraphNodeBackground,
+) -> Result<Pointer, VizError> {
+    create_skybox_facing_camera(builder, layout, memory, node.background as i8)
+}
+
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("LakituState")]
+struct LakituState {
+    pos: [f32; 3],
+    focus: [f32; 3],
+}
+
+#[derive(Debug, Clone)]
+struct Skybox {
+    scaled_x: i32,
+    scaled_y: i32,
+    upper_left_tile: i32,
+}
+
+const SKYBOX_COLORS: [[u8; 3]; 2] = [[0x50, 0x64, 0x5A], [0xFF, 0xFF, 0xFF]];
+
+const SCREEN_WIDTH: i32 = 320;
+const SCREEN_HEIGHT: i32 = 240;
+const SKYBOX_WIDTH: i32 = 4 * SCREEN_WIDTH;
+const SKYBOX_HEIGHT: i32 = 4 * SCREEN_HEIGHT;
+const SKYBOX_TILE_WIDTH: i32 = SCREEN_WIDTH / 2;
+const SKYBOX_TILE_HEIGHT: i32 = SCREEN_HEIGHT / 2;
+const SKYBOX_COLS: i32 = 10;
+
+fn round_float(num: f32) -> i16 {
+    if num >= 0.0 {
+        (num + 0.5) as i16
+    } else {
+        (num - 0.5) as i16
+    }
+}
+
+fn read_skybox_texture(layout: &impl MemoryLayout, background: i8) -> Result<Address, VizError> {
+    let symbol = [
+        "water_skybox_ptrlist",
+        "bitfs_skybox_ptrlist",
+        "wdw_skybox_ptrlist",
+        "cloud_floor_skybox_ptrlist",
+        "ccm_skybox_ptrlist",
+        "ssl_skybox_ptrlist",
+        "bbh_skybox_ptrlist",
+        "bidw_skybox_ptrlist",
+        "clouds_skybox_ptrlist",
+        "bits_skybox_ptrlist",
+    ][background as usize];
+    Ok(layout.symbol_address(symbol)?)
+}
+
+fn calculate_skybox_scaled_x(yaw: Angle, fov: f32) -> i32 {
+    let yaw_scaled = SCREEN_WIDTH as f32 * 360.0 * yaw.0 as f32 / (fov * 65536.0);
+    let mut scaled_x = (yaw_scaled + 0.5) as i32;
+
+    if scaled_x > SKYBOX_WIDTH {
+        scaled_x -= scaled_x / SKYBOX_WIDTH * SKYBOX_WIDTH;
+    }
+    SKYBOX_WIDTH - scaled_x
+}
+
+fn calculate_skybox_scaled_y(pitch: Angle) -> i32 {
+    let pitch_in_degrees = pitch.0 as f32 * 360.0 / 65535.0;
+
+    let degrees_to_scale = 360.0 * pitch_in_degrees / 90.0;
+    let rounded_y = round_float(degrees_to_scale) as i32;
+
+    let mut scaled_y = rounded_y + 5 * SKYBOX_TILE_HEIGHT;
+
+    if scaled_y > SKYBOX_HEIGHT {
+        scaled_y = SKYBOX_HEIGHT;
+    }
+    if scaled_y < SCREEN_HEIGHT {
+        scaled_y = SCREEN_HEIGHT;
+    }
+    scaled_y
+}
+
+fn get_top_left_tile_idx(scaled_x: i32, scaled_y: i32) -> i32 {
+    let tile_col = scaled_x / SKYBOX_TILE_WIDTH;
+    let tile_row = (SKYBOX_HEIGHT - scaled_y) / SKYBOX_TILE_HEIGHT;
+
+    tile_row * SKYBOX_COLS + tile_col
+}
+
+fn make_skybox_rect(tile_index: i32, color_index: i8) -> Vec<Vertex> {
+    let x = (tile_index % SKYBOX_COLS * SKYBOX_TILE_WIDTH) as i16;
+    let y = (SKYBOX_HEIGHT - tile_index / SKYBOX_COLS * SKYBOX_TILE_HEIGHT) as i16;
+
+    let color_index = color_index as usize;
+    let color = [
+        SKYBOX_COLORS[color_index][0],
+        SKYBOX_COLORS[color_index][1],
+        SKYBOX_COLORS[color_index][2],
+        255,
+    ];
+
+    vec![
+        Vertex {
+            pos: [x, y, -1],
+            uv: [0, 0],
+            cn: color,
+        },
+        Vertex {
+            pos: [x, y - SKYBOX_TILE_HEIGHT as i16, -1],
+            uv: [0, 31 << 5],
+            cn: color,
+        },
+        Vertex {
+            pos: [
+                x + SKYBOX_TILE_WIDTH as i16,
+                y - SKYBOX_TILE_HEIGHT as i16,
+                -1,
+            ],
+            uv: [31 << 5, 31 << 5],
+            cn: color,
+        },
+        Vertex {
+            pos: [x + SKYBOX_TILE_WIDTH as i16, y, -1],
+            uv: [31 << 5, 0],
+            cn: color,
+        },
+    ]
+}
+
+fn draw_skybox_tile_grid<M: MemoryRead>(
+    builder: &mut F3DBuilder<'_, M>,
+    layout: &impl MemoryLayout,
+    memory: &M,
+    background: i8,
+    skybox: &Skybox,
+    color_index: i8,
+) -> Result<(), VizError> {
+    for row in 0..3 {
+        for col in 0..3 {
+            let tile_index = skybox.upper_left_tile + row * SKYBOX_COLS + col;
+            let texture_list =
+                builder.seg_to_virt(Segmented(read_skybox_texture(layout, background)?));
+            let texture =
+                memory.read_addr(texture_list + tile_index as usize * layout.pointer_size())?;
+            let vertices = make_skybox_rect(tile_index, color_index);
+
+            todo!()
+
+            // gLoadBlockTexture((*dlist)++, 32, 32, G_IM_FMT_RGBA, texture);
+            // gSPVertex((*dlist)++, VIRTUAL_TO_PHYSICAL(vertices), 4, 0);
+            // gSPDisplayList((*dlist)++, dl_draw_quad_verts_0123);
+        }
+    }
+    Ok(())
+}
+
+fn create_skybox_ortho_matrix(skybox: &Skybox) -> Matrixf {
+    let left = skybox.scaled_x as f32;
+    let right = (skybox.scaled_x + SCREEN_WIDTH) as f32;
+    let bottom = (skybox.scaled_y - SCREEN_HEIGHT) as f32;
+    let top = skybox.scaled_y as f32;
+
+    Matrixf::ortho(left, right, bottom, top, 0.0, 3.0, 1.0)
+}
+
+fn init_skybox_display_list<M: MemoryRead>(
+    builder: &mut F3DBuilder<'_, M>,
+    layout: &impl MemoryLayout,
+    memory: &M,
+    skybox: &Skybox,
+    background: i8,
+    color_index: i8,
+) -> Result<Pointer, VizError> {
+    let ortho = create_skybox_ortho_matrix(skybox);
+
+    // gSPDisplayList(dlist++, dl_skybox_begin);
+    // gSPMatrix(dlist++, VIRTUAL_TO_PHYSICAL(ortho), G_MTX_PROJECTION | G_MTX_MUL | G_MTX_NOPUSH);
+    // gSPDisplayList(dlist++, dl_skybox_tile_tex_settings);
+    draw_skybox_tile_grid(builder, layout, memory, background, skybox, color_index)?;
+    // gSPDisplayList(dlist++, dl_skybox_end);
+    // gSPEndDisplayList(dlist);
+
+    Ok(todo!())
+}
+
+fn create_skybox_facing_camera<M: MemoryRead>(
+    builder: &mut F3DBuilder<'_, M>,
+    layout: &impl MemoryLayout,
+    memory: &M,
+    background: i8,
+) -> Result<Pointer, VizError> {
+    let lakitu_state_addr = layout.symbol_address("gLakituState")?;
+    let LakituState { pos, focus } =
+        LakituState::reader(layout)?.read(memory, lakitu_state_addr)?;
+
+    let camera_face_x = focus[0] - pos[0];
+    let camera_face_y = focus[1] - pos[1];
+    let camera_face_z = focus[2] - pos[2];
+    let color_index = 1;
+
+    // TODO:
+    // If the "Plunder in the Sunken Ship" star in JRB is collected, make the sky darker and slightly green
+    // if (background == 8 && !(save_file_get_star_flags(gCurrSaveFileNum - 1, COURSE_NUM_TO_INDEX(COURSE_JRB)) & (1 << 0))) {
+    //     colorIndex = 0;
+    // }
+
+    let fov = 90.0;
+    let yaw = atan2s(camera_face_z, camera_face_x);
+    let pitch = atan2s(
+        (camera_face_x * camera_face_x + camera_face_z * camera_face_z).sqrt(),
+        camera_face_y,
+    );
+    let scaled_x = calculate_skybox_scaled_x(yaw, fov);
+    let scaled_y = calculate_skybox_scaled_y(pitch);
+    let upper_left_tile = get_top_left_tile_idx(scaled_x, scaled_y);
+
+    let skybox = Skybox {
+        scaled_x,
+        scaled_y,
+        upper_left_tile,
+    };
+
+    init_skybox_display_list(builder, layout, memory, &skybox, background, color_index)
+}

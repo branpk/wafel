@@ -16,4 +16,5 @@ mod ortho_camera_control;
 mod render_data;
 mod renderer;
 mod rotate_camera_control;
+mod skybox;
 mod sm64_gfx_render;
