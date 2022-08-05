@@ -22,7 +22,7 @@ class Model:
     self.viz_enabled = config.dev_mode
     self.viz_config: dict = {
       'object_cull': 'ShowAll',
-      'surface_mode': 'Physical',
+      'surface_mode': 'Visual',
     }
 
   def load(self, game_version: str, edits: Dict[Variable, object]) -> None:
