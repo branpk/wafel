@@ -28,23 +28,29 @@ impl Default for VizConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum Camera {
     InGame,
-    LookAt {
-        pos: [f32; 3],
-        focus: [f32; 3],
-        roll: Angle,
-    },
-    Ortho {
-        pos: [f32; 3],
-        forward: [f32; 3],
-        upward: [f32; 3],
-        span_v: f32,
-    },
+    LookAt(LookAtCamera),
+    Ortho(OrthoCamera),
 }
 
 impl Default for Camera {
     fn default() -> Self {
         Self::InGame
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct LookAtCamera {
+    pub pos: [f32; 3],
+    pub focus: [f32; 3],
+    pub roll: Angle,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct OrthoCamera {
+    pub pos: [f32; 3],
+    pub forward: [f32; 3],
+    pub upward: [f32; 3],
+    pub span_v: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

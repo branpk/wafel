@@ -5,7 +5,7 @@ use wafel_data_access::{DataReadable, MemoryLayout};
 use wafel_data_type::Angle;
 use wafel_memory::MemoryRead;
 
-use crate::{error::VizError, Camera};
+use crate::{error::VizError, Camera, LookAtCamera};
 
 #[derive(Debug, Clone, Default)]
 pub struct PerspCameraControl {
@@ -308,11 +308,11 @@ impl PerspCameraControl {
 
             let pos = [focus[0] - dx, focus[1] - dy, focus[2] - dz];
 
-            Camera::LookAt {
+            Camera::LookAt(LookAtCamera {
                 pos,
                 focus,
                 roll: Wrapping(0),
-            }
+            })
         } else {
             Camera::InGame
         }

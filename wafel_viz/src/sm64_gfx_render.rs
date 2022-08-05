@@ -14,7 +14,8 @@ use wafel_sm64::gfx::*;
 use crate::{
     error::VizError,
     f3d_builder::{F3DBuilder, Pointer, Segmented},
-    Camera, ObjectCull, SurfaceMode, VizConfig,
+    skybox::skybox_main,
+    Camera, LookAtCamera, ObjectCull, OrthoCamera, SurfaceMode, VizConfig,
 };
 
 const DEBUG_PRINT: bool = false;
@@ -150,6 +151,7 @@ enum MasterListEdit {
         display_list: Pointer,
     },
     OptDynamic,
+    SkipDynamic,
 }
 
 #[derive(Debug, Clone)]
@@ -223,6 +225,14 @@ struct ObjectFields {
     behavior: Address,
 }
 
+#[derive(Debug, Clone, DataReadable)]
+#[struct_name("LakituState")]
+struct LakituState {
+    pos: [f32; 3],
+    focus: [f32; 3],
+    roll: Angle,
+}
+
 impl<'m, L, M> NodeRenderer<'m, L, M>
 where
     L: MemoryLayout,
@@ -277,6 +287,15 @@ where
     }
 
     fn append_display_list(&mut self, layer: i16, display_list: Address) -> Result<(), VizError> {
+        let display_list = Pointer::Segmented(self.builder.virt_to_phys(display_list));
+        self.append_display_list_pointer(layer, display_list)
+    }
+
+    fn append_display_list_pointer(
+        &mut self,
+        layer: i16,
+        display_list: Pointer,
+    ) -> Result<(), VizError> {
         let visible = if self.config.surface_mode == SurfaceMode::Visual {
             true
         } else {
@@ -300,8 +319,7 @@ where
         Ok(())
     }
 
-    fn append_display_list_unconditional(&mut self, layer: i16, display_list: Address) {
-        let display_list = Pointer::Segmented(self.builder.virt_to_phys(display_list));
+    fn append_display_list_unconditional(&mut self, layer: i16, display_list: Pointer) {
         if self.is_node_rendered() {
             self.edit_master_list(
                 layer,
@@ -321,8 +339,7 @@ where
         }
     }
 
-    fn skip_display_list(&mut self, layer: i16, display_list: Address) {
-        let display_list = Pointer::Segmented(self.builder.virt_to_phys(display_list));
+    fn skip_display_list(&mut self, layer: i16, display_list: Pointer) {
         if self.is_node_rendered() {
             self.edit_master_list(layer, MasterListEdit::Skip(display_list));
         }
@@ -331,6 +348,12 @@ where
     fn append_opt_dynamic_list(&mut self, layer: i16) {
         if self.is_node_rendered() {
             self.edit_master_list(layer, MasterListEdit::OptDynamic);
+        }
+    }
+
+    fn skip_dynamic_list(&mut self, layer: i16) {
+        if self.is_node_rendered() {
+            self.edit_master_list(layer, MasterListEdit::SkipDynamic);
         }
     }
 
@@ -739,6 +762,13 @@ where
                             }
                         }
                     }
+                    MasterListEdit::SkipDynamic => {
+                        actual_nodes
+                            .next()
+                            .copied()
+                            .filter(|&(_, dl)| is_dynamic(&self.builder, dl))
+                            .expect("master list discrepancy");
+                    }
                 }
             }
 
@@ -913,7 +943,7 @@ where
                     unreachable!();
                 }
             }
-            Camera::LookAt { roll, .. } => {
+            Camera::LookAt(LookAtCamera { roll, .. }) => {
                 let roll_mtx = Matrixf::rotate_xy(roll);
                 let ptr = self.builder.alloc_u32(cast_slice(&roll_mtx.to_fixed()));
                 self.builder.push_cmd(SPMatrix {
@@ -924,7 +954,7 @@ where
                 });
                 self.output.proj_mtx = &self.output.proj_mtx * &roll_mtx;
             }
-            Camera::Ortho { span_v, .. } => {
+            Camera::Ortho(OrthoCamera { span_v, .. }) => {
                 let aspect = 320.0 / 240.0;
                 let span_h = aspect * span_v;
                 let span_z = 40_000.0;
@@ -947,13 +977,15 @@ where
 
         let mod_camera_transform = match used_camera {
             Camera::InGame => camera_transform.clone(),
-            Camera::LookAt { pos, focus, .. } => Matrixf::look_at(pos, focus, node.roll),
-            Camera::Ortho {
+            Camera::LookAt(LookAtCamera { pos, focus, .. }) => {
+                Matrixf::look_at(pos, focus, node.roll)
+            }
+            Camera::Ortho(OrthoCamera {
                 pos,
                 forward,
                 upward,
                 ..
-            } => {
+            }) => {
                 let forward = normalize_vec3(forward);
                 let backward = [-forward[0], -forward[1], -forward[2]];
                 let upward = normalize_vec3(upward);
@@ -1131,7 +1163,7 @@ where
     }
 
     fn used_camera(&self) -> Camera {
-        if let Camera::LookAt { pos, focus, .. } = self.config.camera {
+        if let Camera::LookAt(LookAtCamera { pos, focus, .. }) = self.config.camera {
             if pos == focus {
                 return Camera::InGame;
             }
@@ -1145,8 +1177,8 @@ where
                 let camera = self.cur_camera.as_ref().expect("no current camera");
                 camera.roll
             }
-            Camera::LookAt { roll, .. } => roll,
-            Camera::Ortho { .. } => Wrapping(0),
+            Camera::LookAt(LookAtCamera { roll, .. }) => roll,
+            Camera::Ortho(_) => Wrapping(0),
         }
     }
 
@@ -1351,13 +1383,30 @@ where
         Ok(())
     }
 
+    fn lakitu_state_for_background(&self) -> Result<LookAtCamera, VizError> {
+        let lakitu_state_addr = self.layout.symbol_address("gLakituState")?;
+        let LakituState { pos, focus, roll } =
+            LakituState::reader(self.layout)?.read(self.memory, lakitu_state_addr)?;
+
+        Ok(LookAtCamera { pos, focus, roll })
+    }
+
     fn process_background(&mut self, node: &GraphNodeBackground) -> Result<(), VizError> {
-        let layer = if !node.fn_node.func.is_null() {
-            node.fn_node.node.flags >> 8
+        if !node.fn_node.func.is_null() {
+            let lakitu_state = self.lakitu_state_for_background()?;
+            let display_list = skybox_main(
+                &mut self.builder,
+                self.layout,
+                self.memory,
+                node,
+                &lakitu_state,
+            )?;
+            let layer = node.fn_node.node.flags >> 8;
+            self.skip_dynamic_list(layer);
+            self.append_display_list_pointer(layer, display_list)?;
         } else {
-            0
+            self.append_opt_dynamic_list(0);
         };
-        self.append_opt_dynamic_list(layer);
 
         self.process_node_and_siblings(node.fn_node.node.children)?;
         Ok(())

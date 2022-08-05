@@ -6,7 +6,7 @@ use wafel_sm64::gfx::GraphNodeBackground;
 
 use crate::{
     f3d_builder::{F3DBuilder, Pointer, Segmented},
-    VizError,
+    LookAtCamera, VizError,
 };
 
 #[allow(dead_code)]
@@ -15,15 +15,9 @@ pub fn skybox_main<M: MemoryRead>(
     layout: &impl MemoryLayout,
     memory: &M,
     node: &GraphNodeBackground,
+    lakitu_state: &LookAtCamera,
 ) -> Result<Pointer, VizError> {
-    create_skybox_facing_camera(builder, layout, memory, node.background as i8)
-}
-
-#[derive(Debug, Clone, DataReadable)]
-#[struct_name("LakituState")]
-struct LakituState {
-    pos: [f32; 3],
-    focus: [f32; 3],
+    create_skybox_facing_camera(builder, layout, memory, node.background as i8, lakitu_state)
 }
 
 #[derive(Debug, Clone)]
@@ -202,10 +196,9 @@ fn create_skybox_facing_camera<M: MemoryRead>(
     layout: &impl MemoryLayout,
     memory: &M,
     background: i8,
+    lakitu_state: &LookAtCamera,
 ) -> Result<Pointer, VizError> {
-    let lakitu_state_addr = layout.symbol_address("gLakituState")?;
-    let LakituState { pos, focus } =
-        LakituState::reader(layout)?.read(memory, lakitu_state_addr)?;
+    let LookAtCamera { pos, focus, .. } = lakitu_state;
 
     let camera_face_x = focus[0] - pos[0];
     let camera_face_y = focus[1] - pos[1];

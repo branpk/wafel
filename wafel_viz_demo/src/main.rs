@@ -9,8 +9,8 @@ use std::{
 use wafel_api::{try_load_m64, Error, Game, Input, SaveState};
 use wafel_memory::GameMemory;
 use wafel_viz::{
-    viz_render, Camera, Element, Line, ObjectCull, PerspCameraControl, SurfaceMode, VizConfig,
-    VizRenderer,
+    viz_render, Camera, Element, Line, ObjectCull, OrthoCamera, PerspCameraControl, SurfaceMode,
+    VizConfig, VizRenderer,
 };
 use window::{open_window_and_run, App};
 use winit::event::{ElementState, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowEvent};
@@ -210,12 +210,12 @@ impl App for VizApp {
         let camera = self.camera_control.camera();
 
         let mario_pos = self.game.try_read("gMarioState.pos")?.try_as_f32_3()?;
-        let camera = Camera::Ortho {
+        let camera = Camera::Ortho(OrthoCamera {
             pos: [mario_pos[0], mario_pos[1] + 500.0, mario_pos[2]],
             forward: [0.0, -1.0, 0.0],
             upward: [1.0, 0.0, 0.0],
             span_v: 3200.0,
-        };
+        });
 
         let mut config = VizConfig {
             screen_size: output_size,
