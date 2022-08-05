@@ -928,7 +928,7 @@ where
                 let aspect = 320.0 / 240.0;
                 let span_h = aspect * span_v;
                 let span_z = 40_000.0;
-                let scale = Matrixf::scale_vec3f([2.0 / span_h, 2.0 / span_v, 2.0 / span_z]);
+                let scale = Matrixf::scale_vec3f([2.0 / span_h, 2.0 / span_v, -2.0 / span_z]);
                 let translate = Matrixf::translate([0.0, 0.0, -1.0]);
                 let proj_mtx = &translate * &scale;
                 let ptr = self.builder.alloc_u32(cast_slice(&proj_mtx.to_fixed()));
@@ -955,9 +955,10 @@ where
                 ..
             } => {
                 let forward = normalize_vec3(forward);
+                let backward = [-forward[0], -forward[1], -forward[2]];
                 let upward = normalize_vec3(upward);
                 let rightward = cross(forward, upward);
-                let rotate = Matrixf::from_rows_vec3([rightward, upward, forward]);
+                let rotate = Matrixf::from_rows_vec3([rightward, upward, backward]);
                 let translate = Matrixf::translate([-pos[0], -pos[1], -pos[2]]);
                 &rotate * &translate
             }
