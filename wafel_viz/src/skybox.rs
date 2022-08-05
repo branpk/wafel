@@ -202,6 +202,10 @@ fn draw_skybox_tile_grid<M: MemoryRead>(
     for row in 0..3 {
         for col in 0..3 {
             let tile_index = skybox.upper_left_tile + row * SKYBOX_COLS + col;
+
+            // Index out of bounds when pointing straight down
+            let tile_index = tile_index.clamp(0, 79);
+
             let texture_list =
                 builder.seg_to_virt(Segmented(read_skybox_texture(layout, background)?));
             let texture = Segmented(
