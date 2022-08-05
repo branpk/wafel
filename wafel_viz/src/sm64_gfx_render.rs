@@ -1384,11 +1384,24 @@ where
     }
 
     fn lakitu_state_for_background(&self) -> Result<LookAtCamera, VizError> {
-        let lakitu_state_addr = self.layout.symbol_address("gLakituState")?;
-        let LakituState { pos, focus, roll } =
-            LakituState::reader(self.layout)?.read(self.memory, lakitu_state_addr)?;
-
-        Ok(LookAtCamera { pos, focus, roll })
+        match self.used_camera() {
+            Camera::InGame => {
+                let lakitu_state_addr = self.layout.symbol_address("gLakituState")?;
+                let LakituState { pos, focus, roll } =
+                    LakituState::reader(self.layout)?.read(self.memory, lakitu_state_addr)?;
+                Ok(LookAtCamera { pos, focus, roll })
+            }
+            Camera::LookAt(camera) => Ok(camera),
+            Camera::Ortho(camera) => Ok(LookAtCamera {
+                pos: camera.pos,
+                focus: [
+                    camera.pos[0] + camera.forward[0],
+                    camera.pos[1] + camera.forward[1],
+                    camera.pos[2] + camera.forward[2],
+                ],
+                roll: Wrapping(0),
+            }),
+        }
     }
 
     fn process_background(&mut self, node: &GraphNodeBackground) -> Result<(), VizError> {

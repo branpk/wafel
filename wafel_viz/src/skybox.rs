@@ -69,7 +69,8 @@ fn read_skybox_texture(layout: &impl MemoryLayout, background: i8) -> Result<Add
 }
 
 fn calculate_skybox_scaled_x(yaw: Angle, fov: f32) -> i32 {
-    let yaw_scaled = SCREEN_WIDTH as f32 * 360.0 * yaw.0 as f32 / (fov * 65536.0);
+    let yaw = yaw.0 as u16 as f32;
+    let yaw_scaled = (SCREEN_WIDTH as f64 * 360.0 * yaw as f64 / (fov as f64 * 65536.0)) as f32;
     let mut scaled_x = (yaw_scaled + 0.5) as i32;
 
     if scaled_x > SKYBOX_WIDTH {
@@ -290,13 +291,27 @@ fn create_skybox_facing_camera<M: MemoryRead>(
     let camera_face_x = focus[0] - pos[0];
     let camera_face_y = focus[1] - pos[1];
     let camera_face_z = focus[2] - pos[2];
-    let color_index = 1;
+    let mut color_index = 1;
 
-    // TODO:
-    // If the "Plunder in the Sunken Ship" star in JRB is collected, make the sky darker and slightly green
-    // if (background == 8 && !(save_file_get_star_flags(gCurrSaveFileNum - 1, COURSE_NUM_TO_INDEX(COURSE_JRB)) & (1 << 0))) {
-    //     colorIndex = 0;
-    // }
+    if background == 8 {
+        let file_num = layout
+            .global_path("gCurrSaveFileNum")?
+            .read(memory)?
+            .try_as_int()?;
+        let jrb_course = 3;
+        let jrb_stars = layout
+            .global_path(&format!(
+                "gSaveBuffer.files[{}][0].courseStars[{}]",
+                file_num - 1,
+                jrb_course - 1,
+            ))?
+            .read(memory)?
+            .try_as_int()?;
+
+        if (jrb_stars & (1 << 0)) == 0 {
+            color_index = 0;
+        }
+    }
 
     let fov = 90.0;
     let yaw = atan2s(camera_face_z, camera_face_x);
