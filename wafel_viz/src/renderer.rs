@@ -121,6 +121,7 @@ fn create_surface_pipeline(
     device: &wgpu::Device,
     transform_bind_group_layout: &wgpu::BindGroupLayout,
     output_format: wgpu::TextureFormat,
+    depth_write_enabled: bool,
 ) -> wgpu::RenderPipeline {
     let shader_module = device.create_shader_module(wgpu::include_wgsl!("../shaders/surface.wgsl"));
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -140,7 +141,7 @@ fn create_surface_pipeline(
         primitive: wgpu::PrimitiveState::default(),
         depth_stencil: Some(wgpu::DepthStencilState {
             format: wgpu::TextureFormat::Depth24Plus,
-            depth_write_enabled: true,
+            depth_write_enabled,
             depth_compare: wgpu::CompareFunction::LessEqual,
             stencil: wgpu::StencilState::default(),
             bias: wgpu::DepthBiasState::default(),
@@ -165,6 +166,7 @@ pub struct VizRenderer {
     transform_bind_group_layout: wgpu::BindGroupLayout,
     color_line_pipeline: wgpu::RenderPipeline,
     surface_pipeline: wgpu::RenderPipeline,
+    transparent_surface_pipeline: wgpu::RenderPipeline,
     render_data: Option<RenderData>,
 }
 
@@ -172,11 +174,13 @@ pub struct VizRenderer {
 struct RenderData {
     screen_top_left: [u32; 2],
     screen_size: [u32; 2],
-    f3d_pre_cmds: Range<usize>,
-    f3d_post_cmds: Range<usize>,
+    f3d_pre_depth_cmd_range: Range<usize>,
+    f3d_depth_cmd_range: Range<usize>,
+    f3d_post_depth_cmd_range: Range<usize>,
     transform_bind_group: wgpu::BindGroup,
     color_line_vertex_buffer: (u32, wgpu::Buffer),
     surface_vertex_buffer: (u32, wgpu::Buffer),
+    transparent_surface_vertex_buffer: (u32, wgpu::Buffer),
 }
 
 impl VizRenderer {
@@ -186,13 +190,16 @@ impl VizRenderer {
         let color_line_pipeline =
             create_color_line_pipeline(device, &transform_bind_group_layout, output_format);
         let surface_pipeline =
-            create_surface_pipeline(device, &transform_bind_group_layout, output_format);
+            create_surface_pipeline(device, &transform_bind_group_layout, output_format, true);
+        let transparent_surface_pipeline =
+            create_surface_pipeline(device, &transform_bind_group_layout, output_format, false);
 
         Self {
             f3d_renderer: F3DRenderer::new(device),
             transform_bind_group_layout,
             color_line_pipeline,
             surface_pipeline,
+            transparent_surface_pipeline,
             render_data: None,
         }
     }
@@ -221,18 +228,19 @@ impl VizRenderer {
         output_format: wgpu::TextureFormat,
         data: &VizRenderData,
     ) {
-        let first_z_buf_index = data
-            .f3d_render_data
-            .commands
-            .iter()
-            .enumerate()
-            .filter(|(_, cmd)| {
-                let pipeline = &data.f3d_render_data.pipelines[&cmd.pipeline];
-                pipeline.depth_compare
-            })
-            .map(|(i, _)| i + 1)
-            .next()
-            .unwrap_or(0);
+        let mut first_depth_cmd = None;
+        let mut last_depth_cmd = None;
+        for (i, cmd) in data.f3d_render_data.commands.iter().enumerate() {
+            let pipeline = &data.f3d_render_data.pipelines[&cmd.pipeline];
+            if pipeline.depth_compare {
+                if first_depth_cmd.is_none() {
+                    first_depth_cmd = Some(i);
+                }
+                last_depth_cmd = Some(i);
+            }
+        }
+        let first_depth_cmd = first_depth_cmd.unwrap_or(0);
+        let post_depth_cmd = last_depth_cmd.map(|i| i + 1).unwrap_or(0);
 
         self.f3d_renderer
             .prepare(device, queue, output_format, &data.f3d_render_data);
@@ -271,17 +279,29 @@ impl VizRenderer {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
+        let transparent_surface_vertex_buffer =
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: cast_slice(&data.transparent_surface_vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+
         self.render_data = Some(RenderData {
             screen_top_left: data.f3d_render_data.screen_top_left,
             screen_size: data.f3d_render_data.screen_size,
-            f3d_pre_cmds: 0..first_z_buf_index,
-            f3d_post_cmds: first_z_buf_index..data.f3d_render_data.commands.len(),
+            f3d_pre_depth_cmd_range: 0..first_depth_cmd,
+            f3d_depth_cmd_range: first_depth_cmd..post_depth_cmd,
+            f3d_post_depth_cmd_range: post_depth_cmd..data.f3d_render_data.commands.len(),
             transform_bind_group,
             color_line_vertex_buffer: (
                 color_line_vertex_data.len() as u32,
                 color_line_vertex_buffer,
             ),
             surface_vertex_buffer: (data.surface_vertices.len() as u32, surface_vertex_buffer),
+            transparent_surface_vertex_buffer: (
+                data.transparent_surface_vertices.len() as u32,
+                transparent_surface_vertex_buffer,
+            ),
         });
     }
 
@@ -343,7 +363,7 @@ impl VizRenderer {
     pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>) {
         if let Some(render_data) = &self.render_data {
             self.f3d_renderer
-                .render_command_range(rp, render_data.f3d_pre_cmds.clone());
+                .render_command_range(rp, render_data.f3d_pre_depth_cmd_range.clone());
 
             let vx = render_data.screen_top_left[0];
             let vy = render_data.screen_top_left[1];
@@ -363,7 +383,15 @@ impl VizRenderer {
             rp.draw(0..render_data.color_line_vertex_buffer.0, 0..1);
 
             self.f3d_renderer
-                .render_command_range(rp, render_data.f3d_post_cmds.clone());
+                .render_command_range(rp, render_data.f3d_depth_cmd_range.clone());
+
+            rp.set_pipeline(&self.transparent_surface_pipeline);
+            rp.set_bind_group(0, &render_data.transform_bind_group, &[]);
+            rp.set_vertex_buffer(0, render_data.transparent_surface_vertex_buffer.1.slice(..));
+            rp.draw(0..render_data.transparent_surface_vertex_buffer.0, 0..1);
+
+            self.f3d_renderer
+                .render_command_range(rp, render_data.f3d_post_depth_cmd_range.clone());
         } else {
             self.f3d_renderer.render(rp);
         }

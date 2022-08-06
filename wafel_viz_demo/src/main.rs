@@ -74,7 +74,7 @@ impl App for VizApp {
             time_since_game_advance: Duration::ZERO,
         };
 
-        while app.game.frame() < 74000 {
+        while app.game.frame() < 74200 {
             app.frame_advance()?;
         }
 
@@ -209,19 +209,19 @@ impl App for VizApp {
     ) -> Result<(), Error> {
         let camera = self.camera_control.camera();
 
-        let mario_pos = self.game.try_read("gMarioState.pos")?.try_as_f32_3()?;
-        let camera = Camera::Ortho(OrthoCamera {
-            pos: [mario_pos[0], mario_pos[1] + 500.0, mario_pos[2]],
-            forward: [0.0, -1.0, 0.0],
-            upward: [1.0, 0.0, 0.0],
-            span_v: 3200.0,
-        });
+        // let mario_pos = self.game.try_read("gMarioState.pos")?.try_as_f32_3()?;
+        // let camera = Camera::Ortho(OrthoCamera {
+        //     pos: [mario_pos[0], mario_pos[1] + 500.0, mario_pos[2]],
+        //     forward: [0.0, -1.0, 0.0],
+        //     upward: [1.0, 0.0, 0.0],
+        //     span_v: 3200.0,
+        // });
 
         let mut config = VizConfig {
             screen_size: output_size,
             camera,
             object_cull: ObjectCull::ShowAll,
-            surface_mode: SurfaceMode::Visual,
+            surface_mode: SurfaceMode::Physical,
             ..Default::default()
         };
 

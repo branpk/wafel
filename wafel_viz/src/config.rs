@@ -12,6 +12,7 @@ pub struct VizConfig {
     pub object_cull: ObjectCull,
     pub surface_mode: SurfaceMode,
     pub highlighted_surfaces: HashSet<usize>,
+    pub transparent_surfaces: HashSet<usize>,
     pub elements: Vec<Element>,
 }
 
@@ -24,6 +25,7 @@ impl Default for VizConfig {
             object_cull: ObjectCull::default(),
             surface_mode: SurfaceMode::default(),
             highlighted_surfaces: HashSet::new(),
+            transparent_surfaces: HashSet::new(),
             elements: Vec::new(),
         }
     }
