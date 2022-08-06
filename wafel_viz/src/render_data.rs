@@ -50,7 +50,7 @@ pub fn viz_render(
     let (f3d_render_data, render_output) = sm64_gfx_render(layout, memory, config, true)?;
 
     let surface_vertices = if config.surface_mode == SurfaceMode::Physical {
-        get_surface_vertices(layout, memory)?
+        get_surface_vertices(layout, memory, config)?
     } else {
         Vec::new()
     };
@@ -66,18 +66,30 @@ pub fn viz_render(
 fn get_surface_vertices(
     layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
+    config: &VizConfig,
 ) -> Result<Vec<ColorVertex>, VizError> {
     let mut vertices: Vec<ColorVertex> = Vec::new();
 
     let surfaces = read_surfaces(layout, memory)?;
 
-    for surface in &surfaces {
-        let color = match surface.ty() {
+    for (i, surface) in surfaces.iter().enumerate() {
+        let mut color = match surface.ty() {
             SurfaceType::Floor => [0.5, 0.5, 1.0, 1.0],
             SurfaceType::Ceiling => [1.0, 0.5, 0.5, 1.0],
             SurfaceType::WallXProj => [0.3, 0.8, 0.3, 1.0],
             SurfaceType::WallZProj => [0.15, 0.4, 0.15, 1.0],
         };
+
+        if config.highlighted_surfaces.contains(&i) {
+            let boost = if surface.ty() == SurfaceType::Floor {
+                0.08
+            } else {
+                0.2
+            };
+            color[0] += boost;
+            color[1] += boost;
+            color[2] += boost;
+        }
 
         for pos in &surface.vertices {
             vertices.push(ColorVertex {

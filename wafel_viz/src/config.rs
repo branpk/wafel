@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 use wafel_data_type::Angle;
 
@@ -9,6 +11,7 @@ pub struct VizConfig {
     pub camera: Camera,
     pub object_cull: ObjectCull,
     pub surface_mode: SurfaceMode,
+    pub highlighted_surfaces: HashSet<usize>,
     pub elements: Vec<Element>,
 }
 
@@ -17,10 +20,11 @@ impl Default for VizConfig {
         Self {
             screen_top_left: [0, 0],
             screen_size: [320, 240],
-            camera: Default::default(),
-            object_cull: Default::default(),
-            surface_mode: Default::default(),
-            elements: Default::default(),
+            camera: Camera::default(),
+            object_cull: ObjectCull::default(),
+            surface_mode: SurfaceMode::default(),
+            highlighted_surfaces: HashSet::new(),
+            elements: Vec::new(),
         }
     }
 }
