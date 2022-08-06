@@ -86,7 +86,15 @@ impl Default for SurfaceMode {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Element {
+    Point(Point),
     Line(Line),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Point {
+    pub pos: [f32; 3],
+    pub size: f32,
+    pub color: [f32; 4],
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

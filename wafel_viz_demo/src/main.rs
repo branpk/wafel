@@ -9,8 +9,8 @@ use std::{
 use wafel_api::{try_load_m64, Error, Game, Input, SaveState};
 use wafel_memory::GameMemory;
 use wafel_viz::{
-    viz_render, Camera, Element, Line, ObjectCull, OrthoCamera, PerspCameraControl, SurfaceMode,
-    VizConfig, VizRenderer,
+    viz_render, Camera, Element, Line, ObjectCull, OrthoCamera, PerspCameraControl, Point,
+    SurfaceMode, VizConfig, VizRenderer,
 };
 use window::{open_window_and_run, App};
 use winit::event::{ElementState, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowEvent};
@@ -241,6 +241,17 @@ impl App for VizApp {
         //             vertices: [[-8000.0, y as f32, t as f32], [8000.0, y as f32, t as f32]],
         //             color: [1.0, 1.0, 1.0, 1.0],
         //         }));
+        //     }
+        // }
+        // for x in (-8000..=8000).step_by(1000) {
+        //     for y in (-8000..=8000).step_by(1000) {
+        //         for z in (-8000..=8000).step_by(1000) {
+        //             config.elements.push(Element::Point(Point {
+        //                 pos: [x as f32, y as f32, z as f32],
+        //                 size: 2.0,
+        //                 color: [1.0, 1.0, 1.0, 1.0],
+        //             }));
+        //         }
         //     }
         // }
 
