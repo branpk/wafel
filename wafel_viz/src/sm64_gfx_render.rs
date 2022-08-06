@@ -23,6 +23,7 @@ const DEBUG_ONE_FRAME: bool = false;
 const DEBUG_CALC_TRANSFORMS: bool = false;
 const CHECK_CALC_TRANSFORMS: bool = false;
 const ASSERT_CALC_TRANSFORMS: bool = false;
+const PRINT_DISPLAY_LISTS: bool = false;
 
 pub fn sm64_gfx_render(
     layout: &impl MemoryLayout,
@@ -431,10 +432,14 @@ where
 
             if !pause_rendering {
                 self.process_node(root_addr, false)?;
+
+                if !self.config.show_in_game_overlays {
+                    return Ok(());
+                }
             }
         }
 
-        // Skip hud, in-game menu etc
+        // Hud, in-game menu etc
         self.builder.push_remaining()?;
 
         Ok(())
@@ -651,7 +656,16 @@ where
 
         let mut original_lists: [Vec<(Pointer, Pointer)>; 8] = Default::default();
 
+        if PRINT_DISPLAY_LISTS {
+            println!();
+            println!("Original:");
+        }
+
         for layer in 0..8 {
+            if PRINT_DISPLAY_LISTS {
+                println!("  Layer {}:", layer);
+            }
+
             let mut dl_node_addr = node.list_heads[layer as usize];
             if !dl_node_addr.is_null() {
                 let render_mode = self.get_render_mode(layer, z_buffer);
@@ -669,6 +683,11 @@ where
                         Pointer::Segmented(self.builder.virt_to_phys(dl_node.display_list));
                     self.builder
                         .expect(|cmd| cmd == SPDisplayList(display_list_ptr))?;
+
+                    if PRINT_DISPLAY_LISTS {
+                        let dl = dl_node.display_list;
+                        println!("    {} ({:?})", dl, self.layout.address_to_symbol(dl).ok());
+                    }
 
                     original_lists[layer as usize].push((transform_ptr, display_list_ptr));
 
@@ -694,6 +713,42 @@ where
                 false
             }
         };
+
+        if PRINT_DISPLAY_LISTS {
+            println!();
+            println!("Edits:");
+
+            for (layer, edits) in self.master_lists.iter().enumerate() {
+                println!("  Layer {}:", layer);
+                let name = |ptr: Pointer| match ptr {
+                    Pointer::Segmented(seg) => format!(
+                        "{} ({:?})",
+                        seg.0,
+                        self.layout.address_to_symbol(seg.0).ok()
+                    ),
+                    Pointer::BufferOffset(_) => "buf".to_string(),
+                };
+                for edit in edits {
+                    match edit {
+                        MasterListEdit::Copy { display_list, .. } => {
+                            println!("    Copy {}", name(*display_list));
+                        }
+                        MasterListEdit::Skip(dl) => {
+                            println!("    Skip {}", name(*dl));
+                        }
+                        MasterListEdit::Insert { display_list, .. } => {
+                            println!("    Skip {}", name(*display_list));
+                        }
+                        MasterListEdit::OptDynamic => {
+                            println!("    OptDynamic");
+                        }
+                        MasterListEdit::SkipDynamic => {
+                            println!("    SkipDynamic");
+                        }
+                    }
+                }
+            }
+        }
 
         // TODO: Error handling for mismatched display list structure
 
@@ -723,7 +778,9 @@ where
                             .next()
                             .copied()
                             .filter(|&(_, dl)| dl == *display_list)
-                            .expect("master list discrepancy");
+                            .unwrap_or_else(|| {
+                                panic!("master list discrepancy, copying {}", display_list)
+                            });
 
                         if DEBUG_CALC_TRANSFORMS || self.used_camera() != Camera::InGame {
                             let ptr = self.builder.alloc_u32(cast_slice(transform));

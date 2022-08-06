@@ -8,6 +8,7 @@ use wafel_data_type::Angle;
 pub struct VizConfig {
     pub screen_top_left: [u32; 2],
     pub screen_size: [u32; 2],
+    pub show_in_game_overlays: bool,
     pub camera: Camera,
     pub show_camera_focus: bool,
     pub object_cull: ObjectCull,
@@ -22,6 +23,7 @@ impl Default for VizConfig {
         Self {
             screen_top_left: [0, 0],
             screen_size: [320, 240],
+            show_in_game_overlays: true,
             camera: Camera::default(),
             show_camera_focus: false,
             object_cull: ObjectCull::default(),
