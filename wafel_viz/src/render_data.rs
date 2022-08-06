@@ -5,7 +5,7 @@ use wafel_sm64::{read_surfaces, SurfaceType};
 
 use crate::{
     sm64_gfx_render::{sm64_gfx_render, GfxRenderOutput},
-    ColorVertex, Element, SurfaceMode, VizConfig, VizError,
+    Camera, ColorVertex, Element, Line, Point, SurfaceMode, VizConfig, VizError,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -58,10 +58,16 @@ pub fn viz_render(
             (Vec::new(), Vec::new())
         };
 
+    let mut elements = config.elements.clone();
+
+    if config.show_camera_focus {
+        draw_camera_focus(&mut elements, layout, memory, config)?;
+    }
+
     Ok(VizRenderData {
         f3d_render_data,
         render_output: Some(render_output),
-        elements: config.elements.clone(),
+        elements,
         surface_vertices,
         transparent_surface_vertices,
     })
@@ -121,4 +127,51 @@ fn get_surface_vertices(
     }
 
     Ok((vertices, transparent_vertices))
+}
+
+fn draw_camera_focus(
+    elements: &mut Vec<Element>,
+    layout: &impl MemoryLayout,
+    memory: &impl MemoryRead,
+    config: &VizConfig,
+) -> Result<(), VizError> {
+    let focus;
+    let show_line;
+    match &config.camera {
+        Camera::InGame => {
+            focus = layout
+                .global_path("gLakituState.focus")?
+                .read(memory)?
+                .try_as_f32_3()?;
+            show_line = true;
+        }
+        Camera::LookAt(camera) => {
+            focus = camera.focus;
+            show_line = true;
+        }
+        Camera::Ortho(camera) => {
+            let dist = 1.0;
+            focus = [
+                camera.pos[0] + camera.forward[0] * dist,
+                camera.pos[1] + camera.forward[1] * dist,
+                camera.pos[2] + camera.forward[2] * dist,
+            ];
+            show_line = false;
+        }
+    };
+
+    let color = [0.2, 0.2, 0.2, 0.8];
+    elements.push(Element::Point(Point {
+        pos: focus,
+        size: 4.0,
+        color,
+    }));
+    if show_line {
+        elements.push(Element::Line(Line {
+            vertices: [focus, [focus[0], focus[1] - 10_000.0, focus[2]]],
+            color,
+        }));
+    }
+
+    Ok(())
 }

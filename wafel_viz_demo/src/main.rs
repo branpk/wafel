@@ -220,6 +220,7 @@ impl App for VizApp {
         let mut config = VizConfig {
             screen_size: output_size,
             camera,
+            show_camera_focus: true,
             object_cull: ObjectCull::ShowAll,
             surface_mode: SurfaceMode::Physical,
             ..Default::default()
