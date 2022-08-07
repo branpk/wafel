@@ -1,4 +1,4 @@
-use core::slice;
+use core::{fmt, slice};
 use std::iter::Peekable;
 
 use fast3d::{
@@ -16,6 +16,15 @@ use crate::error::VizError;
 pub enum Pointer {
     Segmented(Segmented),
     BufferOffset(usize),
+}
+
+impl fmt::Display for Pointer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Pointer::Segmented(seg) => write!(f, "Segmented({})", seg.0),
+            Pointer::BufferOffset(offset) => write!(f, "BufferOffset({})", offset),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

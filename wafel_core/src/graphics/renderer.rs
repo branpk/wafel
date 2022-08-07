@@ -295,7 +295,7 @@ impl Renderer {
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
-                color_attachments: &[wgpu::RenderPassColorAttachment {
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &multisample_texture_view,
                     resolve_target: Some(output_view),
                     ops: wgpu::Operations {
@@ -307,7 +307,7 @@ impl Renderer {
                         }),
                         store: true,
                     },
-                }],
+                })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                     view: &depth_texture_view,
                     depth_ops: Some(wgpu::Operations {
@@ -520,7 +520,7 @@ fn create_surface_pipeline(
         fragment: Some(wgpu::FragmentState {
             module: &shader,
             entry_point: "fs_main",
-            targets: &[wgpu::ColorTargetState {
+            targets: &[Some(wgpu::ColorTargetState {
                 format: output_format,
                 blend: Some(wgpu::BlendState {
                     color: wgpu::BlendComponent {
@@ -531,7 +531,7 @@ fn create_surface_pipeline(
                     alpha: wgpu::BlendComponent::REPLACE,
                 }),
                 write_mask: wgpu::ColorWrites::ALL,
-            }],
+            })],
         }),
         multiview: None,
     })
@@ -600,7 +600,7 @@ fn create_color_pipeline(
         fragment: Some(wgpu::FragmentState {
             module: &shader,
             entry_point: "fs_main",
-            targets: &[wgpu::ColorTargetState {
+            targets: &[Some(wgpu::ColorTargetState {
                 format: output_format,
                 blend: Some(wgpu::BlendState {
                     color: wgpu::BlendComponent {
@@ -615,7 +615,7 @@ fn create_color_pipeline(
                 } else {
                     wgpu::ColorWrites::empty()
                 },
-            }],
+            })],
         }),
         multiview: None,
     })
@@ -697,7 +697,7 @@ fn create_screen_dot_pipeline(
         fragment: Some(wgpu::FragmentState {
             module: &shader,
             entry_point: "fs_main",
-            targets: &[wgpu::ColorTargetState {
+            targets: &[Some(wgpu::ColorTargetState {
                 format: output_format,
                 blend: Some(wgpu::BlendState {
                     color: wgpu::BlendComponent {
@@ -708,7 +708,7 @@ fn create_screen_dot_pipeline(
                     alpha: wgpu::BlendComponent::REPLACE,
                 }),
                 write_mask: wgpu::ColorWrites::ALL,
-            }],
+            })],
         }),
         multiview: None,
     })

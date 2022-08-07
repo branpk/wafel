@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 use wafel_data_type::Angle;
 
@@ -6,9 +8,13 @@ use wafel_data_type::Angle;
 pub struct VizConfig {
     pub screen_top_left: [u32; 2],
     pub screen_size: [u32; 2],
+    pub show_in_game_overlays: bool,
     pub camera: Camera,
+    pub show_camera_focus: bool,
     pub object_cull: ObjectCull,
     pub surface_mode: SurfaceMode,
+    pub highlighted_surfaces: HashSet<usize>,
+    pub transparent_surfaces: HashSet<usize>,
     pub elements: Vec<Element>,
 }
 
@@ -17,10 +23,14 @@ impl Default for VizConfig {
         Self {
             screen_top_left: [0, 0],
             screen_size: [320, 240],
-            camera: Default::default(),
-            object_cull: Default::default(),
-            surface_mode: Default::default(),
-            elements: Default::default(),
+            show_in_game_overlays: true,
+            camera: Camera::default(),
+            show_camera_focus: false,
+            object_cull: ObjectCull::default(),
+            surface_mode: SurfaceMode::default(),
+            highlighted_surfaces: HashSet::new(),
+            transparent_surfaces: HashSet::new(),
+            elements: Vec::new(),
         }
     }
 }
@@ -80,7 +90,15 @@ impl Default for SurfaceMode {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Element {
+    Point(Point),
     Line(Line),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Point {
+    pub pos: [f32; 3],
+    pub size: f32,
+    pub color: [f32; 4],
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

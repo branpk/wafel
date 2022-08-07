@@ -9,8 +9,8 @@ use std::{
 use wafel_api::{try_load_m64, Error, Game, Input, SaveState};
 use wafel_memory::GameMemory;
 use wafel_viz::{
-    viz_render, Camera, Element, Line, ObjectCull, OrthoCamera, PerspCameraControl, SurfaceMode,
-    VizConfig, VizRenderer,
+    viz_render, Camera, Element, Line, ObjectCull, OrthoCamera, PerspCameraControl, Point,
+    SurfaceMode, VizConfig, VizRenderer,
 };
 use window::{open_window_and_run, App};
 use winit::event::{ElementState, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowEvent};
@@ -74,7 +74,7 @@ impl App for VizApp {
             time_since_game_advance: Duration::ZERO,
         };
 
-        while app.game.frame() < 74000 {
+        while app.game.frame() < 74200 {
             app.frame_advance()?;
         }
 
@@ -209,19 +209,20 @@ impl App for VizApp {
     ) -> Result<(), Error> {
         let camera = self.camera_control.camera();
 
-        let mario_pos = self.game.try_read("gMarioState.pos")?.try_as_f32_3()?;
-        let camera = Camera::Ortho(OrthoCamera {
-            pos: [mario_pos[0], mario_pos[1] + 500.0, mario_pos[2]],
-            forward: [0.0, -1.0, 0.0],
-            upward: [1.0, 0.0, 0.0],
-            span_v: 3200.0,
-        });
+        // let mario_pos = self.game.try_read("gMarioState.pos")?.try_as_f32_3()?;
+        // let camera = Camera::Ortho(OrthoCamera {
+        //     pos: [mario_pos[0], mario_pos[1] + 500.0, mario_pos[2]],
+        //     forward: [0.0, -1.0, 0.0],
+        //     upward: [1.0, 0.0, 0.0],
+        //     span_v: 3200.0,
+        // });
 
         let mut config = VizConfig {
             screen_size: output_size,
             camera,
+            show_camera_focus: true,
             object_cull: ObjectCull::ShowAll,
-            surface_mode: SurfaceMode::Visual,
+            surface_mode: SurfaceMode::Physical,
             ..Default::default()
         };
 
@@ -241,6 +242,17 @@ impl App for VizApp {
         //             vertices: [[-8000.0, y as f32, t as f32], [8000.0, y as f32, t as f32]],
         //             color: [1.0, 1.0, 1.0, 1.0],
         //         }));
+        //     }
+        // }
+        // for x in (-8000..=8000).step_by(1000) {
+        //     for y in (-8000..=8000).step_by(1000) {
+        //         for z in (-8000..=8000).step_by(1000) {
+        //             config.elements.push(Element::Point(Point {
+        //                 pos: [x as f32, y as f32, z as f32],
+        //                 size: 2.0,
+        //                 color: [1.0, 1.0, 1.0, 1.0],
+        //             }));
+        //         }
         //     }
         // }
 
@@ -270,14 +282,14 @@ impl App for VizApp {
         {
             let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
-                color_attachments: &[wgpu::RenderPassColorAttachment {
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: output_view,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
                         store: true,
                     },
-                }],
+                })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                     view: &depth_texture_view,
                     depth_ops: Some(wgpu::Operations {

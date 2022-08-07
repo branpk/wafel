@@ -1,4 +1,4 @@
-use std::{mem::size_of, ops::Range};
+use std::{f32::consts::PI, mem::size_of, ops::Range};
 
 use bytemuck::{cast_slice, offset_of, Pod, Zeroable};
 use fast3d::{render::F3DRenderer, util::Matrixf};
@@ -30,6 +30,68 @@ impl ColorVertex {
                     format: wgpu::VertexFormat::Float32x4,
                     offset: offset_of!(Self, color) as u64,
                     shader_location: 1,
+                },
+            ]
+            .leak(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Default, Zeroable, Pod)]
+#[repr(C)]
+struct PointInstance {
+    center: [f32; 4],
+    radius: [f32; 2],
+    color: [f32; 4],
+}
+
+impl PointInstance {
+    fn layout() -> wgpu::VertexBufferLayout<'static> {
+        wgpu::VertexBufferLayout {
+            array_stride: size_of::<Self>() as u64,
+            step_mode: wgpu::VertexStepMode::Instance,
+            attributes: vec![
+                // center
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x4,
+                    offset: offset_of!(Self, center) as u64,
+                    shader_location: 0,
+                },
+                // radius
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x2,
+                    offset: offset_of!(Self, radius) as u64,
+                    shader_location: 1,
+                },
+                // color
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x4,
+                    offset: offset_of!(Self, color) as u64,
+                    shader_location: 2,
+                },
+            ]
+            .leak(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Default, Zeroable, Pod)]
+#[repr(C)]
+struct PointVertex {
+    offset: [f32; 2],
+}
+
+impl PointVertex {
+    fn layout() -> wgpu::VertexBufferLayout<'static> {
+        wgpu::VertexBufferLayout {
+            array_stride: size_of::<Self>() as u64,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: vec![
+                // offset
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x2,
+                    offset: offset_of!(Self, offset) as u64,
+                    shader_location: 3,
                 },
             ]
             .leak(),
@@ -71,7 +133,7 @@ fn create_transform_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupL
     })
 }
 
-fn create_color_line_pipeline(
+fn create_line_pipeline(
     device: &wgpu::Device,
     transform_bind_group_layout: &wgpu::BindGroupLayout,
     output_format: wgpu::TextureFormat,
@@ -79,7 +141,7 @@ fn create_color_line_pipeline(
     let shader_module =
         device.create_shader_module(wgpu::include_wgsl!("../shaders/color_decal.wgsl"));
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-        label: Some("viz-color-line"),
+        label: Some("viz-line"),
         layout: Some(
             &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: None,
@@ -107,11 +169,56 @@ fn create_color_line_pipeline(
         fragment: Some(wgpu::FragmentState {
             module: &shader_module,
             entry_point: "fs_main",
-            targets: &[wgpu::ColorTargetState {
+            targets: &[Some(wgpu::ColorTargetState {
                 format: output_format,
                 blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                 write_mask: wgpu::ColorWrites::ALL,
-            }],
+            })],
+        }),
+        multiview: None,
+    })
+}
+
+fn create_point_pipeline(
+    device: &wgpu::Device,
+    transform_bind_group_layout: &wgpu::BindGroupLayout,
+    output_format: wgpu::TextureFormat,
+) -> wgpu::RenderPipeline {
+    let shader_module = device.create_shader_module(wgpu::include_wgsl!("../shaders/point.wgsl"));
+    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("viz-point"),
+        layout: Some(
+            &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: None,
+                bind_group_layouts: &[transform_bind_group_layout],
+                push_constant_ranges: &[],
+            }),
+        ),
+        vertex: wgpu::VertexState {
+            module: &shader_module,
+            entry_point: "vs_main",
+            buffers: &[PointInstance::layout(), PointVertex::layout()],
+        },
+        primitive: wgpu::PrimitiveState {
+            topology: wgpu::PrimitiveTopology::TriangleList,
+            ..Default::default()
+        },
+        depth_stencil: Some(wgpu::DepthStencilState {
+            format: wgpu::TextureFormat::Depth24Plus,
+            depth_write_enabled: true,
+            depth_compare: wgpu::CompareFunction::LessEqual,
+            stencil: wgpu::StencilState::default(),
+            bias: wgpu::DepthBiasState::default(),
+        }),
+        multisample: wgpu::MultisampleState::default(),
+        fragment: Some(wgpu::FragmentState {
+            module: &shader_module,
+            entry_point: "fs_main",
+            targets: &[Some(wgpu::ColorTargetState {
+                format: output_format,
+                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                write_mask: wgpu::ColorWrites::ALL,
+            })],
         }),
         multiview: None,
     })
@@ -121,6 +228,7 @@ fn create_surface_pipeline(
     device: &wgpu::Device,
     transform_bind_group_layout: &wgpu::BindGroupLayout,
     output_format: wgpu::TextureFormat,
+    depth_write_enabled: bool,
 ) -> wgpu::RenderPipeline {
     let shader_module = device.create_shader_module(wgpu::include_wgsl!("../shaders/surface.wgsl"));
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -140,7 +248,7 @@ fn create_surface_pipeline(
         primitive: wgpu::PrimitiveState::default(),
         depth_stencil: Some(wgpu::DepthStencilState {
             format: wgpu::TextureFormat::Depth24Plus,
-            depth_write_enabled: true,
+            depth_write_enabled,
             depth_compare: wgpu::CompareFunction::LessEqual,
             stencil: wgpu::StencilState::default(),
             bias: wgpu::DepthBiasState::default(),
@@ -149,22 +257,53 @@ fn create_surface_pipeline(
         fragment: Some(wgpu::FragmentState {
             module: &shader_module,
             entry_point: "fs_main",
-            targets: &[wgpu::ColorTargetState {
+            targets: &[Some(wgpu::ColorTargetState {
                 format: output_format,
                 blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                 write_mask: wgpu::ColorWrites::ALL,
-            }],
+            })],
         }),
         multiview: None,
     })
+}
+
+fn create_point_vertex_buffer(device: &wgpu::Device) -> (u32, wgpu::Buffer) {
+    let mut vertices: Vec<PointVertex> = Vec::new();
+
+    let num_edges = 12;
+    for i in 0..num_edges {
+        let a0 = i as f32 / num_edges as f32 * 2.0 * PI;
+        let a1 = (i + 1) as f32 / num_edges as f32 * 2.0 * PI;
+
+        vertices.extend(&[
+            PointVertex { offset: [0.0, 0.0] },
+            PointVertex {
+                offset: [a0.cos(), a0.sin()],
+            },
+            PointVertex {
+                offset: [a1.cos(), a1.sin()],
+            },
+        ]);
+    }
+
+    let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: None,
+        contents: cast_slice(&vertices),
+        usage: wgpu::BufferUsages::VERTEX,
+    });
+
+    (vertices.len() as u32, buffer)
 }
 
 #[derive(Debug)]
 pub struct VizRenderer {
     f3d_renderer: F3DRenderer,
     transform_bind_group_layout: wgpu::BindGroupLayout,
-    color_line_pipeline: wgpu::RenderPipeline,
+    line_pipeline: wgpu::RenderPipeline,
+    point_pipeline: wgpu::RenderPipeline,
     surface_pipeline: wgpu::RenderPipeline,
+    transparent_surface_pipeline: wgpu::RenderPipeline,
+    point_vertex_buffer: (u32, wgpu::Buffer),
     render_data: Option<RenderData>,
 }
 
@@ -172,27 +311,39 @@ pub struct VizRenderer {
 struct RenderData {
     screen_top_left: [u32; 2],
     screen_size: [u32; 2],
-    f3d_pre_cmds: Range<usize>,
-    f3d_post_cmds: Range<usize>,
+    f3d_pre_depth_cmd_range: Range<usize>,
+    f3d_depth_cmd_range: Range<usize>,
+    f3d_post_depth_cmd_range: Range<usize>,
     transform_bind_group: wgpu::BindGroup,
-    color_line_vertex_buffer: (u32, wgpu::Buffer),
+    line_vertex_buffer: (u32, wgpu::Buffer),
+    point_instance_buffer: (u32, wgpu::Buffer),
     surface_vertex_buffer: (u32, wgpu::Buffer),
+    transparent_surface_vertex_buffer: (u32, wgpu::Buffer),
 }
 
 impl VizRenderer {
     pub fn new(device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Self {
         let transform_bind_group_layout = create_transform_bind_group_layout(device);
 
-        let color_line_pipeline =
-            create_color_line_pipeline(device, &transform_bind_group_layout, output_format);
+        let line_pipeline =
+            create_line_pipeline(device, &transform_bind_group_layout, output_format);
+        let point_pipeline =
+            create_point_pipeline(device, &transform_bind_group_layout, output_format);
         let surface_pipeline =
-            create_surface_pipeline(device, &transform_bind_group_layout, output_format);
+            create_surface_pipeline(device, &transform_bind_group_layout, output_format, true);
+        let transparent_surface_pipeline =
+            create_surface_pipeline(device, &transform_bind_group_layout, output_format, false);
+
+        let point_vertex_buffer = create_point_vertex_buffer(device);
 
         Self {
             f3d_renderer: F3DRenderer::new(device),
             transform_bind_group_layout,
-            color_line_pipeline,
+            line_pipeline,
+            point_pipeline,
             surface_pipeline,
+            transparent_surface_pipeline,
+            point_vertex_buffer,
             render_data: None,
         }
     }
@@ -221,30 +372,32 @@ impl VizRenderer {
         output_format: wgpu::TextureFormat,
         data: &VizRenderData,
     ) {
-        let first_z_buf_index = data
-            .f3d_render_data
-            .commands
-            .iter()
-            .enumerate()
-            .filter(|(_, cmd)| {
-                let pipeline = &data.f3d_render_data.pipelines[&cmd.pipeline];
-                pipeline.depth_compare
-            })
-            .map(|(i, _)| i + 1)
-            .next()
-            .unwrap_or(0);
+        let mut first_depth_cmd = None;
+        let mut last_depth_cmd = None;
+        for (i, cmd) in data.f3d_render_data.commands.iter().enumerate() {
+            let pipeline = &data.f3d_render_data.pipelines[&cmd.pipeline];
+            if pipeline.depth_compare {
+                if first_depth_cmd.is_none() {
+                    first_depth_cmd = Some(i);
+                }
+                last_depth_cmd = Some(i);
+            }
+        }
+        let first_depth_cmd = first_depth_cmd.unwrap_or(0);
+        let post_depth_cmd = last_depth_cmd.map(|i| i + 1).unwrap_or(0);
 
         self.f3d_renderer
             .prepare(device, queue, output_format, &data.f3d_render_data);
 
         let transform_bind_group = self.create_transform_bind_group(device, data);
 
-        let mut color_line_vertex_data: Vec<ColorVertex> = Vec::new();
+        let mut line_vertex_data: Vec<ColorVertex> = Vec::new();
+        let mut point_instance_data: Vec<PointInstance> = Vec::new();
 
         for element in &data.elements {
             match element {
                 Element::Line(line) => {
-                    color_line_vertex_data.extend(&[
+                    line_vertex_data.extend(&[
                         ColorVertex {
                             pos: point4(line.vertices[0]),
                             color: line.color,
@@ -255,15 +408,28 @@ impl VizRenderer {
                         },
                     ]);
                 }
+                Element::Point(point) => {
+                    let x_radius = point.size * 2.0 / data.f3d_render_data.screen_size[0] as f32;
+                    let y_radius = point.size * 2.0 / data.f3d_render_data.screen_size[1] as f32;
+                    point_instance_data.push(PointInstance {
+                        center: [point.pos[0], point.pos[1], point.pos[2], 1.0],
+                        radius: [x_radius, y_radius],
+                        color: point.color,
+                    });
+                }
             }
         }
 
-        let color_line_vertex_buffer =
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
-                contents: cast_slice(&color_line_vertex_data),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
+        let line_vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: None,
+            contents: cast_slice(&line_vertex_data),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+        let point_instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: None,
+            contents: cast_slice(&point_instance_data),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
 
         let surface_vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: None,
@@ -271,17 +437,27 @@ impl VizRenderer {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
+        let transparent_surface_vertex_buffer =
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: cast_slice(&data.transparent_surface_vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+
         self.render_data = Some(RenderData {
             screen_top_left: data.f3d_render_data.screen_top_left,
             screen_size: data.f3d_render_data.screen_size,
-            f3d_pre_cmds: 0..first_z_buf_index,
-            f3d_post_cmds: first_z_buf_index..data.f3d_render_data.commands.len(),
+            f3d_pre_depth_cmd_range: 0..first_depth_cmd,
+            f3d_depth_cmd_range: first_depth_cmd..post_depth_cmd,
+            f3d_post_depth_cmd_range: post_depth_cmd..data.f3d_render_data.commands.len(),
             transform_bind_group,
-            color_line_vertex_buffer: (
-                color_line_vertex_data.len() as u32,
-                color_line_vertex_buffer,
-            ),
+            line_vertex_buffer: (line_vertex_data.len() as u32, line_vertex_buffer),
+            point_instance_buffer: (point_instance_data.len() as u32, point_instance_buffer),
             surface_vertex_buffer: (data.surface_vertices.len() as u32, surface_vertex_buffer),
+            transparent_surface_vertex_buffer: (
+                data.transparent_surface_vertices.len() as u32,
+                transparent_surface_vertex_buffer,
+            ),
         });
     }
 
@@ -343,7 +519,7 @@ impl VizRenderer {
     pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>) {
         if let Some(render_data) = &self.render_data {
             self.f3d_renderer
-                .render_command_range(rp, render_data.f3d_pre_cmds.clone());
+                .render_command_range(rp, render_data.f3d_pre_depth_cmd_range.clone());
 
             let vx = render_data.screen_top_left[0];
             let vy = render_data.screen_top_left[1];
@@ -357,13 +533,30 @@ impl VizRenderer {
             rp.set_vertex_buffer(0, render_data.surface_vertex_buffer.1.slice(..));
             rp.draw(0..render_data.surface_vertex_buffer.0, 0..1);
 
-            rp.set_pipeline(&self.color_line_pipeline);
+            rp.set_pipeline(&self.line_pipeline);
             rp.set_bind_group(0, &render_data.transform_bind_group, &[]);
-            rp.set_vertex_buffer(0, render_data.color_line_vertex_buffer.1.slice(..));
-            rp.draw(0..render_data.color_line_vertex_buffer.0, 0..1);
+            rp.set_vertex_buffer(0, render_data.line_vertex_buffer.1.slice(..));
+            rp.draw(0..render_data.line_vertex_buffer.0, 0..1);
+
+            rp.set_pipeline(&self.point_pipeline);
+            rp.set_bind_group(0, &render_data.transform_bind_group, &[]);
+            rp.set_vertex_buffer(0, render_data.point_instance_buffer.1.slice(..));
+            rp.set_vertex_buffer(1, self.point_vertex_buffer.1.slice(..));
+            rp.draw(
+                0..self.point_vertex_buffer.0,
+                0..render_data.point_instance_buffer.0,
+            );
 
             self.f3d_renderer
-                .render_command_range(rp, render_data.f3d_post_cmds.clone());
+                .render_command_range(rp, render_data.f3d_depth_cmd_range.clone());
+
+            rp.set_pipeline(&self.transparent_surface_pipeline);
+            rp.set_bind_group(0, &render_data.transform_bind_group, &[]);
+            rp.set_vertex_buffer(0, render_data.transparent_surface_vertex_buffer.1.slice(..));
+            rp.draw(0..render_data.transparent_surface_vertex_buffer.0, 0..1);
+
+            self.f3d_renderer
+                .render_command_range(rp, render_data.f3d_post_depth_cmd_range.clone());
         } else {
             self.f3d_renderer.render(rp);
         }

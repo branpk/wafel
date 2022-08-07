@@ -80,7 +80,7 @@ async fn open_window_and_run_impl<A: App>() {
         format: output_format,
         width: init_window_size.width,
         height: init_window_size.height,
-        present_mode: wgpu::PresentMode::Mailbox,
+        present_mode: wgpu::PresentMode::AutoNoVsync,
     };
     surface.configure(&device, &surface_config);
 
