@@ -16,6 +16,7 @@ pub enum VizError {
     SM64DataError(SM64DataError),
     F3DError(F3DError),
     UnexpectedDisplayListCommand,
+    MasterListDiscrepancy { descr: String },
 }
 
 impl fmt::Display for VizError {
@@ -25,8 +26,13 @@ impl fmt::Display for VizError {
             VizError::SM64DataError(error) => write!(f, "{}", error),
             VizError::F3DError(error) => write!(f, "{}", error),
             VizError::UnexpectedDisplayListCommand => {
-                write!(f, "unexpected display list command (probably wafel bug)")
+                write!(f, "unexpected display list command (wafel bug)")
             }
+            VizError::MasterListDiscrepancy { descr } => write!(
+                f,
+                "unexpected display list in master list (wafel bug). Info: {}",
+                descr
+            ),
         }
     }
 }

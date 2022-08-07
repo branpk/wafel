@@ -778,9 +778,9 @@ where
                             .next()
                             .copied()
                             .filter(|&(_, dl)| dl == *display_list)
-                            .unwrap_or_else(|| {
-                                panic!("master list discrepancy, copying {}", display_list)
-                            });
+                            .ok_or_else(|| VizError::MasterListDiscrepancy {
+                                descr: format!("copying {}", display_list),
+                            })?;
 
                         if DEBUG_CALC_TRANSFORMS || self.used_camera() != Camera::InGame {
                             let ptr = self.builder.alloc_u32(cast_slice(transform));
@@ -794,7 +794,9 @@ where
                             .next()
                             .copied()
                             .filter(|&(_, dl)| dl == *addr)
-                            .expect("master list discrepancy");
+                            .ok_or_else(|| VizError::MasterListDiscrepancy {
+                                descr: format!("skipping {}", addr),
+                            })?;
                     }
                     MasterListEdit::Insert {
                         transform,
@@ -824,7 +826,9 @@ where
                             .next()
                             .copied()
                             .filter(|&(_, dl)| is_dynamic(&self.builder, dl))
-                            .expect("master list discrepancy");
+                            .ok_or_else(|| VizError::MasterListDiscrepancy {
+                                descr: "skip dynamic".to_string(),
+                            })?;
                     }
                 }
             }
