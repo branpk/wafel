@@ -383,10 +383,8 @@ impl DataReader for GfxTreeNodeReader {
     }
 }
 
-impl DataReadable for GfxTreeNode {
-    type Reader = GfxTreeNodeReader;
-
-    fn reader(layout: &impl MemoryLayout) -> Result<Self::Reader, DataError> {
+impl GfxTreeNode {
+    pub fn reader(layout: &impl MemoryLayout) -> Result<GfxTreeNodeReader, DataError> {
         Ok(GfxTreeNodeReader {
             root_reader: GraphNodeRoot::reader(layout)?,
             ortho_projection_reader: GraphNodeOrthoProjection::reader(layout)?,
@@ -411,5 +409,13 @@ impl DataReadable for GfxTreeNode {
             held_object_reader: GraphNodeHeldObject::reader(layout)?,
             culling_radius_reader: GraphNodeCullingRadius::reader(layout)?,
         })
+    }
+}
+
+impl DataReadable for GfxTreeNode {
+    type Reader = GfxTreeNodeReader;
+
+    fn reader(layout: &impl MemoryLayout) -> Result<Self::Reader, DataError> {
+        GfxTreeNode::reader(layout)
     }
 }

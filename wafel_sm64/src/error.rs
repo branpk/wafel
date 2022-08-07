@@ -6,6 +6,7 @@ use std::error::Error;
 use wafel_data_access::DataError;
 use wafel_data_type::{IntValue, ValueTypeError};
 use wafel_layout::LayoutLookupError;
+use wafel_memory::MemoryError;
 
 #[derive(Debug, Clone)]
 pub enum SM64DataError {
@@ -48,6 +49,12 @@ impl From<ValueTypeError> for SM64DataError {
 
 impl From<LayoutLookupError> for SM64DataError {
     fn from(v: LayoutLookupError) -> Self {
+        Self::DataError(v.into())
+    }
+}
+
+impl From<MemoryError> for SM64DataError {
+    fn from(v: MemoryError) -> Self {
         Self::DataError(v.into())
     }
 }
