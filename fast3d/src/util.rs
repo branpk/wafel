@@ -528,13 +528,17 @@ pub fn normalize(v: [f32; 4]) -> [f32; 4] {
     }
 }
 
-pub fn normalize_vec3(v: [f32; 3]) -> [f32; 3] {
+pub fn normalize3(v: [f32; 3]) -> [f32; 3] {
     let n = normalize([v[0], v[1], v[2], 0.0]);
     [n[0], n[1], n[2]]
 }
 
 pub fn dot(v: [f32; 4], w: [f32; 4]) -> f32 {
     v[0] * w[0] + v[1] * w[1] + v[2] * w[2] + v[3] * w[3]
+}
+
+pub fn dot3(v: [f32; 3], w: [f32; 3]) -> f32 {
+    v[0] * w[0] + v[1] * w[1] + v[2] * w[2]
 }
 
 pub fn cross(v: [f32; 3], w: [f32; 3]) -> [f32; 3] {

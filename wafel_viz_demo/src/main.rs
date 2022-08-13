@@ -74,7 +74,9 @@ impl App for VizApp {
             time_since_game_advance: Duration::ZERO,
         };
 
-        while app.game.frame() < 74200 {
+        // bitfs: 41884
+        // jrb: 74200
+        while app.game.frame() < 41884 {
             app.frame_advance()?;
         }
 
@@ -223,6 +225,8 @@ impl App for VizApp {
             show_camera_focus: true,
             object_cull: ObjectCull::ShowAll,
             surface_mode: SurfaceMode::Physical,
+            wall_hitbox_radius: 50.0,
+            // transparent_surfaces: (0..7000).collect(),
             ..Default::default()
         };
 

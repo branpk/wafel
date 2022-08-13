@@ -19,15 +19,7 @@ fn vs_main(in: VertexData) -> VertexOutput {
     return out;
 }
 
-struct FragmentOutput {
-    @builtin(frag_depth) frag_depth: f32,
-    @location(0) color: vec4<f32>,
-}
-
 @fragment
-fn fs_main(in: VertexOutput) -> FragmentOutput {
-    var out = FragmentOutput();
-    out.frag_depth = in.position.z - 0.0002;
-    out.color = in.color;
-    return out;
+fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+    return in.color;
 }

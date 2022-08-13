@@ -4,7 +4,7 @@ use bytemuck::{cast_slice, cast_slice_mut};
 use fast3d::{
     cmd::{F3DCommand::*, *},
     interpret::{interpret_f3d_display_list, F3DMemory, F3DRenderData},
-    util::{coss, cross, normalize_vec3, sins, Angle, MatrixStack, Matrixf},
+    util::{coss, cross, normalize3, sins, Angle, MatrixStack, Matrixf},
 };
 use wafel_data_access::{DataReadable, MemoryLayout, Reader};
 use wafel_data_type::{Address, IntType, Namespace, TypeName, Value};
@@ -98,6 +98,7 @@ pub fn sm64_gfx_render(
 pub struct GfxRenderOutput {
     pub proj_mtx: Matrixf,
     pub view_mtx: Matrixf,
+    pub used_camera: Option<Camera>,
 }
 
 impl Default for GfxRenderOutput {
@@ -105,6 +106,7 @@ impl Default for GfxRenderOutput {
         Self {
             proj_mtx: Matrixf::identity(),
             view_mtx: Matrixf::identity(),
+            used_camera: None,
         }
     }
 }
@@ -431,6 +433,7 @@ where
                 .push_until(|cmd| matches!(cmd, SPViewport(_)))?;
 
             if !pause_rendering {
+                self.output.used_camera = Some(self.calculated_camera()?);
                 self.process_node(root_addr, false)?;
 
                 if !self.config.show_in_game_overlays {
@@ -1047,9 +1050,9 @@ where
                 upward,
                 ..
             }) => {
-                let forward = normalize_vec3(forward);
+                let forward = normalize3(forward);
                 let backward = [-forward[0], -forward[1], -forward[2]];
-                let upward = normalize_vec3(upward);
+                let upward = normalize3(upward);
                 let rightward = cross(forward, upward);
                 let rotate = Matrixf::from_rows_vec3([rightward, upward, backward]);
                 let translate = Matrixf::translate([-pos[0], -pos[1], -pos[2]]);
@@ -1221,6 +1224,18 @@ where
         //         }
 
         Ok(None)
+    }
+
+    fn calculated_camera(&self) -> Result<Camera, VizError> {
+        match self.used_camera() {
+            Camera::InGame => {
+                let lakitu_state_addr = self.layout.symbol_address("gLakituState")?;
+                let LakituState { pos, focus, roll } =
+                    LakituState::reader(self.layout)?.read(self.memory, lakitu_state_addr)?;
+                Ok(Camera::LookAt(LookAtCamera { pos, focus, roll }))
+            }
+            c => Ok(c),
+        }
     }
 
     fn used_camera(&self) -> Camera {

@@ -6,6 +6,9 @@ use wgpu::util::DeviceExt;
 
 use crate::{Element, VizRenderData};
 
+// TODO: Specify frag_depth as uniform / push constant, combine color_decal.wgsl and
+// color.wgsl, use for wall hitboxes instead of calculating by hand
+
 #[derive(Debug, Clone, Copy, PartialEq, Default, Zeroable, Pod)]
 #[repr(C)]
 pub(crate) struct ColorVertex {
@@ -14,6 +17,10 @@ pub(crate) struct ColorVertex {
 }
 
 impl ColorVertex {
+    pub(crate) fn new(pos: [f32; 4], color: [f32; 4]) -> Self {
+        Self { pos, color }
+    }
+
     fn layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
             array_stride: size_of::<Self>() as u64,
@@ -267,6 +274,63 @@ fn create_surface_pipeline(
     })
 }
 
+fn create_color_pipeline(
+    device: &wgpu::Device,
+    transform_bind_group_layout: &wgpu::BindGroupLayout,
+    output_format: wgpu::TextureFormat,
+    color_write_enabled: bool,
+    depth_write_enabled: bool,
+    depth_compare_enabled: bool,
+    topology: wgpu::PrimitiveTopology,
+) -> wgpu::RenderPipeline {
+    let shader_module = device.create_shader_module(wgpu::include_wgsl!("../shaders/color.wgsl"));
+    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("viz-color"),
+        layout: Some(
+            &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: None,
+                bind_group_layouts: &[transform_bind_group_layout],
+                push_constant_ranges: &[],
+            }),
+        ),
+        vertex: wgpu::VertexState {
+            module: &shader_module,
+            entry_point: "vs_main",
+            buffers: &[ColorVertex::layout()],
+        },
+        primitive: wgpu::PrimitiveState {
+            topology,
+            ..Default::default()
+        },
+        depth_stencil: Some(wgpu::DepthStencilState {
+            format: wgpu::TextureFormat::Depth24Plus,
+            depth_write_enabled,
+            depth_compare: if depth_compare_enabled {
+                wgpu::CompareFunction::LessEqual
+            } else {
+                wgpu::CompareFunction::Always
+            },
+            stencil: wgpu::StencilState::default(),
+            bias: wgpu::DepthBiasState::default(),
+        }),
+        multisample: wgpu::MultisampleState::default(),
+        fragment: Some(wgpu::FragmentState {
+            module: &shader_module,
+            entry_point: "fs_main",
+            targets: &[Some(wgpu::ColorTargetState {
+                format: output_format,
+                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                write_mask: if color_write_enabled {
+                    wgpu::ColorWrites::ALL
+                } else {
+                    wgpu::ColorWrites::empty()
+                },
+            })],
+        }),
+        multiview: None,
+    })
+}
+
 fn create_point_vertex_buffer(device: &wgpu::Device) -> (u32, wgpu::Buffer) {
     let mut vertices: Vec<PointVertex> = Vec::new();
 
@@ -299,10 +363,14 @@ fn create_point_vertex_buffer(device: &wgpu::Device) -> (u32, wgpu::Buffer) {
 pub struct VizRenderer {
     f3d_renderer: F3DRenderer,
     transform_bind_group_layout: wgpu::BindGroupLayout,
+
     line_pipeline: wgpu::RenderPipeline,
     point_pipeline: wgpu::RenderPipeline,
     surface_pipeline: wgpu::RenderPipeline,
     transparent_surface_pipeline: wgpu::RenderPipeline,
+    wall_hitbox_pipeline: wgpu::RenderPipeline,
+    wall_hitbox_depth_pass_pipeline: wgpu::RenderPipeline,
+
     point_vertex_buffer: (u32, wgpu::Buffer),
     render_data: Option<RenderData>,
 }
@@ -319,6 +387,8 @@ struct RenderData {
     point_instance_buffer: (u32, wgpu::Buffer),
     surface_vertex_buffer: (u32, wgpu::Buffer),
     transparent_surface_vertex_buffer: (u32, wgpu::Buffer),
+    wall_hitbox_vertex_buffer: (u32, wgpu::Buffer),
+    wall_hitbox_outline_vertex_buffer: (u32, wgpu::Buffer),
 }
 
 impl VizRenderer {
@@ -333,16 +403,38 @@ impl VizRenderer {
             create_surface_pipeline(device, &transform_bind_group_layout, output_format, true);
         let transparent_surface_pipeline =
             create_surface_pipeline(device, &transform_bind_group_layout, output_format, false);
+        let wall_hitbox_pipeline = create_color_pipeline(
+            device,
+            &transform_bind_group_layout,
+            output_format,
+            true,
+            true,
+            true,
+            wgpu::PrimitiveTopology::TriangleList,
+        );
+        let wall_hitbox_depth_pass_pipeline = create_color_pipeline(
+            device,
+            &transform_bind_group_layout,
+            output_format,
+            false,
+            true,
+            true,
+            wgpu::PrimitiveTopology::TriangleList,
+        );
 
         let point_vertex_buffer = create_point_vertex_buffer(device);
 
         Self {
             f3d_renderer: F3DRenderer::new(device),
             transform_bind_group_layout,
+
             line_pipeline,
             point_pipeline,
             surface_pipeline,
             transparent_surface_pipeline,
+            wall_hitbox_pipeline,
+            wall_hitbox_depth_pass_pipeline,
+
             point_vertex_buffer,
             render_data: None,
         }
@@ -436,11 +528,23 @@ impl VizRenderer {
             contents: cast_slice(&data.surface_vertices),
             usage: wgpu::BufferUsages::VERTEX,
         });
-
         let transparent_surface_vertex_buffer =
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: None,
                 contents: cast_slice(&data.transparent_surface_vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+
+        let wall_hitbox_vertex_buffer =
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: cast_slice(&data.wall_hitbox_vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+        let wall_hitbox_outline_vertex_buffer =
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: cast_slice(&data.wall_hitbox_outline_vertices),
                 usage: wgpu::BufferUsages::VERTEX,
             });
 
@@ -457,6 +561,14 @@ impl VizRenderer {
             transparent_surface_vertex_buffer: (
                 data.transparent_surface_vertices.len() as u32,
                 transparent_surface_vertex_buffer,
+            ),
+            wall_hitbox_vertex_buffer: (
+                data.wall_hitbox_vertices.len() as u32,
+                wall_hitbox_vertex_buffer,
+            ),
+            wall_hitbox_outline_vertex_buffer: (
+                data.wall_hitbox_outline_vertices.len() as u32,
+                wall_hitbox_outline_vertex_buffer,
             ),
         });
     }
@@ -549,6 +661,29 @@ impl VizRenderer {
 
             self.f3d_renderer
                 .render_command_range(rp, render_data.f3d_depth_cmd_range.clone());
+
+            {
+                // Render wall hitbox outline first since tris write to z buffer
+                rp.set_pipeline(&self.line_pipeline);
+                rp.set_bind_group(0, &render_data.transform_bind_group, &[]);
+                rp.set_vertex_buffer(0, render_data.wall_hitbox_outline_vertex_buffer.1.slice(..));
+                rp.draw(
+                    0..render_data.wall_hitbox_outline_vertex_buffer.0 as u32,
+                    0..1,
+                );
+
+                // When two wall hitboxes overlap, we should not increase the opacity within
+                // their region of overlap (preference).
+                // First pass writes only to depth buffer to ensure that only the closest
+                // hitbox triangles are drawn, then second pass draws them.
+                rp.set_bind_group(0, &render_data.transform_bind_group, &[]);
+                rp.set_vertex_buffer(0, render_data.wall_hitbox_vertex_buffer.1.slice(..));
+
+                rp.set_pipeline(&self.wall_hitbox_depth_pass_pipeline);
+                rp.draw(0..render_data.wall_hitbox_vertex_buffer.0 as u32, 0..1);
+                rp.set_pipeline(&self.wall_hitbox_pipeline);
+                rp.draw(0..render_data.wall_hitbox_vertex_buffer.0 as u32, 0..1);
+            }
 
             rp.set_pipeline(&self.transparent_surface_pipeline);
             rp.set_bind_group(0, &render_data.transform_bind_group, &[]);
