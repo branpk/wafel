@@ -193,13 +193,13 @@ impl<'m, M: MemoryRead> F3DMemory for F3DBuilder<'m, M> {
     }
 
     fn read_u8(&self, dst: &mut [u8], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error> {
-        let addr = self.seg_to_virt(ptr.segmented().expect("invalid u8 pointer"));
+        let addr = self.seg_to_virt(ptr.segmented().ok_or(VizError::InvalidF3DPointer)?);
         self.memory.read_u8s(addr + offset, dst)?;
         Ok(())
     }
 
     fn read_u16(&self, dst: &mut [u16], ptr: Self::Ptr, offset: usize) -> Result<(), Self::Error> {
-        let addr = self.seg_to_virt(ptr.segmented().expect("invalid u16 pointer"));
+        let addr = self.seg_to_virt(ptr.segmented().ok_or(VizError::InvalidF3DPointer)?);
         self.memory.read_u16s(addr + offset, dst)?;
         Ok(())
     }

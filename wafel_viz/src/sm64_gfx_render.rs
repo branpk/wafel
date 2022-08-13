@@ -1160,7 +1160,9 @@ where
         let fov = self
             .cur_perspective
             .as_ref()
-            .expect("no perspective set")
+            .ok_or(VizError::InvalidGfxTree {
+                descr: "no perspective set",
+            })?
             .fov;
         let half_fov = Wrapping(((fov / 2.0 + 1.0) * 32768.0 / 180.0 + 0.5) as i16);
 
@@ -1257,15 +1259,17 @@ where
         self.config.camera
     }
 
-    fn mod_camera_roll(&self) -> Angle {
-        match self.used_camera() {
+    fn mod_camera_roll(&self) -> Result<Angle, VizError> {
+        Ok(match self.used_camera() {
             Camera::InGame => {
-                let camera = self.cur_camera.as_ref().expect("no current camera");
+                let camera = self.cur_camera.as_ref().ok_or(VizError::InvalidGfxTree {
+                    descr: "no current camra",
+                })?;
                 camera.roll
             }
             Camera::LookAt(LookAtCamera { roll, .. }) => roll,
             Camera::Ortho(_) => Wrapping(0),
-        }
+        })
     }
 
     fn process_object(&mut self, node: &GraphNodeObject) -> Result<(), VizError> {
@@ -1278,12 +1282,17 @@ where
                 let mtx = Matrixf::billboard(
                     &self.mtx_stack.cur,
                     node.pos,
-                    self.cur_camera.as_ref().expect("no current camera").roll,
+                    self.cur_camera
+                        .as_ref()
+                        .ok_or(VizError::InvalidGfxTree {
+                            descr: "no camera set",
+                        })?
+                        .roll,
                 );
                 self.mtx_stack.execute(&mtx, MatrixOp::Load, true);
 
                 let mod_mtx =
-                    Matrixf::billboard(&self.mod_mtx_stack.cur, node.pos, self.mod_camera_roll());
+                    Matrixf::billboard(&self.mod_mtx_stack.cur, node.pos, self.mod_camera_roll()?);
                 self.mod_mtx_stack.execute(&mod_mtx, MatrixOp::Load, true);
             } else {
                 let transform = Matrixf::rotate_zxy_and_translate(node.pos, node.angle);
@@ -1390,12 +1399,20 @@ where
         let mtx = Matrixf::billboard(
             &self.mtx_stack.cur,
             translation,
-            self.cur_camera.as_ref().expect("no current camera").roll,
+            self.cur_camera
+                .as_ref()
+                .ok_or(VizError::InvalidGfxTree {
+                    descr: "no current camera",
+                })?
+                .roll,
         );
         self.mtx_stack.execute(&mtx, MatrixOp::Load, true);
 
-        let mod_mtx =
-            Matrixf::billboard(&self.mod_mtx_stack.cur, translation, self.mod_camera_roll());
+        let mod_mtx = Matrixf::billboard(
+            &self.mod_mtx_stack.cur,
+            translation,
+            self.mod_camera_roll()?,
+        );
         self.mod_mtx_stack.execute(&mod_mtx, MatrixOp::Load, true);
 
         let mut cur_obj = self.cur_object.clone();
@@ -1522,18 +1539,22 @@ where
 
                     let translate = Matrixf::translate(translation);
 
-                    let mut throw = self
-                        .cur_object_throw_mtx
-                        .clone()
-                        .expect("no current object");
+                    let mut throw =
+                        self.cur_object_throw_mtx
+                            .clone()
+                            .ok_or(VizError::InvalidGfxTree {
+                                descr: "no current object",
+                            })?;
                     throw.cols[3][0] = self.mtx_stack.cur.cols[3][0];
                     throw.cols[3][1] = self.mtx_stack.cur.cols[3][1];
                     throw.cols[3][2] = self.mtx_stack.cur.cols[3][2];
 
-                    let mut mod_throw = self
-                        .cur_object_mod_throw_mtx
-                        .clone()
-                        .expect("no current object");
+                    let mut mod_throw =
+                        self.cur_object_mod_throw_mtx
+                            .clone()
+                            .ok_or(VizError::InvalidGfxTree {
+                                descr: "no current object",
+                            })?;
                     mod_throw.cols[3][0] = self.mod_mtx_stack.cur.cols[3][0];
                     mod_throw.cols[3][1] = self.mod_mtx_stack.cur.cols[3][1];
                     mod_throw.cols[3][2] = self.mod_mtx_stack.cur.cols[3][2];

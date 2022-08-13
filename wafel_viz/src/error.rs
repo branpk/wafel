@@ -17,6 +17,8 @@ pub enum VizError {
     F3DError(F3DError),
     UnexpectedDisplayListCommand,
     MasterListDiscrepancy { descr: String },
+    InvalidF3DPointer,
+    InvalidGfxTree { descr: &'static str },
 }
 
 impl fmt::Display for VizError {
@@ -33,6 +35,10 @@ impl fmt::Display for VizError {
                 "unexpected display list in master list (wafel bug). Info: {}",
                 descr
             ),
+            VizError::InvalidF3DPointer => {
+                write!(f, "invalid pointer while processing display list")
+            }
+            VizError::InvalidGfxTree { descr } => write!(f, "invalid gfx tree: {}", descr),
         }
     }
 }
