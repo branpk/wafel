@@ -8,6 +8,7 @@ use wafel_data_type::Angle;
 pub struct VizConfig {
     pub screen_top_left: [u32; 2],
     pub screen_size: [u32; 2],
+    pub in_game_render_mode: InGameRenderMode,
     pub show_in_game_overlays: bool,
     pub camera: Camera,
     pub show_camera_focus: bool,
@@ -24,6 +25,7 @@ impl Default for VizConfig {
         Self {
             screen_top_left: [0, 0],
             screen_size: [320, 240],
+            in_game_render_mode: InGameRenderMode::default(),
             show_in_game_overlays: true,
             camera: Camera::default(),
             show_camera_focus: false,
@@ -34,6 +36,19 @@ impl Default for VizConfig {
             transparent_surfaces: HashSet::new(),
             elements: Vec::new(),
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum InGameRenderMode {
+    Rerender,
+    DisplayList,
+    Disabled,
+}
+
+impl Default for InGameRenderMode {
+    fn default() -> Self {
+        Self::Rerender
     }
 }
 

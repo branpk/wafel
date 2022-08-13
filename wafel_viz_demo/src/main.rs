@@ -9,8 +9,8 @@ use std::{
 use wafel_api::{try_load_m64, Error, Game, Input, SaveState};
 use wafel_memory::GameMemory;
 use wafel_viz::{
-    viz_render, Camera, Element, Line, ObjectCull, OrthoCamera, PerspCameraControl, Point,
-    SurfaceMode, VizConfig, VizRenderer,
+    viz_render, Camera, Element, InGameRenderMode, Line, ObjectCull, OrthoCamera,
+    PerspCameraControl, Point, SurfaceMode, VizConfig, VizRenderer,
 };
 use window::{open_window_and_run, App};
 use winit::event::{ElementState, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowEvent};
@@ -76,7 +76,7 @@ impl App for VizApp {
 
         // bitfs: 41884
         // jrb: 74200
-        while app.game.frame() < 41884 {
+        while app.game.frame() < 42046 {
             app.frame_advance()?;
         }
 
@@ -221,6 +221,13 @@ impl App for VizApp {
 
         let mut config = VizConfig {
             screen_size: output_size,
+            in_game_render_mode: if self.held_keys.contains(&VirtualKeyCode::X) {
+                InGameRenderMode::DisplayList
+            } else if self.held_keys.contains(&VirtualKeyCode::Z) {
+                InGameRenderMode::Disabled
+            } else {
+                InGameRenderMode::Rerender
+            },
             camera,
             show_camera_focus: true,
             object_cull: ObjectCull::ShowAll,

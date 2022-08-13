@@ -15,7 +15,7 @@ use crate::{
     error::VizError,
     f3d_builder::{F3DBuilder, Pointer, Segmented},
     skybox::skybox_main,
-    Camera, LookAtCamera, ObjectCull, OrthoCamera, SurfaceMode, VizConfig,
+    Camera, InGameRenderMode, LookAtCamera, ObjectCull, OrthoCamera, SurfaceMode, VizConfig,
 };
 
 const DEBUG_PRINT: bool = false;
@@ -29,13 +29,19 @@ pub fn sm64_gfx_render(
     layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
     config: &VizConfig,
-    process_gfx: bool,
 ) -> Result<(F3DRenderData, GfxRenderOutput), VizError> {
+    if config.in_game_render_mode == InGameRenderMode::Disabled {
+        return Ok((
+            F3DRenderData::new(config.screen_top_left, config.screen_size),
+            approx_render_output(layout, memory, config)?,
+        ));
+    }
+
     let input_dl_addr = layout.global_path("gGfxPool?")?.read(memory)?;
     if input_dl_addr.is_none() {
         return Ok((
             F3DRenderData::new(config.screen_top_left, config.screen_size),
-            GfxRenderOutput::default(),
+            approx_render_output(layout, memory, config)?,
         ));
     }
     let input_dl_addr = input_dl_addr.try_as_address()?;
@@ -59,26 +65,30 @@ pub fn sm64_gfx_render(
     //     println!("\n\n");
     // }
 
-    let (f3d_memory, render_output) = if process_gfx {
-        let pause_rendering = layout
-            .global_path("gWarpTransition.pauseRendering")?
-            .read(memory)?
-            .try_as_int()?
-            != 0;
-        let root_addr = layout.global_path("gCurrentArea?.unk04")?.read(memory)?;
+    let (f3d_memory, render_output) = match config.in_game_render_mode {
+        InGameRenderMode::Rerender => {
+            let pause_rendering = layout
+                .global_path("gWarpTransition.pauseRendering")?
+                .read(memory)?
+                .try_as_int()?
+                != 0;
+            let root_addr = layout.global_path("gCurrentArea?.unk04")?.read(memory)?;
 
-        let mut renderer = NodeRenderer::new(config, layout, memory, input_dl_addr, seg_table)?;
-        renderer.render_game(root_addr, pause_rendering)?;
+            let mut renderer = NodeRenderer::new(config, layout, memory, input_dl_addr, seg_table)?;
+            renderer.render_game(root_addr, pause_rendering)?;
 
-        let mut output = renderer.output;
-        output.proj_mtx = Matrixf::from_fixed(&output.proj_mtx.to_fixed());
-        output.view_mtx = Matrixf::from_fixed(&output.view_mtx.to_fixed());
+            let mut output = renderer.output;
+            output.proj_mtx = Matrixf::from_fixed(&output.proj_mtx.to_fixed());
+            output.view_mtx = Matrixf::from_fixed(&output.view_mtx.to_fixed());
 
-        (renderer.builder, output)
-    } else {
-        let mut builder = F3DBuilder::new(memory, input_dl_addr, seg_table);
-        builder.push_remaining()?;
-        (builder, GfxRenderOutput::default())
+            (renderer.builder, output)
+        }
+        InGameRenderMode::DisplayList => {
+            let mut builder = F3DBuilder::new(memory, input_dl_addr, seg_table);
+            builder.push_remaining()?;
+            (builder, approx_render_output(layout, memory, config)?)
+        }
+        InGameRenderMode::Disabled => unreachable!(),
     };
 
     let render_data = interpret_f3d_display_list(
@@ -1559,5 +1569,103 @@ where
     fn process_culling_radius(&mut self, node: &GraphNodeCullingRadius) -> Result<(), VizError> {
         self.process_node_and_siblings(node.node.children)?;
         Ok(())
+    }
+}
+
+fn approx_render_output(
+    layout: &impl MemoryLayout,
+    memory: &impl MemoryRead,
+    config: &VizConfig,
+) -> Result<GfxRenderOutput, VizError> {
+    let camera = if config.in_game_render_mode == InGameRenderMode::DisplayList {
+        Camera::InGame
+    } else {
+        config.camera
+    };
+    let mut output = GfxRenderOutput {
+        proj_mtx: approx_proj_mtx(layout, memory, &camera)?,
+        view_mtx: approx_view_mtx(layout, memory, &camera)?,
+        used_camera: Some(approx_used_camera(layout, memory, &camera)?),
+    };
+    output.proj_mtx = Matrixf::from_fixed(&output.proj_mtx.to_fixed());
+    output.view_mtx = Matrixf::from_fixed(&output.view_mtx.to_fixed());
+    Ok(output)
+}
+
+fn approx_proj_mtx(
+    layout: &impl MemoryLayout,
+    memory: &impl MemoryRead,
+    camera: &Camera,
+) -> Result<Matrixf, VizError> {
+    if let Camera::Ortho(OrthoCamera { span_v, .. }) = camera {
+        let aspect = 320.0 / 240.0;
+        let span_h = aspect * span_v;
+        let span_z = 40_000.0;
+        let scale = Matrixf::scale_vec3f([2.0 / span_h, 2.0 / span_v, -2.0 / span_z]);
+        let translate = Matrixf::translate([0.0, 0.0, -1.0]);
+        let proj_mtx = &translate * &scale;
+        Ok(proj_mtx)
+    } else {
+        let fov = layout
+            .global_path("sFOVState.fov")?
+            .read(memory)?
+            .try_as_f32()?;
+        let aspect = 320.0 / 240.0;
+        let proj_mtx = Matrixf::perspective(fov, aspect, 100.0, 20_000.0);
+        Ok(proj_mtx)
+    }
+}
+
+fn approx_view_mtx(
+    layout: &impl MemoryLayout,
+    memory: &impl MemoryRead,
+    camera: &Camera,
+) -> Result<Matrixf, VizError> {
+    let view_mtx = match *camera {
+        Camera::InGame => {
+            let pos = layout
+                .global_path("gLakituState.pos")?
+                .read(memory)?
+                .try_as_f32_3()?;
+            let focus = layout
+                .global_path("gLakituState.focus")?
+                .read(memory)?
+                .try_as_f32_3()?;
+            Matrixf::look_at(pos, focus, Wrapping(0))
+        }
+        Camera::LookAt(LookAtCamera { pos, focus, .. }) => {
+            Matrixf::look_at(pos, focus, Wrapping(0))
+        }
+        Camera::Ortho(OrthoCamera {
+            pos,
+            forward,
+            upward,
+            ..
+        }) => {
+            let forward = normalize3(forward);
+            let backward = [-forward[0], -forward[1], -forward[2]];
+            let upward = normalize3(upward);
+            let rightward = cross(forward, upward);
+            let rotate = Matrixf::from_rows_vec3([rightward, upward, backward]);
+            let translate = Matrixf::translate([-pos[0], -pos[1], -pos[2]]);
+            &rotate * &translate
+        }
+    };
+    Ok(view_mtx)
+}
+
+fn approx_used_camera(
+    layout: &impl MemoryLayout,
+    memory: &impl MemoryRead,
+    camera: &Camera,
+) -> Result<Camera, VizError> {
+    match *camera {
+        Camera::InGame => {
+            let lakitu_state_addr = layout.symbol_address("gLakituState")?;
+            let LakituState { pos, focus, roll } =
+                LakituState::reader(layout)?.read(memory, lakitu_state_addr)?;
+            Ok(Camera::LookAt(LookAtCamera { pos, focus, roll }))
+        }
+        c => Ok(c),
     }
 }

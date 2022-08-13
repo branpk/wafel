@@ -6,7 +6,7 @@ use wafel_sm64::{read_surfaces, Surface, SurfaceType};
 
 use crate::{
     sm64_gfx_render::{sm64_gfx_render, GfxRenderOutput},
-    Camera, ColorVertex, Element, Line, Point, SurfaceMode, VizConfig, VizError,
+    Camera, ColorVertex, Element, InGameRenderMode, Line, Point, SurfaceMode, VizConfig, VizError,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,12 +46,15 @@ pub fn sm64_render(
     screen_top_left: [u32; 2],
     screen_size: [u32; 2],
 ) -> Result<F3DRenderData, VizError> {
+    assert!(screen_size[0] > 0 && screen_size[1] > 0);
+
     let config = VizConfig {
         screen_top_left,
         screen_size,
+        in_game_render_mode: InGameRenderMode::DisplayList,
         ..Default::default()
     };
-    let (f3d_render_data, _) = sm64_gfx_render(layout, memory, &config, false)?;
+    let (f3d_render_data, _) = sm64_gfx_render(layout, memory, &config)?;
     Ok(f3d_render_data)
 }
 
@@ -60,7 +63,13 @@ pub fn viz_render(
     memory: &impl MemoryRead,
     config: &VizConfig,
 ) -> Result<VizRenderData, VizError> {
-    let (f3d_render_data, render_output) = sm64_gfx_render(layout, memory, config, true)?;
+    assert!(config.screen_size[0] > 0 && config.screen_size[1] > 0);
+
+    if config.in_game_render_mode == InGameRenderMode::DisplayList {
+        return Ok(sm64_render(layout, memory, config.screen_top_left, config.screen_size)?.into());
+    }
+
+    let (f3d_render_data, render_output) = sm64_gfx_render(layout, memory, config)?;
 
     let mut render_data = VizRenderData::from(f3d_render_data);
     render_data.elements = config.elements.clone();

@@ -182,8 +182,11 @@ impl Matrixf {
         mtx
     }
 
-    /// fov_y is in radians
+    /// fov_y is in degrees
+    #[allow(clippy::approx_constant)]
     pub fn perspective(fov_y: f32, aspect: f32, near: f32, far: f32) -> Self {
+        let fov_y = fov_y * 3.1415926 / 180.0;
+
         let mut mtx = Self::identity();
 
         let y_scale = (fov_y / 2.0).cos() / (fov_y / 2.0).sin();
