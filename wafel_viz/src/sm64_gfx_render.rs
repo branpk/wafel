@@ -1488,6 +1488,7 @@ where
                 self.layout,
                 self.memory,
                 node,
+                self.config.screen_size,
                 &lakitu_state,
             )?;
             self.append_dynamic_list(node.fn_node.node.flags >> 8, display_list);

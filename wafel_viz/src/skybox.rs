@@ -22,9 +22,17 @@ pub fn skybox_main<M: MemoryRead>(
     layout: &impl MemoryLayout,
     memory: &M,
     node: &GraphNodeBackground,
+    screen_size: [u32; 2],
     lakitu_state: &LookAtCamera,
 ) -> Result<Pointer, VizError> {
-    create_skybox_facing_camera(builder, layout, memory, node.background as i8, lakitu_state)
+    create_skybox_facing_camera(
+        builder,
+        layout,
+        memory,
+        node.background as i8,
+        screen_size,
+        lakitu_state,
+    )
 }
 
 #[derive(Debug, Clone)]
@@ -105,11 +113,12 @@ fn get_top_left_tile_idx(scaled_x: i32, scaled_y: i32) -> i32 {
 
 fn make_skybox_rect<M: MemoryRead>(
     builder: &mut F3DBuilder<'_, M>,
-    tile_index: i32,
+    row: i32,
+    col: i32,
     color_index: i8,
 ) -> Pointer {
-    let x = (tile_index % SKYBOX_COLS * SKYBOX_TILE_WIDTH) as i16;
-    let y = (SKYBOX_HEIGHT - tile_index / SKYBOX_COLS * SKYBOX_TILE_HEIGHT) as i16;
+    let x = (col * SKYBOX_TILE_WIDTH) as i16;
+    let y = (SKYBOX_HEIGHT - row * SKYBOX_TILE_HEIGHT) as i16;
 
     let color_index = color_index as usize;
     let color = [
@@ -188,30 +197,42 @@ fn load_block_texture(
     ));
 }
 
+#[allow(clippy::too_many_arguments)]
 fn draw_skybox_tile_grid<M: MemoryRead>(
     builder: &mut F3DBuilder<'_, M>,
     dl: &mut Vec<F3DCommand<Pointer>>,
     layout: &impl MemoryLayout,
     memory: &M,
+    screen_size: [u32; 2],
     background: i8,
     skybox: &Skybox,
     color_index: i8,
 ) -> Result<(), VizError> {
     use F3DCommand::*;
 
-    for row in 0..3 {
-        for col in 0..3 {
-            let tile_index = skybox.upper_left_tile + row * SKYBOX_COLS + col;
+    let row0 = skybox.upper_left_tile / SKYBOX_COLS;
+    let col0 = skybox.upper_left_tile % SKYBOX_COLS;
 
-            // Index out of bounds when pointing straight down
-            let tile_index = tile_index.clamp(0, 79);
+    let aspect = screen_size[0] as f32 / screen_size[1] as f32;
+    let scale_x = aspect / (320.0 / 240.0);
+    let screen_width = (scale_x * 320.0) as i32;
+
+    let margin_width = (screen_width - SCREEN_WIDTH + 1) / 2;
+    let min_col_offset = -(margin_width / SKYBOX_TILE_WIDTH + 1);
+    let max_col_offset = (SCREEN_WIDTH + margin_width) / SKYBOX_TILE_WIDTH + 1;
+
+    for row_offset in 0..3 {
+        for col_offset in min_col_offset..=max_col_offset {
+            let row = row0 + row_offset;
+            let col = col0 + col_offset;
+            let tile_index = row.clamp(0, 7) * SKYBOX_COLS + col.rem_euclid(8);
 
             let texture_list =
                 builder.seg_to_virt(Segmented(read_skybox_texture(layout, background)?));
             let texture = Segmented(
                 memory.read_addr(texture_list + tile_index as usize * layout.pointer_size())?,
             );
-            let vertices = make_skybox_rect(builder, tile_index, color_index);
+            let vertices = make_skybox_rect(builder, row, col, color_index);
 
             load_block_texture(dl, 32, 32, ImageFormat::Rgba, Pointer::Segmented(texture));
             dl.push(SPVertex {
@@ -240,6 +261,7 @@ fn init_skybox_display_list<M: MemoryRead>(
     builder: &mut F3DBuilder<'_, M>,
     layout: &impl MemoryLayout,
     memory: &M,
+    screen_size: [u32; 2],
     skybox: &Skybox,
     background: i8,
     color_index: i8,
@@ -270,6 +292,7 @@ fn init_skybox_display_list<M: MemoryRead>(
         &mut dl,
         layout,
         memory,
+        screen_size,
         background,
         skybox,
         color_index,
@@ -288,6 +311,7 @@ fn create_skybox_facing_camera<M: MemoryRead>(
     layout: &impl MemoryLayout,
     memory: &M,
     background: i8,
+    screen_size: [u32; 2],
     lakitu_state: &LookAtCamera,
 ) -> Result<Pointer, VizError> {
     let LookAtCamera { pos, focus, .. } = lakitu_state;
@@ -333,5 +357,13 @@ fn create_skybox_facing_camera<M: MemoryRead>(
         upper_left_tile,
     };
 
-    init_skybox_display_list(builder, layout, memory, &skybox, background, color_index)
+    init_skybox_display_list(
+        builder,
+        layout,
+        memory,
+        screen_size,
+        &skybox,
+        background,
+        color_index,
+    )
 }
