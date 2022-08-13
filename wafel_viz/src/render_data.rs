@@ -5,8 +5,9 @@ use wafel_memory::MemoryRead;
 use wafel_sm64::{read_surfaces, Surface, SurfaceType};
 
 use crate::{
+    renderer::data::ColorVertex,
     sm64_gfx_render::{sm64_gfx_render, GfxRenderOutput},
-    Camera, ColorVertex, Element, InGameRenderMode, Line, Point, SurfaceMode, VizConfig, VizError,
+    Camera, Element, InGameRenderMode, Line, Point, SurfaceMode, VizConfig, VizError,
 };
 
 #[derive(Debug, Clone, PartialEq)]

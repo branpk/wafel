@@ -5,7 +5,7 @@
 pub use config::*;
 pub use error::*;
 pub use render_data::*;
-pub use renderer::*;
+pub use renderer::VizRenderer;
 pub use rotate_camera_control::*;
 
 mod config;
