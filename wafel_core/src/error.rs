@@ -53,6 +53,7 @@ pub struct WithContext<E> {
     /// The outermost context is at the front of the vector.
     pub context: Vec<String>,
     /// The backtrace for the error.
+    #[error(not(backtrace))] // TODO: Re-enable backtraces
     pub backtrace: Backtrace,
 }
 

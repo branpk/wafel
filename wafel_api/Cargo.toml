@@ -13,7 +13,8 @@ wafel_timeline = { path = "../wafel_timeline" }
 wafel_viz = { path = "../wafel_viz" }
 deepsize = "0.2.0"
 lru = "0.7.7"
-pwbox = "0.4.0"
-hex = { version = "0.4.3", features = ["alloc"] }  # Fix build of pwbox
+pwbox = "0.5.0"
+# hex = { version = "0.4.3", features = ["alloc"] }  # Fix build of pwbox
+exonum_sodiumoxide = "0.0.24" # Fix build of pwbox
 rand = "0.8.4"
 serde_json = "1.0.64"
