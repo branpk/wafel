@@ -1,614 +1,613 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_viz_tests/src/viz_tests.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>viz_tests.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../wafel_viz_tests/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../wafel_viz_tests/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../wafel_viz_tests/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
-<span id="2">2</span>
-<span id="3">3</span>
-<span id="4">4</span>
-<span id="5">5</span>
-<span id="6">6</span>
-<span id="7">7</span>
-<span id="8">8</span>
-<span id="9">9</span>
-<span id="10">10</span>
-<span id="11">11</span>
-<span id="12">12</span>
-<span id="13">13</span>
-<span id="14">14</span>
-<span id="15">15</span>
-<span id="16">16</span>
-<span id="17">17</span>
-<span id="18">18</span>
-<span id="19">19</span>
-<span id="20">20</span>
-<span id="21">21</span>
-<span id="22">22</span>
-<span id="23">23</span>
-<span id="24">24</span>
-<span id="25">25</span>
-<span id="26">26</span>
-<span id="27">27</span>
-<span id="28">28</span>
-<span id="29">29</span>
-<span id="30">30</span>
-<span id="31">31</span>
-<span id="32">32</span>
-<span id="33">33</span>
-<span id="34">34</span>
-<span id="35">35</span>
-<span id="36">36</span>
-<span id="37">37</span>
-<span id="38">38</span>
-<span id="39">39</span>
-<span id="40">40</span>
-<span id="41">41</span>
-<span id="42">42</span>
-<span id="43">43</span>
-<span id="44">44</span>
-<span id="45">45</span>
-<span id="46">46</span>
-<span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
-<span id="53">53</span>
-<span id="54">54</span>
-<span id="55">55</span>
-<span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
-<span id="63">63</span>
-<span id="64">64</span>
-<span id="65">65</span>
-<span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
-<span id="83">83</span>
-<span id="84">84</span>
-<span id="85">85</span>
-<span id="86">86</span>
-<span id="87">87</span>
-<span id="88">88</span>
-<span id="89">89</span>
-<span id="90">90</span>
-<span id="91">91</span>
-<span id="92">92</span>
-<span id="93">93</span>
-<span id="94">94</span>
-<span id="95">95</span>
-<span id="96">96</span>
-<span id="97">97</span>
-<span id="98">98</span>
-<span id="99">99</span>
-<span id="100">100</span>
-<span id="101">101</span>
-<span id="102">102</span>
-<span id="103">103</span>
-<span id="104">104</span>
-<span id="105">105</span>
-<span id="106">106</span>
-<span id="107">107</span>
-<span id="108">108</span>
-<span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
-<span id="122">122</span>
-<span id="123">123</span>
-<span id="124">124</span>
-<span id="125">125</span>
-<span id="126">126</span>
-<span id="127">127</span>
-<span id="128">128</span>
-<span id="129">129</span>
-<span id="130">130</span>
-<span id="131">131</span>
-<span id="132">132</span>
-<span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
-<span id="169">169</span>
-<span id="170">170</span>
-<span id="171">171</span>
-<span id="172">172</span>
-<span id="173">173</span>
-<span id="174">174</span>
-<span id="175">175</span>
-<span id="176">176</span>
-<span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
-<span id="183">183</span>
-<span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
-<span id="187">187</span>
-<span id="188">188</span>
-<span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
-<span id="197">197</span>
-<span id="198">198</span>
-<span id="199">199</span>
-<span id="200">200</span>
-<span id="201">201</span>
-<span id="202">202</span>
-<span id="203">203</span>
-<span id="204">204</span>
-<span id="205">205</span>
-<span id="206">206</span>
-<span id="207">207</span>
-<span id="208">208</span>
-<span id="209">209</span>
-<span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
-<span id="217">217</span>
-<span id="218">218</span>
-<span id="219">219</span>
-<span id="220">220</span>
-<span id="221">221</span>
-<span id="222">222</span>
-<span id="223">223</span>
-<span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
-<span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
-<span id="230">230</span>
-<span id="231">231</span>
-<span id="232">232</span>
-<span id="233">233</span>
-<span id="234">234</span>
-<span id="235">235</span>
-<span id="236">236</span>
-<span id="237">237</span>
-<span id="238">238</span>
-<span id="239">239</span>
-<span id="240">240</span>
-<span id="241">241</span>
-<span id="242">242</span>
-<span id="243">243</span>
-<span id="244">244</span>
-<span id="245">245</span>
-<span id="246">246</span>
-<span id="247">247</span>
-<span id="248">248</span>
-<span id="249">249</span>
-<span id="250">250</span>
-<span id="251">251</span>
-<span id="252">252</span>
-<span id="253">253</span>
-<span id="254">254</span>
-<span id="255">255</span>
-<span id="256">256</span>
-<span id="257">257</span>
-<span id="258">258</span>
-<span id="259">259</span>
-<span id="260">260</span>
-<span id="261">261</span>
-<span id="262">262</span>
-<span id="263">263</span>
-<span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
-<span id="267">267</span>
-<span id="268">268</span>
-<span id="269">269</span>
-<span id="270">270</span>
-<span id="271">271</span>
-<span id="272">272</span>
-<span id="273">273</span>
-<span id="274">274</span>
-<span id="275">275</span>
-<span id="276">276</span>
-<span id="277">277</span>
-<span id="278">278</span>
-<span id="279">279</span>
-<span id="280">280</span>
-<span id="281">281</span>
-<span id="282">282</span>
-<span id="283">283</span>
-<span id="284">284</span>
-<span id="285">285</span>
-<span id="286">286</span>
-<span id="287">287</span>
-<span id="288">288</span>
-<span id="289">289</span>
-<span id="290">290</span>
-<span id="291">291</span>
-<span id="292">292</span>
-<span id="293">293</span>
-<span id="294">294</span>
-<span id="295">295</span>
-<span id="296">296</span>
-<span id="297">297</span>
-<span id="298">298</span>
-<span id="299">299</span>
-<span id="300">300</span>
-<span id="301">301</span>
-<span id="302">302</span>
-<span id="303">303</span>
-<span id="304">304</span>
-<span id="305">305</span>
-<span id="306">306</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::env</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_viz_tests/src/viz_tests.rs`."><title>viz_tests.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_viz_tests" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (a991861ec 2023-09-05)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-ef3a2de404864b0b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../wafel_viz_tests/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<a href="#2" id="2">2</a>
+<a href="#3" id="3">3</a>
+<a href="#4" id="4">4</a>
+<a href="#5" id="5">5</a>
+<a href="#6" id="6">6</a>
+<a href="#7" id="7">7</a>
+<a href="#8" id="8">8</a>
+<a href="#9" id="9">9</a>
+<a href="#10" id="10">10</a>
+<a href="#11" id="11">11</a>
+<a href="#12" id="12">12</a>
+<a href="#13" id="13">13</a>
+<a href="#14" id="14">14</a>
+<a href="#15" id="15">15</a>
+<a href="#16" id="16">16</a>
+<a href="#17" id="17">17</a>
+<a href="#18" id="18">18</a>
+<a href="#19" id="19">19</a>
+<a href="#20" id="20">20</a>
+<a href="#21" id="21">21</a>
+<a href="#22" id="22">22</a>
+<a href="#23" id="23">23</a>
+<a href="#24" id="24">24</a>
+<a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
+<a href="#37" id="37">37</a>
+<a href="#38" id="38">38</a>
+<a href="#39" id="39">39</a>
+<a href="#40" id="40">40</a>
+<a href="#41" id="41">41</a>
+<a href="#42" id="42">42</a>
+<a href="#43" id="43">43</a>
+<a href="#44" id="44">44</a>
+<a href="#45" id="45">45</a>
+<a href="#46" id="46">46</a>
+<a href="#47" id="47">47</a>
+<a href="#48" id="48">48</a>
+<a href="#49" id="49">49</a>
+<a href="#50" id="50">50</a>
+<a href="#51" id="51">51</a>
+<a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::env;
 
-<span class="kw">use</span> <span class="ident">wafel_viz::VizConfig</span>;
+<span class="kw">use </span>wafel_viz::VizConfig;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TestCase</span> {
-    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">game_version</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>,
-    <span class="kw">pub</span> <span class="ident">m64</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>,
-    <span class="kw">pub</span> <span class="ident">frame</span>: <span class="ident">u32</span>,
-    <span class="kw">pub</span> <span class="ident">config</span>: <span class="ident">VizConfig</span>,
+<span class="attr">#[derive(Debug, Clone)]
+</span><span class="kw">pub struct </span>TestCase {
+    <span class="kw">pub </span>name: String,
+    <span class="kw">pub </span>game_version: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
+    <span class="kw">pub </span>m64: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
+    <span class="kw">pub </span>frame: u32,
+    <span class="kw">pub </span>config: VizConfig,
 }
 
-<span class="kw">fn</span> <span class="ident">u120</span>(<span class="ident">cases</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TestCase</span><span class="op">&gt;</span>) {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">case</span> <span class="op">=</span> <span class="op">|</span><span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">frame</span><span class="op">|</span> {
-        <span class="ident">cases</span>.<span class="ident">push</span>(<span class="ident">TestCase</span> {
-            <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">to_string</span>(),
-            <span class="ident">game_version</span>: <span class="string">&quot;us&quot;</span>,
-            <span class="ident">m64</span>: <span class="string">&quot;120_u&quot;</span>,
-            <span class="ident">frame</span>,
-            <span class="ident">config</span>: <span class="ident">VizConfig::default</span>(),
+<span class="kw">fn </span>u120(cases: <span class="kw-2">&amp;mut </span>Vec&lt;TestCase&gt;) {
+    <span class="kw">let </span><span class="kw-2">mut </span>case = |name: <span class="kw-2">&amp;</span>str, frame| {
+        cases.push(TestCase {
+            name: name.to_string(),
+            game_version: <span class="string">&quot;us&quot;</span>,
+            m64: <span class="string">&quot;120_u&quot;</span>,
+            frame,
+            config: VizConfig::default(),
         })
     };
-    <span class="ident">case</span>(<span class="string">&quot;u120_000000_power_on&quot;</span>, <span class="number">0</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_000052_logo&quot;</span>, <span class="number">52</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_000100_intro_star&quot;</span>, <span class="number">100</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_000120_mario_head&quot;</span>, <span class="number">120</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_000135_before_file_select&quot;</span>, <span class="number">135</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_000140_file_select&quot;</span>, <span class="number">140</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_000169_after_file_select&quot;</span>, <span class="number">169</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_000279_peach_letter&quot;</span>, <span class="number">279</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_000975_castle&quot;</span>, <span class="number">975</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_001059_water_shadow&quot;</span>, <span class="number">1059</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_001176_tree_shadows&quot;</span>, <span class="number">1176</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_001502_mario&quot;</span>, <span class="number">1502</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_001624_tilted_text&quot;</span>, <span class="number">1624</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_001627_scrolling_text&quot;</span>, <span class="number">1627</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_001722_dust&quot;</span>, <span class="number">1722</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_001905_key_door&quot;</span>, <span class="number">1905</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_002037_pause&quot;</span>, <span class="number">2037</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_002299_wkww&quot;</span>, <span class="number">2299</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_002418_star_grab&quot;</span>, <span class="number">2418</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_002628_continue1&quot;</span>, <span class="number">2628</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_002632_continue2&quot;</span>, <span class="number">2632</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_003079_high_poly&quot;</span>, <span class="number">3079</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_003080_low_poly&quot;</span>, <span class="number">3080</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_003363_exit_slide&quot;</span>, <span class="number">3363</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_003422_slide_star&quot;</span>, <span class="number">3422</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_003509_slide_star_spawn&quot;</span>, <span class="number">3509</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_003603_slide_star_grab&quot;</span>, <span class="number">3603</span>); <span class="comment">// TODO: Mupen shows an extra snow particle</span>
-    <span class="ident">case</span>(<span class="string">&quot;u120_004375_snow_run&quot;</span>, <span class="number">4375</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_004575_star_fade&quot;</span>, <span class="number">4575</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_005577_slide_ice&quot;</span>, <span class="number">5577</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_005785_penguin_star&quot;</span>, <span class="number">5785</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_006122_dust_butt&quot;</span>, <span class="number">6122</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_006180_star_head&quot;</span>, <span class="number">6180</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_008282_hold_penguin&quot;</span>, <span class="number">8282</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_008488_penguin_shadow&quot;</span>, <span class="number">8488</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_009044_star_select&quot;</span>, <span class="number">9044</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_009738_ice&quot;</span>, <span class="number">9738</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_010543_caught_in_the_undertoad&quot;</span>, <span class="number">10543</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_010565_pss_room&quot;</span>, <span class="number">10565</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_010717_pss_fog&quot;</span>, <span class="number">10717</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_010802_pss_cull&quot;</span>, <span class="number">10802</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_010903_pss_wall&quot;</span>, <span class="number">10903</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_010908_pss_fog2&quot;</span>, <span class="number">10908</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_011024_pss_fog3&quot;</span>, <span class="number">11024</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_011326_mario_mario&quot;</span>, <span class="number">11326</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_011360_lobby_decal&quot;</span>, <span class="number">11360</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_011638_lod_peach1&quot;</span>, <span class="number">11638</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_011645_lod_peach2&quot;</span>, <span class="number">11645</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_011652_lod_peach3&quot;</span>, <span class="number">11652</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_011749_transparent_box&quot;</span>, <span class="number">11749</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_011845_flames&quot;</span>, <span class="number">11845</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_012222_amps&quot;</span>, <span class="number">12222</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_013385_bowser_key_1&quot;</span>, <span class="number">13385</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_013408_bowser_key_2&quot;</span>, <span class="number">13408</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_013480_bowser_key_3&quot;</span>, <span class="number">13480</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_013808_key_cutscene&quot;</span>, <span class="number">13808</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_015056_totwc_light&quot;</span>, <span class="number">15056</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_015098_totwc_light_2&quot;</span>, <span class="number">15098</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_015117_totwc_light_3&quot;</span>, <span class="number">15117</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_015156_totwc_1&quot;</span>, <span class="number">15156</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_015410_totwc_2&quot;</span>, <span class="number">15410</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_015547_totwc_3_blocky_clouds&quot;</span>, <span class="number">15547</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_015744_totwc_4&quot;</span>, <span class="number">15744</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_015829_totwc_5&quot;</span>, <span class="number">15829</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_015852_totwc_6&quot;</span>, <span class="number">15852</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_016282_wf_entry&quot;</span>, <span class="number">16282</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_017233_cage_cull&quot;</span>, <span class="number">17233</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_022651_box_squish&quot;</span>, <span class="number">22651</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_022659_cap_grab&quot;</span>, <span class="number">22659</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_022839_winged_goomba&quot;</span>, <span class="number">22839</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_022871_tree_hold_1&quot;</span>, <span class="number">22871</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_022874_tree_hold_2&quot;</span>, <span class="number">22874</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_023097_bob_fog&quot;</span>, <span class="number">23097</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_024183_bob_fog_2&quot;</span>, <span class="number">24183</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_024386_bob_oob&quot;</span>, <span class="number">24386</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_025086_fading_shadow&quot;</span>, <span class="number">25086</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_025090_tilted_shadow&quot;</span>, <span class="number">25090</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_025141_limbo&quot;</span>, <span class="number">25141</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_026614_small_box_hold&quot;</span>, <span class="number">26614</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_026638_box_kick&quot;</span>, <span class="number">26638</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_032013_whirlpool&quot;</span>, <span class="number">32013</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_032935_bowser_door&quot;</span>, <span class="number">32935</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_034660_ddd_entrance&quot;</span>, <span class="number">34660</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_034725_ddd_entrance_2&quot;</span>, <span class="number">34725</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_035247_inside_chest&quot;</span>, <span class="number">35247</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_036082_ddd_entry&quot;</span>, <span class="number">36082</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_038713_ddd_rings&quot;</span>, <span class="number">38713</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_041689_lava&quot;</span>, <span class="number">41689</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_044732_mips_shadow&quot;</span>, <span class="number">44732</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_045459_hmc_entrance_1&quot;</span>, <span class="number">45459</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_045467_hmc_entrance_2&quot;</span>, <span class="number">45467</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_045833_hmc_fog&quot;</span>, <span class="number">45833</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_045966_hmc_limbo&quot;</span>, <span class="number">45966</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_052884_dorrie_1&quot;</span>, <span class="number">52884</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_052943_dorrie_2&quot;</span>, <span class="number">52943</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_052968_dorrie_3&quot;</span>, <span class="number">52968</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_053197_metal_cap&quot;</span>, <span class="number">53197</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_053496_metal_cap_2&quot;</span>, <span class="number">53496</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_054664_hmc_star_grab&quot;</span>, <span class="number">54664</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_055577_pokey_face&quot;</span>, <span class="number">55577</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_055642_quicksand&quot;</span>, <span class="number">55642</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_055945_ssl_flame&quot;</span>, <span class="number">55945</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_056273_pyramid_fog&quot;</span>, <span class="number">56273</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_060881_star_grab_in_sand&quot;</span>, <span class="number">60881</span>); <span class="comment">// TODO: Mupen has black bars on top/bottom, which is noticeable here</span>
-    <span class="ident">case</span>(<span class="string">&quot;u120_061098_ssl_ripple&quot;</span>, <span class="number">61098</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_061473_bomb_clip&quot;</span>, <span class="number">61473</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_063451_lll_ripple&quot;</span>, <span class="number">63451</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_064590_smoke_texture&quot;</span>, <span class="number">64590</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_066344_lll_puzzle&quot;</span>, <span class="number">66344</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_068798_lava_shell&quot;</span>, <span class="number">68798</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_069260_lavafall&quot;</span>, <span class="number">69260</span>); <span class="comment">// TODO: Texture is different than on mupen</span>
-    <span class="ident">case</span>(<span class="string">&quot;u120_071009_vanish&quot;</span>, <span class="number">71009</span>); <span class="comment">// TODO: Dithering not implemented</span>
-    <span class="ident">case</span>(<span class="string">&quot;u120_071323_vanish_2&quot;</span>, <span class="number">71323</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_072554_jrb_fog_and_metal&quot;</span>, <span class="number">72554</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_081881_bbh_entry&quot;</span>, <span class="number">81881</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_081960_bbh_entry_2&quot;</span>, <span class="number">81960</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_082906_killing_a_ghost&quot;</span>, <span class="number">82906</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_085194_vc_box_top&quot;</span>, <span class="number">85194</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_085282_bbh_door&quot;</span>, <span class="number">85282</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_085800_bbh_star_grab&quot;</span>, <span class="number">85800</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_090671_bbh_window&quot;</span>, <span class="number">90671</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_092354_koopa_underwear&quot;</span>, <span class="number">92354</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_099903_wiggler_1&quot;</span>, <span class="number">99903</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_100449_wiggler_2&quot;</span>, <span class="number">100449</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_100758_mirror_room&quot;</span>, <span class="number">100758</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_102446_ice_bully&quot;</span>, <span class="number">102446</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_103259_snowmans_head&quot;</span>, <span class="number">103259</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_104109_igloo_star&quot;</span>, <span class="number">104109</span>); <span class="comment">// TODO: Extra snow particle on mupen</span>
-    <span class="ident">case</span>(<span class="string">&quot;u120_105905_moneybags&quot;</span>, <span class="number">105905</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_109556_ttc_slide_ripples&quot;</span>, <span class="number">109556</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_109612_ttc_slide_fade&quot;</span>, <span class="number">109612</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_110107_slide_trap&quot;</span>, <span class="number">110107</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_110127_slide_smile&quot;</span>, <span class="number">110127</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_110130_slide_smile_gone&quot;</span>, <span class="number">110130</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_110147_slide_smile_back&quot;</span>, <span class="number">110147</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_114943_wdw_water_shadow_1&quot;</span>, <span class="number">114943</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_114955_wdw_water_shadow_2&quot;</span>, <span class="number">114955</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_117872_crystal_tap&quot;</span>, <span class="number">117872</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_122216_cloud_entry&quot;</span>, <span class="number">122216</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_122942_cannon_shot_1&quot;</span>, <span class="number">122942</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_123263_cannon_shot_2&quot;</span>, <span class="number">123263</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_123589_rain_cloud&quot;</span>, <span class="number">123589</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_125576_ttc_fog&quot;</span>, <span class="number">125576</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_126160_ttc_fog_2&quot;</span>, <span class="number">126160</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_128143_clock&quot;</span>, <span class="number">128143</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_129859_toad_star&quot;</span>, <span class="number">129859</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_130266_rr_rainbow&quot;</span>, <span class="number">130266</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_130373_rr_blue_flame&quot;</span>, <span class="number">130373</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_134235_cannon_shot_3&quot;</span>, <span class="number">134235</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_137580_staircase_fog&quot;</span>, <span class="number">137580</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_138322_bits_seam&quot;</span>, <span class="number">138322</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_138984_bits_blj&quot;</span>, <span class="number">138984</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_139601_bowser3&quot;</span>, <span class="number">139601</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_139721_boomer3&quot;</span>, <span class="number">139721</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_141811_peach_cutscene_1&quot;</span>, <span class="number">141811</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_141930_peach_cutscene_2&quot;</span>, <span class="number">141930</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_144714_credits_wf&quot;</span>, <span class="number">144714</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_145414_credits_bbh_1&quot;</span>, <span class="number">145414</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_145473_credits_bbh_2&quot;</span>, <span class="number">145473</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_147682_credits_ttc&quot;</span>, <span class="number">147682</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_148424_credits_cotmc&quot;</span>, <span class="number">148424</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_148484_credits_ddd_1&quot;</span>, <span class="number">148484</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_148573_credits_ddd_2&quot;</span>, <span class="number">148573</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_149182_credits_zoom&quot;</span>, <span class="number">149182</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_149706_thank_you&quot;</span>, <span class="number">149706</span>);
+    case(<span class="string">&quot;u120_000000_power_on&quot;</span>, <span class="number">0</span>);
+    case(<span class="string">&quot;u120_000052_logo&quot;</span>, <span class="number">52</span>);
+    case(<span class="string">&quot;u120_000100_intro_star&quot;</span>, <span class="number">100</span>);
+    case(<span class="string">&quot;u120_000120_mario_head&quot;</span>, <span class="number">120</span>);
+    case(<span class="string">&quot;u120_000135_before_file_select&quot;</span>, <span class="number">135</span>);
+    case(<span class="string">&quot;u120_000140_file_select&quot;</span>, <span class="number">140</span>);
+    case(<span class="string">&quot;u120_000169_after_file_select&quot;</span>, <span class="number">169</span>);
+    case(<span class="string">&quot;u120_000279_peach_letter&quot;</span>, <span class="number">279</span>);
+    case(<span class="string">&quot;u120_000975_castle&quot;</span>, <span class="number">975</span>);
+    case(<span class="string">&quot;u120_001059_water_shadow&quot;</span>, <span class="number">1059</span>);
+    case(<span class="string">&quot;u120_001176_tree_shadows&quot;</span>, <span class="number">1176</span>);
+    case(<span class="string">&quot;u120_001502_mario&quot;</span>, <span class="number">1502</span>);
+    case(<span class="string">&quot;u120_001624_tilted_text&quot;</span>, <span class="number">1624</span>);
+    case(<span class="string">&quot;u120_001627_scrolling_text&quot;</span>, <span class="number">1627</span>);
+    case(<span class="string">&quot;u120_001722_dust&quot;</span>, <span class="number">1722</span>);
+    case(<span class="string">&quot;u120_001905_key_door&quot;</span>, <span class="number">1905</span>);
+    case(<span class="string">&quot;u120_002037_pause&quot;</span>, <span class="number">2037</span>);
+    case(<span class="string">&quot;u120_002299_wkww&quot;</span>, <span class="number">2299</span>);
+    case(<span class="string">&quot;u120_002418_star_grab&quot;</span>, <span class="number">2418</span>);
+    case(<span class="string">&quot;u120_002628_continue1&quot;</span>, <span class="number">2628</span>);
+    case(<span class="string">&quot;u120_002632_continue2&quot;</span>, <span class="number">2632</span>);
+    case(<span class="string">&quot;u120_003079_high_poly&quot;</span>, <span class="number">3079</span>);
+    case(<span class="string">&quot;u120_003080_low_poly&quot;</span>, <span class="number">3080</span>);
+    case(<span class="string">&quot;u120_003363_exit_slide&quot;</span>, <span class="number">3363</span>);
+    case(<span class="string">&quot;u120_003422_slide_star&quot;</span>, <span class="number">3422</span>);
+    case(<span class="string">&quot;u120_003509_slide_star_spawn&quot;</span>, <span class="number">3509</span>);
+    case(<span class="string">&quot;u120_003603_slide_star_grab&quot;</span>, <span class="number">3603</span>); <span class="comment">// TODO: Mupen shows an extra snow particle
+    </span>case(<span class="string">&quot;u120_004375_snow_run&quot;</span>, <span class="number">4375</span>);
+    case(<span class="string">&quot;u120_004575_star_fade&quot;</span>, <span class="number">4575</span>);
+    case(<span class="string">&quot;u120_005577_slide_ice&quot;</span>, <span class="number">5577</span>);
+    case(<span class="string">&quot;u120_005785_penguin_star&quot;</span>, <span class="number">5785</span>);
+    case(<span class="string">&quot;u120_006122_dust_butt&quot;</span>, <span class="number">6122</span>);
+    case(<span class="string">&quot;u120_006180_star_head&quot;</span>, <span class="number">6180</span>);
+    case(<span class="string">&quot;u120_008282_hold_penguin&quot;</span>, <span class="number">8282</span>);
+    case(<span class="string">&quot;u120_008488_penguin_shadow&quot;</span>, <span class="number">8488</span>);
+    case(<span class="string">&quot;u120_009044_star_select&quot;</span>, <span class="number">9044</span>);
+    case(<span class="string">&quot;u120_009738_ice&quot;</span>, <span class="number">9738</span>);
+    case(<span class="string">&quot;u120_010543_caught_in_the_undertoad&quot;</span>, <span class="number">10543</span>);
+    case(<span class="string">&quot;u120_010565_pss_room&quot;</span>, <span class="number">10565</span>);
+    case(<span class="string">&quot;u120_010717_pss_fog&quot;</span>, <span class="number">10717</span>);
+    case(<span class="string">&quot;u120_010802_pss_cull&quot;</span>, <span class="number">10802</span>);
+    case(<span class="string">&quot;u120_010903_pss_wall&quot;</span>, <span class="number">10903</span>);
+    case(<span class="string">&quot;u120_010908_pss_fog2&quot;</span>, <span class="number">10908</span>);
+    case(<span class="string">&quot;u120_011024_pss_fog3&quot;</span>, <span class="number">11024</span>);
+    case(<span class="string">&quot;u120_011326_mario_mario&quot;</span>, <span class="number">11326</span>);
+    case(<span class="string">&quot;u120_011360_lobby_decal&quot;</span>, <span class="number">11360</span>);
+    case(<span class="string">&quot;u120_011638_lod_peach1&quot;</span>, <span class="number">11638</span>);
+    case(<span class="string">&quot;u120_011645_lod_peach2&quot;</span>, <span class="number">11645</span>);
+    case(<span class="string">&quot;u120_011652_lod_peach3&quot;</span>, <span class="number">11652</span>);
+    case(<span class="string">&quot;u120_011749_transparent_box&quot;</span>, <span class="number">11749</span>);
+    case(<span class="string">&quot;u120_011845_flames&quot;</span>, <span class="number">11845</span>);
+    case(<span class="string">&quot;u120_012222_amps&quot;</span>, <span class="number">12222</span>);
+    case(<span class="string">&quot;u120_013385_bowser_key_1&quot;</span>, <span class="number">13385</span>);
+    case(<span class="string">&quot;u120_013408_bowser_key_2&quot;</span>, <span class="number">13408</span>);
+    case(<span class="string">&quot;u120_013480_bowser_key_3&quot;</span>, <span class="number">13480</span>);
+    case(<span class="string">&quot;u120_013808_key_cutscene&quot;</span>, <span class="number">13808</span>);
+    case(<span class="string">&quot;u120_015056_totwc_light&quot;</span>, <span class="number">15056</span>);
+    case(<span class="string">&quot;u120_015098_totwc_light_2&quot;</span>, <span class="number">15098</span>);
+    case(<span class="string">&quot;u120_015117_totwc_light_3&quot;</span>, <span class="number">15117</span>);
+    case(<span class="string">&quot;u120_015156_totwc_1&quot;</span>, <span class="number">15156</span>);
+    case(<span class="string">&quot;u120_015410_totwc_2&quot;</span>, <span class="number">15410</span>);
+    case(<span class="string">&quot;u120_015547_totwc_3_blocky_clouds&quot;</span>, <span class="number">15547</span>);
+    case(<span class="string">&quot;u120_015744_totwc_4&quot;</span>, <span class="number">15744</span>);
+    case(<span class="string">&quot;u120_015829_totwc_5&quot;</span>, <span class="number">15829</span>);
+    case(<span class="string">&quot;u120_015852_totwc_6&quot;</span>, <span class="number">15852</span>);
+    case(<span class="string">&quot;u120_016282_wf_entry&quot;</span>, <span class="number">16282</span>);
+    case(<span class="string">&quot;u120_017233_cage_cull&quot;</span>, <span class="number">17233</span>);
+    case(<span class="string">&quot;u120_022651_box_squish&quot;</span>, <span class="number">22651</span>);
+    case(<span class="string">&quot;u120_022659_cap_grab&quot;</span>, <span class="number">22659</span>);
+    case(<span class="string">&quot;u120_022839_winged_goomba&quot;</span>, <span class="number">22839</span>);
+    case(<span class="string">&quot;u120_022871_tree_hold_1&quot;</span>, <span class="number">22871</span>);
+    case(<span class="string">&quot;u120_022874_tree_hold_2&quot;</span>, <span class="number">22874</span>);
+    case(<span class="string">&quot;u120_023097_bob_fog&quot;</span>, <span class="number">23097</span>);
+    case(<span class="string">&quot;u120_024183_bob_fog_2&quot;</span>, <span class="number">24183</span>);
+    case(<span class="string">&quot;u120_024386_bob_oob&quot;</span>, <span class="number">24386</span>);
+    case(<span class="string">&quot;u120_025086_fading_shadow&quot;</span>, <span class="number">25086</span>);
+    case(<span class="string">&quot;u120_025090_tilted_shadow&quot;</span>, <span class="number">25090</span>);
+    case(<span class="string">&quot;u120_025141_limbo&quot;</span>, <span class="number">25141</span>);
+    case(<span class="string">&quot;u120_026614_small_box_hold&quot;</span>, <span class="number">26614</span>);
+    case(<span class="string">&quot;u120_026638_box_kick&quot;</span>, <span class="number">26638</span>);
+    case(<span class="string">&quot;u120_032013_whirlpool&quot;</span>, <span class="number">32013</span>);
+    case(<span class="string">&quot;u120_032935_bowser_door&quot;</span>, <span class="number">32935</span>);
+    case(<span class="string">&quot;u120_034660_ddd_entrance&quot;</span>, <span class="number">34660</span>);
+    case(<span class="string">&quot;u120_034725_ddd_entrance_2&quot;</span>, <span class="number">34725</span>);
+    case(<span class="string">&quot;u120_035247_inside_chest&quot;</span>, <span class="number">35247</span>);
+    case(<span class="string">&quot;u120_036082_ddd_entry&quot;</span>, <span class="number">36082</span>);
+    case(<span class="string">&quot;u120_038713_ddd_rings&quot;</span>, <span class="number">38713</span>);
+    case(<span class="string">&quot;u120_041689_lava&quot;</span>, <span class="number">41689</span>);
+    case(<span class="string">&quot;u120_044732_mips_shadow&quot;</span>, <span class="number">44732</span>);
+    case(<span class="string">&quot;u120_045459_hmc_entrance_1&quot;</span>, <span class="number">45459</span>);
+    case(<span class="string">&quot;u120_045467_hmc_entrance_2&quot;</span>, <span class="number">45467</span>);
+    case(<span class="string">&quot;u120_045833_hmc_fog&quot;</span>, <span class="number">45833</span>);
+    case(<span class="string">&quot;u120_045966_hmc_limbo&quot;</span>, <span class="number">45966</span>);
+    case(<span class="string">&quot;u120_052884_dorrie_1&quot;</span>, <span class="number">52884</span>);
+    case(<span class="string">&quot;u120_052943_dorrie_2&quot;</span>, <span class="number">52943</span>);
+    case(<span class="string">&quot;u120_052968_dorrie_3&quot;</span>, <span class="number">52968</span>);
+    case(<span class="string">&quot;u120_053197_metal_cap&quot;</span>, <span class="number">53197</span>);
+    case(<span class="string">&quot;u120_053496_metal_cap_2&quot;</span>, <span class="number">53496</span>);
+    case(<span class="string">&quot;u120_054664_hmc_star_grab&quot;</span>, <span class="number">54664</span>);
+    case(<span class="string">&quot;u120_055577_pokey_face&quot;</span>, <span class="number">55577</span>);
+    case(<span class="string">&quot;u120_055642_quicksand&quot;</span>, <span class="number">55642</span>);
+    case(<span class="string">&quot;u120_055945_ssl_flame&quot;</span>, <span class="number">55945</span>);
+    case(<span class="string">&quot;u120_056273_pyramid_fog&quot;</span>, <span class="number">56273</span>);
+    case(<span class="string">&quot;u120_060881_star_grab_in_sand&quot;</span>, <span class="number">60881</span>); <span class="comment">// TODO: Mupen has black bars on top/bottom, which is noticeable here
+    </span>case(<span class="string">&quot;u120_061098_ssl_ripple&quot;</span>, <span class="number">61098</span>);
+    case(<span class="string">&quot;u120_061473_bomb_clip&quot;</span>, <span class="number">61473</span>);
+    case(<span class="string">&quot;u120_063451_lll_ripple&quot;</span>, <span class="number">63451</span>);
+    case(<span class="string">&quot;u120_064590_smoke_texture&quot;</span>, <span class="number">64590</span>);
+    case(<span class="string">&quot;u120_066344_lll_puzzle&quot;</span>, <span class="number">66344</span>);
+    case(<span class="string">&quot;u120_068798_lava_shell&quot;</span>, <span class="number">68798</span>);
+    case(<span class="string">&quot;u120_069260_lavafall&quot;</span>, <span class="number">69260</span>); <span class="comment">// TODO: Texture is different than on mupen
+    </span>case(<span class="string">&quot;u120_071009_vanish&quot;</span>, <span class="number">71009</span>); <span class="comment">// TODO: Dithering not implemented
+    </span>case(<span class="string">&quot;u120_071323_vanish_2&quot;</span>, <span class="number">71323</span>);
+    case(<span class="string">&quot;u120_072554_jrb_fog_and_metal&quot;</span>, <span class="number">72554</span>);
+    case(<span class="string">&quot;u120_081881_bbh_entry&quot;</span>, <span class="number">81881</span>);
+    case(<span class="string">&quot;u120_081960_bbh_entry_2&quot;</span>, <span class="number">81960</span>);
+    case(<span class="string">&quot;u120_082906_killing_a_ghost&quot;</span>, <span class="number">82906</span>);
+    case(<span class="string">&quot;u120_085194_vc_box_top&quot;</span>, <span class="number">85194</span>);
+    case(<span class="string">&quot;u120_085282_bbh_door&quot;</span>, <span class="number">85282</span>);
+    case(<span class="string">&quot;u120_085800_bbh_star_grab&quot;</span>, <span class="number">85800</span>);
+    case(<span class="string">&quot;u120_090671_bbh_window&quot;</span>, <span class="number">90671</span>);
+    case(<span class="string">&quot;u120_092354_koopa_underwear&quot;</span>, <span class="number">92354</span>);
+    case(<span class="string">&quot;u120_099903_wiggler_1&quot;</span>, <span class="number">99903</span>);
+    case(<span class="string">&quot;u120_100449_wiggler_2&quot;</span>, <span class="number">100449</span>);
+    case(<span class="string">&quot;u120_100758_mirror_room&quot;</span>, <span class="number">100758</span>);
+    case(<span class="string">&quot;u120_102446_ice_bully&quot;</span>, <span class="number">102446</span>);
+    case(<span class="string">&quot;u120_103259_snowmans_head&quot;</span>, <span class="number">103259</span>);
+    case(<span class="string">&quot;u120_104109_igloo_star&quot;</span>, <span class="number">104109</span>); <span class="comment">// TODO: Extra snow particle on mupen
+    </span>case(<span class="string">&quot;u120_105905_moneybags&quot;</span>, <span class="number">105905</span>);
+    case(<span class="string">&quot;u120_109556_ttc_slide_ripples&quot;</span>, <span class="number">109556</span>);
+    case(<span class="string">&quot;u120_109612_ttc_slide_fade&quot;</span>, <span class="number">109612</span>);
+    case(<span class="string">&quot;u120_110107_slide_trap&quot;</span>, <span class="number">110107</span>);
+    case(<span class="string">&quot;u120_110127_slide_smile&quot;</span>, <span class="number">110127</span>);
+    case(<span class="string">&quot;u120_110130_slide_smile_gone&quot;</span>, <span class="number">110130</span>);
+    case(<span class="string">&quot;u120_110147_slide_smile_back&quot;</span>, <span class="number">110147</span>);
+    case(<span class="string">&quot;u120_114943_wdw_water_shadow_1&quot;</span>, <span class="number">114943</span>);
+    case(<span class="string">&quot;u120_114955_wdw_water_shadow_2&quot;</span>, <span class="number">114955</span>);
+    case(<span class="string">&quot;u120_117872_crystal_tap&quot;</span>, <span class="number">117872</span>);
+    case(<span class="string">&quot;u120_122216_cloud_entry&quot;</span>, <span class="number">122216</span>);
+    case(<span class="string">&quot;u120_122942_cannon_shot_1&quot;</span>, <span class="number">122942</span>);
+    case(<span class="string">&quot;u120_123263_cannon_shot_2&quot;</span>, <span class="number">123263</span>);
+    case(<span class="string">&quot;u120_123589_rain_cloud&quot;</span>, <span class="number">123589</span>);
+    case(<span class="string">&quot;u120_125576_ttc_fog&quot;</span>, <span class="number">125576</span>);
+    case(<span class="string">&quot;u120_126160_ttc_fog_2&quot;</span>, <span class="number">126160</span>);
+    case(<span class="string">&quot;u120_128143_clock&quot;</span>, <span class="number">128143</span>);
+    case(<span class="string">&quot;u120_129859_toad_star&quot;</span>, <span class="number">129859</span>);
+    case(<span class="string">&quot;u120_130266_rr_rainbow&quot;</span>, <span class="number">130266</span>);
+    case(<span class="string">&quot;u120_130373_rr_blue_flame&quot;</span>, <span class="number">130373</span>);
+    case(<span class="string">&quot;u120_134235_cannon_shot_3&quot;</span>, <span class="number">134235</span>);
+    case(<span class="string">&quot;u120_137580_staircase_fog&quot;</span>, <span class="number">137580</span>);
+    case(<span class="string">&quot;u120_138322_bits_seam&quot;</span>, <span class="number">138322</span>);
+    case(<span class="string">&quot;u120_138984_bits_blj&quot;</span>, <span class="number">138984</span>);
+    case(<span class="string">&quot;u120_139601_bowser3&quot;</span>, <span class="number">139601</span>);
+    case(<span class="string">&quot;u120_139721_boomer3&quot;</span>, <span class="number">139721</span>);
+    case(<span class="string">&quot;u120_141811_peach_cutscene_1&quot;</span>, <span class="number">141811</span>);
+    case(<span class="string">&quot;u120_141930_peach_cutscene_2&quot;</span>, <span class="number">141930</span>);
+    case(<span class="string">&quot;u120_144714_credits_wf&quot;</span>, <span class="number">144714</span>);
+    case(<span class="string">&quot;u120_145414_credits_bbh_1&quot;</span>, <span class="number">145414</span>);
+    case(<span class="string">&quot;u120_145473_credits_bbh_2&quot;</span>, <span class="number">145473</span>);
+    case(<span class="string">&quot;u120_147682_credits_ttc&quot;</span>, <span class="number">147682</span>);
+    case(<span class="string">&quot;u120_148424_credits_cotmc&quot;</span>, <span class="number">148424</span>);
+    case(<span class="string">&quot;u120_148484_credits_ddd_1&quot;</span>, <span class="number">148484</span>);
+    case(<span class="string">&quot;u120_148573_credits_ddd_2&quot;</span>, <span class="number">148573</span>);
+    case(<span class="string">&quot;u120_149182_credits_zoom&quot;</span>, <span class="number">149182</span>);
+    case(<span class="string">&quot;u120_149706_thank_you&quot;</span>, <span class="number">149706</span>);
 }
 
-<span class="kw">fn</span> <span class="ident">res</span>(<span class="ident">cases</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TestCase</span><span class="op">&gt;</span>) {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">case</span> <span class="op">=</span> <span class="op">|</span><span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">frame</span><span class="op">|</span> {
-        <span class="ident">cases</span>.<span class="ident">push</span>(<span class="ident">TestCase</span> {
-            <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;res_800_500_{}&quot;</span>, <span class="ident">name</span>),
-            <span class="ident">game_version</span>: <span class="string">&quot;us&quot;</span>,
-            <span class="ident">m64</span>: <span class="string">&quot;120_u&quot;</span>,
-            <span class="ident">frame</span>,
-            <span class="ident">config</span>: <span class="ident">VizConfig</span> {
-                <span class="ident">screen_size</span>: [<span class="number">800</span>, <span class="number">500</span>],
-                ..<span class="ident">Default::default</span>()
+<span class="kw">fn </span>res(cases: <span class="kw-2">&amp;mut </span>Vec&lt;TestCase&gt;) {
+    <span class="kw">let </span><span class="kw-2">mut </span>case = |name: <span class="kw-2">&amp;</span>str, frame| {
+        cases.push(TestCase {
+            name: <span class="macro">format!</span>(<span class="string">&quot;res_800_500_{}&quot;</span>, name),
+            game_version: <span class="string">&quot;us&quot;</span>,
+            m64: <span class="string">&quot;120_u&quot;</span>,
+            frame,
+            config: VizConfig {
+                screen_size: [<span class="number">800</span>, <span class="number">500</span>],
+                ..Default::default()
             },
         });
-        <span class="ident">cases</span>.<span class="ident">push</span>(<span class="ident">TestCase</span> {
-            <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;res_400_600_{}&quot;</span>, <span class="ident">name</span>),
-            <span class="ident">game_version</span>: <span class="string">&quot;us&quot;</span>,
-            <span class="ident">m64</span>: <span class="string">&quot;120_u&quot;</span>,
-            <span class="ident">frame</span>,
-            <span class="ident">config</span>: <span class="ident">VizConfig</span> {
-                <span class="ident">screen_size</span>: [<span class="number">400</span>, <span class="number">600</span>],
-                ..<span class="ident">Default::default</span>()
+        cases.push(TestCase {
+            name: <span class="macro">format!</span>(<span class="string">&quot;res_400_600_{}&quot;</span>, name),
+            game_version: <span class="string">&quot;us&quot;</span>,
+            m64: <span class="string">&quot;120_u&quot;</span>,
+            frame,
+            config: VizConfig {
+                screen_size: [<span class="number">400</span>, <span class="number">600</span>],
+                ..Default::default()
             },
         });
-        <span class="ident">cases</span>.<span class="ident">push</span>(<span class="ident">TestCase</span> {
-            <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;res_160_120_{}&quot;</span>, <span class="ident">name</span>),
-            <span class="ident">game_version</span>: <span class="string">&quot;us&quot;</span>,
-            <span class="ident">m64</span>: <span class="string">&quot;120_u&quot;</span>,
-            <span class="ident">frame</span>,
-            <span class="ident">config</span>: <span class="ident">VizConfig</span> {
-                <span class="ident">screen_size</span>: [<span class="number">160</span>, <span class="number">120</span>],
-                ..<span class="ident">Default::default</span>()
+        cases.push(TestCase {
+            name: <span class="macro">format!</span>(<span class="string">&quot;res_160_120_{}&quot;</span>, name),
+            game_version: <span class="string">&quot;us&quot;</span>,
+            m64: <span class="string">&quot;120_u&quot;</span>,
+            frame,
+            config: VizConfig {
+                screen_size: [<span class="number">160</span>, <span class="number">120</span>],
+                ..Default::default()
             },
         });
     };
-    <span class="ident">case</span>(<span class="string">&quot;u120_000052_logo&quot;</span>, <span class="number">52</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_000120_mario_head&quot;</span>, <span class="number">120</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_000140_file_select&quot;</span>, <span class="number">140</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_000279_peach_letter&quot;</span>, <span class="number">279</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_000902_doorknob_lod&quot;</span>, <span class="number">902</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_001059_water_shadow&quot;</span>, <span class="number">1059</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_001502_mario&quot;</span>, <span class="number">1502</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_001624_tilted_text&quot;</span>, <span class="number">1624</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_001627_scrolling_text&quot;</span>, <span class="number">1627</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_001905_key_door&quot;</span>, <span class="number">1905</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_002037_pause&quot;</span>, <span class="number">2037</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_002628_continue1&quot;</span>, <span class="number">2628</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_002632_continue2&quot;</span>, <span class="number">2632</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_003363_exit_slide&quot;</span>, <span class="number">3363</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_009044_star_select&quot;</span>, <span class="number">9044</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_013808_key_cutscene&quot;</span>, <span class="number">13808</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_071009_vanish&quot;</span>, <span class="number">71009</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_071323_vanish_2&quot;</span>, <span class="number">71323</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_141811_peach_cutscene_1&quot;</span>, <span class="number">141811</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_141930_peach_cutscene_2&quot;</span>, <span class="number">141930</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_144714_credits_wf&quot;</span>, <span class="number">144714</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_145414_credits_bbh_1&quot;</span>, <span class="number">145414</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_145473_credits_bbh_2&quot;</span>, <span class="number">145473</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_147682_credits_ttc&quot;</span>, <span class="number">147682</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_148424_credits_cotmc&quot;</span>, <span class="number">148424</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_148484_credits_ddd_1&quot;</span>, <span class="number">148484</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_148573_credits_ddd_2&quot;</span>, <span class="number">148573</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_149182_credits_zoom&quot;</span>, <span class="number">149182</span>);
-    <span class="ident">case</span>(<span class="string">&quot;u120_149706_thank_you&quot;</span>, <span class="number">149706</span>);
+    case(<span class="string">&quot;u120_000052_logo&quot;</span>, <span class="number">52</span>);
+    case(<span class="string">&quot;u120_000120_mario_head&quot;</span>, <span class="number">120</span>);
+    case(<span class="string">&quot;u120_000140_file_select&quot;</span>, <span class="number">140</span>);
+    case(<span class="string">&quot;u120_000279_peach_letter&quot;</span>, <span class="number">279</span>);
+    case(<span class="string">&quot;u120_000902_doorknob_lod&quot;</span>, <span class="number">902</span>);
+    case(<span class="string">&quot;u120_001059_water_shadow&quot;</span>, <span class="number">1059</span>);
+    case(<span class="string">&quot;u120_001502_mario&quot;</span>, <span class="number">1502</span>);
+    case(<span class="string">&quot;u120_001624_tilted_text&quot;</span>, <span class="number">1624</span>);
+    case(<span class="string">&quot;u120_001627_scrolling_text&quot;</span>, <span class="number">1627</span>);
+    case(<span class="string">&quot;u120_001905_key_door&quot;</span>, <span class="number">1905</span>);
+    case(<span class="string">&quot;u120_002037_pause&quot;</span>, <span class="number">2037</span>);
+    case(<span class="string">&quot;u120_002628_continue1&quot;</span>, <span class="number">2628</span>);
+    case(<span class="string">&quot;u120_002632_continue2&quot;</span>, <span class="number">2632</span>);
+    case(<span class="string">&quot;u120_003363_exit_slide&quot;</span>, <span class="number">3363</span>);
+    case(<span class="string">&quot;u120_009044_star_select&quot;</span>, <span class="number">9044</span>);
+    case(<span class="string">&quot;u120_013808_key_cutscene&quot;</span>, <span class="number">13808</span>);
+    case(<span class="string">&quot;u120_071009_vanish&quot;</span>, <span class="number">71009</span>);
+    case(<span class="string">&quot;u120_071323_vanish_2&quot;</span>, <span class="number">71323</span>);
+    case(<span class="string">&quot;u120_141811_peach_cutscene_1&quot;</span>, <span class="number">141811</span>);
+    case(<span class="string">&quot;u120_141930_peach_cutscene_2&quot;</span>, <span class="number">141930</span>);
+    case(<span class="string">&quot;u120_144714_credits_wf&quot;</span>, <span class="number">144714</span>);
+    case(<span class="string">&quot;u120_145414_credits_bbh_1&quot;</span>, <span class="number">145414</span>);
+    case(<span class="string">&quot;u120_145473_credits_bbh_2&quot;</span>, <span class="number">145473</span>);
+    case(<span class="string">&quot;u120_147682_credits_ttc&quot;</span>, <span class="number">147682</span>);
+    case(<span class="string">&quot;u120_148424_credits_cotmc&quot;</span>, <span class="number">148424</span>);
+    case(<span class="string">&quot;u120_148484_credits_ddd_1&quot;</span>, <span class="number">148484</span>);
+    case(<span class="string">&quot;u120_148573_credits_ddd_2&quot;</span>, <span class="number">148573</span>);
+    case(<span class="string">&quot;u120_149182_credits_zoom&quot;</span>, <span class="number">149182</span>);
+    case(<span class="string">&quot;u120_149706_thank_you&quot;</span>, <span class="number">149706</span>);
 }
 
-<span class="kw">fn</span> <span class="ident">reg</span>(<span class="ident">cases</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TestCase</span><span class="op">&gt;</span>) {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">case</span> <span class="op">=</span> <span class="op">|</span><span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">frame</span><span class="op">|</span> {
-        <span class="kw">for</span> <span class="ident">version</span> <span class="kw">in</span> [<span class="string">&quot;us&quot;</span>, <span class="string">&quot;jp&quot;</span>, <span class="string">&quot;eu&quot;</span>, <span class="string">&quot;sh&quot;</span>] {
-            <span class="ident">cases</span>.<span class="ident">push</span>(<span class="ident">TestCase</span> {
-                <span class="ident">name</span>: <span class="macro">format!</span>(<span class="string">&quot;reg_{}_{}&quot;</span>, <span class="ident">version</span>, <span class="ident">name</span>),
-                <span class="ident">game_version</span>: <span class="ident">version</span>,
-                <span class="ident">m64</span>: <span class="string">&quot;cross_version&quot;</span>,
-                <span class="ident">frame</span>,
-                <span class="ident">config</span>: <span class="ident">VizConfig::default</span>(),
+<span class="kw">fn </span>reg(cases: <span class="kw-2">&amp;mut </span>Vec&lt;TestCase&gt;) {
+    <span class="kw">let </span><span class="kw-2">mut </span>case = |name: <span class="kw-2">&amp;</span>str, frame| {
+        <span class="kw">for </span>version <span class="kw">in </span>[<span class="string">&quot;us&quot;</span>, <span class="string">&quot;jp&quot;</span>, <span class="string">&quot;eu&quot;</span>, <span class="string">&quot;sh&quot;</span>] {
+            cases.push(TestCase {
+                name: <span class="macro">format!</span>(<span class="string">&quot;reg_{}_{}&quot;</span>, version, name),
+                game_version: version,
+                m64: <span class="string">&quot;cross_version&quot;</span>,
+                frame,
+                config: VizConfig::default(),
             });
         }
     };
-    <span class="comment">// TODO: Broken texture/text on SH</span>
-    <span class="ident">case</span>(<span class="string">&quot;000030_title&quot;</span>, <span class="number">30</span>);
-    <span class="ident">case</span>(<span class="string">&quot;000129_mario_head&quot;</span>, <span class="number">129</span>); <span class="comment">// Broken texture on SH</span>
-    <span class="ident">case</span>(<span class="string">&quot;000505_mario_head_lol&quot;</span>, <span class="number">505</span>); <span class="comment">// Broken texture on SH</span>
-    <span class="ident">case</span>(<span class="string">&quot;000975_wf&quot;</span>, <span class="number">975</span>);
-    <span class="ident">case</span>(<span class="string">&quot;002505_ccm&quot;</span>, <span class="number">2505</span>);
-    <span class="ident">case</span>(<span class="string">&quot;004245_bbh&quot;</span>, <span class="number">4245</span>);
-    <span class="ident">case</span>(<span class="string">&quot;005905_jrb&quot;</span>, <span class="number">5905</span>);
-    <span class="ident">case</span>(<span class="string">&quot;007607_hmc&quot;</span>, <span class="number">7607</span>);
-    <span class="ident">case</span>(<span class="string">&quot;009507_pss&quot;</span>, <span class="number">9507</span>);
-    <span class="ident">case</span>(<span class="string">&quot;010209_fade&quot;</span>, <span class="number">10209</span>);
-    <span class="ident">case</span>(<span class="string">&quot;010242_file_select_1&quot;</span>, <span class="number">10242</span>);
-    <span class="ident">case</span>(<span class="string">&quot;010555_file_select_2&quot;</span>, <span class="number">10555</span>); <span class="comment">// Broken text on SH</span>
-    <span class="ident">case</span>(<span class="string">&quot;010822_peach_letter&quot;</span>, <span class="number">10822</span>);
-    <span class="ident">case</span>(<span class="string">&quot;011240_lakitu_1&quot;</span>, <span class="number">11240</span>);
-    <span class="ident">case</span>(<span class="string">&quot;011396_lakitu_2&quot;</span>, <span class="number">11396</span>);
-    <span class="ident">case</span>(<span class="string">&quot;011708_mario&quot;</span>, <span class="number">11708</span>); <span class="comment">// Broken text on SH</span>
-    <span class="ident">case</span>(<span class="string">&quot;011829_tilted_text&quot;</span>, <span class="number">11829</span>);
-    <span class="ident">case</span>(<span class="string">&quot;011838_text&quot;</span>, <span class="number">11838</span>);
-    <span class="ident">case</span>(<span class="string">&quot;012802_pause&quot;</span>, <span class="number">12802</span>); <span class="comment">// Broken text on SH</span>
-    <span class="ident">case</span>(<span class="string">&quot;013366_lakitu_scroll&quot;</span>, <span class="number">13366</span>); <span class="comment">// Broken text on SH</span>
-    <span class="ident">case</span>(<span class="string">&quot;013796_enter_castle&quot;</span>, <span class="number">13796</span>);
-    <span class="ident">case</span>(<span class="string">&quot;014268_castle&quot;</span>, <span class="number">14268</span>);
-    <span class="ident">case</span>(<span class="string">&quot;014475_ripple&quot;</span>, <span class="number">14475</span>);
-    <span class="ident">case</span>(<span class="string">&quot;014578_star_select&quot;</span>, <span class="number">14578</span>); <span class="comment">// Broken text on SH</span>
-    <span class="ident">case</span>(<span class="string">&quot;014757_bob_text&quot;</span>, <span class="number">14757</span>); <span class="comment">// Broken text on SH</span>
-    <span class="ident">case</span>(<span class="string">&quot;015064_pause&quot;</span>, <span class="number">15064</span>); <span class="comment">// Broken text on SH</span>
-}
+    <span class="comment">// TODO: Broken texture/text on SH
+    </span>case(<span class="string">&quot;000030_title&quot;</span>, <span class="number">30</span>);
+    case(<span class="string">&quot;000129_mario_head&quot;</span>, <span class="number">129</span>); <span class="comment">// Broken texture on SH
+    </span>case(<span class="string">&quot;000505_mario_head_lol&quot;</span>, <span class="number">505</span>); <span class="comment">// Broken texture on SH
+    </span>case(<span class="string">&quot;000975_wf&quot;</span>, <span class="number">975</span>);
+    case(<span class="string">&quot;002505_ccm&quot;</span>, <span class="number">2505</span>);
+    case(<span class="string">&quot;004245_bbh&quot;</span>, <span class="number">4245</span>);
+    case(<span class="string">&quot;005905_jrb&quot;</span>, <span class="number">5905</span>);
+    case(<span class="string">&quot;007607_hmc&quot;</span>, <span class="number">7607</span>);
+    case(<span class="string">&quot;009507_pss&quot;</span>, <span class="number">9507</span>);
+    case(<span class="string">&quot;010209_fade&quot;</span>, <span class="number">10209</span>);
+    case(<span class="string">&quot;010242_file_select_1&quot;</span>, <span class="number">10242</span>);
+    case(<span class="string">&quot;010555_file_select_2&quot;</span>, <span class="number">10555</span>); <span class="comment">// Broken text on SH
+    </span>case(<span class="string">&quot;010822_peach_letter&quot;</span>, <span class="number">10822</span>);
+    case(<span class="string">&quot;011240_lakitu_1&quot;</span>, <span class="number">11240</span>);
+    case(<span class="string">&quot;011396_lakitu_2&quot;</span>, <span class="number">11396</span>);
+    case(<span class="string">&quot;011708_mario&quot;</span>, <span class="number">11708</span>); <span class="comment">// Broken text on SH
+    </span>case(<span class="string">&quot;011829_tilted_text&quot;</span>, <span class="number">11829</span>);
+    case(<span class="string">&quot;011838_text&quot;</span>, <span class="number">11838</span>);
+    case(<span class="string">&quot;012802_pause&quot;</span>, <span class="number">12802</span>); <span class="comment">// Broken text on SH
+    </span>case(<span class="string">&quot;013366_lakitu_scroll&quot;</span>, <span class="number">13366</span>); <span class="comment">// Broken text on SH
+    </span>case(<span class="string">&quot;013796_enter_castle&quot;</span>, <span class="number">13796</span>);
+    case(<span class="string">&quot;014268_castle&quot;</span>, <span class="number">14268</span>);
+    case(<span class="string">&quot;014475_ripple&quot;</span>, <span class="number">14475</span>);
+    case(<span class="string">&quot;014578_star_select&quot;</span>, <span class="number">14578</span>); <span class="comment">// Broken text on SH
+    </span>case(<span class="string">&quot;014757_bob_text&quot;</span>, <span class="number">14757</span>); <span class="comment">// Broken text on SH
+    </span>case(<span class="string">&quot;015064_pause&quot;</span>, <span class="number">15064</span>); <span class="comment">// Broken text on SH
+</span>}
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">all</span>() -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TestCase</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cases</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+<span class="kw">pub fn </span>all() -&gt; Vec&lt;TestCase&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>cases = Vec::new();
 
-    <span class="ident">u120</span>(<span class="kw-2">&amp;mut</span> <span class="ident">cases</span>);
-    <span class="kw">if</span> <span class="op">!</span><span class="ident">env::args</span>().<span class="ident">any</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span> <span class="op">==</span> <span class="string">&quot;--no-res&quot;</span>) {
-        <span class="ident">res</span>(<span class="kw-2">&amp;mut</span> <span class="ident">cases</span>);
+    u120(<span class="kw-2">&amp;mut </span>cases);
+    <span class="kw">if </span>!env::args().any(|s| s == <span class="string">&quot;--no-res&quot;</span>) {
+        res(<span class="kw-2">&amp;mut </span>cases);
     }
-    <span class="ident">reg</span>(<span class="kw-2">&amp;mut</span> <span class="ident">cases</span>);
+    reg(<span class="kw-2">&amp;mut </span>cases);
 
-    <span class="ident">cases</span>
+    cases
 }
-</code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="wafel_viz_tests" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (0f4bcadb4 2022-07-30)" ></div></body></html>
+</code></pre></div></section></main></body></html>

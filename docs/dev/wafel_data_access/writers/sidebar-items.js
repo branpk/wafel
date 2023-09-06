@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["AddressWriter",""],["ArrayWriter",""],["DataTypeWriter",""],["F32Writer",""],["F64Writer",""],["I16Writer",""],["I32Writer",""],["I64Writer",""],["I8Writer",""],["U16Writer",""],["U32Writer",""],["U64Writer",""],["U8Writer",""],["WrappingWriter",""]]};
+window.SIDEBAR_ITEMS = {"struct":["AddressWriter","ArrayWriter","DataTypeWriter","F32Writer","F64Writer","I16Writer","I32Writer","I64Writer","I8Writer","U16Writer","U32Writer","U64Writer","U8Writer","WrappingWriter"]};

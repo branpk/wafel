@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Renderer",""],["SizedRenderer",""]]};
+window.SIDEBAR_ITEMS = {"struct":["Renderer","SizedRenderer"]};

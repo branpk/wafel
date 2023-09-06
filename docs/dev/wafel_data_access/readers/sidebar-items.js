@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["AddressReader",""],["ArrayReader",""],["DataTypeReader",""],["F32Reader",""],["F64Reader",""],["I16Reader",""],["I32Reader",""],["I64Reader",""],["I8Reader",""],["U16Reader",""],["U32Reader",""],["U64Reader",""],["U8Reader",""],["WrappingReader",""]]};
+window.SIDEBAR_ITEMS = {"struct":["AddressReader","ArrayReader","DataTypeReader","F32Reader","F64Reader","I16Reader","I32Reader","I64Reader","I8Reader","U16Reader","U32Reader","U64Reader","U8Reader","WrappingReader"]};

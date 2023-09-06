@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["debug","Print a debug message."],["debug_acquire","Print a debug message."],["error","Print an error."],["error_acquire","Print an error."],["info","Print an info message."],["info_acquire","Print an info message."],["warn","Print a warning."],["warn_acquire","Print a warning."]]};
+window.SIDEBAR_ITEMS = {"fn":["debug","debug_acquire","error","error_acquire","info","info_acquire","warn","warn_acquire"]};

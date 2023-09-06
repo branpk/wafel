@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["ErrorCause",""]],"struct":[["WithContext","An error with extra context."]],"type":[["Error",""]]};
+window.SIDEBAR_ITEMS = {"enum":["ErrorCause"],"struct":["WithContext"],"type":["Error"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["error","Error definitions."],["geo","Geometric types and functions."],["graphics","UI and game scene rendering."],["python","SM64-specific Python API for Wafel."],["sm64","SM64-specific utilities and data access."]]};
+window.SIDEBAR_ITEMS = {"mod":["error","geo","graphics","python","sm64"]};

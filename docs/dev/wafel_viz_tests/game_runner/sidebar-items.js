@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Context",""],["GameRunner",""]]};
+window.SIDEBAR_ITEMS = {"struct":["Context","GameRunner"]};

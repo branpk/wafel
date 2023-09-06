@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"derive":[["DataReadable",""]]};
+window.SIDEBAR_ITEMS = {"derive":["DataReadable"]};

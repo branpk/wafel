@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["DecodeResult","The result of decoding a raw command."]],"fn":[["decode_f3d_command","Decodes a raw Fast3D command."],["decode_f3d_display_list","Decodes a stream of [RawF3DCommand]s into a stream of [F3DCommand]s."]],"struct":[["F3DCommandIter",""],["RawF3DCommand","A raw Fast3D command for decoding."]]};
+window.SIDEBAR_ITEMS = {"enum":["DecodeResult"],"fn":["decode_f3d_command","decode_f3d_display_list"],"struct":["F3DCommandIter","RawF3DCommand"]};

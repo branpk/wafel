@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["F3DRenderer",""]]};
+window.SIDEBAR_ITEMS = {"struct":["F3DRenderer"]};
