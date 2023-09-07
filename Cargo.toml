@@ -5,6 +5,7 @@ members = [
     "sm64_layout",
     "sm64_var_dump",
     "wafel_api",
+    "wafel_app_logic",
     "wafel_app",
     "wafel_core",
     "wafel_data_access_derive",

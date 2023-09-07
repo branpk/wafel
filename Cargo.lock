@@ -2889,9 +2889,14 @@ dependencies = [
  "tracing",
  "tracing-log",
  "tracing-subscriber",
+ "wafel_app_logic",
  "wgpu",
  "winit",
 ]
+
+[[package]]
+name = "wafel_app_logic"
+version = "0.1.0"
 
 [[package]]
 name = "wafel_core"

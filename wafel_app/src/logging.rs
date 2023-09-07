@@ -15,7 +15,7 @@ use tracing_subscriber::{
     layer::Context, prelude::__tracing_subscriber_SubscriberExt, registry::LookupSpan, Layer,
 };
 
-use crate::config;
+use crate::env::global_env;
 
 pub fn init() {
     panic::set_hook(Box::new(panic_hook));
@@ -29,11 +29,12 @@ pub fn print_to_log_file(line: &str) {
 
     let mut log_file = LOG_FILE
         .get_or_try_init(|| {
+            let env = global_env().lock().unwrap();
             fs::OpenOptions::new()
                 .write(true)
                 .append(true)
                 .create(true)
-                .open(config::log_file_path())
+                .open(env.log_file_path())
                 .map(Mutex::new)
         })
         .expect("failed to open log file")
