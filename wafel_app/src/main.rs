@@ -1,8 +1,14 @@
+//! The main Wafel application.
+//!
+//! This crate is responsible for the UI and application logic, and produces the
+//! Wafel executable. Most of Wafel's core functionality is defined in other
+//! crates.
+
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 
 use std::env;
 
-pub mod config;
+mod config;
 mod logging;
 mod window;
 
@@ -19,7 +25,7 @@ fn main() {
 #[derive(Debug)]
 struct WafelApp {}
 
-impl window::App for WafelApp {
+impl window::WindowedApp for WafelApp {
     fn new(device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Self {
         WafelApp {}
     }

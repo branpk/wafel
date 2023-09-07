@@ -1,10 +1,12 @@
+//! Sets up the main application window and event loop.
+
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
 
-pub trait App: Sized + 'static {
+pub trait WindowedApp: Sized + 'static {
     fn new(device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Self;
 
     fn window_event(&mut self, event: &WindowEvent<'_>);
@@ -21,7 +23,10 @@ pub trait App: Sized + 'static {
     );
 }
 
-pub fn run_app<A: App>(title: &str) {
+/// Opens a maximized window and runs the application.
+///
+/// This function does not return.
+pub fn run_app<A: WindowedApp>(title: &str) {
     pollster::block_on(async {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY,
