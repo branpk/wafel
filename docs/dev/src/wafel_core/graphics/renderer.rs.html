@@ -1097,6 +1097,8 @@
 <a href="#1097" id="1097">1097</a>
 <a href="#1098" id="1098">1098</a>
 <a href="#1099" id="1099">1099</a>
+<a href="#1100" id="1100">1100</a>
+<a href="#1101" id="1101">1101</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::geo::{direction_to_pitch_yaw, Matrix4f, Point3f, StoredPoint3f, Vector3f, Vector4f};
 <span class="kw">use </span>bytemuck::{cast_slice, offset_of, Pod, Zeroable};
 <span class="kw">use </span>nalgebra::distance;
@@ -1543,6 +1545,7 @@
         dimension: wgpu::TextureDimension::D2,
         format: output_format,
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        view_formats: <span class="kw-2">&amp;</span>[],
     })
 }
 
@@ -1559,6 +1562,7 @@
         dimension: wgpu::TextureDimension::D2,
         format: DEPTH_TEXTURE_FORMAT,
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        view_formats: <span class="kw-2">&amp;</span>[],
     })
 }
 

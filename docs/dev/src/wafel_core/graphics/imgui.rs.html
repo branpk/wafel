@@ -381,9 +381,6 @@
 <a href="#381" id="381">381</a>
 <a href="#382" id="382">382</a>
 <a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Renderer for imgui.
 
 </span><span class="kw">use </span>bytemuck::cast_slice;
@@ -585,11 +582,7 @@
             mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
             mipmap_filter: wgpu::FilterMode::Nearest,
-            lod_min_clamp: <span class="number">0.0</span>,
-            lod_max_clamp: f32::MAX,
-            compare: <span class="prelude-val">None</span>,
-            anisotropy_clamp: <span class="prelude-val">None</span>,
-            border_color: <span class="prelude-val">None</span>,
+            ..Default::default()
         });
 
         <span class="kw">let </span>texture = device.create_texture(<span class="kw-2">&amp;</span>wgpu::TextureDescriptor {
@@ -604,6 +597,7 @@
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba8Unorm,
             usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: <span class="kw-2">&amp;</span>[],
         });
         queue.write_texture(
             wgpu::ImageCopyTexture {

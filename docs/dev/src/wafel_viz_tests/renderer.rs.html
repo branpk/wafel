@@ -220,6 +220,11 @@
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::env;
 
 <span class="kw">use </span>image::{Pixel, Rgb, RgbImage};
@@ -244,7 +249,10 @@
     }
 
     <span class="kw">async fn </span>new_async() -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
+        <span class="kw">let </span>instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::PRIMARY,
+            ..Default::default()
+        });
         <span class="kw">let </span>adapter = instance
             .request_adapter(<span class="kw-2">&amp;</span>wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
@@ -319,6 +327,7 @@
             dimension: wgpu::TextureDimension::D2,
             format: output_format,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: <span class="kw-2">&amp;</span>[],
         });
 
         <span class="kw">let </span>unpadded_bytes_per_row = <span class="number">4 </span>* output_size[<span class="number">0</span>];
@@ -345,6 +354,7 @@
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Depth24Plus,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            view_formats: <span class="kw-2">&amp;</span>[],
         });
 
         <span class="self">Self </span>{

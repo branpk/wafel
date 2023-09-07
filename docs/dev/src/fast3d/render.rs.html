@@ -543,9 +543,6 @@
 <a href="#543" id="543">543</a>
 <a href="#544" id="544">544</a>
 <a href="#545" id="545">545</a>
-<a href="#546" id="546">546</a>
-<a href="#547" id="547">547</a>
-<a href="#548" id="548">548</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! A wgpu renderer for the data produced by [crate::interpret].
 
 </span><span class="kw">use </span>std::{
@@ -911,11 +908,7 @@
             mag_filter: filter,
             min_filter: filter,
             mipmap_filter: wgpu::FilterMode::Nearest,
-            lod_min_clamp: <span class="number">0.0</span>,
-            lod_max_clamp: f32::MAX,
-            compare: <span class="prelude-val">None</span>,
-            anisotropy_clamp: <span class="prelude-val">None</span>,
-            border_color: <span class="prelude-val">None</span>,
+            ..Default::default()
         })
     }
 
@@ -939,6 +932,7 @@
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba8Unorm,
             usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: <span class="kw-2">&amp;</span>[],
         });
         queue.write_texture(
             wgpu::ImageCopyTexture {

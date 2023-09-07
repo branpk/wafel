@@ -152,6 +152,11 @@
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>wafel_api::Error;
 <span class="kw">use </span>winit::{
     event::{Event, WindowEvent},
@@ -200,7 +205,10 @@
         .expect(<span class="string">&quot;failed to create window&quot;</span>);
     <span class="kw">let </span>init_window_size = window.inner_size();
 
-    <span class="kw">let </span>instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
+    <span class="kw">let </span>instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        backends: wgpu::Backends::PRIMARY,
+        ..Default::default()
+    });
     <span class="kw">let </span>adapter = instance
         .request_adapter(<span class="kw-2">&amp;</span>wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
@@ -210,7 +218,7 @@
         .<span class="kw">await
         </span>.expect(<span class="string">&quot;failed to request GPU adapter&quot;</span>);
 
-    <span class="kw">let </span>surface = <span class="kw">unsafe </span>{ instance.create_surface(<span class="kw-2">&amp;</span>window) };
+    <span class="kw">let </span>surface = <span class="kw">unsafe </span>{ instance.create_surface(<span class="kw-2">&amp;</span>window) }.expect(<span class="string">&quot;failed to create surface&quot;</span>);
 
     <span class="kw">let </span>(device, queue) = adapter
         .request_device(
@@ -235,6 +243,8 @@
         width: init_window_size.width,
         height: init_window_size.height,
         present_mode: wgpu::PresentMode::AutoNoVsync,
+        alpha_mode: wgpu::CompositeAlphaMode::Auto,
+        view_formats: Vec::new(),
     };
     surface.configure(<span class="kw-2">&amp;</span>device, <span class="kw-2">&amp;</span>surface_config);
 

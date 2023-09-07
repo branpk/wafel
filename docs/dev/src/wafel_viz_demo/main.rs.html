@@ -318,6 +318,7 @@
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
 <a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::needless_update)]
 
 </span><span class="kw">use </span>std::{
@@ -604,6 +605,7 @@
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Depth24Plus,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            view_formats: <span class="kw-2">&amp;</span>[],
         });
         <span class="kw">let </span>depth_texture_view = depth_texture.create_view(<span class="kw-2">&amp;</span>wgpu::TextureViewDescriptor::default());
 

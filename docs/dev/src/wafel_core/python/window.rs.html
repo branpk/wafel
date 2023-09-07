@@ -276,6 +276,12 @@
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
 <a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     graphics::scene::Scene,
     graphics::{
@@ -300,7 +306,10 @@
 <span class="doccomment">/// Open a window, call `update_fn` on each frame, and render the UI and scene(s).
 </span><span class="kw">pub fn </span>open_window_and_run_impl(title: <span class="kw-2">&amp;</span>str, update_fn: PyObject) -&gt; PyResult&lt;()&gt; {
     futures::executor::block_on(<span class="kw">async </span>{
-        <span class="kw">let </span>instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
+        <span class="kw">let </span>instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::PRIMARY,
+            ..Default::default()
+        });
 
         <span class="kw">let </span>event_loop = EventLoop::new();
         <span class="kw">let </span>window = WindowBuilder::new()
@@ -311,7 +320,8 @@
             .expect(<span class="string">&quot;failed to open window&quot;</span>);
         window.set_maximized(<span class="bool-val">true</span>);
 
-        <span class="kw">let </span>surface = <span class="kw">unsafe </span>{ instance.create_surface(<span class="kw-2">&amp;</span>window) };
+        <span class="kw">let </span>surface =
+            <span class="kw">unsafe </span>{ instance.create_surface(<span class="kw-2">&amp;</span>window) }.expect(<span class="string">&quot;failed to create surface&quot;</span>);
         <span class="kw">let </span>adapter = instance
             .request_adapter(<span class="kw-2">&amp;</span>wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
@@ -338,9 +348,9 @@
             )
             .<span class="kw">await
             </span>.unwrap();
-        device.on_uncaptured_error(|error| {
+        device.on_uncaptured_error(Box::new(|error| {
             <span class="macro">panic!</span>(<span class="string">&quot;wgpu error: {}&quot;</span>, error);
-        });
+        }));
 
         <span class="kw">let </span>swapchain_format = wgpu::TextureFormat::Bgra8Unorm; <span class="comment">// surface.get_preferred_format(&amp;adapter).unwrap();
 
@@ -350,6 +360,8 @@
             width: window.inner_size().width,
             height: window.inner_size().height,
             present_mode: wgpu::PresentMode::Mailbox,
+            alpha_mode: wgpu::CompositeAlphaMode::Auto,
+            view_formats: Vec::new(),
         };
         surface.configure(<span class="kw-2">&amp;</span>device, <span class="kw-2">&amp;</span>config);
 
