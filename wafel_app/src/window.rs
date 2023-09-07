@@ -1,9 +1,10 @@
 //! Sets up the main application window and event loop.
 
+use image::ImageFormat;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
+    window::{Icon, WindowBuilder},
 };
 
 pub trait WindowedApp: Sized + 'static {
@@ -42,7 +43,7 @@ pub fn run_app<A: WindowedApp>(title: &str) {
 
         let window = WindowBuilder::new()
             .with_title(title)
-            // .with_window_icon(Some(load_window_icon())) // TODO: Icon
+            .with_window_icon(Some(load_window_icon()))
             .with_visible(false)
             .with_max_inner_size(winit::dpi::PhysicalSize::new(
                 max_screen_dim,
@@ -117,6 +118,9 @@ pub fn run_app<A: WindowedApp>(title: &str) {
         let mut first_render = false;
 
         event_loop.run(move |event, _, control_flow| {
+            // Since event_loop.run never returns, we should move all Drop objects
+            // into this closure. These ones aren't referenced elsewhere in the
+            // closure, so we reference them explicitly here.
             let _ = (&instance, &adapter);
 
             *control_flow = ControlFlow::Poll;
@@ -171,4 +175,26 @@ pub fn run_app<A: WindowedApp>(title: &str) {
             }
         });
     });
+}
+
+fn load_window_icon() -> Icon {
+    let image = image::load_from_memory_with_format(
+        include_bytes!("../assets/wafel.ico"),
+        ImageFormat::Ico,
+    )
+    .unwrap()
+    .to_rgba8();
+    let width = image.width();
+    let height = image.height();
+    Icon::from_rgba(image.into_raw(), width, height).unwrap()
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_load_window_icon() {
+        load_window_icon();
+    }
 }

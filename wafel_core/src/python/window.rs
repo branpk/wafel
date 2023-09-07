@@ -188,10 +188,12 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
 }
 
 fn load_window_icon() -> Icon {
-    let image =
-        image::load_from_memory_with_format(include_bytes!("../../../wafel.ico"), ImageFormat::Ico)
-            .unwrap()
-            .to_rgba8();
+    let image = image::load_from_memory_with_format(
+        include_bytes!("../../../wafel_app/assets/wafel.ico"),
+        ImageFormat::Ico,
+    )
+    .unwrap()
+    .to_rgba8();
     let width = image.width();
     let height = image.height();
     Icon::from_rgba(image.into_raw(), width, height).unwrap()
