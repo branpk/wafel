@@ -363,11 +363,7 @@ impl F3DRenderer {
             mag_filter: filter,
             min_filter: filter,
             mipmap_filter: wgpu::FilterMode::Nearest,
-            lod_min_clamp: 0.0,
-            lod_max_clamp: f32::MAX,
-            compare: None,
-            anisotropy_clamp: None,
-            border_color: None,
+            ..Default::default()
         })
     }
 
@@ -391,6 +387,7 @@ impl F3DRenderer {
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba8Unorm,
             usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
         });
         queue.write_texture(
             wgpu::ImageCopyTexture {

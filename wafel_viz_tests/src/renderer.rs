@@ -22,7 +22,10 @@ impl Renderer {
     }
 
     async fn new_async() -> Self {
-        let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::PRIMARY,
+            ..Default::default()
+        });
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
@@ -97,6 +100,7 @@ impl SizedRenderer {
             dimension: wgpu::TextureDimension::D2,
             format: output_format,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
         });
 
         let unpadded_bytes_per_row = 4 * output_size[0];
@@ -123,6 +127,7 @@ impl SizedRenderer {
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Depth24Plus,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[],
         });
 
         Self {

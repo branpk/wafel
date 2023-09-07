@@ -444,6 +444,7 @@ fn create_multisample_texture(
         dimension: wgpu::TextureDimension::D2,
         format: output_format,
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        view_formats: &[],
     })
 }
 
@@ -460,6 +461,7 @@ fn create_depth_texture(device: &wgpu::Device, output_size: (u32, u32)) -> wgpu:
         dimension: wgpu::TextureDimension::D2,
         format: DEPTH_TEXTURE_FORMAT,
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        view_formats: &[],
     })
 }
 

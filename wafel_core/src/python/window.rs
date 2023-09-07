@@ -22,7 +22,10 @@ use super::{log, PyVizRenderData};
 /// Open a window, call `update_fn` on each frame, and render the UI and scene(s).
 pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()> {
     futures::executor::block_on(async {
-        let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::PRIMARY,
+            ..Default::default()
+        });
 
         let event_loop = EventLoop::new();
         let window = WindowBuilder::new()
@@ -33,7 +36,8 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
             .expect("failed to open window");
         window.set_maximized(true);
 
-        let surface = unsafe { instance.create_surface(&window) };
+        let surface =
+            unsafe { instance.create_surface(&window) }.expect("failed to create surface");
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
@@ -60,9 +64,9 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
             )
             .await
             .unwrap();
-        device.on_uncaptured_error(|error| {
+        device.on_uncaptured_error(Box::new(|error| {
             panic!("wgpu error: {}", error);
-        });
+        }));
 
         let swapchain_format = wgpu::TextureFormat::Bgra8Unorm; // surface.get_preferred_format(&adapter).unwrap();
 
@@ -72,6 +76,8 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
             width: window.inner_size().width,
             height: window.inner_size().height,
             present_mode: wgpu::PresentMode::Mailbox,
+            alpha_mode: wgpu::CompositeAlphaMode::Auto,
+            view_formats: Vec::new(),
         };
         surface.configure(&device, &config);
 

@@ -46,7 +46,10 @@ async fn open_window_and_run_impl<A: App>() {
         .expect("failed to create window");
     let init_window_size = window.inner_size();
 
-    let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
+    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        backends: wgpu::Backends::PRIMARY,
+        ..Default::default()
+    });
     let adapter = instance
         .request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
@@ -56,7 +59,7 @@ async fn open_window_and_run_impl<A: App>() {
         .await
         .expect("failed to request GPU adapter");
 
-    let surface = unsafe { instance.create_surface(&window) };
+    let surface = unsafe { instance.create_surface(&window) }.expect("failed to create surface");
 
     let (device, queue) = adapter
         .request_device(
@@ -81,6 +84,8 @@ async fn open_window_and_run_impl<A: App>() {
         width: init_window_size.width,
         height: init_window_size.height,
         present_mode: wgpu::PresentMode::AutoNoVsync,
+        alpha_mode: wgpu::CompositeAlphaMode::Auto,
+        view_formats: Vec::new(),
     };
     surface.configure(&device, &surface_config);
 
