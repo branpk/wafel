@@ -5,18 +5,19 @@ members = [
     "sm64_layout",
     "sm64_var_dump",
     "wafel_api",
+    "wafel_app",
     "wafel_core",
-    "wafel_data_access",
     "wafel_data_access_derive",
+    "wafel_data_access",
     "wafel_data_type",
     "wafel_layout",
     "wafel_memory",
     "wafel_python",
     "wafel_sm64",
     "wafel_timeline",
-    "wafel_viz",
     "wafel_viz_demo",
     "wafel_viz_tests",
+    "wafel_viz",
 ]
 resolver = "2"
 
