@@ -78,9 +78,16 @@ struct LogLayer;
 #[derive(Default)]
 struct MessageVisitor {
     message: String,
+    log_target: Option<String>,
 }
 
 impl Visit for MessageVisitor {
+    fn record_str(&mut self, field: &Field, value: &str) {
+        if field.name() == "log.target" {
+            self.log_target = Some(value.to_string());
+        }
+    }
+
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
         if field.name() == "message" {
             self.message = format!("{:?}", value);
@@ -103,7 +110,7 @@ where
                     .from_root()
                     .map(|span| span.name())
                     .collect::<Vec<_>>()
-                    .join(" | ")
+                    .join(".")
             )
         } else {
             String::new()
@@ -111,7 +118,15 @@ where
 
         let metadata = event.metadata();
 
-        let message = format!("{}[{}] {}", span, metadata.target(), visitor.message);
+        let target = visitor
+            .log_target
+            .unwrap_or_else(|| metadata.target().to_string());
+
+        if target.starts_with("wgpu") && *metadata.level() >= Level::INFO {
+            return;
+        }
+
+        let message = format!("{}[{}] {}", span, target, visitor.message);
 
         log_callback(*metadata.level(), &message);
     }

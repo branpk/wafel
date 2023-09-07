@@ -13,3 +13,7 @@ pub fn root_dir() -> PathBuf {
 pub fn log_file_path() -> PathBuf {
     root_dir().join("log.txt")
 }
+
+pub fn wafel_version() -> &'static str {
+    env!("CARGO_PKG_VERSION")
+}

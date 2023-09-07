@@ -1,6 +1,6 @@
 [package]
 name = "wafel_app"
-version = "0.1.0"
+version = "0.8.5" # Important: be sure to re-run `python build.py lock` after changing!
 edition = "2021"
 
 [dependencies]
