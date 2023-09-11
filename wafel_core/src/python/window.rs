@@ -75,7 +75,7 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
             format: swapchain_format,
             width: window.inner_size().width,
             height: window.inner_size().height,
-            present_mode: wgpu::PresentMode::Mailbox,
+            present_mode: wgpu::PresentMode::AutoNoVsync,
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
             view_formats: Vec::new(),
         };
