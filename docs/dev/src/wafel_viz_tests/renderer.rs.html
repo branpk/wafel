@@ -375,7 +375,7 @@
         game: <span class="kw-2">&amp;</span>Game,
         config: <span class="kw-2">&amp;</span>VizConfig,
     ) -&gt; RgbImage {
-        <span class="kw">let </span>render_data = game.render(config).expect(<span class="string">&quot;failed to render game&quot;</span>);
+        <span class="kw">let </span>render_data = game.render(config);
         <span class="self">self</span>.viz_renderer
             .prepare(device, queue, <span class="self">self</span>.output_format, <span class="kw-2">&amp;</span>render_data);
 
