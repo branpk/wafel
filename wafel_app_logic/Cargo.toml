@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 egui = "0.22.0"
 itertools = "0.11.0"
+wafel_api = { version = "0.1.0", path = "../wafel_api" }

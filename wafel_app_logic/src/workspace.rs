@@ -1,4 +1,4 @@
-use crate::workspace_mode::WorkspaceModeSelector;
+use crate::{workspace_mode::WorkspaceModeSelector, Env};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct WorkspaceButtonResponse {
@@ -56,7 +56,7 @@ impl Workspace {
         response
     }
 
-    pub fn show(&mut self, ui: &mut egui::Ui) {
-        self.mode_selector.show(ui);
+    pub fn show(&mut self, env: &dyn Env, ui: &mut egui::Ui) {
+        self.mode_selector.show(env, ui);
     }
 }

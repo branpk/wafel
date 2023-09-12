@@ -51,7 +51,7 @@ impl Root {
 
             ui.separator();
             if let Some(index) = self.selected_workspace_index {
-                self.workspaces[index].show(ui);
+                self.workspaces[index].show(env, ui);
             }
         });
     }
@@ -59,6 +59,7 @@ impl Root {
     fn show_workspace_pane_contents(&mut self, ui: &mut egui::Ui) {
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
+                ui.add_space(5.0);
                 ui.vertical_centered_justified(|ui| {
                     ui.label("Workspaces");
                 });

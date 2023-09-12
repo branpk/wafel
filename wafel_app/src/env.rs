@@ -3,9 +3,12 @@
 use std::{
     env,
     path::{Path, PathBuf},
+    sync::Mutex,
 };
 
-use wafel_app_logic::Env;
+use once_cell::sync::Lazy;
+use sysinfo::{Pid, PidExt, ProcessExt, ProcessRefreshKind, RefreshKind, System, SystemExt};
+use wafel_app_logic::{Env, ProcessInfo};
 
 #[derive(Debug)]
 pub struct WafelEnv {
@@ -46,8 +49,33 @@ impl WafelEnv {
     }
 }
 
+static SYSTEM: Lazy<Mutex<System>> = Lazy::new(|| {
+    Mutex::new(System::new_with_specifics(
+        RefreshKind::new().with_processes(ProcessRefreshKind::new()),
+    ))
+});
+
 impl Env for WafelEnv {
     fn wafel_version(&self) -> &str {
         &self.wafel_version
+    }
+
+    fn processes(&self) -> Vec<ProcessInfo> {
+        let mut system = SYSTEM.lock().unwrap();
+        system.refresh_processes();
+
+        system
+            .processes()
+            .into_iter()
+            .map(|(pid, process)| ProcessInfo {
+                pid: pid.as_u32(),
+                name: process.name().to_string(),
+            })
+            .collect()
+    }
+
+    fn is_process_open(&self, pid: u32) -> bool {
+        let mut system = SYSTEM.lock().unwrap();
+        system.refresh_process(Pid::from_u32(pid))
     }
 }

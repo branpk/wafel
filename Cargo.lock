@@ -3150,6 +3150,7 @@ dependencies = [
  "image 0.24.7",
  "once_cell",
  "pollster 0.3.0",
+ "sysinfo",
  "tracing",
  "tracing-log",
  "tracing-subscriber",
@@ -3164,6 +3165,7 @@ version = "0.1.0"
 dependencies = [
  "egui",
  "itertools 0.11.0",
+ "wafel_api",
 ]
 
 [[package]]

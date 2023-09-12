@@ -10,6 +10,7 @@
 pub use env::*;
 pub use wafel::*;
 
+mod emu_selector;
 mod env;
 mod root;
 mod wafel;
