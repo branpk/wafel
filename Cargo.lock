@@ -1363,6 +1363,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3152,6 +3161,10 @@ dependencies = [
 [[package]]
 name = "wafel_app_logic"
 version = "0.1.0"
+dependencies = [
+ "egui",
+ "itertools 0.11.0",
+]
 
 [[package]]
 name = "wafel_core"
@@ -3298,7 +3311,7 @@ version = "0.1.0"
 dependencies = [
  "env_logger",
  "image 0.24.7",
- "itertools",
+ "itertools 0.10.3",
  "pollster 0.2.5",
  "wafel_api",
  "wafel_memory",

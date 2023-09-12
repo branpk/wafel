@@ -24,5 +24,6 @@ fn main() {
         std::env::consts::ARCH
     );
 
-    window::run_app::<app::WafelApp>(&format!("Wafel {}", env.wafel_version()));
+    let title = format!("Wafel {}", env.wafel_version());
+    window::run_app::<app::WafelApp>(env, &title);
 }

@@ -7,8 +7,15 @@ use winit::{
     window::{Icon, Window, WindowBuilder},
 };
 
+use crate::env::WafelEnv;
+
 pub trait WindowedApp: Sized + 'static {
-    fn new(window: &Window, device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Self;
+    fn new(
+        env: WafelEnv,
+        window: &Window,
+        device: &wgpu::Device,
+        output_format: wgpu::TextureFormat,
+    ) -> Self;
 
     fn window_event(&mut self, event: &WindowEvent<'_>);
 
@@ -28,7 +35,7 @@ pub trait WindowedApp: Sized + 'static {
 /// Opens a maximized window and runs the application.
 ///
 /// This function does not return.
-pub fn run_app<A: WindowedApp>(title: &str) {
+pub fn run_app<A: WindowedApp>(env: WafelEnv, title: &str) {
     pollster::block_on(async {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY,
@@ -115,7 +122,7 @@ pub fn run_app<A: WindowedApp>(title: &str) {
         };
         surface.configure(&device, &surface_config);
 
-        let mut app = A::new(&window, &device, output_format);
+        let mut app = A::new(env, &window, &device, output_format);
 
         window.set_visible(true);
         let mut first_render = false;

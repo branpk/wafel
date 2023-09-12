@@ -1,17 +1,27 @@
 use std::fmt;
 
+use wafel_app_logic::Wafel;
 use winit::{event::WindowEvent, window::Window};
 
-use crate::{egui_state::EguiState, window::WindowedApp};
+use crate::{egui_state::EguiState, env::WafelEnv, window::WindowedApp};
 
 pub struct WafelApp {
+    env: WafelEnv,
     egui_state: EguiState,
+    wafel: Wafel,
 }
 
 impl WindowedApp for WafelApp {
-    fn new(window: &Window, device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Self {
+    fn new(
+        env: WafelEnv,
+        window: &Window,
+        device: &wgpu::Device,
+        output_format: wgpu::TextureFormat,
+    ) -> Self {
         WafelApp {
+            env,
             egui_state: EguiState::new(window, device, output_format),
+            wafel: Wafel::default(),
         }
     }
 
@@ -24,12 +34,7 @@ impl WindowedApp for WafelApp {
 
     fn update(&mut self, window: &Window) {
         self.egui_state.run(window, |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
-                ui.label("Hello world!");
-                if ui.button("Click me").clicked() {
-                    eprintln!("clicked");
-                }
-            });
+            self.wafel.show(&self.env, ctx);
         });
     }
 
