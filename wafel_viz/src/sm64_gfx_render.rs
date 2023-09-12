@@ -524,8 +524,8 @@ where
                     self.process_node_and_siblings(cur_node.node().children)?;
                 } else {
                     if DEBUG_PRINT {
-                        let indent_str = "  ".repeat(self.indent);
-                        println!("{}{:?} {:?} {{", indent_str, cur_addr, cur_node);
+                        let indent_str = "    ".repeat(self.indent);
+                        println!("{}- {:?} {:?} {{", indent_str, cur_addr, cur_node);
                     }
 
                     self.indent += 1;

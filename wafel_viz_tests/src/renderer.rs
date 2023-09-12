@@ -148,7 +148,7 @@ impl SizedRenderer {
         game: &Game,
         config: &VizConfig,
     ) -> RgbImage {
-        let render_data = game.render(config).expect("failed to render game");
+        let render_data = game.render(config);
         self.viz_renderer
             .prepare(device, queue, self.output_format, &render_data);
 

@@ -6,6 +6,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use remote_dll::RemoteDllApp;
 use wafel_api::{try_load_m64, Error, Game, Input, SaveState};
 use wafel_memory::GameMemory;
 use wafel_viz::{
@@ -15,10 +16,12 @@ use wafel_viz::{
 use window::{open_window_and_run, App};
 use winit::event::{ElementState, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowEvent};
 
+mod remote_dll;
 mod window;
 
 fn main() {
-    open_window_and_run::<VizApp>();
+    open_window_and_run::<RemoteDllApp>();
+    // open_window_and_run::<VizApp>();
 }
 
 #[derive(Debug)]
@@ -40,6 +43,9 @@ impl VizApp {
     fn frame_advance(&mut self) -> Result<(), Error> {
         if let Some(&input) = self.inputs.get(self.game.frame() as usize) {
             self.game.try_set_input(input)?;
+        }
+        if self.held_keys.contains(&VirtualKeyCode::Q) {
+            self.game.write("gQuickRender", 1.into());
         }
         self.game.advance();
 
@@ -76,7 +82,10 @@ impl App for VizApp {
 
         // bitfs: 41884
         // jrb: 74200
-        while app.game.frame() < 42046 {
+        // ccm: 8414
+        // crash: 17276
+        // ddd moves back: 40492
+        while app.game.frame() < 100000 {
             app.frame_advance()?;
         }
 
@@ -267,7 +276,7 @@ impl App for VizApp {
         //     }
         // }
 
-        let render_data = self.game.render(&config)?;
+        let render_data = self.game.render(&config);
 
         self.viz_renderer
             .prepare(device, queue, output_format, &render_data);

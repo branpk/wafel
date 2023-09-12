@@ -60,7 +60,6 @@ pub enum MemoryInitError {
     DlOpenError(Arc<dlopen::Error>),
     IoError(Arc<io::Error>),
     DllLayoutError(DllLayoutError),
-    MissingDataSegments,
     UndefinedSymbol(String),
     ProcessAttachError(Arc<io::Error>),
 }
@@ -71,7 +70,6 @@ impl fmt::Display for MemoryInitError {
             MemoryInitError::DlOpenError(error) => write!(f, "{}", error),
             MemoryInitError::IoError(error) => write!(f, "{}", error),
             MemoryInitError::DllLayoutError(error) => write!(f, "{}", error),
-            MemoryInitError::MissingDataSegments => write!(f, "missing data sections .data/.bss"),
             MemoryInitError::UndefinedSymbol(name) => write!(f, "undefined symbol {}", name),
             MemoryInitError::ProcessAttachError(error) => {
                 write!(f, "failed to attach to process: {}", error)

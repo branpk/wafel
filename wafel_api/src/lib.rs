@@ -13,7 +13,8 @@
 //! fast in a brute forcing setting.
 //!
 //! The [Emu] API attaches to a running emulator and allows reading/writing to its process
-//! memory.
+//! memory. Similarly, the [RemoteDll] API attaches to a running instance of libsm64
+//! in another process.
 //!
 //! # Data paths
 //!
@@ -40,12 +41,7 @@
 //! Object fields such as `oPosX` are supported and can be accessed using the regular `.`
 //! syntax.
 
-#![warn(
-    missing_docs,
-    missing_debug_implementations,
-    rust_2018_idioms,
-    unreachable_pub
-)]
+#![warn(missing_docs, missing_debug_implementations)]
 
 pub use data_type::*;
 pub use emu::*;
@@ -53,6 +49,7 @@ pub use error::*;
 pub use game::*;
 pub use lock::*;
 pub use m64::*;
+pub use remote_dll::*;
 pub use timeline::*;
 pub use wafel_data_type::{
     Address, Angle, FloatType, FloatValue, IntType, IntValue, Value, ValueTypeError,
@@ -67,4 +64,5 @@ mod error;
 mod game;
 mod lock;
 mod m64;
+mod remote_dll;
 mod timeline;

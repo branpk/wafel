@@ -90,7 +90,7 @@ impl Game {
     ///   except this [Game], this is UB.
     /// - The DLL can easily execute arbitrary code.
     pub unsafe fn try_new(dll_path: &str) -> Result<Self, Error> {
-        let mut data_layout = DllLayout::read(&dll_path)?.data_layout;
+        let mut data_layout = DllLayout::read(dll_path)?.data_layout;
         data_layout.add_sm64_extras()?;
         let data_layout = Arc::new(data_layout);
 
@@ -107,6 +107,22 @@ impl Game {
             base_slot,
             rerecords: 0,
         })
+    }
+
+    /// Return the PID of the running process.
+    ///
+    /// This may be used to allow external processes to access this [Game] instance's
+    /// memory, e.g. using [RemoteDll](crate::RemoteDll).
+    pub fn pid(&self) -> u32 {
+        std::process::id()
+    }
+
+    /// Return the base address of the libsm64 DLL in memory.
+    ///
+    /// This may be used to allow external processes to access this [Game] instance's
+    /// memory, e.g. using [RemoteDll](crate::RemoteDll).
+    pub fn base_address(&self) -> usize {
+        self.memory.base_address()
     }
 
     /// Read a value from memory.
@@ -360,9 +376,9 @@ impl Game {
     /// # Panics
     ///
     /// Panics if rendering fails (most likely a bug in [wafel_viz]).
-    pub fn render(&self, config: &VizConfig) -> Result<VizRenderData, Error> {
+    pub fn render(&self, config: &VizConfig) -> VizRenderData {
         match self.try_render(config) {
-            Ok(render_data) => Ok(render_data),
+            Ok(render_data) => render_data,
             Err(error) => panic!("Error:\n  failed to render:\n  {}\n", error),
         }
     }

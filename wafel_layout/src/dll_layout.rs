@@ -174,6 +174,36 @@ fn read_dll_segments_impl(object: &object::File<'_>) -> Result<Vec<DllSegment>, 
     Ok(segments)
 }
 
+/// Return the segments which might contain mutable data.
+pub fn dll_data_segments(all_segments: &[DllSegment]) -> Result<Vec<DllSegment>, DllLayoutError> {
+    // .data and .bss segments are the only ones that need to be copied in backup slots
+    let mut data_segments: Vec<DllSegment> = all_segments
+        .iter()
+        .filter(|&segment| [".data", ".bss", "__DATA"].contains(&segment.name.as_str()))
+        .cloned()
+        .collect();
+
+    if data_segments.is_empty() {
+        return Err(DllLayoutError {
+            kind: DllLayoutErrorKind::MissingDataSegments,
+            unit: None,
+        });
+    }
+
+    // Need to ensure that data segments are disjoint for aliasing restrictions
+    data_segments.sort_by_key(|segment| segment.virtual_address);
+    for i in 0..data_segments.len().saturating_sub(1) {
+        let segment1 = &data_segments[i];
+        let segment2 = &data_segments[i + 1];
+        assert!(
+            segment1.virtual_address + segment1.virtual_size <= segment2.virtual_address,
+            "overlapping dll segments"
+        );
+    }
+
+    Ok(data_segments)
+}
+
 /// Build a DataLayout from the provided DWARF info.
 fn load_data_layout_from_dwarf<R>(
     dwarf: &Dwarf<R>,
@@ -729,8 +759,16 @@ where
         if let Some(name) = self.attr_string(entry, gimli::DW_AT_name)? {
             self.global_types
                 .insert(name.clone(), ShallowDataType::Void);
-            self.global_decls.insert(entry.offset().0, name);
+            self.global_decls.insert(entry.offset().0, name.clone());
+
+            if let Some(attr) = entry.attr(gimli::DW_AT_low_pc)? {
+                if let AttributeValue::Addr(address) = attr.value() {
+                    // let address = self.evaluate_address(expr)?;
+                    self.global_addresses.insert(name, address);
+                }
+            }
         }
+
         Ok(())
     }
 
