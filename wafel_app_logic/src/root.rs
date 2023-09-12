@@ -48,6 +48,11 @@ impl Root {
             if ui.button(label).clicked() {
                 self.is_workspace_panel_expanded = !self.is_workspace_panel_expanded;
             }
+
+            ui.separator();
+            if let Some(index) = self.selected_workspace_index {
+                self.workspaces[index].show(ui);
+            }
         });
     }
 

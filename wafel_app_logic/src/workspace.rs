@@ -1,3 +1,5 @@
+use crate::workspace_mode::WorkspaceModeSelector;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct WorkspaceButtonResponse {
     pub selected: bool,
@@ -7,6 +9,7 @@ pub struct WorkspaceButtonResponse {
 pub struct Workspace {
     name: String,
     renaming: bool,
+    mode_selector: WorkspaceModeSelector,
 }
 
 impl Workspace {
@@ -14,6 +17,7 @@ impl Workspace {
         Self {
             name: name.to_string(),
             renaming: false,
+            mode_selector: WorkspaceModeSelector::new(),
         }
     }
 
@@ -50,5 +54,9 @@ impl Workspace {
         }
 
         response
+    }
+
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.mode_selector.show(ui);
     }
 }

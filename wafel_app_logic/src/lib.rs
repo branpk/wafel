@@ -14,3 +14,4 @@ mod env;
 mod root;
 mod wafel;
 mod workspace;
+mod workspace_mode;
