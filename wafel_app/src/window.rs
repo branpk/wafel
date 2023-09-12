@@ -4,15 +4,15 @@ use image::ImageFormat;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
-    window::{Icon, WindowBuilder},
+    window::{Icon, Window, WindowBuilder},
 };
 
 pub trait WindowedApp: Sized + 'static {
-    fn new(device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Self;
+    fn new(window: &Window, device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Self;
 
     fn window_event(&mut self, event: &WindowEvent<'_>);
 
-    fn update(&mut self);
+    fn update(&mut self, window: &Window);
 
     fn render(
         &mut self,
@@ -21,6 +21,7 @@ pub trait WindowedApp: Sized + 'static {
         output_view: &wgpu::TextureView,
         output_format: wgpu::TextureFormat,
         output_size: [u32; 2],
+        scale_factor: f32,
     );
 }
 
@@ -51,7 +52,7 @@ pub fn run_app<A: WindowedApp>(title: &str) {
             ))
             .build(&event_loop)
             .expect("failed to create window");
-        window.set_maximized(true);
+        // window.set_maximized(true);
 
         let surface =
             unsafe { instance.create_surface(&window) }.expect("failed to create surface");
@@ -71,13 +72,15 @@ pub fn run_app<A: WindowedApp>(title: &str) {
             adapter_info.backend
         );
 
+        let max_texture_dimension_2d = max_screen_dim.max(2048);
+
         let (device, queue) = adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
                     label: None,
                     features: wgpu::Features::empty(),
                     limits: wgpu::Limits {
-                        max_texture_dimension_2d: max_screen_dim,
+                        max_texture_dimension_2d,
                         ..wgpu::Limits::downlevel_webgl2_defaults()
                     },
                 },
@@ -112,7 +115,7 @@ pub fn run_app<A: WindowedApp>(title: &str) {
         };
         surface.configure(&device, &surface_config);
 
-        let mut app = A::new(&device, output_format);
+        let mut app = A::new(&window, &device, output_format);
 
         window.set_visible(true);
         let mut first_render = false;
@@ -144,7 +147,7 @@ pub fn run_app<A: WindowedApp>(title: &str) {
                 }
                 Event::MainEventsCleared => {
                     if !first_render {
-                        app.update();
+                        app.update(&window);
                     }
 
                     if surface_config.width != 0 && surface_config.height != 0 {
@@ -165,6 +168,7 @@ pub fn run_app<A: WindowedApp>(title: &str) {
                                 &output_view,
                                 output_format,
                                 [surface_config.width, surface_config.height],
+                                window.scale_factor() as f32,
                             );
                         }
 

@@ -3,10 +3,8 @@
 use std::{
     env,
     path::{Path, PathBuf},
-    sync::Mutex,
 };
 
-use once_cell::sync::OnceCell;
 use wafel_app_logic::Env;
 
 #[derive(Debug)]
@@ -16,7 +14,7 @@ pub struct WafelEnv {
 }
 
 impl WafelEnv {
-    fn create() -> Self {
+    pub fn create() -> Self {
         // root_dir is directory that configuration and log files should be saved.
         // In release mode, this is the directory containing the executable.
         let root_dir = if cfg!(debug_assertions) {
@@ -52,11 +50,4 @@ impl Env for WafelEnv {
     fn wafel_version(&self) -> &str {
         &self.wafel_version
     }
-}
-
-/// Initialize the application environment if needed, and return it.
-pub fn global_env() -> &'static Mutex<WafelEnv> {
-    static ENV: OnceCell<Mutex<WafelEnv>> = OnceCell::new();
-
-    ENV.get_or_init(|| Mutex::new(WafelEnv::create()))
 }

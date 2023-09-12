@@ -4,6 +4,7 @@ use std::{
     fmt, fs,
     io::Write,
     panic::{self, PanicInfo},
+    path::Path,
     sync::Mutex,
 };
 use tracing::{
@@ -15,9 +16,19 @@ use tracing_subscriber::{
     layer::Context, prelude::__tracing_subscriber_SubscriberExt, registry::LookupSpan, Layer,
 };
 
-use crate::env::global_env;
+static LOG_FILE: OnceCell<Mutex<fs::File>> = OnceCell::new();
 
-pub fn init() {
+pub fn init(log_file_path: &Path) {
+    let log_file = fs::OpenOptions::new()
+        .write(true)
+        .append(true)
+        .create(true)
+        .open(log_file_path)
+        .expect("failed to open log file");
+    LOG_FILE
+        .set(Mutex::new(log_file))
+        .expect("called logging::init more than once");
+
     panic::set_hook(Box::new(panic_hook));
     LogTracer::init().unwrap();
     tracing::subscriber::set_global_default(tracing_subscriber::Registry::default().with(LogLayer))
@@ -25,19 +36,9 @@ pub fn init() {
 }
 
 pub fn print_to_log_file(line: &str) {
-    static LOG_FILE: OnceCell<Mutex<fs::File>> = OnceCell::new();
-
     let mut log_file = LOG_FILE
-        .get_or_try_init(|| {
-            let env = global_env().lock().unwrap();
-            fs::OpenOptions::new()
-                .write(true)
-                .append(true)
-                .create(true)
-                .open(env.log_file_path())
-                .map(Mutex::new)
-        })
-        .expect("failed to open log file")
+        .get()
+        .expect("missing call to logging::init")
         .lock()
         .unwrap();
 

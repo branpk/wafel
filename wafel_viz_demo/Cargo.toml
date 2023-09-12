@@ -10,5 +10,5 @@ wafel_api = { path = "../wafel_api" }
 wafel_data_access = { path = "../wafel_data_access" }
 wafel_memory = { path = "../wafel_memory" }
 wafel_viz = { path = "../wafel_viz" }
-wgpu = "0.17.0"
+wgpu = { workspace = true }
 winit = "0.28.6"

@@ -30,3 +30,6 @@ opt-level = 3
 
 [profile.release]
 debug = true
+
+[workspace.dependencies]
+wgpu = "0.16.3"

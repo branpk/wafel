@@ -8,7 +8,7 @@ env_logger = "0.9.0"
 image = "0.24.2"
 wafel_api = { path = "../wafel_api" }
 wafel_viz = { path = "../wafel_viz" }
-wgpu = "0.17.0"
+wgpu = { workspace = true }
 pollster = "0.2.5"
 itertools = "0.10.3"
 wafel_memory = { version = "0.1.0", path = "../wafel_memory" }
