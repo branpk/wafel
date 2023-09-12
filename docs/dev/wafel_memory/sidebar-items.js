@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["MemoryError","MemoryInitError"],"struct":["DllGameMemory","DllSlot","DllSlotMemoryView","DllSlotMemoryViewMut","DllStaticMemoryView","EmptySymbolLookup","EmuMemory"],"trait":["GameMemory","MemoryRead","MemoryWrite","SymbolLookup"]};
+window.SIDEBAR_ITEMS = {"enum":["MemoryError","MemoryInitError"],"struct":["DllGameMemory","DllSlot","DllSlotMemoryView","DllSlotMemoryViewMut","DllStaticMemoryView","EmptySymbolLookup","EmuMemory","RemoteDllMemory"],"trait":["GameMemory","MemoryRead","MemoryWrite","SymbolLookup"]};
