@@ -9,23 +9,18 @@
 //! Finally it provides [DllGameMemory] which implements [GameMemory] using a
 //! game DLL, and [EmuMemory] which attaches to a running emulator.
 
-#![warn(
-    missing_docs,
-    missing_debug_implementations,
-    rust_2018_idioms,
-    unreachable_pub
-)]
-#![allow(incomplete_features)]
-#![feature(generic_associated_types)]
+#![warn(missing_docs, missing_debug_implementations)]
 
 pub use dll_memory::*;
 pub use emu_memory::*;
 pub use error::*;
+pub use remote_dll_memory::*;
 pub use traits::*;
 
 mod dll_memory;
 mod dll_slot_impl;
 mod emu_memory;
 mod error;
+mod remote_dll_memory;
 mod traits;
 mod unique_dll;

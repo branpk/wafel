@@ -10,7 +10,7 @@ use std::{
 use dlopen::raw::{AddressInfoObtainer, Library};
 use once_cell::sync::OnceCell;
 use wafel_data_type::{Address, IntType};
-use wafel_layout::{append_dll_extension, read_dll_segments, DllSegment};
+use wafel_layout::{append_dll_extension, dll_data_segments, read_dll_segments, DllSegment};
 
 use crate::{
     dll_slot_impl::{BasePointer, BaseSlot, BufferSlot, SlotImpl},
@@ -136,6 +136,11 @@ impl DllGameMemory {
         Ok((memory, base_slot))
     }
 
+    /// Return the base address of the DLL instance in memory.
+    pub fn base_address(&self) -> usize {
+        self.base_pointer.0 as usize
+    }
+
     fn validate_slot(&self, slot: &DllSlot) {
         assert_eq!(
             slot.0.memory_id(),
@@ -192,7 +197,7 @@ impl DllGameMemory {
     ///
     /// This does not perform any alignment or bounds checking, but those will be done when the
     /// address is accessed.
-    pub fn unchecked_pointer_to_address<T>(&self, pointer: *const T) -> Address {
+    fn unchecked_pointer_to_address<T>(&self, pointer: *const T) -> Address {
         if pointer.is_null() {
             Address::NULL
         } else {
@@ -388,33 +393,7 @@ impl GameMemory for DllGameMemory {
     }
 }
 
-fn dll_data_segments(all_segments: &[DllSegment]) -> Result<Vec<DllSegment>, MemoryInitError> {
-    // .data and .bss segments are the only ones that need to be copied in backup slots
-    let mut data_segments: Vec<DllSegment> = all_segments
-        .iter()
-        .filter(|&segment| [".data", ".bss", "__DATA"].contains(&segment.name.as_str()))
-        .cloned()
-        .collect();
-
-    if data_segments.is_empty() {
-        return Err(MemoryInitError::MissingDataSegments);
-    }
-
-    // Need to ensure that data segments are disjoint for aliasing restrictions
-    data_segments.sort_by_key(|segment| segment.virtual_address);
-    for i in 0..data_segments.len().saturating_sub(1) {
-        let segment1 = &data_segments[i];
-        let segment2 = &data_segments[i + 1];
-        assert!(
-            segment1.virtual_address + segment1.virtual_size <= segment2.virtual_address,
-            "overlapping dll segments"
-        );
-    }
-
-    Ok(data_segments)
-}
-
-unsafe fn dll_base_pointer(
+pub(crate) unsafe fn dll_base_pointer(
     arbitrary_symbol_pointer: *const (),
 ) -> Result<BasePointer, dlopen::Error> {
     #[cfg(target_os = "windows")]

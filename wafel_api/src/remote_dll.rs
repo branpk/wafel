@@ -2,75 +2,46 @@ use std::{collections::HashMap, sync::Arc};
 
 use wafel_data_access::{DataPath, MemoryLayout, MemoryLayoutImpl};
 use wafel_data_type::{Address, Value};
-use wafel_layout::load_sm64_n64_layout;
-use wafel_memory::{EmptySymbolLookup, EmuMemory, MemoryRead};
+use wafel_layout::DllLayout;
+use wafel_memory::{EmptySymbolLookup, MemoryRead, RemoteDllMemory};
 use wafel_sm64::{mario_action_names, read_object_hitboxes, read_surfaces, ObjectHitbox, Surface};
 use wafel_viz::{viz_render, VizConfig, VizRenderData};
 
-use crate::{simplified_data_type, DataType, Error, SM64Version};
+use crate::{simplified_data_type, DataType, Error};
 
-// TODO: Add to python API:
-// - render
-
-/// An SM64 API that attaches to a running emulator and can read/write to its
-/// memory.
-///
-/// # Example
-///
-/// ```no_run
-/// use wafel_api::{Emu, SM64Version};
-///
-/// let pid = 4232;
-/// let base_address = 0x0050B110;
-///
-/// let mut emu = Emu::attach(pid, base_address, SM64Version::US);
-///
-/// loop {
-///     let holding_l =
-///         (emu.read("gControllerPads[0].button").as_int() & emu.constant("L_TRIG").as_int()) != 0;
-///
-///     if holding_l && emu.read("gMarioState.action") != emu.constant("ACT_FREEFALL") {
-///         emu.write("gMarioState.action", emu.constant("ACT_FREEFALL"));
-///         emu.write("gMarioState.vel[1]", 50.0.into());
-///     }
-/// }
-/// ```
+/// An SM64 API that attaches to a running instance of libsm64 in a different
+/// process and can read/write to its memory.
 #[derive(Debug)]
-pub struct Emu {
+pub struct RemoteDll {
     pub layout: MemoryLayoutImpl<EmptySymbolLookup>, // FIXME: Remove pubs
-    pub memory: EmuMemory,
+    pub memory: RemoteDllMemory,
 }
 
-impl Emu {
-    /// Attach to a running emulator.
+impl RemoteDll {
+    /// Attach to a running instance of libsm64 in a different process.
     ///
     /// # Panics
     ///
     /// Panics if attachment fails, probably because there is no running process with the given
-    /// PID.
+    /// PID, or if the DLL fails to load as a valid libsm64 DLL.
     #[track_caller]
-    pub fn attach(pid: u32, base_address: usize, sm64_version: SM64Version) -> Self {
-        match Self::try_attach(pid, base_address, sm64_version) {
+    pub fn attach(pid: u32, base_address: usize, dll_path: &str) -> Self {
+        match Self::try_attach(pid, base_address, dll_path) {
             Ok(this) => this,
             Err(error) => panic!("Error:\n  failed to attach to {}:\n  {}\n", pid, error),
         }
     }
 
-    /// Attach to a running emulator.
+    /// Attach to a running instance of libsm64 in a different process.
     ///
     /// Returns an error if attachment fails, probably because there is no running process with
-    /// the given PID.
-    pub fn try_attach(
-        pid: u32,
-        base_address: usize,
-        sm64_version: SM64Version,
-    ) -> Result<Self, Error> {
-        const SM64_MEMORY_SIZE: usize = 0x0040_0000;
-
-        let data_layout = load_sm64_n64_layout(&sm64_version.to_string().to_lowercase())?;
+    /// the given PID, or if the DLL fails to load as a valid libsm64 DLL.
+    pub fn try_attach(pid: u32, base_address: usize, dll_path: &str) -> Result<Self, Error> {
+        let mut data_layout = DllLayout::read(dll_path)?.data_layout;
+        data_layout.add_sm64_extras()?;
         let data_layout = Arc::new(data_layout);
 
-        let memory = EmuMemory::attach(pid, base_address, SM64_MEMORY_SIZE)?;
+        let memory = RemoteDllMemory::attach(pid, base_address, dll_path)?;
 
         let layout = MemoryLayoutImpl::new(
             &data_layout,
@@ -79,6 +50,19 @@ impl Emu {
         );
 
         Ok(Self { layout, memory })
+    }
+
+    /// Return true if a process with the given pid is currently open.
+    ///
+    /// If the process is closed, then reads and writes on this memory object
+    /// will fail. Once this method returns false, you should avoid using this
+    /// [RemoteDll] again since a new process may eventually open with the same
+    /// pid.
+    ///
+    /// Note that a process may close immediately after calling this method,
+    /// so failed reads/writes must be handled regardless.
+    pub fn is_process_open(&self) -> bool {
+        self.memory.is_process_open()
     }
 
     /// Read a value from memory.

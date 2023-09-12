@@ -44,6 +44,7 @@ pub enum DllLayoutErrorKind {
         entry_label: String,
     },
     MissingDeclaration,
+    MissingDataSegments,
 }
 
 impl fmt::Display for DllLayoutErrorKind {
@@ -74,6 +75,9 @@ impl fmt::Display for DllLayoutErrorKind {
                 write!(f, "expected subrange node")
             }
             DllLayoutErrorKind::MissingDeclaration => write!(f, "missing variable declaration"),
+            DllLayoutErrorKind::MissingDataSegments => {
+                write!(f, "missing data sections .data/.bss")
+            }
         }
     }
 }

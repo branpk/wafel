@@ -67,7 +67,7 @@ pub struct AddressReader;
 
 impl AddressReader {
     pub fn read(&self, memory: &impl MemoryRead, addr: Address) -> Result<Address, DataError> {
-        Ok(memory.read_addr(addr)? as Address)
+        Ok(memory.read_addr(addr)?)
     }
 }
 
