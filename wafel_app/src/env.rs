@@ -10,6 +10,8 @@ use once_cell::sync::Lazy;
 use sysinfo::{Pid, PidExt, ProcessExt, ProcessRefreshKind, RefreshKind, System, SystemExt};
 use wafel_app_logic::{Env, ProcessInfo};
 
+use crate::logging;
+
 #[derive(Debug)]
 pub struct WafelEnv {
     log_file_path: PathBuf,
@@ -60,6 +62,10 @@ impl Env for WafelEnv {
         &self.wafel_version
     }
 
+    fn log_file_path(&self) -> &Path {
+        self.log_file_path.as_path()
+    }
+
     fn processes(&self) -> Vec<ProcessInfo> {
         let mut system = SYSTEM.lock().unwrap();
         system.refresh_processes();
@@ -77,5 +83,9 @@ impl Env for WafelEnv {
     fn is_process_open(&self, pid: u32) -> bool {
         let mut system = SYSTEM.lock().unwrap();
         system.refresh_process(Pid::from_u32(pid))
+    }
+
+    fn take_recent_panic_details(&self) -> Option<String> {
+        logging::take_recent_panic_details()
     }
 }

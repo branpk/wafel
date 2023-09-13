@@ -1,14 +1,16 @@
-use crate::{root::Root, Env};
+use crate::{root::RootErrorBoundary, Env};
 
 /// State of the Wafel application.
 #[derive(Debug)]
 pub struct Wafel {
-    root: Root,
+    root: RootErrorBoundary,
 }
 
 impl Default for Wafel {
     fn default() -> Self {
-        Self { root: Root::new() }
+        Self {
+            root: RootErrorBoundary::new(),
+        }
     }
 }
 

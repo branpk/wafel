@@ -12,6 +12,7 @@ pub use wafel::*;
 
 mod emu_selector;
 mod env;
+mod error_boundary;
 mod root;
 mod wafel;
 mod workspace;

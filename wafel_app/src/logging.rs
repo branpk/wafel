@@ -1,4 +1,4 @@
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
 use std::{
     backtrace::Backtrace,
     fmt, fs,
@@ -17,6 +17,7 @@ use tracing_subscriber::{
 };
 
 static LOG_FILE: OnceCell<Mutex<fs::File>> = OnceCell::new();
+static RECENT_PANIC_DETAILS: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::new(None));
 
 pub fn init(log_file_path: &Path) {
     let log_file = fs::OpenOptions::new()
@@ -59,6 +60,10 @@ fn log_callback(level: Level, message: &str) {
     }
 }
 
+pub fn take_recent_panic_details() -> Option<String> {
+    RECENT_PANIC_DETAILS.lock().unwrap().take()
+}
+
 fn panic_hook(info: &PanicInfo<'_>) {
     let location = info.location().unwrap();
     let msg = match info.payload().downcast_ref::<&'static str>() {
@@ -72,6 +77,7 @@ fn panic_hook(info: &PanicInfo<'_>) {
 
     let panic_details = format!("Panicked at {}: {}\n{}", location, msg, backtrace);
 
+    *RECENT_PANIC_DETAILS.lock().unwrap() = Some(panic_details.clone());
     tracing::error!("{}", panic_details);
 }
 

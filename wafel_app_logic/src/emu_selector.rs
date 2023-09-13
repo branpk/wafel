@@ -114,6 +114,7 @@ impl EmuSelector {
                 )
                 .clicked()
             {
+                panic!("uh oh");
                 if self.selected_pid == Some(process.pid) {
                     self.selected_pid = None;
                 } else {

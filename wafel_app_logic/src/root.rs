@@ -1,4 +1,31 @@
-use crate::{workspace_root::WorkspaceRoot, Env};
+use crate::{error_boundary::ErrorBoundary, workspace_root::WorkspaceRoot, Env};
+
+#[derive(Debug)]
+pub struct RootErrorBoundary {
+    error_boundary: ErrorBoundary,
+    root: Root,
+}
+
+impl RootErrorBoundary {
+    pub fn new() -> Self {
+        Self {
+            error_boundary: ErrorBoundary::new(),
+            root: Root::new(),
+        }
+    }
+
+    pub fn show(&mut self, env: &dyn Env, ctx: &egui::Context) {
+        if self.error_boundary.has_error() {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                self.error_boundary.show_error(env, ui);
+            });
+        } else {
+            self.error_boundary.catch_panic(env, || {
+                self.root.show(env, ctx);
+            });
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct Root {
