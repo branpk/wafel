@@ -15,13 +15,18 @@ pub struct EguiState {
 }
 
 impl EguiState {
-    pub fn new(window: &Window, device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Self {
+    pub fn new(
+        window: &Window,
+        device: &wgpu::Device,
+        output_format: wgpu::TextureFormat,
+        msaa_samples: u32,
+    ) -> Self {
         let mut state = State::new(window);
         state.set_pixels_per_point(window.scale_factor() as f32);
         EguiState {
             context: Context::default(),
             state,
-            renderer: Renderer::new(device, output_format, None, 1),
+            renderer: Renderer::new(device, output_format, None, msaa_samples),
             primitives: Vec::new(),
             textures_delta: TexturesDelta::default(),
             screen_descriptor: None,

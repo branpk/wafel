@@ -15,6 +15,7 @@ pub trait WindowedApp: Sized + 'static {
         window: &Window,
         device: &wgpu::Device,
         output_format: wgpu::TextureFormat,
+        msaa_samples: u32,
     ) -> Self;
 
     fn window_event(&mut self, event: &WindowEvent<'_>);
@@ -122,7 +123,14 @@ pub fn run_app<A: WindowedApp>(env: WafelEnv, title: &str) {
         };
         surface.configure(&device, &surface_config);
 
-        let mut app = A::new(env, &window, &device, output_format);
+        let texture_format_features = adapter.get_texture_format_features(output_format).flags;
+        let msaa_samples = [4, 2]
+            .into_iter()
+            .find(|&count| texture_format_features.sample_count_supported(count))
+            .unwrap_or(1);
+        tracing::info!("MSAA samples: {msaa_samples}");
+
+        let mut app = A::new(env, &window, &device, output_format, msaa_samples);
 
         window.set_visible(true);
         let mut first_render = false;

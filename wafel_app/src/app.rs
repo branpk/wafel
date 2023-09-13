@@ -12,6 +12,7 @@ pub struct WafelApp {
     viz_renderer: VizRenderer,
     viz_render_data: Vec<VizRenderData>,
     wafel: Wafel,
+    msaa_samples: u32,
 }
 
 impl WindowedApp for WafelApp {
@@ -20,13 +21,15 @@ impl WindowedApp for WafelApp {
         window: &Window,
         device: &wgpu::Device,
         output_format: wgpu::TextureFormat,
+        msaa_samples: u32,
     ) -> Self {
         WafelApp {
             env,
-            egui_state: EguiState::new(window, device, output_format),
-            viz_renderer: VizRenderer::new(device, output_format),
+            egui_state: EguiState::new(window, device, output_format, msaa_samples),
+            viz_renderer: VizRenderer::new(device, output_format, msaa_samples),
             viz_render_data: Vec::new(),
             wafel: Wafel::default(),
+            msaa_samples,
         }
     }
 
@@ -52,6 +55,23 @@ impl WindowedApp for WafelApp {
         output_size: [u32; 2],
         scale_factor: f32,
     ) {
+        let msaa_output_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: None,
+            size: wgpu::Extent3d {
+                width: output_size[0],
+                height: output_size[1],
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: self.msaa_samples,
+            dimension: wgpu::TextureDimension::D2,
+            format: output_format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[],
+        });
+        let msaa_output_view =
+            msaa_output_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
         let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
             size: wgpu::Extent3d {
@@ -60,7 +80,7 @@ impl WindowedApp for WafelApp {
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
-            sample_count: 1,
+            sample_count: self.msaa_samples,
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Depth24Plus,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -83,6 +103,7 @@ impl WindowedApp for WafelApp {
             queue,
             &mut encoder,
             output_view,
+            &msaa_output_view,
             &depth_texture_view,
             output_format,
             &mut clear_op,
@@ -93,6 +114,7 @@ impl WindowedApp for WafelApp {
             queue,
             &mut encoder,
             output_view,
+            &msaa_output_view,
             output_size,
             scale_factor,
             &mut clear_op,
@@ -109,6 +131,7 @@ impl WafelApp {
         queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
         output_view: &wgpu::TextureView,
+        msaa_output_view: &wgpu::TextureView,
         output_size: [u32; 2],
         scale_factor: f32,
         clear_op: &mut Option<wgpu::LoadOp<wgpu::Color>>,
@@ -119,8 +142,8 @@ impl WafelApp {
         let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: None,
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: output_view,
-                resolve_target: None,
+                view: msaa_output_view,
+                resolve_target: Some(output_view),
                 ops: wgpu::Operations {
                     load: clear_op.take().unwrap_or(wgpu::LoadOp::Load),
                     store: true,
@@ -138,6 +161,7 @@ impl WafelApp {
         queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
         output_view: &wgpu::TextureView,
+        msaa_output_view: &wgpu::TextureView,
         depth_texture_view: &wgpu::TextureView,
         output_format: wgpu::TextureFormat,
         clear_op: &mut Option<wgpu::LoadOp<wgpu::Color>>,
@@ -149,8 +173,8 @@ impl WafelApp {
             let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: output_view,
-                    resolve_target: None,
+                    view: msaa_output_view,
+                    resolve_target: Some(output_view),
                     ops: wgpu::Operations {
                         load: clear_op.take().unwrap_or(wgpu::LoadOp::Load),
                         store: true,

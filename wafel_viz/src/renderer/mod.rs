@@ -22,16 +22,21 @@ pub struct VizRenderer {
 }
 
 impl VizRenderer {
-    pub fn new(device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Self {
+    pub fn new(
+        device: &wgpu::Device,
+        output_format: wgpu::TextureFormat,
+        msaa_samples: u32,
+    ) -> Self {
         let static_data = StaticData::create(device);
         let pipelines = Pipelines::create(
             device,
             &static_data.transform_bind_group_layout,
             output_format,
+            msaa_samples,
         );
 
         Self {
-            f3d_renderer: F3DRenderer::new(device),
+            f3d_renderer: F3DRenderer::new(device, msaa_samples),
             static_data,
             pipelines,
             per_frame_data: None,
