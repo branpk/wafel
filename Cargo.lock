@@ -3165,6 +3165,7 @@ version = "0.1.0"
 dependencies = [
  "egui",
  "itertools 0.11.0",
+ "log",
  "wafel_api",
 ]
 

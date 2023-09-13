@@ -1,9 +1,9 @@
-use crate::{workspace::Workspace, Env};
+use crate::{workspace_root::WorkspaceRoot, Env};
 
 #[derive(Debug)]
 pub struct Root {
     is_workspace_panel_expanded: bool,
-    workspaces: Vec<Workspace>,
+    workspaces: Vec<WorkspaceRoot>,
     selected_workspace_index: Option<usize>,
     next_workspace_num: u32,
 }
@@ -24,7 +24,7 @@ impl Root {
     fn new_workspace(&mut self) -> usize {
         let name = format!("Workspace {}", self.next_workspace_num);
         self.next_workspace_num += 1;
-        self.workspaces.push(Workspace::new(&name));
+        self.workspaces.push(WorkspaceRoot::new(&name));
         self.workspaces.len() - 1
     }
 

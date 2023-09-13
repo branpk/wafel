@@ -24,7 +24,7 @@ struct ProcessHandleWrapper(ProcessHandle);
 unsafe impl Sync for ProcessHandleWrapper {}
 unsafe impl Send for ProcessHandleWrapper {}
 
-fn is_process_open(pid: u32) -> bool {
+pub(crate) fn is_process_open(pid: u32) -> bool {
     static SYSTEM: Lazy<Mutex<System>> = Lazy::new(|| {
         Mutex::new(System::new_with_specifics(
             RefreshKind::new().with_processes(ProcessRefreshKind::new()),

@@ -1,7 +1,9 @@
-use itertools::Itertools;
-use wafel_api::SM64Version;
+use std::fmt;
 
-use crate::{Env, ProcessInfo};
+use itertools::Itertools;
+use wafel_api::{Emu, SM64Version};
+
+use crate::{workspace::Workspace, Env, ProcessInfo};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct EmuAttachInfo {
@@ -10,12 +12,23 @@ pub struct EmuAttachInfo {
     pub sm64_version: SM64Version,
 }
 
+impl fmt::Display for EmuAttachInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "[pid={}, {:#010X}, {}]",
+            self.pid, self.base_address, self.sm64_version
+        )
+    }
+}
+
 #[derive(Debug)]
 pub struct EmuSelector {
     show_all_processes: bool,
     selected_pid: Option<u32>,
     base_address: String,
     sm64_version: Option<SM64Version>,
+    connect_error: Option<String>,
 }
 
 impl EmuSelector {
@@ -25,6 +38,7 @@ impl EmuSelector {
             selected_pid: None,
             base_address: String::new(),
             sm64_version: None,
+            connect_error: None,
         }
     }
 
@@ -39,10 +53,8 @@ impl EmuSelector {
         })
     }
 
-    pub fn show(&mut self, env: &dyn Env, ui: &mut egui::Ui) -> Option<EmuAttachInfo> {
+    pub fn show(&mut self, env: &dyn Env, ui: &mut egui::Ui) -> Option<Workspace> {
         self.show_process_list(env, ui);
-
-        let mut selected_info = None;
 
         if self.selected_pid.is_some() {
             ui.vertical(|ui| {
@@ -54,17 +66,12 @@ impl EmuSelector {
 
                 ui.separator();
 
-                let info = self.validate();
-                if ui
-                    .add_enabled(info.is_some(), egui::Button::new("Connect"))
-                    .clicked()
-                {
-                    selected_info = info;
-                }
-            });
+                self.show_connect_button(ui)
+            })
+            .inner
+        } else {
+            None
         }
-
-        selected_info
     }
 
     fn show_process_list(&mut self, env: &dyn Env, ui: &mut egui::Ui) {
@@ -155,6 +162,45 @@ impl EmuSelector {
                 }
             }
         });
+    }
+
+    fn show_connect_button(&mut self, ui: &mut egui::Ui) -> Option<Workspace> {
+        let mut workspace = None;
+
+        let selected_info = self.validate();
+        if selected_info.is_none() {
+            self.connect_error = None;
+        }
+
+        ui.horizontal(|ui| {
+            if ui
+                .add_enabled(selected_info.is_some(), egui::Button::new("Connect"))
+                .clicked()
+            {
+                if let Some(info) = selected_info {
+                    log::info!("Connecting to emulator: {info}");
+                    match Emu::try_attach(info.pid, info.base_address, info.sm64_version) {
+                        Ok(emu) => {
+                            log::info!("Success!");
+                            workspace = Some(Workspace::with_emu(emu));
+                        }
+                        Err(error) => {
+                            log::error!("Error: {error}");
+                            self.connect_error = Some(error.to_string());
+                        }
+                    }
+                }
+            }
+
+            if let Some(error) = &self.connect_error {
+                ui.add_space(5.0);
+                ui.label(
+                    egui::RichText::new(format!("Error: {error}")).color(egui::Color32::LIGHT_RED),
+                );
+            }
+        });
+
+        workspace
     }
 }
 
