@@ -29,6 +29,7 @@ pub fn sm64_gfx_render(
     layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
     config: &VizConfig,
+    use_segment_table: bool,
 ) -> Result<(F3DRenderData, GfxRenderOutput), VizError> {
     if config.in_game_render_mode == InGameRenderMode::Disabled {
         return Ok((
@@ -46,12 +47,14 @@ pub fn sm64_gfx_render(
     }
     let input_dl_addr = input_dl_addr.try_as_address()?;
 
-    // TODO: Determine when seg table should be used
-    // let mut seg_table: Vec<u32> = vec![0; 32];
-    // let seg_table_addr = layout.symbol_address("sSegmentTable")?;
-    // memory.read_u32s(seg_table_addr, seg_table.as_mut_slice())?;
-    // let seg_table = Some(seg_table);
-    let seg_table = None;
+    let seg_table = if use_segment_table {
+        let mut seg_table: Vec<u32> = vec![0; 32];
+        let seg_table_addr = layout.symbol_address("sSegmentTable")?;
+        memory.read_u32s(seg_table_addr, seg_table.as_mut_slice())?;
+        Some(seg_table)
+    } else {
+        None
+    };
 
     // if DEBUG_PRINT {
     //     println!("\n\n------- FRAME -------");

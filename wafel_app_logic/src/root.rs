@@ -1,3 +1,5 @@
+use wafel_api::VizRenderData;
+
 use crate::{error_boundary::ErrorBoundary, workspace_root::WorkspaceRoot, Env};
 
 #[derive(Debug)]
@@ -14,15 +16,16 @@ impl RootErrorBoundary {
         }
     }
 
-    pub fn show(&mut self, env: &dyn Env, ctx: &egui::Context) {
+    pub fn show(&mut self, env: &dyn Env, ctx: &egui::Context) -> Vec<VizRenderData> {
         if self.error_boundary.has_error() {
             egui::CentralPanel::default().show(ctx, |ui| {
                 self.error_boundary.show_error(env, ui);
             });
+            Vec::new()
         } else {
-            self.error_boundary.catch_panic(env, || {
-                self.root.show(env, ctx);
-            });
+            self.error_boundary
+                .catch_panic(env, || self.root.show(env, ctx))
+                .unwrap_or_default()
         }
     }
 }
@@ -55,7 +58,7 @@ impl Root {
         self.workspaces.len() - 1
     }
 
-    pub fn show(&mut self, env: &dyn Env, ctx: &egui::Context) {
+    pub fn show(&mut self, env: &dyn Env, ctx: &egui::Context) -> Vec<VizRenderData> {
         let is_workspace_panel_expanded =
             self.is_workspace_panel_expanded || self.selected_workspace_index.is_none();
 
@@ -66,21 +69,25 @@ impl Root {
                 self.show_workspace_pane_contents(ui);
             });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
-            let label = match (self.selected_workspace_index, is_workspace_panel_expanded) {
-                (Some(index), false) => self.workspaces[index].name(),
-                (None, false) => "Show workspaces",
-                (_, true) => "Hide workspaces",
-            };
-            if ui.button(label).clicked() {
-                self.is_workspace_panel_expanded = !self.is_workspace_panel_expanded;
-            }
+        egui::CentralPanel::default()
+            .show(ctx, |ui| {
+                let label = match (self.selected_workspace_index, is_workspace_panel_expanded) {
+                    (Some(index), false) => self.workspaces[index].name(),
+                    (None, false) => "Show workspaces",
+                    (_, true) => "Hide workspaces",
+                };
+                if ui.button(label).clicked() {
+                    self.is_workspace_panel_expanded = !self.is_workspace_panel_expanded;
+                }
 
-            ui.separator();
-            if let Some(index) = self.selected_workspace_index {
-                self.workspaces[index].show(env, ui);
-            }
-        });
+                ui.separator();
+                if let Some(index) = self.selected_workspace_index {
+                    self.workspaces[index].show(env, ui)
+                } else {
+                    Vec::new()
+                }
+            })
+            .inner
     }
 
     fn show_workspace_pane_contents(&mut self, ui: &mut egui::Ui) {

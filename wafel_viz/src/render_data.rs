@@ -46,6 +46,7 @@ pub fn sm64_render(
     memory: &impl MemoryRead,
     screen_top_left: [u32; 2],
     screen_size: [u32; 2],
+    use_segment_table: bool,
 ) -> Result<F3DRenderData, VizError> {
     assert!(screen_size[0] > 0 && screen_size[1] > 0);
 
@@ -55,7 +56,7 @@ pub fn sm64_render(
         in_game_render_mode: InGameRenderMode::DisplayList,
         ..Default::default()
     };
-    let (f3d_render_data, _) = sm64_gfx_render(layout, memory, &config)?;
+    let (f3d_render_data, _) = sm64_gfx_render(layout, memory, &config, use_segment_table)?;
     Ok(f3d_render_data)
 }
 
@@ -63,14 +64,23 @@ pub fn viz_render(
     layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
     config: &VizConfig,
+    use_segment_table: bool,
 ) -> Result<VizRenderData, VizError> {
     assert!(config.screen_size[0] > 0 && config.screen_size[1] > 0);
 
     if config.in_game_render_mode == InGameRenderMode::DisplayList {
-        return Ok(sm64_render(layout, memory, config.screen_top_left, config.screen_size)?.into());
+        return Ok(sm64_render(
+            layout,
+            memory,
+            config.screen_top_left,
+            config.screen_size,
+            use_segment_table,
+        )?
+        .into());
     }
 
-    let (f3d_render_data, render_output) = sm64_gfx_render(layout, memory, config)?;
+    let (f3d_render_data, render_output) =
+        sm64_gfx_render(layout, memory, config, use_segment_table)?;
 
     let mut render_data = VizRenderData::from(f3d_render_data);
     render_data.elements = config.elements.clone();

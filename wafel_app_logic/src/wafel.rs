@@ -1,3 +1,5 @@
+use wafel_api::VizRenderData;
+
 use crate::{root::RootErrorBoundary, Env};
 
 /// State of the Wafel application.
@@ -16,7 +18,7 @@ impl Default for Wafel {
 
 impl Wafel {
     /// Render the Wafel UI and respond to user input events.
-    pub fn show(&mut self, env: &dyn Env, ctx: &egui::Context) {
-        self.root.show(env, ctx);
+    pub fn show(&mut self, env: &dyn Env, ctx: &egui::Context) -> Vec<VizRenderData> {
+        self.root.show(env, ctx)
     }
 }

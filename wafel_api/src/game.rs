@@ -389,7 +389,7 @@ impl Game {
     /// Returns an error if rendering fails (most likely a bug in [wafel_viz]).
     pub fn try_render(&self, config: &VizConfig) -> Result<VizRenderData, Error> {
         let memory = self.memory.with_slot(&self.base_slot);
-        let render_data = viz_render(&self.layout, &memory, config)?;
+        let render_data = viz_render(&self.layout, &memory, config, false)?;
         Ok(render_data)
     }
 

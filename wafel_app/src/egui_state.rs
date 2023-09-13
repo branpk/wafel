@@ -38,7 +38,12 @@ impl EguiState {
 
     pub fn run(&mut self, window: &Window, run_ui: impl FnOnce(&Context)) {
         let raw_input = self.state.take_egui_input(window);
-        let egui_output = self.context.run(raw_input, |ctx| run_ui(ctx));
+        let egui_output = self.context.run(raw_input, |ctx| {
+            let mut style = (*ctx.style()).clone();
+            style.visuals.panel_fill = egui::Color32::TRANSPARENT;
+            ctx.set_style(style);
+            run_ui(ctx);
+        });
         self.state
             .handle_platform_output(window, &self.context, egui_output.platform_output);
         self.primitives = self.context.tessellate(egui_output.shapes);

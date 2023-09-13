@@ -3155,6 +3155,7 @@ dependencies = [
  "tracing-log",
  "tracing-subscriber",
  "wafel_app_logic",
+ "wafel_viz",
  "wgpu",
  "winit",
 ]
