@@ -14,6 +14,7 @@ mod emu_selector;
 mod env;
 mod error_boundary;
 mod root;
+mod tab;
 mod wafel;
 mod workspace;
 mod workspace_mode;

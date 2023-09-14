@@ -62,7 +62,7 @@ impl WorkspaceRoot {
 
     pub fn show(&mut self, env: &dyn Env, ui: &mut egui::Ui) -> Vec<VizRenderData> {
         match &mut self.workspace {
-            Some(workspace) => workspace.show(ui),
+            Some(workspace) => workspace.show(env, ui),
             None => {
                 self.workspace = self.mode_selector.show(env, ui);
                 Vec::new()
