@@ -9,6 +9,7 @@
 
 pub use env::*;
 pub use wafel::*;
+use wafel_api::VizRenderData;
 
 mod emu_selector;
 mod env;
@@ -19,3 +20,11 @@ mod wafel;
 mod workspace;
 mod workspace_mode;
 mod workspace_root;
+
+/// Render the Wafel UI and respond to user input events.
+///
+/// This function is no_mangle so that it can be hot reloaded.
+#[no_mangle]
+pub fn wafel_show(wafel: &mut Wafel, env: &dyn Env, ctx: &egui::Context) -> Vec<VizRenderData> {
+    wafel.show(env, ctx)
+}

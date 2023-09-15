@@ -17,5 +17,6 @@ winit = "0.28.6"
 wafel_app_logic = { path = "../wafel_app_logic" }
 egui-wgpu = "0.22.0"
 egui-winit = "0.22.0"
-sysinfo = "0.29.10"
+sysinfo = { version = "0.29.10", default-features = false }
 wafel_viz = { version = "0.1.0", path = "../wafel_viz" }
+hot-lib-reloader = "0.6.5"

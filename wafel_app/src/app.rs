@@ -4,7 +4,7 @@ use wafel_app_logic::Wafel;
 use wafel_viz::{VizRenderData, VizRenderer};
 use winit::{event::WindowEvent, window::Window};
 
-use crate::{egui_state::EguiState, env::WafelEnv, window::WindowedApp};
+use crate::{egui_state::EguiState, env::WafelEnv, hot_reload, window::WindowedApp};
 
 pub struct WafelApp {
     env: WafelEnv,
@@ -42,7 +42,7 @@ impl WindowedApp for WafelApp {
 
     fn update(&mut self, window: &Window) {
         self.egui_state.run(window, |ctx| {
-            self.viz_render_data = self.wafel.show(&self.env, ctx);
+            self.viz_render_data = hot_reload::wafel_show(&mut self.wafel, &self.env, ctx);
         });
     }
 

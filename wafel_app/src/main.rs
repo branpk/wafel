@@ -8,6 +8,7 @@ use crate::env::WafelEnv;
 mod app;
 mod egui_state;
 mod env;
+mod hot_reload;
 mod logging;
 mod window;
 
