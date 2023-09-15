@@ -9,7 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 wafel_api = { path = "../wafel_api" }
-wafel_viz = { path = "../wafel_viz" }
+wafel_viz = { path = "../wafel_viz", features = ["wgpu"] }
 derive_more = "0.99.14"
 pyo3 = { version = "0.16.5", features = ["extension-module"] }
 serde_json = "1.0.64"

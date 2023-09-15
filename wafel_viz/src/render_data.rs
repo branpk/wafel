@@ -1,3 +1,4 @@
+use bytemuck::{Pod, Zeroable};
 use fast3d::interpret::F3DRenderData;
 use ultraviolet::Vec3;
 use wafel_data_access::MemoryLayout;
@@ -5,10 +6,22 @@ use wafel_memory::MemoryRead;
 use wafel_sm64::{read_surfaces, Surface, SurfaceType};
 
 use crate::{
-    renderer::data::ColorVertex,
     sm64_gfx_render::{sm64_gfx_render, GfxRenderOutput},
     Camera, Element, InGameRenderMode, Line, Point, SurfaceMode, VizConfig, VizError,
 };
+
+#[derive(Debug, Clone, Copy, PartialEq, Default, Zeroable, Pod)]
+#[repr(C)]
+pub(crate) struct ColorVertex {
+    pub(crate) pos: [f32; 4],
+    pub(crate) color: [f32; 4],
+}
+
+impl ColorVertex {
+    pub(crate) fn new(pos: [f32; 4], color: [f32; 4]) -> Self {
+        Self { pos, color }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VizRenderData {

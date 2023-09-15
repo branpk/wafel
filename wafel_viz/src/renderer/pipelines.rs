@@ -1,4 +1,6 @@
-use super::data::{ColorVertex, PointInstance, PointVertex};
+use crate::ColorVertex;
+
+use super::data::{PointInstance, PointVertex};
 
 #[derive(Debug)]
 pub struct Pipelines {

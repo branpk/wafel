@@ -4,20 +4,9 @@ use bytemuck::{cast_slice, offset_of, Pod, Zeroable};
 use fast3d::util::Matrixf;
 use wgpu::util::DeviceExt;
 
-use crate::{Element, VizRenderData};
-
-#[derive(Debug, Clone, Copy, PartialEq, Default, Zeroable, Pod)]
-#[repr(C)]
-pub struct ColorVertex {
-    pub pos: [f32; 4],
-    pub color: [f32; 4],
-}
+use crate::{ColorVertex, Element, VizRenderData};
 
 impl ColorVertex {
-    pub fn new(pos: [f32; 4], color: [f32; 4]) -> Self {
-        Self { pos, color }
-    }
-
     pub fn layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
             array_stride: size_of::<Self>() as u64,
