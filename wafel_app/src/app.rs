@@ -1,3 +1,5 @@
+#[allow(unused_imports)]
+use std::sync::atomic::Ordering;
 use std::{
     fmt,
     sync::{atomic::AtomicBool, Arc, Mutex},
