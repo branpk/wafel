@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["init","log_callback","panic_hook","print_to_log_file","take_recent_panic_details"],"static":["LOG_FILE","RECENT_PANIC_DETAILS"],"struct":["LogLayer","MessageVisitor"]};

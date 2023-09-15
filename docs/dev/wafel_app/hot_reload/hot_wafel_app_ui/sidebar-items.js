@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["__lib_loader","__lib_loader_subscription","__lib_notifier","wafel_show"],"static":["LIB_CHANGE_NOTIFIER","LIB_CHANGE_NOTIFIER_INIT","LIB_LOADER","LIB_LOADER_INIT","VERSION","WAS_UPDATED"],"struct":["VizRenderData","Wafel"],"trait":["Env"]};

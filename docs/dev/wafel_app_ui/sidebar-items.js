@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["wafel_show"],"struct":["ProcessInfo","Wafel"],"trait":["Env"]};

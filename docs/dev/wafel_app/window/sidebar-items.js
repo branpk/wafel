@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["load_window_icon","run_app"],"trait":["WindowedApp"]};

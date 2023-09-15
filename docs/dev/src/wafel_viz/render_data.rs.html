@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_viz/src/render_data.rs`."><title>render_data.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_viz" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../wafel_viz/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_viz/src/render_data.rs`."><title>render_data.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ae1b282cda4c21ec.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_viz" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (ca2b74f1a 2023-09-14)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-cabe4b1bd7b9da95.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../wafel_viz/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -319,17 +319,53 @@
 <a href="#319" id="319">319</a>
 <a href="#320" id="320">320</a>
 <a href="#321" id="321">321</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>fast3d::interpret::F3DRenderData;
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
+<span class="kw">use </span>fast3d::interpret::F3DRenderData;
 <span class="kw">use </span>ultraviolet::Vec3;
 <span class="kw">use </span>wafel_data_access::MemoryLayout;
 <span class="kw">use </span>wafel_memory::MemoryRead;
 <span class="kw">use </span>wafel_sm64::{read_surfaces, Surface, SurfaceType};
 
 <span class="kw">use crate</span>::{
-    renderer::data::ColorVertex,
     sm64_gfx_render::{sm64_gfx_render, GfxRenderOutput},
     Camera, Element, InGameRenderMode, Line, Point, SurfaceMode, VizConfig, VizError,
 };
+
+<span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Default, Zeroable, Pod)]
+#[repr(C)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ColorVertex {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) pos: [f32; <span class="number">4</span>],
+    <span class="kw">pub</span>(<span class="kw">crate</span>) color: [f32; <span class="number">4</span>],
+}
+
+<span class="kw">impl </span>ColorVertex {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(pos: [f32; <span class="number">4</span>], color: [f32; <span class="number">4</span>]) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ pos, color }
+    }
+}
 
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">pub struct </span>VizRenderData {
@@ -367,6 +403,7 @@
     memory: <span class="kw-2">&amp;</span><span class="kw">impl </span>MemoryRead,
     screen_top_left: [u32; <span class="number">2</span>],
     screen_size: [u32; <span class="number">2</span>],
+    use_segment_table: bool,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;F3DRenderData, VizError&gt; {
     <span class="macro">assert!</span>(screen_size[<span class="number">0</span>] &gt; <span class="number">0 </span>&amp;&amp; screen_size[<span class="number">1</span>] &gt; <span class="number">0</span>);
 
@@ -376,7 +413,7 @@
         in_game_render_mode: InGameRenderMode::DisplayList,
         ..Default::default()
     };
-    <span class="kw">let </span>(f3d_render_data, <span class="kw">_</span>) = sm64_gfx_render(layout, memory, <span class="kw-2">&amp;</span>config)<span class="question-mark">?</span>;
+    <span class="kw">let </span>(f3d_render_data, <span class="kw">_</span>) = sm64_gfx_render(layout, memory, <span class="kw-2">&amp;</span>config, use_segment_table)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(f3d_render_data)
 }
 
@@ -384,14 +421,23 @@
     layout: <span class="kw-2">&amp;</span><span class="kw">impl </span>MemoryLayout,
     memory: <span class="kw-2">&amp;</span><span class="kw">impl </span>MemoryRead,
     config: <span class="kw-2">&amp;</span>VizConfig,
+    use_segment_table: bool,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;VizRenderData, VizError&gt; {
     <span class="macro">assert!</span>(config.screen_size[<span class="number">0</span>] &gt; <span class="number">0 </span>&amp;&amp; config.screen_size[<span class="number">1</span>] &gt; <span class="number">0</span>);
 
     <span class="kw">if </span>config.in_game_render_mode == InGameRenderMode::DisplayList {
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(sm64_render(layout, memory, config.screen_top_left, config.screen_size)<span class="question-mark">?</span>.into());
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(sm64_render(
+            layout,
+            memory,
+            config.screen_top_left,
+            config.screen_size,
+            use_segment_table,
+        )<span class="question-mark">?
+        </span>.into());
     }
 
-    <span class="kw">let </span>(f3d_render_data, render_output) = sm64_gfx_render(layout, memory, config)<span class="question-mark">?</span>;
+    <span class="kw">let </span>(f3d_render_data, render_output) =
+        sm64_gfx_render(layout, memory, config, use_segment_table)<span class="question-mark">?</span>;
 
     <span class="kw">let </span><span class="kw-2">mut </span>render_data = VizRenderData::from(f3d_render_data);
     render_data.elements = config.elements.clone();

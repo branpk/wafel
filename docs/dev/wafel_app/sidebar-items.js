@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["WAFEL_VERSION"],"fn":["main"],"mod":["app","egui_state","env","hot_reload","logging","window"]};

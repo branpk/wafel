@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_viz/src/renderer/pipelines.rs`."><title>pipelines.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="wafel_viz" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../wafel_viz/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_viz/src/renderer/pipelines.rs`."><title>pipelines.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ae1b282cda4c21ec.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="wafel_viz" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (ca2b74f1a 2023-09-14)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-cabe4b1bd7b9da95.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../wafel_viz/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -247,7 +247,54 @@
 <a href="#247" id="247">247</a>
 <a href="#248" id="248">248</a>
 <a href="#249" id="249">249</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::data::{ColorVertex, PointInstance, PointVertex};
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::ColorVertex;
+
+<span class="kw">use </span><span class="kw">super</span>::data::{PointInstance, PointVertex};
 
 <span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Pipelines {
@@ -264,14 +311,35 @@
         device: <span class="kw-2">&amp;</span>wgpu::Device,
         transform_bind_group_layout: <span class="kw-2">&amp;</span>wgpu::BindGroupLayout,
         output_format: wgpu::TextureFormat,
+        msaa_samples: u32,
     ) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>line = create_line_pipeline(device, transform_bind_group_layout, output_format);
-        <span class="kw">let </span>point = create_point_pipeline(device, transform_bind_group_layout, output_format);
+        <span class="kw">let </span>line = create_line_pipeline(
+            device,
+            transform_bind_group_layout,
+            output_format,
+            msaa_samples,
+        );
+        <span class="kw">let </span>point = create_point_pipeline(
+            device,
+            transform_bind_group_layout,
+            output_format,
+            msaa_samples,
+        );
 
-        <span class="kw">let </span>surface =
-            create_surface_pipeline(device, transform_bind_group_layout, output_format, <span class="bool-val">true</span>);
-        <span class="kw">let </span>transparent_surface =
-            create_surface_pipeline(device, transform_bind_group_layout, output_format, <span class="bool-val">false</span>);
+        <span class="kw">let </span>surface = create_surface_pipeline(
+            device,
+            transform_bind_group_layout,
+            output_format,
+            <span class="bool-val">true</span>,
+            msaa_samples,
+        );
+        <span class="kw">let </span>transparent_surface = create_surface_pipeline(
+            device,
+            transform_bind_group_layout,
+            output_format,
+            <span class="bool-val">false</span>,
+            msaa_samples,
+        );
 
         <span class="kw">let </span>wall_hitbox = create_color_pipeline(
             device,
@@ -281,6 +349,7 @@
             <span class="bool-val">true</span>,
             <span class="bool-val">true</span>,
             wgpu::PrimitiveTopology::TriangleList,
+            msaa_samples,
         );
         <span class="kw">let </span>wall_hitbox_depth_pass = create_color_pipeline(
             device,
@@ -290,6 +359,7 @@
             <span class="bool-val">true</span>,
             <span class="bool-val">true</span>,
             wgpu::PrimitiveTopology::TriangleList,
+            msaa_samples,
         );
 
         <span class="self">Self </span>{
@@ -307,6 +377,7 @@
     device: <span class="kw-2">&amp;</span>wgpu::Device,
     transform_bind_group_layout: <span class="kw-2">&amp;</span>wgpu::BindGroupLayout,
     output_format: wgpu::TextureFormat,
+    msaa_samples: u32,
 ) -&gt; wgpu::RenderPipeline {
     <span class="kw">let </span>shader_module =
         device.create_shader_module(<span class="macro">wgpu::include_wgsl!</span>(<span class="string">&quot;../../shaders/color_decal.wgsl&quot;</span>));
@@ -335,7 +406,11 @@
             stencil: wgpu::StencilState::default(),
             bias: wgpu::DepthBiasState::default(),
         }),
-        multisample: wgpu::MultisampleState::default(),
+        multisample: wgpu::MultisampleState {
+            count: msaa_samples,
+            mask: !<span class="number">0</span>,
+            alpha_to_coverage_enabled: <span class="bool-val">false</span>,
+        },
         fragment: <span class="prelude-val">Some</span>(wgpu::FragmentState {
             module: <span class="kw-2">&amp;</span>shader_module,
             entry_point: <span class="string">&quot;fs_main&quot;</span>,
@@ -353,6 +428,7 @@
     device: <span class="kw-2">&amp;</span>wgpu::Device,
     transform_bind_group_layout: <span class="kw-2">&amp;</span>wgpu::BindGroupLayout,
     output_format: wgpu::TextureFormat,
+    msaa_samples: u32,
 ) -&gt; wgpu::RenderPipeline {
     <span class="kw">let </span>shader_module =
         device.create_shader_module(<span class="macro">wgpu::include_wgsl!</span>(<span class="string">&quot;../../shaders/point.wgsl&quot;</span>));
@@ -381,7 +457,11 @@
             stencil: wgpu::StencilState::default(),
             bias: wgpu::DepthBiasState::default(),
         }),
-        multisample: wgpu::MultisampleState::default(),
+        multisample: wgpu::MultisampleState {
+            count: msaa_samples,
+            mask: !<span class="number">0</span>,
+            alpha_to_coverage_enabled: <span class="bool-val">false</span>,
+        },
         fragment: <span class="prelude-val">Some</span>(wgpu::FragmentState {
             module: <span class="kw-2">&amp;</span>shader_module,
             entry_point: <span class="string">&quot;fs_main&quot;</span>,
@@ -400,6 +480,7 @@
     transform_bind_group_layout: <span class="kw-2">&amp;</span>wgpu::BindGroupLayout,
     output_format: wgpu::TextureFormat,
     depth_write_enabled: bool,
+    msaa_samples: u32,
 ) -&gt; wgpu::RenderPipeline {
     <span class="kw">let </span>shader_module =
         device.create_shader_module(<span class="macro">wgpu::include_wgsl!</span>(<span class="string">&quot;../../shaders/surface.wgsl&quot;</span>));
@@ -425,7 +506,11 @@
             stencil: wgpu::StencilState::default(),
             bias: wgpu::DepthBiasState::default(),
         }),
-        multisample: wgpu::MultisampleState::default(),
+        multisample: wgpu::MultisampleState {
+            count: msaa_samples,
+            mask: !<span class="number">0</span>,
+            alpha_to_coverage_enabled: <span class="bool-val">false</span>,
+        },
         fragment: <span class="prelude-val">Some</span>(wgpu::FragmentState {
             module: <span class="kw-2">&amp;</span>shader_module,
             entry_point: <span class="string">&quot;fs_main&quot;</span>,
@@ -447,6 +532,7 @@
     depth_write_enabled: bool,
     depth_compare_enabled: bool,
     topology: wgpu::PrimitiveTopology,
+    msaa_samples: u32,
 ) -&gt; wgpu::RenderPipeline {
     <span class="kw">let </span>shader_module =
         device.create_shader_module(<span class="macro">wgpu::include_wgsl!</span>(<span class="string">&quot;../../shaders/color.wgsl&quot;</span>));
@@ -479,7 +565,11 @@
             stencil: wgpu::StencilState::default(),
             bias: wgpu::DepthBiasState::default(),
         }),
-        multisample: wgpu::MultisampleState::default(),
+        multisample: wgpu::MultisampleState {
+            count: msaa_samples,
+            mask: !<span class="number">0</span>,
+            alpha_to_coverage_enabled: <span class="bool-val">false</span>,
+        },
         fragment: <span class="prelude-val">Some</span>(wgpu::FragmentState {
             module: <span class="kw-2">&amp;</span>shader_module,
             entry_point: <span class="string">&quot;fs_main&quot;</span>,
