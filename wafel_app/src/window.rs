@@ -62,8 +62,9 @@ pub fn run_app<A: WindowedApp>(env: WafelEnv, title: &str) {
             .expect("failed to create window");
         // window.set_maximized(true);
 
-        #[cfg(debug_assertions)]
-        window.set_window_level(WindowLevel::AlwaysOnTop); // TODO: Add config option
+        if cfg!(debug_assertions) {
+            window.set_window_level(WindowLevel::AlwaysOnTop); // TODO: Add config option
+        }
 
         let surface =
             unsafe { instance.create_surface(&window) }.expect("failed to create surface");

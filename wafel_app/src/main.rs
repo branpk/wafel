@@ -20,6 +20,9 @@ mod hot_reload;
 mod logging;
 mod window;
 
+// Important: be sure to re-run `python build.py lock` after changing!
+const WAFEL_VERSION: &'static str = "0.8.5";
+
 fn main() {
     let env = WafelEnv::create();
 

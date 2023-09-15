@@ -10,12 +10,11 @@ use once_cell::sync::Lazy;
 use sysinfo::{Pid, PidExt, ProcessExt, ProcessRefreshKind, RefreshKind, System, SystemExt};
 use wafel_app_ui::{Env, ProcessInfo};
 
-use crate::logging;
+use crate::{logging, WAFEL_VERSION};
 
 #[derive(Debug)]
 pub struct WafelEnv {
     log_file_path: PathBuf,
-    wafel_version: String,
 }
 
 impl WafelEnv {
@@ -32,12 +31,7 @@ impl WafelEnv {
 
         let log_file_path = root_dir.join("log.txt");
 
-        let wafel_version = env!("CARGO_PKG_VERSION").to_string();
-
-        Self {
-            log_file_path,
-            wafel_version,
-        }
+        Self { log_file_path }
     }
 
     /// Return the path to the log file.
@@ -47,7 +41,7 @@ impl WafelEnv {
 
     /// Return the current version of Wafel.
     pub fn wafel_version(&self) -> &str {
-        &self.wafel_version
+        WAFEL_VERSION
     }
 }
 
@@ -59,7 +53,7 @@ static SYSTEM: Lazy<Mutex<System>> = Lazy::new(|| {
 
 impl Env for WafelEnv {
     fn wafel_version(&self) -> &str {
-        &self.wafel_version
+        WAFEL_VERSION
     }
 
     fn log_file_path(&self) -> &Path {
