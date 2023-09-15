@@ -2,7 +2,7 @@
     type <a href="#associatedtype.Value" class="associatedtype">Value</a>;
 
     // Required method
-    fn <a href="#tymethod.write" class="fn">write</a>&lt;M: MemoryRead + MemoryWrite&gt;(
+    fn <a href="#tymethod.write" class="fn">write</a>&lt;M: <a class="trait" href="../wafel_memory/traits/trait.MemoryRead.html" title="trait wafel_memory::traits::MemoryRead">MemoryRead</a> + <a class="trait" href="../wafel_memory/traits/trait.MemoryWrite.html" title="trait wafel_memory::traits::MemoryWrite">MemoryWrite</a>&gt;(
         &amp;self,
         memory: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut M</a>,
         addr: <a class="struct" href="../wafel_data_type/value/struct.Address.html" title="struct wafel_data_type::value::Address">Address</a>,
@@ -11,7 +11,7 @@
 }</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>A type that knows how to write a structured value to memory.</p>
 <p>See <a href="trait.DataWritable.html" title="trait wafel_data_access::DataWritable">DataWritable</a>.</p>
 </div></details><h2 id="required-associated-types" class="small-section-header">Required Associated Types<a href="#required-associated-types" class="anchor">§</a></h2><div class="methods"><details class="toggle" open><summary><section id="associatedtype.Value" class="method"><a class="src rightside" href="../src/wafel_data_access/traits.rs.html#37">source</a><h4 class="code-header">type <a href="#associatedtype.Value" class="associatedtype">Value</a></h4></section></summary><div class="docblock"><p>The type of value that is written to memory.</p>
-</div></details></div><h2 id="required-methods" class="small-section-header">Required Methods<a href="#required-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="tymethod.write" class="method"><a class="src rightside" href="../src/wafel_data_access/traits.rs.html#40-45">source</a><h4 class="code-header">fn <a href="#tymethod.write" class="fn">write</a>&lt;M: MemoryRead + MemoryWrite&gt;(
+</div></details></div><h2 id="required-methods" class="small-section-header">Required Methods<a href="#required-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="tymethod.write" class="method"><a class="src rightside" href="../src/wafel_data_access/traits.rs.html#40-45">source</a><h4 class="code-header">fn <a href="#tymethod.write" class="fn">write</a>&lt;M: <a class="trait" href="../wafel_memory/traits/trait.MemoryRead.html" title="trait wafel_memory::traits::MemoryRead">MemoryRead</a> + <a class="trait" href="../wafel_memory/traits/trait.MemoryWrite.html" title="trait wafel_memory::traits::MemoryWrite">MemoryWrite</a>&gt;(
     &amp;self,
     memory: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut M</a>,
     addr: <a class="struct" href="../wafel_data_type/value/struct.Address.html" title="struct wafel_data_type::value::Address">Address</a>,
