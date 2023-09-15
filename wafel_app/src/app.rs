@@ -1,6 +1,6 @@
 use std::{
     fmt,
-    sync::{Arc, Mutex},
+    sync::{atomic::AtomicBool, Arc, Mutex},
 };
 
 use wafel_app_ui::Wafel;
@@ -13,7 +13,7 @@ use crate::{egui_state::EguiState, env::WafelEnv, hot_reload, window::WindowedAp
 pub struct WafelApp {
     env: WafelEnv,
     egui_state: Arc<Mutex<Option<EguiState>>>,
-    is_reloading: Arc<Mutex<bool>>,
+    is_reloading: Arc<AtomicBool>,
     viz_renderer: VizRenderer,
     viz_render_data: Vec<VizRenderData>,
     wafel: Wafel,
@@ -38,7 +38,7 @@ impl WindowedApp for WafelApp {
 
         // To avoid crashes when hot reloading, we need to drop EguiState before the reload happens,
         // and recreate it afterward.
-        let is_reloading = Arc::new(Mutex::new(false));
+        let is_reloading = Arc::new(AtomicBool::new(false));
         #[cfg(feature = "reload")]
         {
             let egui_state = Arc::clone(&egui_state);
@@ -47,11 +47,11 @@ impl WindowedApp for WafelApp {
             let observer = hot_reload::subscribe();
             std::thread::spawn(move || loop {
                 observer.wait_for_about_to_reload();
-                *is_reloading.lock().unwrap() = true;
+                is_reloading.store(true, Ordering::SeqCst);
                 *egui_state.lock().unwrap() = None;
 
                 observer.wait_for_reload();
-                *is_reloading.lock().unwrap() = false;
+                is_reloading.store(false, Ordering::SeqCst);
             });
         }
 
@@ -79,7 +79,7 @@ impl WindowedApp for WafelApp {
     fn update(&mut self, window: &Window, _device: &wgpu::Device) {
         // Recreate EguiState if necessary after hot reloading.
         #[cfg(feature = "reload")]
-        if !*self.is_reloading.lock().unwrap() {
+        if !self.is_reloading.load(Ordering::SeqCst) {
             let mut egui_state = self.egui_state.lock().unwrap();
             egui_state.get_or_insert_with(|| {
                 EguiState::new(window, _device, self.output_format, self.msaa_samples)
