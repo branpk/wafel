@@ -20,3 +20,6 @@ egui-winit = "0.22.0"
 sysinfo = { version = "0.29.10", default-features = false }
 wafel_viz = { path = "../wafel_viz", features = ["wgpu"] }
 hot-lib-reloader = "0.6.5"
+
+[features]
+reload = []

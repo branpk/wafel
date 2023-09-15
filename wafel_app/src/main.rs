@@ -1,10 +1,11 @@
 //! The executable for the main Wafel GUI.
 //!
 //! It is possible to hot reload the [wafel_app_ui] crate while this binary is
-//! running in debug mode by building it. You can automatically rebuild on file
-//! edit using this command:
+//! running if the `reload` feature is enabled.
+//! Commands to run (in separate terminals):
 //!
-//! ```sh
+//! ```sh'
+//! cargo run -p wafel_app --features reload
 //! cargo watch -w wafel_app_ui -x 'build -p wafel_app_ui'
 //! ```
 
@@ -35,6 +36,10 @@ fn main() {
         std::env::consts::OS,
         std::env::consts::ARCH
     );
+
+    if cfg!(feature = "reload") {
+        tracing::info!("Hot reload enabled");
+    }
 
     let title = format!("Wafel {}", env.wafel_version());
     window::run_app::<app::WafelApp>(env, &title);

@@ -1,4 +1,7 @@
-use std::fmt;
+use std::{
+    fmt,
+    sync::{Arc, Mutex},
+};
 
 use wafel_app_ui::Wafel;
 use wafel_viz::{VizRenderData, VizRenderer};
@@ -6,12 +9,15 @@ use winit::{event::WindowEvent, window::Window};
 
 use crate::{egui_state::EguiState, env::WafelEnv, hot_reload, window::WindowedApp};
 
+#[allow(unused)]
 pub struct WafelApp {
     env: WafelEnv,
-    egui_state: EguiState,
+    egui_state: Arc<Mutex<Option<EguiState>>>,
+    is_reloading: Arc<Mutex<bool>>,
     viz_renderer: VizRenderer,
     viz_render_data: Vec<VizRenderData>,
     wafel: Wafel,
+    output_format: wgpu::TextureFormat,
     msaa_samples: u32,
 }
 
@@ -23,27 +29,69 @@ impl WindowedApp for WafelApp {
         output_format: wgpu::TextureFormat,
         msaa_samples: u32,
     ) -> Self {
+        let egui_state = Arc::new(Mutex::new(Some(EguiState::new(
+            window,
+            device,
+            output_format,
+            msaa_samples,
+        ))));
+
+        // To avoid crashes when hot reloading, we need to drop EguiState before the reload happens,
+        // and recreate it afterward.
+        let is_reloading = Arc::new(Mutex::new(false));
+        #[cfg(feature = "reload")]
+        {
+            let egui_state = Arc::clone(&egui_state);
+            let is_reloading = Arc::clone(&is_reloading);
+
+            let observer = hot_reload::subscribe();
+            std::thread::spawn(move || loop {
+                observer.wait_for_about_to_reload();
+                *is_reloading.lock().unwrap() = true;
+                *egui_state.lock().unwrap() = None;
+
+                observer.wait_for_reload();
+                *is_reloading.lock().unwrap() = false;
+            });
+        }
+
         WafelApp {
             env,
-            egui_state: EguiState::new(window, device, output_format, msaa_samples),
+            egui_state,
+            is_reloading,
             viz_renderer: VizRenderer::new(device, output_format, msaa_samples),
             viz_render_data: Vec::new(),
             wafel: Wafel::default(),
+            output_format,
             msaa_samples,
         }
     }
 
     fn window_event(&mut self, event: &WindowEvent<'_>) {
-        let consumed = self.egui_state.window_event(event);
-        if !consumed {
-            // handle event
+        if let Some(egui_state) = self.egui_state.lock().unwrap().as_mut() {
+            let consumed = egui_state.window_event(event);
+            if !consumed {
+                // handle event
+            }
         }
     }
 
-    fn update(&mut self, window: &Window) {
-        self.egui_state.run(window, |ctx| {
-            self.viz_render_data = hot_reload::wafel_show(&mut self.wafel, &self.env, ctx);
-        });
+    fn update(&mut self, window: &Window, _device: &wgpu::Device) {
+        // Recreate EguiState if necessary after hot reloading.
+        #[cfg(feature = "reload")]
+        if !*self.is_reloading.lock().unwrap() {
+            let mut egui_state = self.egui_state.lock().unwrap();
+            egui_state.get_or_insert_with(|| {
+                EguiState::new(window, _device, self.output_format, self.msaa_samples)
+            });
+        }
+
+        if let Some(egui_state) = self.egui_state.lock().unwrap().as_mut() {
+            egui_state.run(window, |ctx| {
+                ctx.input(|input| input.key_down(egui::Key::A));
+                self.viz_render_data = hot_reload::wafel_show(&mut self.wafel, &self.env, ctx);
+            });
+        }
     }
 
     fn render(
@@ -55,6 +103,9 @@ impl WindowedApp for WafelApp {
         output_size: [u32; 2],
         scale_factor: f32,
     ) {
+        self.viz_render_data
+            .insert(0, VizRenderData::new([0, 0], output_size));
+
         let msaa_output_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
             size: wgpu::Extent3d {
@@ -136,23 +187,24 @@ impl WafelApp {
         scale_factor: f32,
         clear_op: &mut Option<wgpu::LoadOp<wgpu::Color>>,
     ) {
-        self.egui_state
-            .prepare(device, queue, encoder, output_size, scale_factor);
+        if let Some(egui_state) = self.egui_state.lock().unwrap().as_mut() {
+            egui_state.prepare(device, queue, encoder, output_size, scale_factor);
 
-        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: None,
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: msaa_output_view,
-                resolve_target: Some(output_view),
-                ops: wgpu::Operations {
-                    load: clear_op.take().unwrap_or(wgpu::LoadOp::Load),
-                    store: true,
-                },
-            })],
-            depth_stencil_attachment: None,
-        });
+            let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: None,
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: msaa_output_view,
+                    resolve_target: Some(output_view),
+                    ops: wgpu::Operations {
+                        load: clear_op.take().unwrap_or(wgpu::LoadOp::Load),
+                        store: true,
+                    },
+                })],
+                depth_stencil_attachment: None,
+            });
 
-        self.egui_state.render(&mut rp);
+            egui_state.render(&mut rp);
+        }
     }
 
     fn render_viz(

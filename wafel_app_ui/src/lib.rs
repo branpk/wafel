@@ -5,11 +5,12 @@
 //! These operations are done indirectly through the [Env] trait, which can be
 //! overriden as needed.
 //!
-//! It is possible to hot reload this crate while `wafel_app` is running.
-//! Simply rebuild the crate while the app is running in debug mode. You can
-//! automatically rebuild on file edit using this command:
+//! It is possible to hot reload this crate while `wafel_app` is running by
+//! rebuilding it while the app is running with the `reload` feature enabled.
+//! Commands to run (in separate terminals):
 //!
-//! ```sh
+//! ```sh'
+//! cargo run -p wafel_app --features reload
 //! cargo watch -w wafel_app_ui -x 'build -p wafel_app_ui'
 //! ```
 

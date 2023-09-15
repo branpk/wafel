@@ -20,7 +20,7 @@ pub trait WindowedApp: Sized + 'static {
 
     fn window_event(&mut self, event: &WindowEvent<'_>);
 
-    fn update(&mut self, window: &Window);
+    fn update(&mut self, window: &Window, device: &wgpu::Device);
 
     fn render(
         &mut self,
@@ -166,7 +166,7 @@ pub fn run_app<A: WindowedApp>(env: WafelEnv, title: &str) {
                 }
                 Event::MainEventsCleared => {
                     if !first_render {
-                        app.update(&window);
+                        app.update(&window, &device);
                     }
 
                     if surface_config.width != 0 && surface_config.height != 0 {
