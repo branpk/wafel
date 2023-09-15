@@ -36,6 +36,7 @@
 <a href="#36" id="36">36</a>
 <a href="#37" id="37">37</a>
 <a href="#38" id="38">38</a>
+<a href="#39" id="39">39</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The logic and UI for the main Wafel application.
 //!
 //! For testing purposes, this crate doesn&#39;t directly access the file system and
@@ -43,11 +44,12 @@
 //! These operations are done indirectly through the [Env] trait, which can be
 //! overriden as needed.
 //!
-//! It is possible to hot reload this crate while `wafel_app` is running.
-//! Simply rebuild the crate while the app is running in debug mode. You can
-//! automatically rebuild on file edit using this command:
+//! It is possible to hot reload this crate while `wafel_app` is running by
+//! rebuilding it while the app is running with the `reload` feature enabled.
+//! Commands to run (in separate terminals):
 //!
-//! ```sh
+//! ```sh&#39;
+//! cargo run -p wafel_app --features reload
 //! cargo watch -w wafel_app_ui -x &#39;build -p wafel_app_ui&#39;
 //! ```
 

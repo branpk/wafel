@@ -243,7 +243,7 @@
 
     <span class="kw">fn </span>window_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: <span class="kw-2">&amp;</span>WindowEvent&lt;<span class="lifetime">&#39;_</span>&gt;);
 
-    <span class="kw">fn </span>update(<span class="kw-2">&amp;mut </span><span class="self">self</span>, window: <span class="kw-2">&amp;</span>Window);
+    <span class="kw">fn </span>update(<span class="kw-2">&amp;mut </span><span class="self">self</span>, window: <span class="kw-2">&amp;</span>Window, device: <span class="kw-2">&amp;</span>wgpu::Device);
 
     <span class="kw">fn </span>render(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
@@ -389,7 +389,7 @@
                 }
                 Event::MainEventsCleared =&gt; {
                     <span class="kw">if </span>!first_render {
-                        app.update(<span class="kw-2">&amp;</span>window);
+                        app.update(<span class="kw-2">&amp;</span>window, <span class="kw-2">&amp;</span>device);
                     }
 
                     <span class="kw">if </span>surface_config.width != <span class="number">0 </span>&amp;&amp; surface_config.height != <span class="number">0 </span>{

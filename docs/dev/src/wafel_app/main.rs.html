@@ -39,13 +39,19 @@
 <a href="#39" id="39">39</a>
 <a href="#40" id="40">40</a>
 <a href="#41" id="41">41</a>
+<a href="#42" id="42">42</a>
+<a href="#43" id="43">43</a>
+<a href="#44" id="44">44</a>
+<a href="#45" id="45">45</a>
+<a href="#46" id="46">46</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The executable for the main Wafel GUI.
 //!
 //! It is possible to hot reload the [wafel_app_ui] crate while this binary is
-//! running in debug mode by building it. You can automatically rebuild on file
-//! edit using this command:
+//! running if the `reload` feature is enabled.
+//! Commands to run (in separate terminals):
 //!
-//! ```sh
+//! ```sh&#39;
+//! cargo run -p wafel_app --features reload
 //! cargo watch -w wafel_app_ui -x &#39;build -p wafel_app_ui&#39;
 //! ```
 
@@ -76,6 +82,10 @@
         std::env::consts::OS,
         std::env::consts::ARCH
     );
+
+    <span class="kw">if </span><span class="macro">cfg!</span>(feature = <span class="string">&quot;reload&quot;</span>) {
+        <span class="macro">tracing::info!</span>(<span class="string">&quot;Hot reload enabled&quot;</span>);
+    }
 
     <span class="kw">let </span>title = <span class="macro">format!</span>(<span class="string">&quot;Wafel {}&quot;</span>, env.wafel_version());
     window::run_app::&lt;app::WafelApp&gt;(env, <span class="kw-2">&amp;</span>title);
