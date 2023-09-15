@@ -1,6 +1,6 @@
 use std::fmt;
 
-use wafel_app_logic::Wafel;
+use wafel_app_ui::Wafel;
 use wafel_viz::{VizRenderData, VizRenderer};
 use winit::{event::WindowEvent, window::Window};
 

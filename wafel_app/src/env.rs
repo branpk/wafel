@@ -8,7 +8,7 @@ use std::{
 
 use once_cell::sync::Lazy;
 use sysinfo::{Pid, PidExt, ProcessExt, ProcessRefreshKind, RefreshKind, System, SystemExt};
-use wafel_app_logic::{Env, ProcessInfo};
+use wafel_app_ui::{Env, ProcessInfo};
 
 use crate::logging;
 

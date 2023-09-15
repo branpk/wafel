@@ -3382,14 +3382,14 @@ dependencies = [
  "tracing",
  "tracing-log",
  "tracing-subscriber",
- "wafel_app_logic",
+ "wafel_app_ui",
  "wafel_viz",
  "wgpu",
  "winit",
 ]
 
 [[package]]
-name = "wafel_app_logic"
+name = "wafel_app_ui"
 version = "0.1.0"
 dependencies = [
  "egui",
