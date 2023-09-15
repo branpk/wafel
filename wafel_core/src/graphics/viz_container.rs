@@ -11,7 +11,7 @@ impl VizContainer {
     /// Create a VizContainer.
     pub fn new(device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Self {
         Self {
-            renderer: VizRenderer::new(device, output_format),
+            renderer: VizRenderer::new(device, output_format, 1),
         }
     }
 

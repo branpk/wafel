@@ -81,6 +81,19 @@ impl Emu {
         Ok(Self { layout, memory })
     }
 
+    /// Return true if a process with the given pid is currently open.
+    ///
+    /// If the process is closed, then reads and writes on this memory object
+    /// will fail. Once this method returns false, you should avoid using this
+    /// [Emu] again since a new process may eventually open with the same
+    /// pid.
+    ///
+    /// Note that a process may close immediately after calling this method,
+    /// so failed reads/writes must be handled regardless.
+    pub fn is_process_open(&self) -> bool {
+        self.memory.is_process_open()
+    }
+
     /// Read a value from memory.
     ///
     /// See the [crate documentation](crate) for the path syntax.
@@ -265,7 +278,7 @@ impl Emu {
     ///
     /// Returns an error if rendering fails (most likely a bug in [wafel_viz]).
     pub fn try_render(&self, config: &VizConfig) -> Result<VizRenderData, Error> {
-        let render_data = viz_render(&self.layout, &self.memory, config)?;
+        let render_data = viz_render(&self.layout, &self.memory, config, true)?;
         Ok(render_data)
     }
 

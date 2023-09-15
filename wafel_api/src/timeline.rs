@@ -465,7 +465,7 @@ impl Timeline {
     /// Returns an error if rendering fails (most likely a bug in [wafel_viz]).
     pub fn try_render(&self, frame: u32, config: &VizConfig) -> Result<VizRenderData, Error> {
         self.with_slot_memory(frame, |memory| {
-            viz_render(&self.layout, memory, config).map_err(Error::from)
+            viz_render(&self.layout, memory, config, false).map_err(Error::from)
         })
     }
 

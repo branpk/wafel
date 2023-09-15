@@ -23,6 +23,10 @@ impl Emu {
         Ok(Emu { pid, inner })
     }
 
+    pub fn is_process_open(&self) -> bool {
+        self.inner.is_process_open()
+    }
+
     pub fn read(&self, py: Python<'_>, path: &str) -> PyResult<PyObject> {
         let value = self.inner.try_read(path).map_err(err)?;
         let object = value_to_py_object(py, value)?;

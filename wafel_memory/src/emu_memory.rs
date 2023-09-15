@@ -4,6 +4,7 @@ use process_memory::{CopyAddress, Pid, ProcessHandle, PutAddress, TryIntoProcess
 use wafel_data_type::{Address, IntType};
 
 use crate::{
+    is_process_open,
     MemoryError::{self, *},
     MemoryInitError, MemoryRead, MemoryWrite,
 };
@@ -30,6 +31,7 @@ unsafe impl Send for ProcessHandleWrapper {}
 /// when needed.
 #[derive(Debug, Clone)]
 pub struct EmuMemory {
+    pid: u32,
     handle: ProcessHandleWrapper,
     base_address: usize,
     memory_size: usize,
@@ -49,11 +51,24 @@ impl EmuMemory {
             .map_err(|error| MemoryInitError::ProcessAttachError(error.into()))?;
 
         Ok(Self {
+            pid,
             handle: ProcessHandleWrapper(handle),
             base_address,
             memory_size,
             cache: None,
         })
+    }
+
+    /// Return true if a process with the given pid is currently open.
+    ///
+    /// If the process is closed, then reads and writes on this memory object
+    /// will fail. Once this method returns false, you should avoid using this
+    /// memory again since a new process may eventually open with the same pid.
+    ///
+    /// Note that a process may close immediately after calling this method,
+    /// so failed reads/writes must be handled regardless.
+    pub fn is_process_open(&self) -> bool {
+        is_process_open(self.pid)
     }
 
     pub fn load_cache(&mut self, global_timer_addr: Address) -> Result<(), MemoryError> {

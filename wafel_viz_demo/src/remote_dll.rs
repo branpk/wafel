@@ -27,7 +27,7 @@ impl App for RemoteDllApp {
             remote_dll,
             camera_control: PerspCameraControl::new(),
             held_keys: HashSet::new(),
-            viz_renderer: VizRenderer::new(device, output_format),
+            viz_renderer: VizRenderer::new(device, output_format, 1),
         })
     }
 

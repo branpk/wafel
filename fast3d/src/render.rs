@@ -14,6 +14,7 @@ use crate::f3d_render_data::*;
 #[allow(missing_docs)]
 #[derive(Debug)]
 pub struct F3DRenderer {
+    msaa_samples: u32,
     texture_bind_group_layout: wgpu::BindGroupLayout,
     texture_bind_groups: HashMap<TextureIndex, wgpu::BindGroup>,
     pipelines: HashMap<PipelineId, wgpu::RenderPipeline>,
@@ -88,7 +89,7 @@ fn arg_expr(arg: ColorArg) -> String {
 
 #[allow(missing_docs)]
 impl F3DRenderer {
-    pub fn new(device: &wgpu::Device) -> Self {
+    pub fn new(device: &wgpu::Device, msaa_samples: u32) -> Self {
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: None,
@@ -115,6 +116,7 @@ impl F3DRenderer {
             });
 
         Self {
+            msaa_samples,
             texture_bind_group_layout,
             texture_bind_groups: HashMap::new(),
             pipelines: HashMap::new(),
@@ -307,7 +309,11 @@ impl F3DRenderer {
                 stencil: wgpu::StencilState::default(),
                 bias: wgpu::DepthBiasState::default(),
             }),
-            multisample: wgpu::MultisampleState::default(),
+            multisample: wgpu::MultisampleState {
+                count: self.msaa_samples,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
             fragment: Some(wgpu::FragmentState {
                 module: &shader_module,
                 entry_point: "fs_main",

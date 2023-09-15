@@ -204,6 +204,8 @@ class Emu:
 
         Version strings: "jp", "us", "eu", "sh"
         """
+    def is_process_open(self) -> bool:
+        """Return true if a process with the given pid is currently open."""
     def read(self, path: str) -> object:
         """Read a value from memory.
 

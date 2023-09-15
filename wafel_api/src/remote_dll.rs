@@ -249,7 +249,7 @@ impl RemoteDll {
     ///
     /// Returns an error if rendering fails (most likely a bug in [wafel_viz]).
     pub fn try_render(&self, config: &VizConfig) -> Result<VizRenderData, Error> {
-        let render_data = viz_render(&self.layout, &self.memory, config)?;
+        let render_data = viz_render(&self.layout, &self.memory, config, false)?;
         Ok(render_data)
     }
 
