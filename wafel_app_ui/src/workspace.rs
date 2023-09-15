@@ -1,17 +1,17 @@
 use wafel_api::{Emu, VizRenderData};
 
-use crate::{tab::Tab, Env};
+use crate::{pane::Pane, Env};
 
 #[derive(Debug)]
 pub struct Workspace {
     emu: Emu,
-    tree: egui_dock::Tree<Tab>,
+    tree: egui_dock::Tree<Pane>,
 }
 
 impl Workspace {
     pub fn with_emu(emu: Emu) -> Self {
-        let mut tree = egui_dock::Tree::new(vec![Tab::Test1]);
-        tree.split_right(egui_dock::NodeIndex::root(), 0.5, vec![Tab::Test2]);
+        let mut tree = egui_dock::Tree::new(vec![Pane::Test1]);
+        tree.split_right(egui_dock::NodeIndex::root(), 0.5, vec![Pane::Test2]);
         Self { emu, tree }
     }
 
@@ -37,14 +37,14 @@ struct TabViewer<'a> {
 }
 
 impl egui_dock::TabViewer for TabViewer<'_> {
-    type Tab = Tab;
+    type Tab = Pane;
 
-    fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Tab) {
+    fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Pane) {
         let viz_render_data = tab.show(self.env, ui);
         self.viz_render_data.extend(viz_render_data);
     }
 
-    fn title(&mut self, tab: &mut Tab) -> egui::WidgetText {
+    fn title(&mut self, tab: &mut Pane) -> egui::WidgetText {
         tab.title().into()
     }
 }

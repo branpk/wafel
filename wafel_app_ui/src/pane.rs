@@ -3,16 +3,16 @@ use wafel_api::VizRenderData;
 use crate::Env;
 
 #[derive(Debug)]
-pub enum Tab {
+pub enum Pane {
     Test1,
     Test2,
 }
 
-impl Tab {
+impl Pane {
     pub fn title(&self) -> String {
         match self {
-            Tab::Test1 => "Test 1 title".to_string(),
-            Tab::Test2 => "Test 2 title".to_string(),
+            Pane::Test1 => "Test 1 title".to_string(),
+            Pane::Test2 => "Test 2 title".to_string(),
         }
     }
 
