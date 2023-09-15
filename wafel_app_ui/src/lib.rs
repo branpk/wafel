@@ -4,6 +4,14 @@
 //! is agnostic to the window/graphics backend.
 //! These operations are done indirectly through the [Env] trait, which can be
 //! overriden as needed.
+//!
+//! It is possible to hot reload this crate while `wafel_app` is running.
+//! Simply rebuild the crate while the app is running in debug mode. You can
+//! automatically rebuild on file edit using this command:
+//!
+//! ```sh
+//! cargo watch -w wafel_app_ui -x 'build -p wafel_app_ui'
+//! ```
 
 #![warn(missing_docs, missing_debug_implementations)]
 

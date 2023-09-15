@@ -1,4 +1,12 @@
 //! The executable for the main Wafel GUI.
+//!
+//! It is possible to hot reload the [wafel_app_ui] crate while this binary is
+//! running in debug mode by building it. You can automatically rebuild on file
+//! edit using this command:
+//!
+//! ```sh
+//! cargo watch -w wafel_app_ui -x 'build -p wafel_app_ui'
+//! ```
 
 #![warn(missing_docs, missing_debug_implementations)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
