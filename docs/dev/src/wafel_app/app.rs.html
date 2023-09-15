@@ -254,7 +254,7 @@
 <a href="#254" id="254">254</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     fmt,
-    sync::{Arc, Mutex},
+    sync::{atomic::AtomicBool, Arc, Mutex},
 };
 
 <span class="kw">use </span>wafel_app_ui::Wafel;
@@ -267,7 +267,7 @@
 </span><span class="kw">pub struct </span>WafelApp {
     env: WafelEnv,
     egui_state: Arc&lt;Mutex&lt;<span class="prelude-ty">Option</span>&lt;EguiState&gt;&gt;&gt;,
-    is_reloading: Arc&lt;Mutex&lt;bool&gt;&gt;,
+    is_reloading: Arc&lt;AtomicBool&gt;,
     viz_renderer: VizRenderer,
     viz_render_data: Vec&lt;VizRenderData&gt;,
     wafel: Wafel,
@@ -292,7 +292,7 @@
 
         <span class="comment">// To avoid crashes when hot reloading, we need to drop EguiState before the reload happens,
         // and recreate it afterward.
-        </span><span class="kw">let </span>is_reloading = Arc::new(Mutex::new(<span class="bool-val">false</span>));
+        </span><span class="kw">let </span>is_reloading = Arc::new(AtomicBool::new(<span class="bool-val">false</span>));
         <span class="attr">#[cfg(feature = <span class="string">&quot;reload&quot;</span>)]
         </span>{
             <span class="kw">let </span>egui_state = Arc::clone(<span class="kw-2">&amp;</span>egui_state);
@@ -301,11 +301,11 @@
             <span class="kw">let </span>observer = hot_reload::subscribe();
             std::thread::spawn(<span class="kw">move </span>|| <span class="kw">loop </span>{
                 observer.wait_for_about_to_reload();
-                <span class="kw-2">*</span>is_reloading.lock().unwrap() = <span class="bool-val">true</span>;
+                is_reloading.store(<span class="bool-val">true</span>, Ordering::SeqCst);
                 <span class="kw-2">*</span>egui_state.lock().unwrap() = <span class="prelude-val">None</span>;
 
                 observer.wait_for_reload();
-                <span class="kw-2">*</span>is_reloading.lock().unwrap() = <span class="bool-val">false</span>;
+                is_reloading.store(<span class="bool-val">false</span>, Ordering::SeqCst);
             });
         }
 
@@ -333,7 +333,7 @@
     <span class="kw">fn </span>update(<span class="kw-2">&amp;mut </span><span class="self">self</span>, window: <span class="kw-2">&amp;</span>Window, _device: <span class="kw-2">&amp;</span>wgpu::Device) {
         <span class="comment">// Recreate EguiState if necessary after hot reloading.
         </span><span class="attr">#[cfg(feature = <span class="string">&quot;reload&quot;</span>)]
-        </span><span class="kw">if </span>!<span class="kw-2">*</span><span class="self">self</span>.is_reloading.lock().unwrap() {
+        </span><span class="kw">if </span>!<span class="self">self</span>.is_reloading.load(Ordering::SeqCst) {
             <span class="kw">let </span><span class="kw-2">mut </span>egui_state = <span class="self">self</span>.egui_state.lock().unwrap();
             egui_state.get_or_insert_with(|| {
                 EguiState::new(window, _device, <span class="self">self</span>.output_format, <span class="self">self</span>.msaa_samples)
