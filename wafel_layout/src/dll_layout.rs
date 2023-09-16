@@ -3,7 +3,7 @@
 use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
-    ffi::{OsStr, OsString},
+    ffi::OsString,
     fmt, fs, iter,
     path::{Path, PathBuf},
 };
@@ -19,7 +19,7 @@ use wafel_data_type::{
         build_data_types, get_size_from_pre_types, BuildDataTypesError, PreDataType,
         PreDataTypeSize, ShallowDataType, ShallowField,
     },
-    FloatType, IntType, IntValue, Namespace, TypeName,
+    DataType, FloatType, IntType, IntValue, Namespace, TypeName,
 };
 
 use crate::{Constant, ConstantSource, DataLayout, DllLayoutError, DllLayoutErrorKind, Global};
@@ -393,12 +393,21 @@ where
         // Resolve placeholder type ids in variables
         for (name, shallow_type) in &self.global_types {
             let data_type = shallow_type.resolve_direct(get_type, &get_size)?;
-            let global = layout.globals.entry(name.clone()).or_insert(Global {
-                data_type,
-                address: None,
-            });
+            if let Some(global) = layout.globals.get_mut(name) {
+                if is_more_specific(&data_type, &global.data_type) {
+                    global.data_type = data_type;
+                }
+            } else {
+                layout.globals.insert(
+                    name.clone(),
+                    Global {
+                        data_type,
+                        address: None,
+                    },
+                );
+            }
             if let Some(&address) = self.global_addresses.get(name) {
-                global.address = Some(address);
+                layout.globals.get_mut(name).unwrap().address = Some(address);
             }
         }
 
@@ -737,6 +746,13 @@ where
                 .global_decls
                 .get(&offset)
                 .ok_or(DllLayoutErrorKind::MissingDeclaration)?;
+
+            // Overwrite the declaration type, since the definition type might have
+            // more information like array length.
+            self.global_types.insert(
+                name.clone(),
+                ShallowDataType::Alias(self.req_attr_type_id(entry, gimli::DW_AT_type)?),
+            );
             name.clone()
         };
 
@@ -967,4 +983,51 @@ fn unique_name(used_names: &HashSet<String>, base_name: &str) -> String {
         .chain(fallbacks)
         .find(|name| !used_names.contains(name))
         .unwrap()
+}
+
+/// Return true if data_type_1 is preferred in the layout over data_type_2 for a given variable.
+fn is_more_specific(data_type_1: &DataType, data_type_2: &DataType) -> bool {
+    match (data_type_1, data_type_2) {
+        (
+            DataType::Array {
+                base: base1,
+                length: length1,
+                ..
+            },
+            DataType::Array {
+                base: base2,
+                length: length2,
+                ..
+            },
+        ) => {
+            if length1.is_some() && length2.is_none() {
+                true
+            } else if length2.is_some() && length1.is_none() {
+                false
+            } else {
+                is_more_specific(&base1, &base2)
+            }
+        }
+        (
+            DataType::Pointer {
+                base: base1,
+                stride: stride1,
+            },
+            DataType::Pointer {
+                base: base2,
+                stride: stride2,
+            },
+        ) => {
+            if stride1.is_some() && stride2.is_none() {
+                true
+            } else if stride2.is_some() && stride1.is_none() {
+                false
+            } else {
+                is_more_specific(&base1, &base2)
+            }
+        }
+        // Generally prefer to keep an existing type instead of overwriting it. Not
+        // sure if we should account for typdefs.
+        _ => false,
+    }
 }
