@@ -1031,6 +1031,11 @@
 <a href="#1031" id="1031">1031</a>
 <a href="#1032" id="1032">1032</a>
 <a href="#1033" id="1033">1033</a>
+<a href="#1034" id="1034">1034</a>
+<a href="#1035" id="1035">1035</a>
+<a href="#1036" id="1036">1036</a>
+<a href="#1037" id="1037">1037</a>
+<a href="#1038" id="1038">1038</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Debugging and structural information extracted from a DLL.
 
 </span><span class="kw">use </span>std::{
@@ -1258,7 +1263,9 @@
         };
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = <span class="kw-2">&amp;</span>unit_name {
-            <span class="kw">if </span>path.starts_with(<span class="string">&quot;C:/M/mingw-w64-crt-git&quot;</span>) {
+            <span class="kw">if </span>path.starts_with(<span class="string">&quot;C:/M/mingw-w64-crt-git&quot;</span>)
+                || path.starts_with(<span class="string">&quot;C:/M/B/src/mingw-w64&quot;</span>)
+            {
                 <span class="kw">continue</span>;
             }
         }
@@ -1483,6 +1490,7 @@
                 base: TypeId::U64,
                 length: <span class="prelude-val">Some</span>(<span class="number">2</span>),
             },
+            <span class="string">&quot;_Float16&quot; </span>=&gt; ShallowDataType::Int(IntType::U16),
             <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(DllLayoutErrorKind::UnknownBaseTypeName { name }),
         };
         <span class="self">self</span>.pre_types.insert(
@@ -1782,10 +1790,12 @@
 
             <span class="comment">// Overwrite the declaration type, since the definition type might have
             // more information like array length.
-            </span><span class="self">self</span>.global_types.insert(
-                name.clone(),
-                ShallowDataType::Alias(<span class="self">self</span>.req_attr_type_id(entry, gimli::DW_AT_type)<span class="question-mark">?</span>),
-            );
+            </span><span class="kw">if </span>entry.attr(gimli::DW_AT_type)<span class="question-mark">?</span>.is_some() {
+                <span class="self">self</span>.global_types.insert(
+                    name.clone(),
+                    ShallowDataType::Alias(<span class="self">self</span>.req_attr_type_id(entry, gimli::DW_AT_type)<span class="question-mark">?</span>),
+                );
+            }
             name.clone()
         };
 
