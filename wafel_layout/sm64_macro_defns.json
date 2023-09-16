@@ -6580,10 +6580,6 @@
       "type": "s64",
       "value": 8
     },
-    "MATH_UTIL_H": {
-      "type": "void",
-      "value": null
-    },
     "MAXCONTROLLERS": {
       "type": "s64",
       "value": 4
@@ -14116,6 +14112,50 @@
       "type": "s64",
       "value": 5
     },
+    "__BFLT16_DECIMAL_DIG__": {
+      "type": "s64",
+      "value": 4
+    },
+    "__BFLT16_DIG__": {
+      "type": "s64",
+      "value": 2
+    },
+    "__BFLT16_HAS_DENORM__": {
+      "type": "s64",
+      "value": 1
+    },
+    "__BFLT16_HAS_INFINITY__": {
+      "type": "s64",
+      "value": 1
+    },
+    "__BFLT16_HAS_QUIET_NAN__": {
+      "type": "s64",
+      "value": 1
+    },
+    "__BFLT16_IS_IEC_60559__": {
+      "type": "s64",
+      "value": 0
+    },
+    "__BFLT16_MANT_DIG__": {
+      "type": "s64",
+      "value": 8
+    },
+    "__BFLT16_MAX_10_EXP__": {
+      "type": "s64",
+      "value": 38
+    },
+    "__BFLT16_MAX_EXP__": {
+      "type": "s64",
+      "value": 128
+    },
+    "__BFLT16_MIN_10_EXP__": {
+      "type": "s64",
+      "value": -37
+    },
+    "__BFLT16_MIN_EXP__": {
+      "type": "s64",
+      "value": -125
+    },
     "__BIGGEST_ALIGNMENT__": {
       "type": "s64",
       "value": 16
@@ -14214,7 +14254,7 @@
     },
     "__DBL_IS_IEC_60559__": {
       "type": "s64",
-      "value": 2
+      "value": 1
     },
     "__DBL_MANT_DIG__": {
       "type": "s64",
@@ -14318,7 +14358,7 @@
     },
     "__FLT128_IS_IEC_60559__": {
       "type": "s64",
-      "value": 2
+      "value": 1
     },
     "__FLT128_MANT_DIG__": {
       "type": "s64",
@@ -14362,7 +14402,7 @@
     },
     "__FLT16_IS_IEC_60559__": {
       "type": "s64",
-      "value": 2
+      "value": 1
     },
     "__FLT16_MANT_DIG__": {
       "type": "s64",
@@ -14406,7 +14446,7 @@
     },
     "__FLT32X_IS_IEC_60559__": {
       "type": "s64",
-      "value": 2
+      "value": 1
     },
     "__FLT32X_MANT_DIG__": {
       "type": "s64",
@@ -14450,7 +14490,7 @@
     },
     "__FLT32_IS_IEC_60559__": {
       "type": "s64",
-      "value": 2
+      "value": 1
     },
     "__FLT32_MANT_DIG__": {
       "type": "s64",
@@ -14494,7 +14534,7 @@
     },
     "__FLT64X_IS_IEC_60559__": {
       "type": "s64",
-      "value": 2
+      "value": 1
     },
     "__FLT64X_MANT_DIG__": {
       "type": "s64",
@@ -14538,7 +14578,7 @@
     },
     "__FLT64_IS_IEC_60559__": {
       "type": "s64",
-      "value": 2
+      "value": 1
     },
     "__FLT64_MANT_DIG__": {
       "type": "s64",
@@ -14590,7 +14630,7 @@
     },
     "__FLT_IS_IEC_60559__": {
       "type": "s64",
-      "value": 2
+      "value": 1
     },
     "__FLT_MANT_DIG__": {
       "type": "s64",
@@ -14676,7 +14716,15 @@
       "type": "s64",
       "value": 64
     },
+    "__GCC_HAVE_DWARF2_CFI_ASM": {
+      "type": "s64",
+      "value": 1
+    },
     "__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1": {
+      "type": "s64",
+      "value": 1
+    },
+    "__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16": {
       "type": "s64",
       "value": 1
     },
@@ -14718,11 +14766,11 @@
     },
     "__GNUC__": {
       "type": "s64",
-      "value": 12
+      "value": 13
     },
     "__GXX_ABI_VERSION": {
       "type": "s64",
-      "value": 1017
+      "value": 1018
     },
     "__GXX_MERGED_TYPEINFO_NAMES": {
       "type": "s64",
@@ -14842,7 +14890,7 @@
     },
     "__LDBL_IS_IEC_60559__": {
       "type": "s64",
-      "value": 2
+      "value": 1
     },
     "__LDBL_MANT_DIG__": {
       "type": "s64",
@@ -14890,7 +14938,7 @@
     },
     "__MINGW64_VERSION_MAJOR": {
       "type": "s64",
-      "value": 11
+      "value": 12
     },
     "__MINGW64_VERSION_MINOR": {
       "type": "s64",
@@ -15108,6 +15156,10 @@
       "type": "s64",
       "value": 1
     },
+    "__SSE3__": {
+      "type": "s64",
+      "value": 1
+    },
     "__SSE_MATH__": {
       "type": "s64",
       "value": 1
@@ -15236,11 +15288,11 @@
       "type": "void",
       "value": null
     },
-    "__k8": {
+    "__nocona": {
       "type": "s64",
       "value": 1
     },
-    "__k8__": {
+    "__nocona__": {
       "type": "s64",
       "value": 1
     },
@@ -15257,10 +15309,6 @@
       "value": null
     },
     "__ptr64": {
-      "type": "void",
-      "value": null
-    },
-    "__stdcall": {
       "type": "void",
       "value": null
     },

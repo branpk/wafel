@@ -225,7 +225,9 @@ where
         };
 
         if let Some(path) = &unit_name {
-            if path.starts_with("C:/M/mingw-w64-crt-git") {
+            if path.starts_with("C:/M/mingw-w64-crt-git")
+                || path.starts_with("C:/M/B/src/mingw-w64")
+            {
                 continue;
             }
         }
@@ -450,6 +452,7 @@ where
                 base: TypeId::U64,
                 length: Some(2),
             },
+            "_Float16" => ShallowDataType::Int(IntType::U16),
             _ => return Err(DllLayoutErrorKind::UnknownBaseTypeName { name }),
         };
         self.pre_types.insert(
@@ -749,10 +752,12 @@ where
 
             // Overwrite the declaration type, since the definition type might have
             // more information like array length.
-            self.global_types.insert(
-                name.clone(),
-                ShallowDataType::Alias(self.req_attr_type_id(entry, gimli::DW_AT_type)?),
-            );
+            if entry.attr(gimli::DW_AT_type)?.is_some() {
+                self.global_types.insert(
+                    name.clone(),
+                    ShallowDataType::Alias(self.req_attr_type_id(entry, gimli::DW_AT_type)?),
+                );
+            }
             name.clone()
         };
 
