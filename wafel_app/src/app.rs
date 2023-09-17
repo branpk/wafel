@@ -1,8 +1,6 @@
-#[allow(unused_imports)]
-use std::sync::atomic::Ordering;
 use std::{
     fmt,
-    sync::{atomic::AtomicBool, Arc, Mutex},
+    sync::{Arc, Mutex},
 };
 
 use wafel_app_ui::Wafel;
@@ -15,7 +13,6 @@ use crate::{egui_state::EguiState, env::WafelEnv, hot_reload, window::WindowedAp
 pub struct WafelApp {
     env: WafelEnv,
     egui_state: Arc<Mutex<Option<EguiState>>>,
-    is_reloading: Arc<AtomicBool>,
     viz_renderer: VizRenderer,
     viz_render_data: Vec<VizRenderData>,
     wafel: Wafel,
@@ -38,29 +35,24 @@ impl WindowedApp for WafelApp {
             msaa_samples,
         ))));
 
-        // To avoid crashes when hot reloading, we need to drop EguiState before the reload happens,
-        // and recreate it afterward.
-        let is_reloading = Arc::new(AtomicBool::new(false));
         #[cfg(feature = "reload")]
         {
             let egui_state = Arc::clone(&egui_state);
-            let is_reloading = Arc::clone(&is_reloading);
-
             let observer = hot_reload::subscribe();
             std::thread::spawn(move || loop {
-                observer.wait_for_about_to_reload();
-                is_reloading.store(true, Ordering::SeqCst);
-                *egui_state.lock().unwrap() = None;
+                // Ensure that rendering/updating doesn't overlap with the dll reload
+                let block_reload = observer.wait_for_about_to_reload();
+                let mut egui_state_lock = egui_state.lock().unwrap();
+                *egui_state_lock = None;
 
+                drop(block_reload);
                 observer.wait_for_reload();
-                is_reloading.store(false, Ordering::SeqCst);
             });
         }
 
         WafelApp {
             env,
             egui_state,
-            is_reloading,
             viz_renderer: VizRenderer::new(device, output_format, msaa_samples),
             viz_render_data: Vec::new(),
             wafel: Wafel::default(),
@@ -78,15 +70,11 @@ impl WindowedApp for WafelApp {
         }
     }
 
-    fn update(&mut self, window: &Window, _device: &wgpu::Device) {
-        // Recreate EguiState if necessary after hot reloading.
+    fn update(&mut self, window: &Window, device: &wgpu::Device) {
         #[cfg(feature = "reload")]
-        if !self.is_reloading.load(Ordering::SeqCst) {
-            let mut egui_state = self.egui_state.lock().unwrap();
-            egui_state.get_or_insert_with(|| {
-                EguiState::new(window, _device, self.output_format, self.msaa_samples)
-            });
-        }
+        self.egui_state.lock().unwrap().get_or_insert_with(|| {
+            EguiState::new(window, device, self.output_format, self.msaa_samples)
+        });
 
         if let Some(egui_state) = self.egui_state.lock().unwrap().as_mut() {
             egui_state.run(window, |ctx| {

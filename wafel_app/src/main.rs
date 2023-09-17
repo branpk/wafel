@@ -6,7 +6,7 @@
 //!
 //! ```sh'
 //! cargo run -p wafel_app --features reload
-//! cargo watch -w wafel_app_ui -x 'build -p wafel_app_ui'
+//! cargo watch -w wafel_app_ui -x "build -p wafel_app_ui"
 //! ```
 
 #![warn(missing_docs, missing_debug_implementations)]

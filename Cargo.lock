@@ -3396,7 +3396,12 @@ dependencies = [
  "egui_dock",
  "itertools 0.11.0",
  "log",
+ "once_cell",
  "wafel_api",
+ "wafel_data_access",
+ "wafel_data_type",
+ "wafel_layout",
+ "wafel_memory",
 ]
 
 [[package]]

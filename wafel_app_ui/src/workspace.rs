@@ -1,6 +1,6 @@
 use wafel_api::{Emu, VizRenderData};
 
-use crate::{pane::Pane, Env};
+use crate::{data_explorer::DataExplorer, pane::Pane, Env};
 
 #[derive(Debug)]
 pub struct Workspace {
@@ -10,8 +10,7 @@ pub struct Workspace {
 
 impl Workspace {
     pub fn with_emu(emu: Emu) -> Self {
-        let mut tree = egui_dock::Tree::new(vec![Pane::Test1]);
-        tree.split_right(egui_dock::NodeIndex::root(), 0.5, vec![Pane::Test2]);
+        let mut tree = egui_dock::Tree::new(vec![Pane::DataExplorer(DataExplorer::new())]);
         Self { emu, tree }
     }
 
@@ -19,6 +18,7 @@ impl Workspace {
         let mut viz_render_data = Vec::new();
         let mut tab_viewer = TabViewer {
             env,
+            emu: &mut self.emu,
             viz_render_data: &mut viz_render_data,
         };
         egui_dock::DockArea::new(&mut self.tree)
@@ -33,6 +33,7 @@ impl Workspace {
 
 struct TabViewer<'a> {
     env: &'a dyn Env,
+    emu: &'a mut Emu,
     viz_render_data: &'a mut Vec<VizRenderData>,
 }
 
@@ -40,7 +41,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     type Tab = Pane;
 
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Pane) {
-        let viz_render_data = tab.show(self.env, ui);
+        let viz_render_data = tab.show(self.env, self.emu, ui);
         self.viz_render_data.extend(viz_render_data);
     }
 

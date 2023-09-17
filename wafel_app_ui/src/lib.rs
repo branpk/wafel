@@ -11,7 +11,7 @@
 //!
 //! ```sh'
 //! cargo run -p wafel_app --features reload
-//! cargo watch -w wafel_app_ui -x 'build -p wafel_app_ui'
+//! cargo watch -w wafel_app_ui -x "build -p wafel_app_ui"
 //! ```
 
 #![warn(missing_docs, missing_debug_implementations)]
@@ -20,6 +20,7 @@ pub use env::*;
 pub use wafel::*;
 use wafel_api::VizRenderData;
 
+mod data_explorer;
 mod emu_selector;
 mod env;
 mod error_boundary;

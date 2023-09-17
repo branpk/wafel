@@ -428,7 +428,11 @@ impl fmt::Display for Namespace {
 
 impl fmt::Display for TypeName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.namespace, self.name)
+        match self.namespace {
+            Namespace::Struct => write!(f, "struct {}", self.name),
+            Namespace::Union => write!(f, "union {}", self.name),
+            Namespace::Typedef => write!(f, "{}", self.name),
+        }
     }
 }
 
