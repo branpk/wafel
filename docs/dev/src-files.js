@@ -6,7 +6,7 @@ var srcIndex = JSON.parse('{\
 "wafel":["",[],["emu.rs","game.rs","lib.rs","m64.rs"]],\
 "wafel_api":["",[],["data_cache.rs","data_type.rs","emu.rs","error.rs","game.rs","lib.rs","lock.rs","m64.rs","remote_dll.rs","timeline.rs"]],\
 "wafel_app":["",[],["app.rs","egui_state.rs","env.rs","hot_reload.rs","logging.rs","main.rs","window.rs"]],\
-"wafel_app_ui":["",[],["emu_selector.rs","env.rs","error_boundary.rs","lib.rs","pane.rs","root.rs","wafel.rs","workspace.rs","workspace_mode.rs","workspace_root.rs"]],\
+"wafel_app_ui":["",[],["data_explorer.rs","emu_selector.rs","env.rs","error_boundary.rs","lib.rs","pane.rs","root.rs","wafel.rs","workspace.rs","workspace_mode.rs","workspace_root.rs"]],\
 "wafel_core":["",[["graphics",[],["imgui.rs","mod.rs","renderer.rs","scene.rs","viz_container.rs"]],["python",[],["error.rs","imgui_input.rs","log.rs","mod.rs","pipeline.rs","value.rs","variable.rs","window.rs"]],["sm64",[],["data_variables.rs","error.rs","input.rs","mod.rs","pipeline.rs","range_edit.rs","util.rs","variable.rs"]]],["error.rs","geo.rs","lib.rs"]],\
 "wafel_data_access":["",[],["compile.rs","data_path.rs","data_path_cache.rs","error.rs","layout.rs","lib.rs","parse.rs","readers.rs","traits.rs","writers.rs"]],\
 "wafel_data_access_derive":["",[],["lib.rs"]],\
