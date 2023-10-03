@@ -124,7 +124,7 @@ impl Config {
     /// Sets the window icon from a .ico file (Windows only).
     ///
     /// This requires the `image` feature.
-    #[cfg(any(feature = "image", doc))]
+    #[cfg(feature = "image")]
     pub fn with_icon_from_ico(self, ico_bytes: &[u8]) -> Self {
         let image = image::load_from_memory_with_format(ico_bytes, image::ImageFormat::Ico)
             .unwrap()
