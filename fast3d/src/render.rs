@@ -405,8 +405,8 @@ impl F3DRenderer {
             &data.rgba8,
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: Some((4 * data.width).try_into().unwrap()),
-                rows_per_image: Some(data.height.try_into().unwrap()),
+                bytes_per_row: Some(4 * data.width),
+                rows_per_image: Some(data.height),
             },
             wgpu::Extent3d {
                 width: data.width,
@@ -483,14 +483,15 @@ impl F3DRenderer {
         }
     }
 
-    pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>) {
-        self.render_command_range(rp, 0..self.commands.len());
+    pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>, scale_factor: f32) {
+        self.render_command_range(rp, 0..self.commands.len(), scale_factor);
     }
 
     pub fn render_command_range<'r>(
         &'r self,
         rp: &mut wgpu::RenderPass<'r>,
         cmd_indices: Range<usize>,
+        scale_factor: f32,
     ) {
         let mut current_pipeline = None;
 
@@ -500,10 +501,10 @@ impl F3DRenderer {
                 continue;
             }
             rp.set_viewport(
-                x as f32 + self.screen_top_left[0] as f32,
-                y as f32 + self.screen_top_left[1] as f32,
-                w as f32,
-                h as f32,
+                (x as f32 + self.screen_top_left[0] as f32) * scale_factor,
+                (y as f32 + self.screen_top_left[1] as f32) * scale_factor,
+                (w as f32) * scale_factor,
+                (h as f32) * scale_factor,
                 0.0,
                 1.0,
             );
@@ -519,10 +520,10 @@ impl F3DRenderer {
                 continue;
             }
             rp.set_scissor_rect(
-                x as u32 + self.screen_top_left[0],
-                y as u32 + self.screen_top_left[1],
-                w as u32,
-                h as u32,
+                ((x as f32 + self.screen_top_left[0] as f32) * scale_factor) as u32,
+                ((y as f32 + self.screen_top_left[1] as f32) * scale_factor) as u32,
+                ((w as f32) * scale_factor) as u32,
+                ((h as f32) * scale_factor) as u32,
             );
 
             if current_pipeline != Some(command.pipeline) {

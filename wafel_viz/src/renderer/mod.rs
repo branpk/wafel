@@ -60,17 +60,32 @@ impl VizRenderer {
         }
     }
 
-    pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>) {
+    pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>, scale_factor: f32) {
         if let Some(render_data) = &self.per_frame_data {
-            self.f3d_renderer
-                .render_command_range(rp, render_data.f3d_pre_depth_cmd_range.clone());
+            self.f3d_renderer.render_command_range(
+                rp,
+                render_data.f3d_pre_depth_cmd_range.clone(),
+                scale_factor,
+            );
 
             let vx = render_data.screen_top_left[0];
             let vy = render_data.screen_top_left[1];
             let vw = render_data.screen_size[0];
             let vh = render_data.screen_size[1];
-            rp.set_viewport(vx as f32, vy as f32, vw as f32, vh as f32, 0.0, 1.0);
-            rp.set_scissor_rect(vx, vy, vw, vh);
+            rp.set_viewport(
+                (vx as f32) * scale_factor,
+                (vy as f32) * scale_factor,
+                (vw as f32) * scale_factor,
+                (vh as f32) * scale_factor,
+                0.0,
+                1.0,
+            );
+            rp.set_scissor_rect(
+                ((vx as f32) * scale_factor) as u32,
+                ((vy as f32) * scale_factor) as u32,
+                ((vw as f32) * scale_factor) as u32,
+                ((vh as f32) * scale_factor) as u32,
+            );
 
             rp.set_pipeline(&self.pipelines.surface);
             rp.set_bind_group(0, &render_data.transform_bind_group, &[]);
@@ -91,18 +106,18 @@ impl VizRenderer {
                 0..render_data.point_instance_buffer.0,
             );
 
-            self.f3d_renderer
-                .render_command_range(rp, render_data.f3d_depth_cmd_range.clone());
+            self.f3d_renderer.render_command_range(
+                rp,
+                render_data.f3d_depth_cmd_range.clone(),
+                scale_factor,
+            );
 
             {
                 // Render wall hitbox outline first since tris write to z buffer
                 rp.set_pipeline(&self.pipelines.line);
                 rp.set_bind_group(0, &render_data.transform_bind_group, &[]);
                 rp.set_vertex_buffer(0, render_data.wall_hitbox_outline_vertex_buffer.1.slice(..));
-                rp.draw(
-                    0..render_data.wall_hitbox_outline_vertex_buffer.0 as u32,
-                    0..1,
-                );
+                rp.draw(0..render_data.wall_hitbox_outline_vertex_buffer.0, 0..1);
 
                 // When two wall hitboxes overlap, we should not increase the opacity within
                 // their region of overlap (preference).
@@ -112,9 +127,9 @@ impl VizRenderer {
                 rp.set_vertex_buffer(0, render_data.wall_hitbox_vertex_buffer.1.slice(..));
 
                 rp.set_pipeline(&self.pipelines.wall_hitbox_depth_pass);
-                rp.draw(0..render_data.wall_hitbox_vertex_buffer.0 as u32, 0..1);
+                rp.draw(0..render_data.wall_hitbox_vertex_buffer.0, 0..1);
                 rp.set_pipeline(&self.pipelines.wall_hitbox);
-                rp.draw(0..render_data.wall_hitbox_vertex_buffer.0 as u32, 0..1);
+                rp.draw(0..render_data.wall_hitbox_vertex_buffer.0, 0..1);
             }
 
             rp.set_pipeline(&self.pipelines.transparent_surface);
@@ -122,10 +137,13 @@ impl VizRenderer {
             rp.set_vertex_buffer(0, render_data.transparent_surface_vertex_buffer.1.slice(..));
             rp.draw(0..render_data.transparent_surface_vertex_buffer.0, 0..1);
 
-            self.f3d_renderer
-                .render_command_range(rp, render_data.f3d_post_depth_cmd_range.clone());
+            self.f3d_renderer.render_command_range(
+                rp,
+                render_data.f3d_post_depth_cmd_range.clone(),
+                scale_factor,
+            );
         } else {
-            self.f3d_renderer.render(rp);
+            self.f3d_renderer.render(rp, scale_factor);
         }
     }
 }

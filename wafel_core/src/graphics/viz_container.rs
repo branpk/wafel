@@ -89,7 +89,7 @@ impl VizContainer {
                 }),
             });
 
-            self.renderer.render(&mut rp);
+            self.renderer.render(&mut rp, 1.0);
         }
 
         let command_buffer = encoder.finish();

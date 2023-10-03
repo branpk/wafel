@@ -182,7 +182,7 @@ impl SizedRenderer {
                         stencil_ops: None,
                     }),
                 });
-                self.viz_renderer.render(&mut rp);
+                self.viz_renderer.render(&mut rp, 1.0);
             }
 
             encoder.copy_texture_to_buffer(

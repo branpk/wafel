@@ -18,7 +18,7 @@ pub mod decode;
 mod error;
 mod f3d_render_data;
 pub mod interpret;
-#[cfg(any(feature = "wgpu", doc))]
+#[cfg(feature = "wgpu")]
 #[doc(cfg(feature = "wgpu"))]
 pub mod render;
 mod trig_tables;

@@ -19,6 +19,7 @@ members = [
     "wafel_viz_demo",
     "wafel_viz_tests",
     "wafel_viz",
+    "wafel_window",
 ]
 resolver = "2"
 

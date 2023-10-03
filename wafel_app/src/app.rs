@@ -147,6 +147,7 @@ impl WindowedApp for WafelApp {
             &msaa_output_view,
             &depth_texture_view,
             output_format,
+            scale_factor,
             &mut clear_op,
         );
 
@@ -206,6 +207,7 @@ impl WafelApp {
         msaa_output_view: &wgpu::TextureView,
         depth_texture_view: &wgpu::TextureView,
         output_format: wgpu::TextureFormat,
+        scale_factor: f32,
         clear_op: &mut Option<wgpu::LoadOp<wgpu::Color>>,
     ) {
         for viz_render_data in &self.viz_render_data {
@@ -232,7 +234,7 @@ impl WafelApp {
                 }),
             });
 
-            self.viz_renderer.render(&mut rp);
+            self.viz_renderer.render(&mut rp, scale_factor);
         }
     }
 }

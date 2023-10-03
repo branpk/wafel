@@ -3558,6 +3558,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "wafel_window"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "egui",
+ "egui-wgpu",
+ "egui-winit",
+ "hot-lib-reloader",
+ "image 0.24.7",
+ "once_cell",
+ "pollster 0.3.0",
+ "static_assertions",
+ "tracing",
+ "tracing-log",
+ "tracing-subscriber",
+ "wafel_api",
+ "wafel_viz",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
 name = "walkdir"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
