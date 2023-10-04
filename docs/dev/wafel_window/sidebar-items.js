@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["run"],"struct":["Config"],"trait":["WindowEnv"]};
+window.SIDEBAR_ITEMS = {"fn":["run"],"struct":["AppConfig"],"trait":["WindowEnv"]};

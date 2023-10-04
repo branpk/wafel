@@ -15,9 +15,11 @@ var srcIndex = JSON.parse('{\
 "wafel_memory":["",[],["dll_memory.rs","dll_slot_impl.rs","emu_memory.rs","error.rs","lib.rs","remote_dll_memory.rs","traits.rs","unique_dll.rs"]],\
 "wafel_sm64":["",[],["error.rs","frame_log.rs","gfx.rs","lib.rs","mario.rs","object.rs","segment_table.rs","surface.rs"]],\
 "wafel_timeline":["",[],["controller.rs","lib.rs","slots.rs","timeline.rs"]],\
-"wafel_viz":["",[["renderer",[],["data.rs","mod.rs","pipelines.rs"]]],["config.rs","error.rs","f3d_builder.rs","lib.rs","ortho_camera_control.rs","render_data.rs","rotate_camera_control.rs","skybox.rs","sm64_gfx_render.rs"]],\
+"wafel_viz":["",[],["lib.rs","scene.rs"]],\
 "wafel_viz_demo":["",[],["main.rs","remote_dll.rs","window.rs"]],\
+"wafel_viz_sm64":["",[],["config.rs","error.rs","f3d_builder.rs","lib.rs","ortho_camera_control.rs","render_data.rs","rotate_camera_control.rs","skybox.rs","sm64_gfx_render.rs"]],\
 "wafel_viz_tests":["",[],["game_runner.rs","main.rs","renderer.rs","run_tests.rs","viz_tests.rs"]],\
+"wafel_viz_wgpu":["",[],["data.rs","lib.rs","pipelines.rs","renderer.rs"]],\
 "wafel_window":["",[],["config.rs","container.rs","egui_state.rs","fps_counter.rs","lib.rs","logging.rs","wgpu_util.rs","window.rs","window_env.rs"]]\
 }');
 createSrcSidebar();

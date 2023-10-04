@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_app/src/app.rs`."><title>app.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_app" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (2e5a9dd6c 2023-10-02)" data-channel="nightly" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../wafel_app/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_app/src/app.rs`."><title>app.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_app" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (187b8131d 2023-10-03)" data-channel="nightly" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../wafel_app/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -244,13 +244,22 @@
 <a href="#244" id="244">244</a>
 <a href="#245" id="245">245</a>
 <a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     fmt,
     sync::{Arc, Mutex},
 };
 
 <span class="kw">use </span>wafel_app_ui::Wafel;
-<span class="kw">use </span>wafel_viz::{VizRenderData, VizRenderer};
+<span class="kw">use </span>wafel_viz::VizScene;
+<span class="kw">use </span>wafel_viz_wgpu::VizRenderer;
 <span class="kw">use </span>winit::{event::WindowEvent, window::Window};
 
 <span class="kw">use crate</span>::{egui_state::EguiState, env::WafelEnv, hot_reload, window::WindowedApp};
@@ -260,7 +269,7 @@
     env: WafelEnv,
     egui_state: Arc&lt;Mutex&lt;<span class="prelude-ty">Option</span>&lt;EguiState&gt;&gt;&gt;,
     viz_renderer: VizRenderer,
-    viz_render_data: Vec&lt;VizRenderData&gt;,
+    viz_scenes: Vec&lt;VizScene&gt;,
     wafel: Wafel,
     output_format: wgpu::TextureFormat,
     msaa_samples: u32,
@@ -300,7 +309,7 @@
             env,
             egui_state,
             viz_renderer: VizRenderer::new(device, output_format, msaa_samples),
-            viz_render_data: Vec::new(),
+            viz_scenes: Vec::new(),
             wafel: Wafel::default(),
             output_format,
             msaa_samples,
@@ -325,7 +334,7 @@
         <span class="kw">if let </span><span class="prelude-val">Some</span>(egui_state) = <span class="self">self</span>.egui_state.lock().unwrap().as_mut() {
             egui_state.run(window, |ctx| {
                 ctx.input(|input| input.key_down(egui::Key::A));
-                <span class="self">self</span>.viz_render_data = hot_reload::wafel_show(<span class="kw-2">&amp;mut </span><span class="self">self</span>.wafel, <span class="kw-2">&amp;</span><span class="self">self</span>.env, ctx);
+                <span class="self">self</span>.viz_scenes = hot_reload::wafel_show(<span class="kw-2">&amp;mut </span><span class="self">self</span>.wafel, <span class="kw-2">&amp;</span><span class="self">self</span>.env, ctx);
             });
         }
     }
@@ -339,8 +348,7 @@
         output_size: [u32; <span class="number">2</span>],
         scale_factor: f32,
     ) {
-        <span class="self">self</span>.viz_render_data
-            .insert(<span class="number">0</span>, VizRenderData::new([<span class="number">0</span>, <span class="number">0</span>], output_size));
+        <span class="self">self</span>.viz_scenes.insert(<span class="number">0</span>, VizScene::default());
 
         <span class="kw">let </span>msaa_output_texture = device.create_texture(<span class="kw-2">&amp;</span>wgpu::TextureDescriptor {
             label: <span class="prelude-val">None</span>,
@@ -393,6 +401,7 @@
             <span class="kw-2">&amp;</span>msaa_output_view,
             <span class="kw-2">&amp;</span>depth_texture_view,
             output_format,
+            output_size,
             scale_factor,
             <span class="kw-2">&amp;mut </span>clear_op,
         );
@@ -453,12 +462,19 @@
         msaa_output_view: <span class="kw-2">&amp;</span>wgpu::TextureView,
         depth_texture_view: <span class="kw-2">&amp;</span>wgpu::TextureView,
         output_format: wgpu::TextureFormat,
+        output_size: [u32; <span class="number">2</span>],
         scale_factor: f32,
         clear_op: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;wgpu::LoadOp&lt;wgpu::Color&gt;&gt;,
     ) {
-        <span class="kw">for </span>viz_render_data <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.viz_render_data {
-            <span class="self">self</span>.viz_renderer
-                .prepare(device, queue, output_format, viz_render_data);
+        <span class="kw">for </span>scene <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.viz_scenes {
+            <span class="self">self</span>.viz_renderer.prepare(
+                device,
+                queue,
+                output_format,
+                output_size,
+                scale_factor,
+                scene,
+            );
 
             <span class="kw">let </span><span class="kw-2">mut </span>rp = encoder.begin_render_pass(<span class="kw-2">&amp;</span>wgpu::RenderPassDescriptor {
                 label: <span class="prelude-val">None</span>,
@@ -480,7 +496,7 @@
                 }),
             });
 
-            <span class="self">self</span>.viz_renderer.render(<span class="kw-2">&amp;mut </span>rp, scale_factor);
+            <span class="self">self</span>.viz_renderer.render(<span class="kw-2">&amp;mut </span>rp);
         }
     }
 }
