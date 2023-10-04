@@ -1,10 +1,16 @@
 use std::{f32::consts::PI, mem::size_of, ops::Range};
 
 use bytemuck::{cast_slice, offset_of, Pod, Zeroable};
-use fast3d::util::Matrixf;
+use enum_map::{Enum, EnumMap};
+use wafel_viz::{Element, TransparencyHint, VizScene};
 use wgpu::util::DeviceExt;
 
-use crate::{ColorVertex, Element, VizRenderData};
+#[derive(Debug, Clone, Copy, PartialEq, Default, Zeroable, Pod)]
+#[repr(C)]
+pub struct ColorVertex {
+    pub pos: [f32; 4],
+    pub color: [f32; 4],
+}
 
 impl ColorVertex {
     pub fn layout() -> wgpu::VertexBufferLayout<'static> {
@@ -171,47 +177,96 @@ fn create_point_vertex_buffer(device: &wgpu::Device) -> (u32, wgpu::Buffer) {
     (vertices.len() as u32, buffer)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Enum)]
+pub enum TriangleTransparency {
+    Opaque,
+    Transparent,
+    TransparentWallHitbox,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Enum)]
+pub enum BufferId {
+    Point {
+        transparent: bool,
+    },
+    Line {
+        transparent: bool,
+    },
+    Triangle {
+        transparency: TriangleTransparency,
+        surface_gradient: bool,
+    },
+}
+
 #[derive(Debug)]
 pub struct PerFrameData {
-    pub screen_top_left: [u32; 2],
-    pub screen_size: [u32; 2],
+    pub viewport_top_left: [u32; 2],
+    pub viewport_size: [u32; 2],
+    pub scale_factor: f32,
+
     pub f3d_pre_depth_cmd_range: Range<usize>,
     pub f3d_depth_cmd_range: Range<usize>,
     pub f3d_post_depth_cmd_range: Range<usize>,
+
     pub transform_bind_group: wgpu::BindGroup,
-    pub line_vertex_buffer: (u32, wgpu::Buffer),
-    pub point_instance_buffer: (u32, wgpu::Buffer),
-    pub surface_vertex_buffer: (u32, wgpu::Buffer),
-    pub transparent_surface_vertex_buffer: (u32, wgpu::Buffer),
-    pub wall_hitbox_vertex_buffer: (u32, wgpu::Buffer),
-    pub wall_hitbox_outline_vertex_buffer: (u32, wgpu::Buffer),
+    pub buffers: EnumMap<BufferId, Option<(u32, wgpu::Buffer)>>,
 }
 
 impl PerFrameData {
-    pub fn create(device: &wgpu::Device, static_data: &StaticData, data: &VizRenderData) -> Self {
+    pub fn create(
+        device: &wgpu::Device,
+        static_data: &StaticData,
+        scene: &VizScene,
+        viewport_top_left: [u32; 2],
+        viewport_size: [u32; 2],
+        scale_factor: f32,
+    ) -> Self {
         let mut first_depth_cmd = None;
         let mut last_depth_cmd = None;
-        for (i, cmd) in data.f3d_render_data.commands.iter().enumerate() {
-            let pipeline = &data.f3d_render_data.pipelines[&cmd.pipeline];
-            if pipeline.depth_compare {
-                if first_depth_cmd.is_none() {
-                    first_depth_cmd = Some(i);
+        if let Some(f3d_render_data) = &scene.f3d_render_data {
+            for (i, cmd) in f3d_render_data.commands.iter().enumerate() {
+                let pipeline = &f3d_render_data.pipelines[&cmd.pipeline];
+                if pipeline.depth_compare {
+                    if first_depth_cmd.is_none() {
+                        first_depth_cmd = Some(i);
+                    }
+                    last_depth_cmd = Some(i);
                 }
-                last_depth_cmd = Some(i);
             }
         }
         let first_depth_cmd = first_depth_cmd.unwrap_or(0);
         let post_depth_cmd = last_depth_cmd.map(|i| i + 1).unwrap_or(0);
+        let num_cmds = scene
+            .f3d_render_data
+            .as_ref()
+            .map_or(0, |data| data.commands.len());
 
-        let transform_bind_group = create_transform_bind_group(device, static_data, data);
+        let transform_bind_group = create_transform_bind_group(device, static_data, scene);
 
-        let mut line_vertex_data: Vec<ColorVertex> = Vec::new();
-        let mut point_instance_data: Vec<PointInstance> = Vec::new();
+        let mut counts: EnumMap<BufferId, u32> = EnumMap::default();
+        let mut buffer_data: EnumMap<BufferId, Vec<u8>> = EnumMap::default();
 
-        for element in &data.elements {
+        for element in &scene.elements {
             match element {
+                Element::Point(point) => {
+                    let x_radius = point.size * 2.0 / viewport_size[0] as f32;
+                    let y_radius = point.size * 2.0 / viewport_size[1] as f32;
+                    let buffer_id = BufferId::Point {
+                        transparent: point.color[3] < 1.0,
+                    };
+                    counts[buffer_id] += 1;
+                    buffer_data[buffer_id].extend(cast_slice(&[PointInstance {
+                        center: point4(point.pos),
+                        radius: [x_radius, y_radius],
+                        color: point.color,
+                    }]));
+                }
                 Element::Line(line) => {
-                    line_vertex_data.extend(&[
+                    let buffer_id = BufferId::Line {
+                        transparent: line.color[3] < 1.0,
+                    };
+                    counts[buffer_id] += 2;
+                    buffer_data[buffer_id].extend(cast_slice(&[
                         ColorVertex {
                             pos: point4(line.vertices[0]),
                             color: line.color,
@@ -220,78 +275,64 @@ impl PerFrameData {
                             pos: point4(line.vertices[1]),
                             color: line.color,
                         },
-                    ]);
+                    ]));
                 }
-                Element::Point(point) => {
-                    let x_radius = point.size * 2.0 / data.f3d_render_data.screen_size[0] as f32;
-                    let y_radius = point.size * 2.0 / data.f3d_render_data.screen_size[1] as f32;
-                    point_instance_data.push(PointInstance {
-                        center: [point.pos[0], point.pos[1], point.pos[2], 1.0],
-                        radius: [x_radius, y_radius],
-                        color: point.color,
-                    });
+                Element::Triangle(triangle) => {
+                    let transparency = if triangle.color[3] >= 1.0 {
+                        TriangleTransparency::Opaque
+                    } else {
+                        match triangle.transparency_hint {
+                            TransparencyHint::None => TriangleTransparency::Transparent,
+                            TransparencyHint::WallHitbox => {
+                                TriangleTransparency::TransparentWallHitbox
+                            }
+                        }
+                    };
+                    let buffer_id = BufferId::Triangle {
+                        transparency,
+                        surface_gradient: triangle.surface_gradient,
+                    };
+                    counts[buffer_id] += 3;
+                    buffer_data[buffer_id].extend(cast_slice(&[
+                        ColorVertex {
+                            pos: point4(triangle.vertices[0]),
+                            color: triangle.color,
+                        },
+                        ColorVertex {
+                            pos: point4(triangle.vertices[1]),
+                            color: triangle.color,
+                        },
+                        ColorVertex {
+                            pos: point4(triangle.vertices[2]),
+                            color: triangle.color,
+                        },
+                    ]));
                 }
             }
         }
 
-        let line_vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: None,
-            contents: cast_slice(&line_vertex_data),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-        let point_instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: None,
-            contents: cast_slice(&point_instance_data),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
-        let surface_vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: None,
-            contents: cast_slice(&data.surface_vertices),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-        let transparent_surface_vertex_buffer =
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
-                contents: cast_slice(&data.transparent_surface_vertices),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
-
-        let wall_hitbox_vertex_buffer =
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
-                contents: cast_slice(&data.wall_hitbox_vertices),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
-        let wall_hitbox_outline_vertex_buffer =
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
-                contents: cast_slice(&data.wall_hitbox_outline_vertices),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
+        let mut buffers = EnumMap::default();
+        for (buffer_id, data) in buffer_data {
+            let count = counts[buffer_id];
+            if count > 0 {
+                let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: None,
+                    contents: cast_slice(&data),
+                    usage: wgpu::BufferUsages::VERTEX,
+                });
+                buffers[buffer_id] = Some((count, buffer));
+            }
+        }
 
         Self {
-            screen_top_left: data.f3d_render_data.screen_top_left,
-            screen_size: data.f3d_render_data.screen_size,
+            viewport_top_left,
+            viewport_size,
+            scale_factor,
             f3d_pre_depth_cmd_range: 0..first_depth_cmd,
             f3d_depth_cmd_range: first_depth_cmd..post_depth_cmd,
-            f3d_post_depth_cmd_range: post_depth_cmd..data.f3d_render_data.commands.len(),
+            f3d_post_depth_cmd_range: post_depth_cmd..num_cmds,
             transform_bind_group,
-            line_vertex_buffer: (line_vertex_data.len() as u32, line_vertex_buffer),
-            point_instance_buffer: (point_instance_data.len() as u32, point_instance_buffer),
-            surface_vertex_buffer: (data.surface_vertices.len() as u32, surface_vertex_buffer),
-            transparent_surface_vertex_buffer: (
-                data.transparent_surface_vertices.len() as u32,
-                transparent_surface_vertex_buffer,
-            ),
-            wall_hitbox_vertex_buffer: (
-                data.wall_hitbox_vertices.len() as u32,
-                wall_hitbox_vertex_buffer,
-            ),
-            wall_hitbox_outline_vertex_buffer: (
-                data.wall_hitbox_outline_vertices.len() as u32,
-                wall_hitbox_outline_vertex_buffer,
-            ),
+            buffers,
         }
     }
 }
@@ -299,29 +340,16 @@ impl PerFrameData {
 fn create_transform_bind_group(
     device: &wgpu::Device,
     static_data: &StaticData,
-    data: &VizRenderData,
+    scene: &VizScene,
 ) -> wgpu::BindGroup {
-    let screen_size = data.f3d_render_data.screen_size;
-    let render_output = data.render_output.as_ref().expect("missing gfx output");
-
-    let aspect = screen_size[0] as f32 / screen_size[1] as f32;
-    let x_scale = (320.0 / 240.0) / aspect;
-    let proj_modify = Matrixf::from_rows([
-        [x_scale, 0.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0, 0.0],
-        [0.0, 0.0, 0.5, 0.5],
-        [0.0, 0.0, 0.0, 1.0],
-    ]);
-    let proj_mtx = &proj_modify * &render_output.proj_mtx;
-
     let proj_mtx_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: None,
-        contents: cast_slice(&proj_mtx.cols),
+        contents: cast_slice(&scene.proj_mtx),
         usage: wgpu::BufferUsages::UNIFORM,
     });
     let view_mtx_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: None,
-        contents: cast_slice(&render_output.view_mtx.cols),
+        contents: cast_slice(&scene.view_mtx),
         usage: wgpu::BufferUsages::UNIFORM,
     });
 

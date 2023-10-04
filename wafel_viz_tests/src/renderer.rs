@@ -2,7 +2,8 @@ use std::env;
 
 use image::{Pixel, Rgb, RgbImage};
 use wafel_api::Game;
-use wafel_viz::{VizConfig, VizRenderer};
+use wafel_viz_sm64::VizConfig;
+use wafel_viz_wgpu::VizRenderer;
 
 #[derive(Debug)]
 pub struct Renderer {
@@ -148,9 +149,15 @@ impl SizedRenderer {
         game: &Game,
         config: &VizConfig,
     ) -> RgbImage {
-        let render_data = game.render(config);
-        self.viz_renderer
-            .prepare(device, queue, self.output_format, &render_data);
+        let scene = game.render(config);
+        self.viz_renderer.prepare(
+            device,
+            queue,
+            self.output_format,
+            self.output_size,
+            1.0,
+            &scene,
+        );
 
         let mut encoder =
             device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
@@ -182,7 +189,7 @@ impl SizedRenderer {
                         stencil_ops: None,
                     }),
                 });
-                self.viz_renderer.render(&mut rp, 1.0);
+                self.viz_renderer.render(&mut rp);
             }
 
             encoder.copy_texture_to_buffer(

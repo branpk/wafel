@@ -17,7 +17,9 @@ members = [
     "wafel_sm64",
     "wafel_timeline",
     "wafel_viz_demo",
+    "wafel_viz_sm64",
     "wafel_viz_tests",
+    "wafel_viz_wgpu",
     "wafel_viz",
     "wafel_window",
 ]

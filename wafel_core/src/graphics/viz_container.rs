@@ -1,5 +1,5 @@
-use wafel_api::VizRenderData;
-use wafel_viz::VizRenderer;
+use wafel_api::VizScene;
+use wafel_viz_wgpu::VizRenderer;
 
 /// Wrapper for VizRenderer that renders multiple scenes.
 #[derive(Debug)]
@@ -23,7 +23,7 @@ impl VizContainer {
         output_view: &wgpu::TextureView,
         output_size: (u32, u32),
         output_format: wgpu::TextureFormat,
-        scenes: &[VizRenderData],
+        scenes: &[VizScene],
     ) {
         for scene in scenes {
             self.render_scene(
@@ -44,7 +44,7 @@ impl VizContainer {
         output_view: &wgpu::TextureView,
         output_size: (u32, u32),
         output_format: wgpu::TextureFormat,
-        render_data: &VizRenderData,
+        scene: &VizScene,
     ) {
         let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
@@ -62,8 +62,14 @@ impl VizContainer {
         });
         let depth_texture_view = depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        self.renderer
-            .prepare(device, queue, output_format, render_data);
+        self.renderer.prepare(
+            device,
+            queue,
+            output_format,
+            [output_size.0, output_size.1],
+            1.0,
+            scene,
+        );
 
         let mut encoder =
             device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
@@ -89,7 +95,7 @@ impl VizContainer {
                 }),
             });
 
-            self.renderer.render(&mut rp, 1.0);
+            self.renderer.render(&mut rp);
         }
 
         let command_buffer = encoder.finish();

@@ -3,29 +3,28 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-#[cfg(feature = "wafel_viz")]
-use wafel_viz::{VizRenderData, VizRenderer};
+use wafel_viz::VizScene;
+use wafel_viz_wgpu::VizRenderer;
 use winit::{event::WindowEvent, window::Window};
 
 use crate::{
     egui_state::EguiState, fps_counter::FpsCounter, logging, wgpu_util::CachedTexture,
-    window_env::WindowEnv, Config,
+    window_env::WindowEnv, AppConfig,
 };
 
 #[derive(Debug)]
 struct WindowEnvImpl<'a> {
-    config: &'a Config,
+    config: &'a AppConfig,
     fps: f32,
     mspf: f32,
     egui_ctx: egui::Context,
-    #[cfg(feature = "wafel_viz")]
-    viz_render_data: Mutex<Vec<VizRenderData>>,
+    viz_scenes: Mutex<Vec<VizScene>>,
 }
 
 static_assertions::assert_impl_all!(WindowEnvImpl<'_>: Send, Sync);
 
 impl WindowEnv for WindowEnvImpl<'_> {
-    fn config(&self) -> &Config {
+    fn config(&self) -> &AppConfig {
         self.config
     }
 
@@ -41,9 +40,8 @@ impl WindowEnv for WindowEnvImpl<'_> {
         &self.egui_ctx
     }
 
-    #[cfg(feature = "wafel_viz")]
-    fn draw_viz(&self, render_data: VizRenderData) {
-        self.viz_render_data.lock().unwrap().push(render_data);
+    fn draw_viz(&self, scene: VizScene) {
+        self.viz_scenes.lock().unwrap().push(scene);
     }
 
     fn take_recent_panic_details(&self) -> Option<String> {
@@ -53,13 +51,11 @@ impl WindowEnv for WindowEnvImpl<'_> {
 
 #[allow(unused)]
 pub struct Container<D> {
-    config: Config,
+    config: AppConfig,
     draw: D,
     egui_state: Arc<Mutex<Option<EguiState>>>,
-    #[cfg(feature = "wafel_viz")]
     viz_renderer: VizRenderer,
-    #[cfg(feature = "wafel_viz")]
-    viz_render_data: Vec<VizRenderData>,
+    viz_scenes: Vec<VizScene>,
     output_format: wgpu::TextureFormat,
     msaa_samples: u32,
     msaa_texture: CachedTexture,
@@ -69,7 +65,7 @@ pub struct Container<D> {
 
 impl<D: FnMut(&dyn WindowEnv)> Container<D> {
     pub fn new(
-        config: &Config,
+        config: &AppConfig,
         draw: D,
         window: &Window,
         device: &wgpu::Device,
@@ -102,10 +98,8 @@ impl<D: FnMut(&dyn WindowEnv)> Container<D> {
             config: config.clone(),
             draw,
             egui_state,
-            #[cfg(feature = "wafel_viz")]
             viz_renderer: VizRenderer::new(device, output_format, msaa_samples),
-            #[cfg(feature = "wafel_viz")]
-            viz_render_data: Vec::new(),
+            viz_scenes: Vec::new(),
             output_format,
             msaa_samples,
             msaa_texture: CachedTexture::new(),
@@ -136,16 +130,12 @@ impl<D: FnMut(&dyn WindowEnv)> Container<D> {
                 fps: self.fps_counter.fps(),
                 mspf: self.fps_counter.mspf(),
                 egui_ctx: ctx.clone(),
-                #[cfg(feature = "wafel_viz")]
-                viz_render_data: Mutex::new(Vec::new()),
+                viz_scenes: Mutex::new(Vec::new()),
             };
 
             (self.draw)(&env);
 
-            #[cfg(feature = "wafel_viz")]
-            {
-                self.viz_render_data = env.viz_render_data.into_inner().unwrap();
-            }
+            self.viz_scenes = env.viz_scenes.into_inner().unwrap();
         });
     }
 
@@ -198,7 +188,6 @@ impl<D: FnMut(&dyn WindowEnv)> Container<D> {
                 view_formats: &[],
             },
         );
-        #[allow(unused)]
         let depth_texture_view = depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
         // The first render pass should use LoadOp::Clear and the rest should use
@@ -232,7 +221,6 @@ impl<D: FnMut(&dyn WindowEnv)> Container<D> {
         let mut encoder =
             device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
-        #[cfg(feature = "wafel_viz")]
         self.render_viz(
             device,
             queue,
@@ -240,6 +228,7 @@ impl<D: FnMut(&dyn WindowEnv)> Container<D> {
             &mut get_color_attachment,
             &depth_texture_view,
             output_format,
+            output_size,
             scale_factor,
         );
 
@@ -278,7 +267,6 @@ impl<D: FnMut(&dyn WindowEnv)> Container<D> {
         }
     }
 
-    #[cfg(feature = "wafel_viz")]
     fn render_viz<'a>(
         &mut self,
         device: &wgpu::Device,
@@ -287,11 +275,18 @@ impl<D: FnMut(&dyn WindowEnv)> Container<D> {
         mut get_color_attachment: impl FnMut() -> wgpu::RenderPassColorAttachment<'a>,
         depth_texture_view: &wgpu::TextureView,
         output_format: wgpu::TextureFormat,
+        output_size: [u32; 2],
         scale_factor: f32,
     ) {
-        for viz_render_data in &self.viz_render_data {
-            self.viz_renderer
-                .prepare(device, queue, output_format, viz_render_data);
+        for scene in &self.viz_scenes {
+            self.viz_renderer.prepare(
+                device,
+                queue,
+                output_format,
+                output_size,
+                scale_factor,
+                scene,
+            );
 
             let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
@@ -306,7 +301,7 @@ impl<D: FnMut(&dyn WindowEnv)> Container<D> {
                 }),
             });
 
-            self.viz_renderer.render(&mut rp, scale_factor);
+            self.viz_renderer.render(&mut rp);
         }
     }
 }

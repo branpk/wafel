@@ -1,5 +1,7 @@
+use env_logger::init;
 use wafel_api::Error;
 use winit::{
+    dpi::LogicalSize,
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
@@ -19,6 +21,7 @@ pub trait App: Sized + 'static {
         output_view: &wgpu::TextureView,
         output_format: wgpu::TextureFormat,
         output_size: [u32; 2],
+        scale_factor: f32,
     ) -> Result<(), Error>;
 }
 
@@ -139,6 +142,7 @@ async fn open_window_and_run_impl<A: App>() {
                             &output_view,
                             output_format,
                             [surface_config.width, surface_config.height],
+                            window.scale_factor() as f32,
                         ));
                     }
 

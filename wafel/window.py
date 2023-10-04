@@ -13,7 +13,7 @@ import wafel.graphics as graphics
 first_render = True
 
 
-def _render_window(render: Callable[[str], None]) -> Tuple[object, List[core.Scene], List[core.VizRenderData]]:
+def _render_window(render: Callable[[str], None]) -> Tuple[object, List[core.Scene], List[core.VizScene]]:
   global first_render
 
   # TODO: clipboard length

@@ -1,4 +1,4 @@
-use wafel_api::VizRenderData;
+use wafel_api::VizScene;
 
 use crate::{error_boundary::ErrorBoundary, root::Root, Env};
 
@@ -20,7 +20,7 @@ impl Default for Wafel {
 
 impl Wafel {
     /// Render the Wafel UI and respond to user input events.
-    pub fn show(&mut self, env: &dyn Env, ctx: &egui::Context) -> Vec<VizRenderData> {
+    pub fn show(&mut self, env: &dyn Env, ctx: &egui::Context) -> Vec<VizScene> {
         if self.error_boundary.has_error() {
             egui::CentralPanel::default().show(ctx, |ui| {
                 self.error_boundary.show_error(env, ui);

@@ -1,9 +1,8 @@
 use std::collections::HashSet;
 
 use wafel_api::{Error, RemoteDll};
-use wafel_viz::{
-    InGameRenderMode, ObjectCull, PerspCameraControl, SurfaceMode, VizConfig, VizRenderer,
-};
+use wafel_viz_sm64::{InGameRenderMode, ObjectCull, PerspCameraControl, SurfaceMode, VizConfig};
+use wafel_viz_wgpu::VizRenderer;
 use winit::event::{ElementState, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowEvent};
 
 use crate::window::App;
@@ -117,9 +116,13 @@ impl App for RemoteDllApp {
         output_view: &wgpu::TextureView,
         output_format: wgpu::TextureFormat,
         output_size: [u32; 2],
+        scale_factor: f32,
     ) -> Result<(), Error> {
         let config = VizConfig {
-            screen_size: output_size,
+            screen_size: [
+                (output_size[0] as f32 / scale_factor) as u32,
+                (output_size[1] as f32 / scale_factor) as u32,
+            ],
             in_game_render_mode: if self.held_keys.contains(&VirtualKeyCode::X) {
                 InGameRenderMode::DisplayList
             } else if self.held_keys.contains(&VirtualKeyCode::Z) {
@@ -132,10 +135,16 @@ impl App for RemoteDllApp {
             ..Default::default()
         };
 
-        let render_data = self.remote_dll.render(&config);
+        let scene = self.remote_dll.render(&config);
 
-        self.viz_renderer
-            .prepare(device, queue, output_format, &render_data);
+        self.viz_renderer.prepare(
+            device,
+            queue,
+            output_format,
+            output_size,
+            scale_factor,
+            &scene,
+        );
 
         let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
@@ -177,7 +186,7 @@ impl App for RemoteDllApp {
                 }),
             });
 
-            self.viz_renderer.render(&mut rp, 1.0);
+            self.viz_renderer.render(&mut rp);
         }
 
         queue.submit([encoder.finish()]);

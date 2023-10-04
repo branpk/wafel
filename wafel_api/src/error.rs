@@ -7,7 +7,7 @@ use wafel_data_type::{Value, ValueTypeError};
 use wafel_layout::{DllLayoutError, LayoutLookupError, SM64LayoutError};
 use wafel_memory::{MemoryError, MemoryInitError};
 use wafel_sm64::SM64DataError;
-use wafel_viz::VizError;
+use wafel_viz_sm64::VizError;
 
 #[derive(Debug, Clone)]
 pub enum Error {

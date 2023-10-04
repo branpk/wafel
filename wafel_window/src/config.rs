@@ -9,7 +9,7 @@ use winit::window::Icon;
 /// Configuration for the window and application environment.
 #[derive(Debug, Clone)]
 #[non_exhaustive]
-pub struct Config {
+pub struct AppConfig {
     root_dir: PathBuf,
     relative_log_file_path: PathBuf,
 
@@ -21,9 +21,9 @@ pub struct Config {
     hot_reload_subscriber: Option<fn() -> LibReloadObserver>,
 }
 
-static_assertions::assert_impl_all!(Config: Send, Sync);
+static_assertions::assert_impl_all!(AppConfig: Send, Sync);
 
-impl Default for Config {
+impl Default for AppConfig {
     fn default() -> Self {
         let root_dir = if cfg!(debug_assertions) {
             env::current_dir().expect("failed to locate current working directory")
@@ -47,7 +47,7 @@ impl Default for Config {
     }
 }
 
-impl Config {
+impl AppConfig {
     /// Returns the default configuration.
     pub fn new() -> Self {
         Self::default()

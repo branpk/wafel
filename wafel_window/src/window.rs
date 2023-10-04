@@ -6,12 +6,12 @@ use winit::{
     window::{WindowBuilder, WindowLevel},
 };
 
-use crate::{container::Container, window_env::WindowEnv, Config};
+use crate::{container::Container, window_env::WindowEnv, AppConfig};
 
 /// Opens a maximized window and runs the application.
 ///
 /// This function does not return.
-pub fn open_window_and_run(config: &Config, draw: impl FnMut(&dyn WindowEnv) + 'static) {
+pub fn open_window_and_run(config: &AppConfig, draw: impl FnMut(&dyn WindowEnv) + 'static) {
     pollster::block_on(async {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY,

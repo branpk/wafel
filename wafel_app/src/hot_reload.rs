@@ -11,7 +11,7 @@ pub use wafel_app_ui::*;
 )]
 mod hot_wafel_app_ui {
     pub use wafel_app_ui::{Env, Wafel};
-    pub use wafel_viz::VizRenderData;
+    pub use wafel_viz::VizScene;
 
     hot_functions_from_file!("wafel_app_ui/src/lib.rs");
 

@@ -1,12 +1,11 @@
-#[cfg(feature = "wafel_viz")]
-use wafel_viz::VizRenderData;
+use wafel_viz::VizScene;
 
-use crate::Config;
+use crate::AppConfig;
 
 /// Trait defining the interaction between a windowed application and the window.
 pub trait WindowEnv {
     /// The config that was used when running the application.
-    fn config(&self) -> &Config;
+    fn config(&self) -> &AppConfig;
 
     /// A recent fps measurement.
     fn fps(&self) -> f32;
@@ -18,10 +17,7 @@ pub trait WindowEnv {
     fn egui_ctx(&self) -> &egui::Context;
 
     /// Adds a [wafel_viz] visualization to the window.
-    ///
-    /// This method is only available when the `wafel_viz` feature is enabled.
-    #[cfg(feature = "wafel_viz")]
-    fn draw_viz(&self, render_data: VizRenderData);
+    fn draw_viz(&self, scene: VizScene);
 
     /// Return details of the most recent panic caught by the panic handler.
     ///

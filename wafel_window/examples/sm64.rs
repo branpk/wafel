@@ -3,8 +3,8 @@
 use std::time;
 
 use wafel_api::{Game, Input};
-use wafel_viz::{ObjectCull, VizConfig};
-use wafel_window::Config;
+use wafel_viz_sm64::{ObjectCull, VizConfig};
+use wafel_window::AppConfig;
 
 fn main() {
     let mut game = unsafe { Game::new("libsm64/sm64_us") };
@@ -22,7 +22,7 @@ fn main() {
     let mut stick_x: i8 = 0;
     let mut stick_y: i8 = 0;
 
-    let config = Config::new();
+    let config = AppConfig::new();
     wafel_window::run(&config, move |env| {
         let ctx = env.egui_ctx();
 

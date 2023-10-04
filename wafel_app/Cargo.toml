@@ -18,7 +18,8 @@ wafel_app_ui = { path = "../wafel_app_ui" }
 egui-wgpu = "0.22.0"
 egui-winit = "0.22.0"
 sysinfo = { version = "0.29.10", default-features = false }
-wafel_viz = { path = "../wafel_viz", features = ["wgpu"] }
+wafel_viz_wgpu = { path = "../wafel_viz_wgpu" }
+wafel_viz = { path = "../wafel_viz" }
 hot-lib-reloader = "0.6.5"
 
 [features]

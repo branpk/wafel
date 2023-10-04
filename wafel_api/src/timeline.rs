@@ -12,7 +12,8 @@ use wafel_sm64::{
     mario_action_names, read_frame_log, read_object_hitboxes, read_surfaces, ObjectHitbox, Surface,
 };
 use wafel_timeline::{GameController, GameTimeline, InvalidatedFrames};
-use wafel_viz::{viz_render, VizConfig, VizRenderData};
+use wafel_viz::VizScene;
+use wafel_viz_sm64::{viz_render, VizConfig};
 
 use crate::{data_cache::DataCache, simplified_data_type, DataType, Error, Input};
 
@@ -446,26 +447,26 @@ impl Timeline {
         Ok(value.value.into())
     }
 
-    /// Render the game to a [VizRenderData] object, which can be displayed using
+    /// Render the game to a [VizScene] object, which can be displayed using
     /// [wafel_viz].
     ///
     /// # Panics
     ///
     /// Panics if rendering fails (most likely a bug in [wafel_viz]).
-    pub fn render(&self, frame: u32, config: &VizConfig) -> Result<VizRenderData, Error> {
-        match self.try_render(frame, config) {
+    pub fn render(&self, frame: u32, scene: &VizConfig) -> Result<VizScene, Error> {
+        match self.try_render(frame, scene) {
             Ok(render_data) => Ok(render_data),
             Err(error) => panic!("Error:\n  failed to render:\n  {}\n", error),
         }
     }
 
-    /// Render the game to a [VizRenderData] object, which can be displayed using
+    /// Render the game to a [VizScene] object, which can be displayed using
     /// [wafel_viz].
     ///
     /// Returns an error if rendering fails (most likely a bug in [wafel_viz]).
-    pub fn try_render(&self, frame: u32, config: &VizConfig) -> Result<VizRenderData, Error> {
+    pub fn try_render(&self, frame: u32, scene: &VizConfig) -> Result<VizScene, Error> {
         self.with_slot_memory(frame, |memory| {
-            viz_render(&self.layout, memory, config, false).map_err(Error::from)
+            viz_render(&self.layout, memory, scene, false).map_err(Error::from)
         })
     }
 

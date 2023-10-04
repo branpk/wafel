@@ -9,6 +9,8 @@ pollster = "0.2.5"
 wafel_api = { path = "../wafel_api" }
 wafel_data_access = { path = "../wafel_data_access" }
 wafel_memory = { path = "../wafel_memory" }
-wafel_viz = { path = "../wafel_viz", features = ["wgpu"] }
+wafel_viz_sm64 = { path = "../wafel_viz_sm64" }
+wafel_viz = { path = "../wafel_viz" }
+wafel_viz_wgpu = { path = "../wafel_viz_wgpu" }
 wgpu = { workspace = true }
 winit = "0.28.6"

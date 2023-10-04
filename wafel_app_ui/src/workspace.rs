@@ -1,4 +1,4 @@
-use wafel_api::{Emu, VizRenderData};
+use wafel_api::{Emu, VizScene};
 
 use crate::{data_explorer::DataExplorer, pane::Pane, Env};
 
@@ -14,7 +14,7 @@ impl Workspace {
         Self { emu, tree }
     }
 
-    pub fn show(&mut self, env: &dyn Env, ui: &mut egui::Ui) -> Vec<VizRenderData> {
+    pub fn show(&mut self, env: &dyn Env, ui: &mut egui::Ui) -> Vec<VizScene> {
         let mut viz_render_data = Vec::new();
         let mut tab_viewer = TabViewer {
             env,
@@ -34,7 +34,7 @@ impl Workspace {
 struct TabViewer<'a> {
     env: &'a dyn Env,
     emu: &'a mut Emu,
-    viz_render_data: &'a mut Vec<VizRenderData>,
+    viz_render_data: &'a mut Vec<VizScene>,
 }
 
 impl egui_dock::TabViewer for TabViewer<'_> {

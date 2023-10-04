@@ -1,9 +1,10 @@
 use bytemuck::{Pod, Zeroable};
-use fast3d::interpret::F3DRenderData;
+use fast3d::{interpret::F3DRenderData, util::Matrixf};
 use ultraviolet::Vec3;
 use wafel_data_access::MemoryLayout;
 use wafel_memory::MemoryRead;
 use wafel_sm64::{read_surfaces, Surface, SurfaceType};
+use wafel_viz::{TransparencyHint, Triangle, VizScene};
 
 use crate::{
     sm64_gfx_render::{sm64_gfx_render, GfxRenderOutput},
@@ -21,10 +22,14 @@ impl ColorVertex {
     pub(crate) fn new(pos: [f32; 4], color: [f32; 4]) -> Self {
         Self { pos, color }
     }
+
+    pub(crate) fn pos3(&self) -> [f32; 3] {
+        [self.pos[0], self.pos[1], self.pos[2]]
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct VizRenderData {
+pub(crate) struct VizRenderData {
     pub(crate) f3d_render_data: F3DRenderData,
     pub(crate) render_output: Option<GfxRenderOutput>,
     pub(crate) elements: Vec<Element>,
@@ -37,6 +42,82 @@ pub struct VizRenderData {
 impl VizRenderData {
     pub fn new(screen_top_left: [u32; 2], screen_size: [u32; 2]) -> Self {
         F3DRenderData::new(screen_top_left, screen_size).into()
+    }
+
+    pub fn into_viz_scene(self) -> VizScene {
+        let mut scene = VizScene::new();
+
+        let viewport_top_left = self.f3d_render_data.screen_top_left;
+        let viewport_size = self.f3d_render_data.screen_size;
+
+        scene.set_viewport_logical(viewport_top_left, viewport_size);
+        scene.set_f3d_render_data(self.f3d_render_data);
+
+        if let Some(render_output) = self.render_output {
+            let aspect = viewport_size[0] as f32 / viewport_size[1] as f32;
+            let x_scale = (320.0 / 240.0) / aspect;
+            let proj_modify = Matrixf::from_rows([
+                [x_scale, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 0.5, 0.5],
+                [0.0, 0.0, 0.0, 1.0],
+            ]);
+            let proj_mtx = &proj_modify * &render_output.proj_mtx;
+
+            scene.set_proj_mtx(proj_mtx.cols);
+            scene.set_view_mtx(render_output.view_mtx.cols);
+        }
+
+        // Surfaces
+        for vertices in self.surface_vertices.chunks(3) {
+            assert_eq!(vertices.len(), 3);
+            scene.add(
+                Triangle::new([vertices[0].pos3(), vertices[1].pos3(), vertices[2].pos3()])
+                    .with_color(vertices[0].color)
+                    .with_surface_gradient(true),
+            );
+        }
+        for vertices in self.transparent_surface_vertices.chunks(3) {
+            assert_eq!(vertices.len(), 3);
+            scene.add(
+                Triangle::new([vertices[0].pos3(), vertices[1].pos3(), vertices[2].pos3()])
+                    .with_color(vertices[0].color)
+                    .with_surface_gradient(true),
+            );
+        }
+
+        // Wall hitboxes
+        for vertices in self.wall_hitbox_vertices.chunks(3) {
+            assert_eq!(vertices.len(), 3);
+            scene.add(
+                Triangle::new([vertices[0].pos3(), vertices[1].pos3(), vertices[2].pos3()])
+                    .with_color(vertices[0].color)
+                    .with_surface_gradient(true)
+                    .with_transparency_hint(TransparencyHint::WallHitbox),
+            );
+        }
+        for vertices in self.wall_hitbox_outline_vertices.chunks(2) {
+            assert_eq!(vertices.len(), 2);
+            scene.add(
+                wafel_viz::Line::new([vertices[0].pos3(), vertices[1].pos3()])
+                    .with_color(vertices[0].color),
+            );
+        }
+
+        // Other elements
+        for element in self.elements {
+            scene.add(match element {
+                Element::Point(point) => wafel_viz::Element::Point(
+                    wafel_viz::Point::new(point.pos).with_color(point.color),
+                ),
+                Element::Line(line) => wafel_viz::Element::Line(
+                    wafel_viz::Line::new([line.vertices[0], line.vertices[1]])
+                        .with_color(line.color),
+                ),
+            });
+        }
+
+        scene
     }
 }
 
@@ -78,18 +159,18 @@ pub fn viz_render(
     memory: &impl MemoryRead,
     config: &VizConfig,
     use_segment_table: bool,
-) -> Result<VizRenderData, VizError> {
+) -> Result<VizScene, VizError> {
     assert!(config.screen_size[0] > 0 && config.screen_size[1] > 0);
 
     if config.in_game_render_mode == InGameRenderMode::DisplayList {
-        return Ok(sm64_render(
+        return Ok(VizRenderData::from(sm64_render(
             layout,
             memory,
             config.screen_top_left,
             config.screen_size,
             use_segment_table,
-        )?
-        .into());
+        )?)
+        .into_viz_scene());
     }
 
     let (f3d_render_data, render_output) =
@@ -100,7 +181,7 @@ pub fn viz_render(
     draw_extras(&mut render_data, layout, memory, config, &render_output)?;
     render_data.render_output = Some(render_output);
 
-    Ok(render_data)
+    Ok(render_data.into_viz_scene())
 }
 
 fn draw_extras(

@@ -4,7 +4,8 @@ use std::{
 };
 
 use wafel_app_ui::Wafel;
-use wafel_viz::{VizRenderData, VizRenderer};
+use wafel_viz::VizScene;
+use wafel_viz_wgpu::VizRenderer;
 use winit::{event::WindowEvent, window::Window};
 
 use crate::{egui_state::EguiState, env::WafelEnv, hot_reload, window::WindowedApp};
@@ -14,7 +15,7 @@ pub struct WafelApp {
     env: WafelEnv,
     egui_state: Arc<Mutex<Option<EguiState>>>,
     viz_renderer: VizRenderer,
-    viz_render_data: Vec<VizRenderData>,
+    viz_scenes: Vec<VizScene>,
     wafel: Wafel,
     output_format: wgpu::TextureFormat,
     msaa_samples: u32,
@@ -54,7 +55,7 @@ impl WindowedApp for WafelApp {
             env,
             egui_state,
             viz_renderer: VizRenderer::new(device, output_format, msaa_samples),
-            viz_render_data: Vec::new(),
+            viz_scenes: Vec::new(),
             wafel: Wafel::default(),
             output_format,
             msaa_samples,
@@ -79,7 +80,7 @@ impl WindowedApp for WafelApp {
         if let Some(egui_state) = self.egui_state.lock().unwrap().as_mut() {
             egui_state.run(window, |ctx| {
                 ctx.input(|input| input.key_down(egui::Key::A));
-                self.viz_render_data = hot_reload::wafel_show(&mut self.wafel, &self.env, ctx);
+                self.viz_scenes = hot_reload::wafel_show(&mut self.wafel, &self.env, ctx);
             });
         }
     }
@@ -93,8 +94,7 @@ impl WindowedApp for WafelApp {
         output_size: [u32; 2],
         scale_factor: f32,
     ) {
-        self.viz_render_data
-            .insert(0, VizRenderData::new([0, 0], output_size));
+        self.viz_scenes.insert(0, VizScene::default());
 
         let msaa_output_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
@@ -147,6 +147,7 @@ impl WindowedApp for WafelApp {
             &msaa_output_view,
             &depth_texture_view,
             output_format,
+            output_size,
             scale_factor,
             &mut clear_op,
         );
@@ -207,12 +208,19 @@ impl WafelApp {
         msaa_output_view: &wgpu::TextureView,
         depth_texture_view: &wgpu::TextureView,
         output_format: wgpu::TextureFormat,
+        output_size: [u32; 2],
         scale_factor: f32,
         clear_op: &mut Option<wgpu::LoadOp<wgpu::Color>>,
     ) {
-        for viz_render_data in &self.viz_render_data {
-            self.viz_renderer
-                .prepare(device, queue, output_format, viz_render_data);
+        for scene in &self.viz_scenes {
+            self.viz_renderer.prepare(
+                device,
+                queue,
+                output_format,
+                output_size,
+                scale_factor,
+                scene,
+            );
 
             let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
@@ -234,7 +242,7 @@ impl WafelApp {
                 }),
             });
 
-            self.viz_renderer.render(&mut rp, scale_factor);
+            self.viz_renderer.render(&mut rp);
         }
     }
 }

@@ -1,16 +1,16 @@
 from typing import *
 import json
 
-from wafel_core import Scene, Viewport, BirdsEyeCamera, RotateCamera, QuarterStep, VizRenderData
+from wafel_core import Scene, Viewport, BirdsEyeCamera, RotateCamera, QuarterStep, VizScene
 
 from wafel.model import Model
 from wafel.util import *
 
 
 scenes: List[Scene] = []
-viz_scenes: List[VizRenderData] = []
+viz_scenes: List[VizScene] = []
 
-def take_scenes() -> Tuple[List[Scene], List[VizRenderData]]:
+def take_scenes() -> Tuple[List[Scene], List[VizScene]]:
   global scenes, viz_scenes
   result = (scenes, viz_scenes)
   scenes = []

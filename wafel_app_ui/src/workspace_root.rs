@@ -1,4 +1,4 @@
-use wafel_api::VizRenderData;
+use wafel_api::VizScene;
 
 use crate::{workspace::Workspace, workspace_mode::WorkspaceModeSelector, Env};
 
@@ -60,7 +60,7 @@ impl WorkspaceRoot {
         response
     }
 
-    pub fn show(&mut self, env: &dyn Env, ui: &mut egui::Ui) -> Vec<VizRenderData> {
+    pub fn show(&mut self, env: &dyn Env, ui: &mut egui::Ui) -> Vec<VizScene> {
         match &mut self.workspace {
             Some(workspace) => workspace.show(env, ui),
             None => {

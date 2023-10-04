@@ -9,7 +9,7 @@ use crate::{
 use image::ImageFormat;
 use pyo3::prelude::*;
 use std::{slice, time::Instant};
-use wafel_api::VizRenderData;
+use wafel_api::VizScene;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -17,7 +17,7 @@ use winit::{
     window::WindowBuilder,
 };
 
-use super::{log, PyVizRenderData};
+use super::{log, PyVizScene};
 
 /// Open a window, call `update_fn` on each frame, and render the UI and scene(s).
 pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()> {
@@ -131,7 +131,7 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
                         let (py_imgui_draw_data, scenes, viz_scenes): (
                             &PyAny,
                             Vec<Scene>,
-                            Vec<PyVizRenderData>,
+                            Vec<PyVizScene>,
                         ) = update_fn.as_ref(py).call0()?.extract()?;
                         let imgui_draw_data =
                             extract_imgui_draw_data(&imgui_config, py_imgui_draw_data)?;
@@ -151,7 +151,7 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
                                 &scenes,
                             );
 
-                            let viz_scenes: Vec<VizRenderData> =
+                            let viz_scenes: Vec<VizScene> =
                                 viz_scenes.into_iter().map(|s| s.inner).collect();
                             viz_container.render(
                                 &device,

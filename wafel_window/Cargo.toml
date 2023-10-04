@@ -17,12 +17,10 @@ egui = "0.22.0"
 egui-wgpu = "0.22.0"
 egui-winit = "0.22.0"
 hot-lib-reloader = "0.6.5"
-wafel_viz = { path = "../wafel_viz", features = ["wgpu"], optional = true }
+wafel_viz = { path = "../wafel_viz" }
+wafel_viz_wgpu = { path = "../wafel_viz_wgpu" }
 static_assertions = "1.1.0"
 
 [dev-dependencies]
 wafel_api = { path = "../wafel_api" }
-
-[[example]]
-name = "sm64"
-required-features = ["wafel_viz"]
+wafel_viz_sm64 = { path = "../wafel_viz_sm64" }

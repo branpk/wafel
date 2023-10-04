@@ -1,0 +1,15 @@
+[package]
+name = "wafel_viz_wgpu"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+wafel_viz = { path = "../wafel_viz" }
+bytemuck = { version = "1.11.0", features = ["derive"] }
+fast3d = { path = "../fast3d", features = ["wgpu"] }
+wgpu = { workspace = true }
+ultraviolet = "0.9.0"
+enum-map = "2.6.3"
+
+[dev-dependencies]
+wafel_window = { path = "../wafel_window" }

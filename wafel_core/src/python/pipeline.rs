@@ -1,6 +1,6 @@
 use super::{
     value::{py_object_to_value, value_to_py_object},
-    PyAddress, PyEditRange, PyObjectBehavior, PyVariable, PyVizRenderData,
+    PyAddress, PyEditRange, PyObjectBehavior, PyVariable, PyVizScene,
 };
 use crate::{
     error::Error,
@@ -16,7 +16,7 @@ use lazy_static::lazy_static;
 use pyo3::{prelude::*, types::PyBytes};
 use std::{collections::HashMap, sync::Mutex};
 use wafel_api::Value;
-use wafel_viz::VizConfig;
+use wafel_viz_sm64::VizConfig;
 
 lazy_static! {
     static ref VALID_PIPELINES: Mutex<Vec<Py<PyPipeline>>> = Mutex::new(Vec::new());
@@ -437,13 +437,13 @@ impl PyPipeline {
     }
 
     /// Render the game for [wafel_viz] using `config_json` for [VizConfig].
-    pub fn render(&self, frame: u32, config_json: &str) -> PyResult<Option<PyVizRenderData>> {
+    pub fn render(&self, frame: u32, config_json: &str) -> PyResult<Option<PyVizScene>> {
         let timeline = self.get().pipeline.timeline();
 
         let config: VizConfig =
             serde_json::from_str(config_json).expect("failed to parse viz config json");
         let render_data = timeline.try_render(frame, &config).ok();
 
-        Ok(render_data.map(|inner| PyVizRenderData { inner }))
+        Ok(render_data.map(|inner| PyVizScene { inner }))
     }
 }

@@ -58,7 +58,7 @@ class Pipeline:
   def read_surfaces_to_scene(self, scene: Scene, frame: int) -> None: ...
   def read_objects_to_scene(self, scene: Scene, frame: int) -> None: ...
   def read_mario_path(self, frame_start: int, frame_end: int) -> ObjectPath: ...
-  def render(self, frame: int, config_json: str) -> Optional[VizRenderData]: ...
+  def render(self, frame: int, config_json: str) -> Optional[VizScene]: ...
 
 
 class Variable:
@@ -149,13 +149,13 @@ class QuarterStep:
   result_pos: Tuple[float, float, float]
 
 
-class VizRenderData:
+class VizScene:
   pass
 
 
 def open_window_and_run(
   title: str,
-  update_fn: Callable[[], Tuple[object, List[Scene], List[VizRenderData]]],
+  update_fn: Callable[[], Tuple[object, List[Scene], List[VizScene]]],
 ) -> None:
   ...
 

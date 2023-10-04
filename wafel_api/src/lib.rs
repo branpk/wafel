@@ -55,9 +55,10 @@ pub use wafel_data_type::{
     Address, Angle, FloatType, FloatValue, IntType, IntValue, Value, ValueTypeError,
 };
 pub use wafel_sm64::{ObjectHitbox, Surface};
-pub use wafel_viz::{
+pub use wafel_viz::VizScene;
+pub use wafel_viz_sm64::{
     Camera, Element, InGameRenderMode, Line, LookAtCamera, ObjectCull, OrthoCamera, Point,
-    SurfaceMode, VizConfig, VizRenderData,
+    SurfaceMode, VizConfig,
 };
 
 mod data_cache;

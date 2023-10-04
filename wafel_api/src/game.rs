@@ -7,7 +7,8 @@ use wafel_memory::{DllGameMemory, GameMemory, MemoryRead};
 use wafel_sm64::{
     mario_action_names, read_frame_log, read_object_hitboxes, read_surfaces, ObjectHitbox, Surface,
 };
-use wafel_viz::{viz_render, VizConfig, VizRenderData};
+use wafel_viz::VizScene;
+use wafel_viz_sm64::{viz_render, VizConfig};
 
 use crate::{simplified_data_type, DataType, Error, Input};
 
@@ -370,27 +371,27 @@ impl Game {
         Ok(value.value.into())
     }
 
-    /// Render the game to a [VizRenderData] object, which can be displayed using
+    /// Render the game to a [VizScene] object, which can be displayed using
     /// [wafel_viz].
     ///
     /// # Panics
     ///
     /// Panics if rendering fails (most likely a bug in [wafel_viz]).
-    pub fn render(&self, config: &VizConfig) -> VizRenderData {
+    pub fn render(&self, config: &VizConfig) -> VizScene {
         match self.try_render(config) {
-            Ok(render_data) => render_data,
+            Ok(scene) => scene,
             Err(error) => panic!("Error:\n  failed to render:\n  {}\n", error),
         }
     }
 
-    /// Render the game to a [VizRenderData] object, which can be displayed using
+    /// Render the game to a [VizScene] object, which can be displayed using
     /// [wafel_viz].
     ///
     /// Returns an error if rendering fails (most likely a bug in [wafel_viz]).
-    pub fn try_render(&self, config: &VizConfig) -> Result<VizRenderData, Error> {
+    pub fn try_render(&self, config: &VizConfig) -> Result<VizScene, Error> {
         let memory = self.memory.with_slot(&self.base_slot);
-        let render_data = viz_render(&self.layout, &memory, config, false)?;
-        Ok(render_data)
+        let scene = viz_render(&self.layout, &memory, config, false)?;
+        Ok(scene)
     }
 
     /// Return a mapping from Mario action values to their name (e.g. `ACT_IDLE`).

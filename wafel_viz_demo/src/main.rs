@@ -9,10 +9,11 @@ use std::{
 use remote_dll::RemoteDllApp;
 use wafel_api::{try_load_m64, Error, Game, Input, SaveState};
 use wafel_memory::GameMemory;
-use wafel_viz::{
+use wafel_viz_sm64::{
     viz_render, Camera, Element, InGameRenderMode, Line, ObjectCull, OrthoCamera,
-    PerspCameraControl, Point, SurfaceMode, VizConfig, VizRenderer,
+    PerspCameraControl, Point, SurfaceMode, VizConfig,
 };
+use wafel_viz_wgpu::VizRenderer;
 use window::{open_window_and_run, App};
 use winit::event::{ElementState, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowEvent};
 
@@ -20,8 +21,8 @@ mod remote_dll;
 mod window;
 
 fn main() {
-    open_window_and_run::<RemoteDllApp>();
-    // open_window_and_run::<VizApp>();
+    // open_window_and_run::<RemoteDllApp>();
+    open_window_and_run::<VizApp>();
 }
 
 #[derive(Debug)]
@@ -85,7 +86,7 @@ impl App for VizApp {
         // ccm: 8414
         // crash: 17276
         // ddd moves back: 40492
-        while app.game.frame() < 100000 {
+        while app.game.frame() < 41884 {
             app.frame_advance()?;
         }
 
@@ -217,6 +218,7 @@ impl App for VizApp {
         output_view: &wgpu::TextureView,
         output_format: wgpu::TextureFormat,
         output_size: [u32; 2],
+        scale_factor: f32,
     ) -> Result<(), Error> {
         let camera = self.camera_control.camera();
 
@@ -229,7 +231,10 @@ impl App for VizApp {
         // });
 
         let mut config = VizConfig {
-            screen_size: output_size,
+            screen_size: [
+                (output_size[0] as f32 / scale_factor) as u32,
+                (output_size[1] as f32 / scale_factor) as u32,
+            ],
             in_game_render_mode: if self.held_keys.contains(&VirtualKeyCode::X) {
                 InGameRenderMode::DisplayList
             } else if self.held_keys.contains(&VirtualKeyCode::Z) {
@@ -276,10 +281,16 @@ impl App for VizApp {
         //     }
         // }
 
-        let render_data = self.game.render(&config);
+        let scene = self.game.render(&config);
 
-        self.viz_renderer
-            .prepare(device, queue, output_format, &render_data);
+        self.viz_renderer.prepare(
+            device,
+            queue,
+            output_format,
+            output_size,
+            scale_factor,
+            &scene,
+        );
 
         let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
@@ -321,7 +332,7 @@ impl App for VizApp {
                 }),
             });
 
-            self.viz_renderer.render(&mut rp, 1.0);
+            self.viz_renderer.render(&mut rp);
         }
 
         queue.submit([encoder.finish()]);

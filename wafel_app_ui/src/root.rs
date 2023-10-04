@@ -1,4 +1,4 @@
-use wafel_api::VizRenderData;
+use wafel_api::VizScene;
 
 use crate::{workspace_root::WorkspaceRoot, Env};
 
@@ -30,7 +30,7 @@ impl Root {
         self.workspaces.len() - 1
     }
 
-    pub fn show(&mut self, env: &dyn Env, ctx: &egui::Context) -> Vec<VizRenderData> {
+    pub fn show(&mut self, env: &dyn Env, ctx: &egui::Context) -> Vec<VizScene> {
         let is_workspace_panel_expanded =
             self.is_workspace_panel_expanded || self.selected_workspace_index.is_none();
 

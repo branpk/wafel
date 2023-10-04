@@ -1,6 +1,6 @@
 use std::env;
 
-use wafel_viz::VizConfig;
+use wafel_viz_sm64::VizConfig;
 
 #[derive(Debug, Clone)]
 pub struct TestCase {
