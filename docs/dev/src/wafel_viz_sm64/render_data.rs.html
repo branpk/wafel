@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_viz_sm64/src/render_data.rs`."><title>render_data.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_viz_sm64" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (187b8131d 2023-10-03)" data-channel="nightly" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../wafel_viz_sm64/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_viz_sm64/src/render_data.rs`."><title>render_data.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_viz_sm64" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (cae0791da 2023-10-05)" data-channel="nightly" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../wafel_viz_sm64/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -423,13 +423,20 @@
 <a href="#423" id="423">423</a>
 <a href="#424" id="424">424</a>
 <a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>fast3d::{interpret::F3DRenderData, util::Matrixf};
-<span class="kw">use </span>ultraviolet::Vec3;
 <span class="kw">use </span>wafel_data_access::MemoryLayout;
 <span class="kw">use </span>wafel_memory::MemoryRead;
 <span class="kw">use </span>wafel_sm64::{read_surfaces, Surface, SurfaceType};
-<span class="kw">use </span>wafel_viz::{TransparencyHint, Triangle, VizScene};
+<span class="kw">use </span>wafel_viz::{Rect2, TransparencyHint, TriangleElement, Vec2, Vec3, VizScene};
 
 <span class="kw">use crate</span>::{
     sm64_gfx_render::{sm64_gfx_render, GfxRenderOutput},
@@ -448,8 +455,8 @@
         <span class="self">Self </span>{ pos, color }
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>pos3(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; [f32; <span class="number">3</span>] {
-        [<span class="self">self</span>.pos[<span class="number">0</span>], <span class="self">self</span>.pos[<span class="number">1</span>], <span class="self">self</span>.pos[<span class="number">2</span>]]
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>pos3(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec3 {
+        [<span class="self">self</span>.pos[<span class="number">0</span>], <span class="self">self</span>.pos[<span class="number">1</span>], <span class="self">self</span>.pos[<span class="number">2</span>]].into()
     }
 }
 
@@ -465,7 +472,7 @@
 }
 
 <span class="kw">impl </span>VizRenderData {
-    <span class="kw">pub fn </span>new(screen_top_left: [u32; <span class="number">2</span>], screen_size: [u32; <span class="number">2</span>]) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(screen_top_left: [i32; <span class="number">2</span>], screen_size: [i32; <span class="number">2</span>]) -&gt; <span class="self">Self </span>{
         F3DRenderData::new(screen_top_left, screen_size).into()
     }
 
@@ -475,7 +482,10 @@
         <span class="kw">let </span>viewport_top_left = <span class="self">self</span>.f3d_render_data.screen_top_left;
         <span class="kw">let </span>viewport_size = <span class="self">self</span>.f3d_render_data.screen_size;
 
-        scene.set_viewport_logical(viewport_top_left, viewport_size);
+        scene.set_viewport_logical(Rect2::from_min_and_size(
+            Vec2::new(viewport_top_left[<span class="number">0</span>] <span class="kw">as </span>f32, viewport_top_left[<span class="number">1</span>] <span class="kw">as </span>f32),
+            Vec2::new(viewport_size[<span class="number">0</span>] <span class="kw">as </span>f32, viewport_size[<span class="number">1</span>] <span class="kw">as </span>f32),
+        ));
         scene.set_f3d_render_data(<span class="self">self</span>.f3d_render_data);
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(render_output) = <span class="self">self</span>.render_output {
@@ -489,24 +499,26 @@
             ]);
             <span class="kw">let </span>proj_mtx = <span class="kw-2">&amp;</span>proj_modify * <span class="kw-2">&amp;</span>render_output.proj_mtx;
 
-            scene.set_proj_mtx(proj_mtx.cols);
-            scene.set_view_mtx(render_output.view_mtx.cols);
+            scene.set_camera(wafel_viz::Camera::new(
+                proj_mtx.cols.into(),
+                render_output.view_mtx.cols.into(),
+            ));
         }
 
         <span class="comment">// Surfaces
         </span><span class="kw">for </span>vertices <span class="kw">in </span><span class="self">self</span>.surface_vertices.chunks(<span class="number">3</span>) {
             <span class="macro">assert_eq!</span>(vertices.len(), <span class="number">3</span>);
             scene.add(
-                Triangle::new([vertices[<span class="number">0</span>].pos3(), vertices[<span class="number">1</span>].pos3(), vertices[<span class="number">2</span>].pos3()])
-                    .with_color(vertices[<span class="number">0</span>].color)
+                TriangleElement::new([vertices[<span class="number">0</span>].pos3(), vertices[<span class="number">1</span>].pos3(), vertices[<span class="number">2</span>].pos3()])
+                    .with_color(vertices[<span class="number">0</span>].color.into())
                     .with_surface_gradient(<span class="bool-val">true</span>),
             );
         }
         <span class="kw">for </span>vertices <span class="kw">in </span><span class="self">self</span>.transparent_surface_vertices.chunks(<span class="number">3</span>) {
             <span class="macro">assert_eq!</span>(vertices.len(), <span class="number">3</span>);
             scene.add(
-                Triangle::new([vertices[<span class="number">0</span>].pos3(), vertices[<span class="number">1</span>].pos3(), vertices[<span class="number">2</span>].pos3()])
-                    .with_color(vertices[<span class="number">0</span>].color)
+                TriangleElement::new([vertices[<span class="number">0</span>].pos3(), vertices[<span class="number">1</span>].pos3(), vertices[<span class="number">2</span>].pos3()])
+                    .with_color(vertices[<span class="number">0</span>].color.into())
                     .with_surface_gradient(<span class="bool-val">true</span>),
             );
         }
@@ -515,8 +527,8 @@
         </span><span class="kw">for </span>vertices <span class="kw">in </span><span class="self">self</span>.wall_hitbox_vertices.chunks(<span class="number">3</span>) {
             <span class="macro">assert_eq!</span>(vertices.len(), <span class="number">3</span>);
             scene.add(
-                Triangle::new([vertices[<span class="number">0</span>].pos3(), vertices[<span class="number">1</span>].pos3(), vertices[<span class="number">2</span>].pos3()])
-                    .with_color(vertices[<span class="number">0</span>].color)
+                TriangleElement::new([vertices[<span class="number">0</span>].pos3(), vertices[<span class="number">1</span>].pos3(), vertices[<span class="number">2</span>].pos3()])
+                    .with_color(vertices[<span class="number">0</span>].color.into())
                     .with_surface_gradient(<span class="bool-val">true</span>)
                     .with_transparency_hint(TransparencyHint::WallHitbox),
             );
@@ -524,8 +536,8 @@
         <span class="kw">for </span>vertices <span class="kw">in </span><span class="self">self</span>.wall_hitbox_outline_vertices.chunks(<span class="number">2</span>) {
             <span class="macro">assert_eq!</span>(vertices.len(), <span class="number">2</span>);
             scene.add(
-                wafel_viz::Line::new([vertices[<span class="number">0</span>].pos3(), vertices[<span class="number">1</span>].pos3()])
-                    .with_color(vertices[<span class="number">0</span>].color),
+                wafel_viz::LineElement::new([vertices[<span class="number">0</span>].pos3(), vertices[<span class="number">1</span>].pos3()])
+                    .with_color(vertices[<span class="number">0</span>].color.into()),
             );
         }
 
@@ -533,11 +545,11 @@
         </span><span class="kw">for </span>element <span class="kw">in </span><span class="self">self</span>.elements {
             scene.add(<span class="kw">match </span>element {
                 Element::Point(point) =&gt; wafel_viz::Element::Point(
-                    wafel_viz::Point::new(point.pos).with_color(point.color),
+                    wafel_viz::PointElement::new(point.pos.into()).with_color(point.color.into()),
                 ),
                 Element::Line(line) =&gt; wafel_viz::Element::Line(
-                    wafel_viz::Line::new([line.vertices[<span class="number">0</span>], line.vertices[<span class="number">1</span>]])
-                        .with_color(line.color),
+                    wafel_viz::LineElement::new([line.vertices[<span class="number">0</span>].into(), line.vertices[<span class="number">1</span>].into()])
+                        .with_color(line.color.into()),
                 ),
             });
         }
@@ -563,11 +575,13 @@
 <span class="kw">pub fn </span>sm64_render(
     layout: <span class="kw-2">&amp;</span><span class="kw">impl </span>MemoryLayout,
     memory: <span class="kw-2">&amp;</span><span class="kw">impl </span>MemoryRead,
-    screen_top_left: [u32; <span class="number">2</span>],
-    screen_size: [u32; <span class="number">2</span>],
+    screen_top_left: [i32; <span class="number">2</span>],
+    screen_size: [i32; <span class="number">2</span>],
     use_segment_table: bool,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;F3DRenderData, VizError&gt; {
-    <span class="macro">assert!</span>(screen_size[<span class="number">0</span>] &gt; <span class="number">0 </span>&amp;&amp; screen_size[<span class="number">1</span>] &gt; <span class="number">0</span>);
+    <span class="kw">if </span>screen_size[<span class="number">0</span>] &lt;= <span class="number">0 </span>|| screen_size[<span class="number">1</span>] &lt;= <span class="number">0 </span>{
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(F3DRenderData::new(screen_top_left, screen_size));
+    }
 
     <span class="kw">let </span>config = VizConfig {
         screen_top_left,
@@ -585,7 +599,9 @@
     config: <span class="kw-2">&amp;</span>VizConfig,
     use_segment_table: bool,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;VizScene, VizError&gt; {
-    <span class="macro">assert!</span>(config.screen_size[<span class="number">0</span>] &gt; <span class="number">0 </span>&amp;&amp; config.screen_size[<span class="number">1</span>] &gt; <span class="number">0</span>);
+    <span class="kw">if </span>config.screen_size[<span class="number">0</span>] &lt;= <span class="number">0 </span>|| config.screen_size[<span class="number">1</span>] &lt;= <span class="number">0 </span>{
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(VizRenderData::new(config.screen_top_left, config.screen_size).into_viz_scene());
+    }
 
     <span class="kw">if </span>config.in_game_render_mode == InGameRenderMode::DisplayList {
         <span class="kw">return </span><span class="prelude-val">Ok</span>(VizRenderData::from(sm64_render(

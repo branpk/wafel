@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Element","TransparencyHint"],"struct":["Line","Point","Triangle","VizScene"]};
+window.SIDEBAR_ITEMS = {"enum":["Element","TransparencyHint","Viewport"],"struct":["Camera","LineElement","Mat4","PointElement","Rect2","TriangleElement","Vec2","Vec3","Vec4","VizScene"]};
