@@ -9,7 +9,7 @@ use winit::{event::WindowEvent, window::Window};
 
 use crate::{
     egui_state::EguiState, fps_counter::FpsCounter, logging, wgpu_util::CachedTexture,
-    window_env::WindowEnv, AppConfig,
+    window_env::AppEnv, AppConfig, Input,
 };
 
 #[derive(Debug)]
@@ -19,11 +19,12 @@ struct WindowEnvImpl<'a> {
     mspf: f32,
     egui_ctx: egui::Context,
     viz_scenes: Mutex<Vec<VizScene>>,
+    input: &'a Input,
 }
 
 static_assertions::assert_impl_all!(WindowEnvImpl<'_>: Send, Sync);
 
-impl WindowEnv for WindowEnvImpl<'_> {
+impl AppEnv for WindowEnvImpl<'_> {
     fn config(&self) -> &AppConfig {
         self.config
     }
@@ -38,6 +39,10 @@ impl WindowEnv for WindowEnvImpl<'_> {
 
     fn egui_ctx(&self) -> &egui::Context {
         &self.egui_ctx
+    }
+
+    fn input(&self) -> &Input {
+        self.input
     }
 
     fn draw_viz(&self, scene: VizScene) {
@@ -61,9 +66,10 @@ pub struct Container<D> {
     msaa_texture: CachedTexture,
     depth_texture: CachedTexture,
     fps_counter: FpsCounter,
+    input: Input,
 }
 
-impl<D: FnMut(&dyn WindowEnv)> Container<D> {
+impl<D: FnMut(&dyn AppEnv)> Container<D> {
     pub fn new(
         config: &AppConfig,
         draw: D,
@@ -105,15 +111,14 @@ impl<D: FnMut(&dyn WindowEnv)> Container<D> {
             msaa_texture: CachedTexture::new(),
             depth_texture: CachedTexture::new(),
             fps_counter: FpsCounter::new(),
+            input: Input::new(),
         }
     }
 
-    pub fn window_event(&mut self, event: &WindowEvent<'_>) {
+    pub fn window_event(&mut self, window: &Window, event: &WindowEvent<'_>) {
         if let Some(egui_state) = self.egui_state.lock().unwrap().as_mut() {
-            let consumed = egui_state.window_event(event);
-            if !consumed {
-                // handle event
-            }
+            let egui_consumed = egui_state.window_event(event);
+            self.input.handle_event(window, event, egui_consumed);
         }
     }
 
@@ -131,12 +136,15 @@ impl<D: FnMut(&dyn WindowEnv)> Container<D> {
                 mspf: self.fps_counter.mspf(),
                 egui_ctx: ctx.clone(),
                 viz_scenes: Mutex::new(Vec::new()),
+                input: &self.input,
             };
 
             (self.draw)(&env);
 
             self.viz_scenes = env.viz_scenes.into_inner().unwrap();
         });
+
+        self.input.end_frame();
     }
 
     pub fn render(
@@ -258,7 +266,7 @@ impl<D: FnMut(&dyn WindowEnv)> Container<D> {
             egui_state.prepare(device, queue, encoder, output_size, scale_factor);
 
             let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: None,
+                label: Some("egui"),
                 color_attachments: &[Some(get_color_attachment())],
                 depth_stencil_attachment: None,
             });
@@ -289,7 +297,7 @@ impl<D: FnMut(&dyn WindowEnv)> Container<D> {
             );
 
             let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: None,
+                label: Some("viz"),
                 color_attachments: &[Some(get_color_attachment())],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                     view: depth_texture_view,

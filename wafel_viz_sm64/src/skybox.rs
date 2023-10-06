@@ -120,6 +120,10 @@ fn make_skybox_rect<M: MemoryRead>(
     let x = (col * SKYBOX_TILE_WIDTH) as i16;
     let y = (SKYBOX_HEIGHT - row * SKYBOX_TILE_HEIGHT) as i16;
 
+    // Avoid overflow at extreme aspect ratios
+    let x = x.clamp(-10000, 10000);
+    let y = y.clamp(-10000, 10000);
+
     let color_index = color_index as usize;
     let color = [
         SKYBOX_COLORS[color_index][0],

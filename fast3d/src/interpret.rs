@@ -78,10 +78,12 @@ pub trait F3DMemory {
 /// self-contained [F3DRenderData] object.
 pub fn interpret_f3d_display_list<M: F3DMemory>(
     memory: &M,
-    screen_top_left: [u32; 2],
-    screen_size: [u32; 2],
+    screen_top_left: [i32; 2],
+    screen_size: [i32; 2],
     z_is_from_0_to_1: bool,
 ) -> Result<F3DRenderData, M::Error> {
+    assert!(screen_size[0] > 0 && screen_size[1] > 0);
+
     let mut interpreter = Interpreter {
         memory: Some(memory),
         screen_size,
@@ -98,7 +100,7 @@ pub fn interpret_f3d_display_list<M: F3DMemory>(
 #[derivative(Default(bound = ""))]
 struct Interpreter<'m, M: F3DMemory> {
     memory: Option<&'m M>,
-    screen_size: [u32; 2],
+    screen_size: [i32; 2],
     z_is_from_0_to_1: bool,
     result: Option<F3DRenderData>,
 

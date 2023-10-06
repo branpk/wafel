@@ -60,12 +60,13 @@ impl Renderer {
     }
 
     pub fn render(&mut self, game: &Game, config: &VizConfig) -> RgbImage {
-        if self.sized.as_ref().map(|r| r.output_size) != Some(config.screen_size) {
+        if self.sized.as_ref().map(|r| r.output_size.map(|n| n as i32)) != Some(config.screen_size)
+        {
             self.sized = None;
         }
-        let sized_renderer = self
-            .sized
-            .get_or_insert_with(|| SizedRenderer::new(&self.device, config.screen_size));
+        let sized_renderer = self.sized.get_or_insert_with(|| {
+            SizedRenderer::new(&self.device, config.screen_size.map(|n| n as u32))
+        });
         sized_renderer.render(&self.device, &self.queue, game, config)
     }
 }
@@ -198,7 +199,7 @@ impl SizedRenderer {
                     buffer: &self.output_buffer,
                     layout: wgpu::ImageDataLayout {
                         offset: 0,
-                        bytes_per_row: Some(self.padded_bytes_per_row.try_into().unwrap()),
+                        bytes_per_row: Some(self.padded_bytes_per_row),
                         rows_per_image: None,
                     },
                 },

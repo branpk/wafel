@@ -28,12 +28,15 @@
 #![allow(clippy::too_many_arguments)]
 
 pub use config::*;
+pub use input::*;
 pub use window_env::*;
+pub use winit::event::{MouseButton, VirtualKeyCode};
 
 mod config;
 mod container;
 mod egui_state;
 mod fps_counter;
+mod input;
 mod logging;
 mod wgpu_util;
 mod window;
@@ -42,7 +45,7 @@ mod window_env;
 /// Initializes logging, opens a window and runs the application.
 ///
 /// This function does not return.
-pub fn run(config: &AppConfig, draw: impl FnMut(&dyn WindowEnv) + 'static) {
+pub fn run(config: &AppConfig, draw: impl FnMut(&dyn AppEnv) + 'static) {
     logging::init(&config.log_file_path());
 
     logging::print_to_log_file(&"-".repeat(80));

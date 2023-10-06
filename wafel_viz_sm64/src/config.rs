@@ -6,8 +6,8 @@ use wafel_data_type::Angle;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct VizConfig {
-    pub screen_top_left: [u32; 2],
-    pub screen_size: [u32; 2],
+    pub screen_top_left: [i32; 2],
+    pub screen_size: [i32; 2],
     pub in_game_render_mode: InGameRenderMode,
     pub show_in_game_overlays: bool,
     pub camera: Camera,

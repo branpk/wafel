@@ -20,6 +20,7 @@ hot-lib-reloader = "0.6.5"
 wafel_viz = { path = "../wafel_viz" }
 wafel_viz_wgpu = { path = "../wafel_viz_wgpu" }
 static_assertions = "1.1.0"
+indexmap = "2.0.2"
 
 [dev-dependencies]
 wafel_api = { path = "../wafel_api" }

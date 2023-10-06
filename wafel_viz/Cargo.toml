@@ -6,3 +6,8 @@ edition = "2021"
 [dependencies]
 fast3d = { path = "../fast3d" }
 ultraviolet = "0.9.0"
+
+[dev-dependencies]
+wafel_window = { path = "../wafel_window" }
+egui = "0.22.0"
+wafel_api = { path = "../wafel_api" }

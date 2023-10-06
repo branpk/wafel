@@ -232,8 +232,8 @@ impl App for VizApp {
 
         let mut config = VizConfig {
             screen_size: [
-                (output_size[0] as f32 / scale_factor) as u32,
-                (output_size[1] as f32 / scale_factor) as u32,
+                (output_size[0] as f32 / scale_factor) as i32,
+                (output_size[1] as f32 / scale_factor) as i32,
             ],
             in_game_render_mode: if self.held_keys.contains(&VirtualKeyCode::X) {
                 InGameRenderMode::DisplayList

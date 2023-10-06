@@ -6,12 +6,12 @@ use winit::{
     window::{WindowBuilder, WindowLevel},
 };
 
-use crate::{container::Container, window_env::WindowEnv, AppConfig};
+use crate::{container::Container, window_env::AppEnv, AppConfig};
 
 /// Opens a maximized window and runs the application.
 ///
 /// This function does not return.
-pub fn open_window_and_run(config: &AppConfig, draw: impl FnMut(&dyn WindowEnv) + 'static) {
+pub fn open_window_and_run(config: &AppConfig, draw: impl FnMut(&dyn AppEnv) + 'static) {
     pollster::block_on(async {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY,
@@ -114,7 +114,7 @@ pub fn open_window_and_run(config: &AppConfig, draw: impl FnMut(&dyn WindowEnv) 
 
             match event {
                 Event::WindowEvent { event, .. } => {
-                    container.window_event(&event);
+                    container.window_event(&window, &event);
                     match event {
                         WindowEvent::Resized(size) => {
                             surface_config.width = size.width;
@@ -137,7 +137,7 @@ pub fn open_window_and_run(config: &AppConfig, draw: impl FnMut(&dyn WindowEnv) 
                         container.update(&window, &device);
                     }
 
-                    if surface_config.width != 0 && surface_config.height != 0 {
+                    if surface_config.width > 0 && surface_config.height > 0 {
                         let surface_texture = surface
                             .get_current_texture()
                             .expect("failed to acquire next swap chain texture");

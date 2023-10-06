@@ -31,6 +31,8 @@ pub fn sm64_gfx_render(
     config: &VizConfig,
     use_segment_table: bool,
 ) -> Result<(F3DRenderData, GfxRenderOutput), VizError> {
+    assert!(config.screen_size[0] > 0 && config.screen_size[1] > 0);
+
     if config.in_game_render_mode == InGameRenderMode::Disabled {
         return Ok((
             F3DRenderData::new(config.screen_top_left, config.screen_size),
@@ -1518,7 +1520,7 @@ where
                 self.layout,
                 self.memory,
                 node,
-                self.config.screen_size,
+                self.config.screen_size.map(|n| n as u32),
                 &lakitu_state,
             )?;
             self.append_dynamic_list(node.fn_node.node.flags >> 8, display_list);

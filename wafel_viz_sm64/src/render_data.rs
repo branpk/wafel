@@ -1,10 +1,9 @@
 use bytemuck::{Pod, Zeroable};
 use fast3d::{interpret::F3DRenderData, util::Matrixf};
-use ultraviolet::Vec3;
 use wafel_data_access::MemoryLayout;
 use wafel_memory::MemoryRead;
 use wafel_sm64::{read_surfaces, Surface, SurfaceType};
-use wafel_viz::{TransparencyHint, Triangle, VizScene};
+use wafel_viz::{Rect2, TransparencyHint, TriangleElement, Vec2, Vec3, VizScene};
 
 use crate::{
     sm64_gfx_render::{sm64_gfx_render, GfxRenderOutput},
@@ -23,8 +22,8 @@ impl ColorVertex {
         Self { pos, color }
     }
 
-    pub(crate) fn pos3(&self) -> [f32; 3] {
-        [self.pos[0], self.pos[1], self.pos[2]]
+    pub(crate) fn pos3(&self) -> Vec3 {
+        [self.pos[0], self.pos[1], self.pos[2]].into()
     }
 }
 
@@ -40,7 +39,7 @@ pub(crate) struct VizRenderData {
 }
 
 impl VizRenderData {
-    pub fn new(screen_top_left: [u32; 2], screen_size: [u32; 2]) -> Self {
+    pub fn new(screen_top_left: [i32; 2], screen_size: [i32; 2]) -> Self {
         F3DRenderData::new(screen_top_left, screen_size).into()
     }
 
@@ -50,7 +49,10 @@ impl VizRenderData {
         let viewport_top_left = self.f3d_render_data.screen_top_left;
         let viewport_size = self.f3d_render_data.screen_size;
 
-        scene.set_viewport_logical(viewport_top_left, viewport_size);
+        scene.set_viewport_logical(Rect2::from_min_and_size(
+            Vec2::new(viewport_top_left[0] as f32, viewport_top_left[1] as f32),
+            Vec2::new(viewport_size[0] as f32, viewport_size[1] as f32),
+        ));
         scene.set_f3d_render_data(self.f3d_render_data);
 
         if let Some(render_output) = self.render_output {
@@ -64,24 +66,26 @@ impl VizRenderData {
             ]);
             let proj_mtx = &proj_modify * &render_output.proj_mtx;
 
-            scene.set_proj_mtx(proj_mtx.cols);
-            scene.set_view_mtx(render_output.view_mtx.cols);
+            scene.set_camera(wafel_viz::Camera::new(
+                proj_mtx.cols.into(),
+                render_output.view_mtx.cols.into(),
+            ));
         }
 
         // Surfaces
         for vertices in self.surface_vertices.chunks(3) {
             assert_eq!(vertices.len(), 3);
             scene.add(
-                Triangle::new([vertices[0].pos3(), vertices[1].pos3(), vertices[2].pos3()])
-                    .with_color(vertices[0].color)
+                TriangleElement::new([vertices[0].pos3(), vertices[1].pos3(), vertices[2].pos3()])
+                    .with_color(vertices[0].color.into())
                     .with_surface_gradient(true),
             );
         }
         for vertices in self.transparent_surface_vertices.chunks(3) {
             assert_eq!(vertices.len(), 3);
             scene.add(
-                Triangle::new([vertices[0].pos3(), vertices[1].pos3(), vertices[2].pos3()])
-                    .with_color(vertices[0].color)
+                TriangleElement::new([vertices[0].pos3(), vertices[1].pos3(), vertices[2].pos3()])
+                    .with_color(vertices[0].color.into())
                     .with_surface_gradient(true),
             );
         }
@@ -90,8 +94,8 @@ impl VizRenderData {
         for vertices in self.wall_hitbox_vertices.chunks(3) {
             assert_eq!(vertices.len(), 3);
             scene.add(
-                Triangle::new([vertices[0].pos3(), vertices[1].pos3(), vertices[2].pos3()])
-                    .with_color(vertices[0].color)
+                TriangleElement::new([vertices[0].pos3(), vertices[1].pos3(), vertices[2].pos3()])
+                    .with_color(vertices[0].color.into())
                     .with_surface_gradient(true)
                     .with_transparency_hint(TransparencyHint::WallHitbox),
             );
@@ -99,8 +103,8 @@ impl VizRenderData {
         for vertices in self.wall_hitbox_outline_vertices.chunks(2) {
             assert_eq!(vertices.len(), 2);
             scene.add(
-                wafel_viz::Line::new([vertices[0].pos3(), vertices[1].pos3()])
-                    .with_color(vertices[0].color),
+                wafel_viz::LineElement::new([vertices[0].pos3(), vertices[1].pos3()])
+                    .with_color(vertices[0].color.into()),
             );
         }
 
@@ -108,11 +112,11 @@ impl VizRenderData {
         for element in self.elements {
             scene.add(match element {
                 Element::Point(point) => wafel_viz::Element::Point(
-                    wafel_viz::Point::new(point.pos).with_color(point.color),
+                    wafel_viz::PointElement::new(point.pos.into()).with_color(point.color.into()),
                 ),
                 Element::Line(line) => wafel_viz::Element::Line(
-                    wafel_viz::Line::new([line.vertices[0], line.vertices[1]])
-                        .with_color(line.color),
+                    wafel_viz::LineElement::new([line.vertices[0].into(), line.vertices[1].into()])
+                        .with_color(line.color.into()),
                 ),
             });
         }
@@ -138,11 +142,13 @@ impl From<F3DRenderData> for VizRenderData {
 pub fn sm64_render(
     layout: &impl MemoryLayout,
     memory: &impl MemoryRead,
-    screen_top_left: [u32; 2],
-    screen_size: [u32; 2],
+    screen_top_left: [i32; 2],
+    screen_size: [i32; 2],
     use_segment_table: bool,
 ) -> Result<F3DRenderData, VizError> {
-    assert!(screen_size[0] > 0 && screen_size[1] > 0);
+    if screen_size[0] <= 0 || screen_size[1] <= 0 {
+        return Ok(F3DRenderData::new(screen_top_left, screen_size));
+    }
 
     let config = VizConfig {
         screen_top_left,
@@ -160,7 +166,9 @@ pub fn viz_render(
     config: &VizConfig,
     use_segment_table: bool,
 ) -> Result<VizScene, VizError> {
-    assert!(config.screen_size[0] > 0 && config.screen_size[1] > 0);
+    if config.screen_size[0] <= 0 || config.screen_size[1] <= 0 {
+        return Ok(VizRenderData::new(config.screen_top_left, config.screen_size).into_viz_scene());
+    }
 
     if config.in_game_render_mode == InGameRenderMode::DisplayList {
         return Ok(VizRenderData::from(sm64_render(

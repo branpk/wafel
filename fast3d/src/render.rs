@@ -18,8 +18,10 @@ pub struct F3DRenderer {
     texture_bind_group_layout: wgpu::BindGroupLayout,
     texture_bind_groups: HashMap<TextureIndex, wgpu::BindGroup>,
     pipelines: HashMap<PipelineId, wgpu::RenderPipeline>,
-    screen_top_left: [u32; 2],
-    screen_size: [u32; 2],
+    output_size_physical: Option<[u32; 2]>,
+    scale_factor: f32,
+    screen_top_left: [i32; 2],
+    screen_size: [i32; 2],
     commands: Vec<DrawCommand<wgpu::Buffer>>,
 }
 
@@ -120,6 +122,8 @@ impl F3DRenderer {
             texture_bind_group_layout,
             texture_bind_groups: HashMap::new(),
             pipelines: HashMap::new(),
+            output_size_physical: None,
+            scale_factor: 1.0,
             screen_top_left: [0, 0],
             screen_size: [320, 240],
             commands: Vec::new(),
@@ -457,6 +461,8 @@ impl F3DRenderer {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         output_format: wgpu::TextureFormat,
+        output_size_physical: [u32; 2],
+        scale_factor: f32,
         data: &F3DRenderData,
     ) {
         for (&pipeline_id, pipeline_info) in &data.pipelines {
@@ -469,6 +475,8 @@ impl F3DRenderer {
             self.prepare_texture_bind_group(device, queue, texture_index, texture);
         }
 
+        self.output_size_physical = Some(output_size_physical);
+        self.scale_factor = scale_factor;
         self.screen_top_left = data.screen_top_left;
         self.screen_size = data.screen_size;
 
@@ -483,23 +491,29 @@ impl F3DRenderer {
         }
     }
 
-    pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>, scale_factor: f32) {
-        self.render_command_range(rp, 0..self.commands.len(), scale_factor);
+    pub fn render<'r>(&'r self, rp: &mut wgpu::RenderPass<'r>) {
+        self.render_command_range(rp, 0..self.commands.len());
     }
 
     pub fn render_command_range<'r>(
         &'r self,
         rp: &mut wgpu::RenderPass<'r>,
         cmd_indices: Range<usize>,
-        scale_factor: f32,
     ) {
+        if self.screen_size[0] <= 0 || self.screen_size[1] <= 0 {
+            return;
+        }
+
+        let output_size_physical = self
+            .output_size_physical
+            .expect("missing call to F3DRenderer::render");
+        let scale_factor = self.scale_factor;
+        let output_size_logical = output_size_physical.map(|n| (n as f32 / scale_factor) as i32);
+
         let mut current_pipeline = None;
 
         for command in &self.commands[cmd_indices] {
             let ScreenRectangle { x, y, w, h } = command.viewport;
-            if w == 0 || h == 0 {
-                continue;
-            }
             rp.set_viewport(
                 (x as f32 + self.screen_top_left[0] as f32) * scale_factor,
                 (y as f32 + self.screen_top_left[1] as f32) * scale_factor,
@@ -509,21 +523,34 @@ impl F3DRenderer {
                 1.0,
             );
 
-            let ScreenRectangle { x, y, w, h } = command.scissor;
-            let x0 = x.clamp(0, self.screen_size[0] as i32);
-            let y0 = y.clamp(0, self.screen_size[1] as i32);
-            let x1 = (x + w).clamp(0, self.screen_size[0] as i32);
-            let y1 = (y + h).clamp(0, self.screen_size[1] as i32);
-            let w = x1 - x0;
-            let h = y1 - y0;
-            if w <= 0 || h <= 0 {
+            // Clamp scissor rect to both the screen and the output window.
+            let screen_rect = ScreenRectangle {
+                x: self.screen_top_left[0],
+                y: self.screen_top_left[1],
+                w: self.screen_size[0],
+                h: self.screen_size[1],
+            };
+            let output_rect = ScreenRectangle {
+                x: 0,
+                y: 0,
+                w: output_size_logical[0],
+                h: output_size_logical[1],
+            };
+            let clamped_scissor = command
+                .scissor
+                .translate(self.screen_top_left)
+                .clamp(screen_rect)
+                .clamp(output_rect);
+
+            if clamped_scissor.w <= 0 || clamped_scissor.h <= 0 {
                 continue;
             }
+
             rp.set_scissor_rect(
-                ((x as f32 + self.screen_top_left[0] as f32) * scale_factor) as u32,
-                ((y as f32 + self.screen_top_left[1] as f32) * scale_factor) as u32,
-                ((w as f32) * scale_factor) as u32,
-                ((h as f32) * scale_factor) as u32,
+                (clamped_scissor.x as f32 * scale_factor) as u32,
+                (clamped_scissor.y as f32 * scale_factor) as u32,
+                (clamped_scissor.w as f32 * scale_factor) as u32,
+                (clamped_scissor.h as f32 * scale_factor) as u32,
             );
 
             if current_pipeline != Some(command.pipeline) {

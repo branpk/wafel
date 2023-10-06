@@ -58,8 +58,8 @@ fn main() {
 
             if rect.width() as u32 > 0 && rect.height() as u32 > 0 {
                 let render_data = game.render(&VizConfig {
-                    screen_top_left: [rect.left() as u32, rect.top() as u32],
-                    screen_size: [rect.width() as u32, rect.height() as u32],
+                    screen_top_left: [rect.left() as i32, rect.top() as i32],
+                    screen_size: [rect.width() as i32, rect.height() as i32],
                     object_cull: ObjectCull::ShowAll,
                     ..Default::default()
                 });

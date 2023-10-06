@@ -6,9 +6,9 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, PartialEq)]
 pub struct F3DRenderData {
     /// The offset of the screen from the top left corner in pixels.
-    pub screen_top_left: [u32; 2],
+    pub screen_top_left: [i32; 2],
     /// The screen size in pixels.
-    pub screen_size: [u32; 2],
+    pub screen_size: [i32; 2],
     /// Pipeline modes that are used by the commands.
     pub pipelines: HashMap<PipelineId, PipelineInfo>,
     /// Textures that are used by the commands.
@@ -19,7 +19,7 @@ pub struct F3DRenderData {
 
 impl F3DRenderData {
     /// Create an empty F3DRenderData.
-    pub fn new(screen_top_left: [u32; 2], screen_size: [u32; 2]) -> Self {
+    pub fn new(screen_top_left: [i32; 2], screen_size: [i32; 2]) -> Self {
         Self {
             screen_top_left,
             screen_size,
@@ -220,4 +220,30 @@ pub struct ScreenRectangle {
     pub y: i32,
     pub w: i32,
     pub h: i32,
+}
+
+impl ScreenRectangle {
+    /// Clamps the rectangle to the given bounds.
+    pub fn clamp(&self, bounds: ScreenRectangle) -> ScreenRectangle {
+        let x0 = self.x.clamp(bounds.x, bounds.x + bounds.w);
+        let y0 = self.y.clamp(bounds.y, bounds.y + bounds.h);
+        let x1 = (self.x + self.w).clamp(bounds.x, bounds.x + bounds.w);
+        let y1 = (self.y + self.h).clamp(bounds.y, bounds.y + bounds.h);
+        ScreenRectangle {
+            x: x0,
+            y: y0,
+            w: x1 - x0,
+            h: y1 - y0,
+        }
+    }
+
+    /// Translates the rectangle by the given amount.
+    pub fn translate(&self, amount: [i32; 2]) -> ScreenRectangle {
+        ScreenRectangle {
+            x: self.x + amount[0],
+            y: self.y + amount[1],
+            w: self.w,
+            h: self.h,
+        }
+    }
 }

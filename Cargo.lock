@@ -839,6 +839,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "equivalent"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
+
+[[package]]
 name = "error-code"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1169,7 +1175,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e4075386626662786ddb0ec9081e7c7eeb1ba31951f447ca780ef9f5d568189"
 dependencies = [
  "fallible-iterator",
- "indexmap",
+ "indexmap 1.9.3",
  "stable_deref_trait",
 ]
 
@@ -1267,6 +1273,12 @@ name = "hashbrown"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db0d4cf898abf0081f964436dc980e96670a0f36863e4b83aaacdb65c9d7ccc3"
+
+[[package]]
+name = "hashbrown"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dfda62a12f55daeae5015f81b0baea145391cb4520f86c248fc615d72640d12"
 
 [[package]]
 name = "hassle-rs"
@@ -1440,6 +1452,16 @@ dependencies = [
  "autocfg",
  "hashbrown 0.12.1",
  "serde",
+]
+
+[[package]]
+name = "indexmap"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8adf3ddd720272c6ea8bf59463c04e0f93d0bbf7c5439b691bca2987e0270897"
+dependencies = [
+ "equivalent",
+ "hashbrown 0.14.1",
 ]
 
 [[package]]
@@ -1858,7 +1880,7 @@ dependencies = [
  "bitflags 1.3.2",
  "codespan-reporting",
  "hexf-parse",
- "indexmap",
+ "indexmap 1.9.3",
  "log",
  "num-traits",
  "rustc-hash",
@@ -3290,6 +3312,7 @@ version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bf2728f3858937f50df6d92b741f53ef8fd5b5ae23b03b73fb9ac891e980df3b"
 dependencies = [
+ "bytemuck",
  "wide",
 ]
 
@@ -3434,7 +3457,7 @@ dependencies = [
  "derive_more",
  "futures",
  "image 0.23.14",
- "indexmap",
+ "indexmap 1.9.3",
  "lazy_static",
  "nalgebra",
  "pyo3",
@@ -3455,7 +3478,7 @@ dependencies = [
 name = "wafel_data_access"
 version = "0.1.0"
 dependencies = [
- "indexmap",
+ "indexmap 1.9.3",
  "wafel_data_access_derive",
  "wafel_data_type",
  "wafel_layout",
@@ -3476,7 +3499,7 @@ dependencies = [
 name = "wafel_data_type"
 version = "0.1.0"
 dependencies = [
- "indexmap",
+ "indexmap 1.9.3",
  "serde",
 ]
 
@@ -3485,7 +3508,7 @@ name = "wafel_layout"
 version = "0.1.0"
 dependencies = [
  "gimli 0.24.0",
- "indexmap",
+ "indexmap 1.9.3",
  "object 0.25.3",
  "serde",
  "serde_json",
@@ -3512,7 +3535,7 @@ dependencies = [
 name = "wafel_python"
 version = "0.1.0"
 dependencies = [
- "indexmap",
+ "indexmap 1.9.3",
  "pyo3",
  "wafel_api",
 ]
@@ -3540,8 +3563,11 @@ dependencies = [
 name = "wafel_viz"
 version = "0.1.0"
 dependencies = [
+ "egui",
  "fast3d",
  "ultraviolet",
+ "wafel_api",
+ "wafel_window",
 ]
 
 [[package]]
@@ -3603,7 +3629,6 @@ dependencies = [
  "fast3d",
  "ultraviolet",
  "wafel_viz",
- "wafel_window",
  "wgpu",
 ]
 
@@ -3617,6 +3642,7 @@ dependencies = [
  "egui-winit",
  "hot-lib-reloader",
  "image 0.24.7",
+ "indexmap 2.0.2",
  "once_cell",
  "pollster 0.3.0",
  "static_assertions",

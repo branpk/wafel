@@ -1,9 +1,9 @@
 use wafel_viz::VizScene;
 
-use crate::AppConfig;
+use crate::{AppConfig, Input};
 
 /// Trait defining the interaction between a windowed application and the window.
-pub trait WindowEnv {
+pub trait AppEnv {
     /// The config that was used when running the application.
     fn config(&self) -> &AppConfig;
 
@@ -12,6 +12,9 @@ pub trait WindowEnv {
 
     /// A recent mspf measurement.
     fn mspf(&self) -> f32;
+
+    /// The keyboard/mouse input state.
+    fn input(&self) -> &Input;
 
     /// The egui context.
     fn egui_ctx(&self) -> &egui::Context;

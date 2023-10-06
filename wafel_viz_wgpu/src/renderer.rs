@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use fast3d::render::F3DRenderer;
-use wafel_viz::VizScene;
+use wafel_viz::{Rect2, Vec2, Viewport, VizScene};
 
 use crate::{
     data::{BufferId, PerFrameData, StaticData, TriangleTransparency},
@@ -55,29 +55,30 @@ impl VizRenderer {
     ) {
         self.per_frame_data = None;
 
-        let viewport_top_left_logical = scene.viewport_top_left_logical.unwrap_or([0, 0]);
-        let viewport_size_logical = scene.viewport_size_logical.unwrap_or([
-            (output_size_physical[0] as f32 / scale_factor) as u32 - viewport_top_left_logical[0],
-            (output_size_physical[1] as f32 / scale_factor) as u32 - viewport_top_left_logical[1],
-        ]);
+        let output_size_logical = Vec2::from(output_size_physical.map(|x| x as f32 / scale_factor));
+
+        let vieport = match scene.viewport {
+            Viewport::FullWindow => Rect2::from_min_and_size(Vec2::zero(), output_size_logical),
+            Viewport::RectLogical(rect) => rect,
+        };
 
         if let Some(f3d_render_data) = &scene.f3d_render_data {
-            assert_eq!(
-                [f3d_render_data.screen_top_left, f3d_render_data.screen_size],
-                [viewport_top_left_logical, viewport_size_logical],
-                "F3D screen size must match VizScene viewport size"
+            self.f3d_renderer.prepare(
+                device,
+                queue,
+                output_format,
+                output_size_physical,
+                scale_factor,
+                f3d_render_data,
             );
-
-            self.f3d_renderer
-                .prepare(device, queue, output_format, f3d_render_data);
         }
 
         self.per_frame_data = Some(PerFrameData::create(
             device,
             &self.static_data,
             scene,
-            viewport_top_left_logical,
-            viewport_size_logical,
+            output_size_logical,
+            vieport,
             scale_factor,
         ));
     }
@@ -116,31 +117,36 @@ impl VizRenderer {
             .expect("missing call to VizRenderer::prepare");
         let scale_factor = render_data.scale_factor;
 
+        if !render_data.viewport.has_positive_area() {
+            return;
+        }
+
         // Execute F3D commands which are prior to enabling depth test (e.g. skybox).
-        self.f3d_renderer.render_command_range(
-            rp,
-            render_data.f3d_pre_depth_cmd_range.clone(),
-            scale_factor,
-        );
+        self.f3d_renderer
+            .render_command_range(rp, render_data.f3d_pre_depth_cmd_range.clone());
 
         // Set the viewport and scissor rect.
-        let vx = render_data.viewport_top_left[0];
-        let vy = render_data.viewport_top_left[1];
-        let vw = render_data.viewport_size[0];
-        let vh = render_data.viewport_size[1];
+        let scaled_viewport = render_data.viewport.scale(scale_factor);
         rp.set_viewport(
-            (vx as f32) * scale_factor,
-            (vy as f32) * scale_factor,
-            (vw as f32) * scale_factor,
-            (vh as f32) * scale_factor,
+            scaled_viewport.min_x(),
+            scaled_viewport.min_y(),
+            scaled_viewport.width(),
+            scaled_viewport.height(),
             0.0,
             1.0,
         );
+
+        // Clamp scissor rect to the output window.
+        let output_rect = Rect2::from_min_and_size(Vec2::zero(), render_data.output_size);
+        let scissor_rect = render_data.viewport.clamp(output_rect).scale(scale_factor);
+        if !scissor_rect.has_positive_area() {
+            return;
+        }
         rp.set_scissor_rect(
-            ((vx as f32) * scale_factor) as u32,
-            ((vy as f32) * scale_factor) as u32,
-            ((vw as f32) * scale_factor) as u32,
-            ((vh as f32) * scale_factor) as u32,
+            scissor_rect.min_x() as u32,
+            scissor_rect.min_y() as u32,
+            scissor_rect.width() as u32,
+            scissor_rect.height() as u32,
         );
 
         // Draw opaque triangles, lines, then points.
@@ -173,11 +179,8 @@ impl VizRenderer {
         );
 
         // Execute F3D commands which have depth test enabled.
-        self.f3d_renderer.render_command_range(
-            rp,
-            render_data.f3d_depth_cmd_range.clone(),
-            scale_factor,
-        );
+        self.f3d_renderer
+            .render_command_range(rp, render_data.f3d_depth_cmd_range.clone());
 
         // Draw transparent points and lines with depth test and write enabled.
         self.draw_buffer(
@@ -239,10 +242,7 @@ impl VizRenderer {
         }
 
         // Render post depth F3D commands (e.g. the HUD).
-        self.f3d_renderer.render_command_range(
-            rp,
-            render_data.f3d_post_depth_cmd_range.clone(),
-            scale_factor,
-        );
+        self.f3d_renderer
+            .render_command_range(rp, render_data.f3d_post_depth_cmd_range.clone());
     }
 }

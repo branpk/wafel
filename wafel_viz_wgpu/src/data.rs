@@ -2,14 +2,14 @@ use std::{f32::consts::PI, mem::size_of, ops::Range};
 
 use bytemuck::{cast_slice, offset_of, Pod, Zeroable};
 use enum_map::{Enum, EnumMap};
-use wafel_viz::{Element, TransparencyHint, VizScene};
+use wafel_viz::{Element, Rect2, TransparencyHint, Vec2, Vec4, VizScene};
 use wgpu::util::DeviceExt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Default, Zeroable, Pod)]
 #[repr(C)]
 pub struct ColorVertex {
-    pub pos: [f32; 4],
-    pub color: [f32; 4],
+    pub pos: Vec4,
+    pub color: Vec4,
 }
 
 impl ColorVertex {
@@ -39,9 +39,9 @@ impl ColorVertex {
 #[derive(Debug, Clone, Copy, PartialEq, Default, Zeroable, Pod)]
 #[repr(C)]
 pub struct PointInstance {
-    pub center: [f32; 4],
-    pub radius: [f32; 2],
-    pub color: [f32; 4],
+    pub center: Vec4,
+    pub radius: Vec2,
+    pub color: Vec4,
 }
 
 impl PointInstance {
@@ -96,10 +96,6 @@ impl PointVertex {
             .leak(),
         }
     }
-}
-
-pub fn point4(v: [f32; 3]) -> [f32; 4] {
-    [v[0], v[1], v[2], 1.0]
 }
 
 #[derive(Debug)]
@@ -200,8 +196,8 @@ pub enum BufferId {
 
 #[derive(Debug)]
 pub struct PerFrameData {
-    pub viewport_top_left: [u32; 2],
-    pub viewport_size: [u32; 2],
+    pub output_size: Vec2,
+    pub viewport: Rect2,
     pub scale_factor: f32,
 
     pub f3d_pre_depth_cmd_range: Range<usize>,
@@ -217,8 +213,8 @@ impl PerFrameData {
         device: &wgpu::Device,
         static_data: &StaticData,
         scene: &VizScene,
-        viewport_top_left: [u32; 2],
-        viewport_size: [u32; 2],
+        output_size: Vec2,
+        viewport: Rect2,
         scale_factor: f32,
     ) -> Self {
         let mut first_depth_cmd = None;
@@ -249,15 +245,13 @@ impl PerFrameData {
         for element in &scene.elements {
             match element {
                 Element::Point(point) => {
-                    let x_radius = point.size * 2.0 / viewport_size[0] as f32;
-                    let y_radius = point.size * 2.0 / viewport_size[1] as f32;
                     let buffer_id = BufferId::Point {
                         transparent: point.color[3] < 1.0,
                     };
                     counts[buffer_id] += 1;
                     buffer_data[buffer_id].extend(cast_slice(&[PointInstance {
-                        center: point4(point.pos),
-                        radius: [x_radius, y_radius],
+                        center: point.pos.into_homogeneous_point(),
+                        radius: Vec2::broadcast(point.size * 2.0) / viewport.size(),
                         color: point.color,
                     }]));
                 }
@@ -268,11 +262,11 @@ impl PerFrameData {
                     counts[buffer_id] += 2;
                     buffer_data[buffer_id].extend(cast_slice(&[
                         ColorVertex {
-                            pos: point4(line.vertices[0]),
+                            pos: line.vertices[0].into_homogeneous_point(),
                             color: line.color,
                         },
                         ColorVertex {
-                            pos: point4(line.vertices[1]),
+                            pos: line.vertices[1].into_homogeneous_point(),
                             color: line.color,
                         },
                     ]));
@@ -295,15 +289,15 @@ impl PerFrameData {
                     counts[buffer_id] += 3;
                     buffer_data[buffer_id].extend(cast_slice(&[
                         ColorVertex {
-                            pos: point4(triangle.vertices[0]),
+                            pos: triangle.vertices[0].into_homogeneous_point(),
                             color: triangle.color,
                         },
                         ColorVertex {
-                            pos: point4(triangle.vertices[1]),
+                            pos: triangle.vertices[1].into_homogeneous_point(),
                             color: triangle.color,
                         },
                         ColorVertex {
-                            pos: point4(triangle.vertices[2]),
+                            pos: triangle.vertices[2].into_homogeneous_point(),
                             color: triangle.color,
                         },
                     ]));
@@ -325,8 +319,8 @@ impl PerFrameData {
         }
 
         Self {
-            viewport_top_left,
-            viewport_size,
+            output_size,
+            viewport,
             scale_factor,
             f3d_pre_depth_cmd_range: 0..first_depth_cmd,
             f3d_depth_cmd_range: first_depth_cmd..post_depth_cmd,
@@ -344,12 +338,12 @@ fn create_transform_bind_group(
 ) -> wgpu::BindGroup {
     let proj_mtx_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: None,
-        contents: cast_slice(&scene.proj_mtx),
+        contents: cast_slice(&scene.camera.proj_mtx.cols),
         usage: wgpu::BufferUsages::UNIFORM,
     });
     let view_mtx_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: None,
-        contents: cast_slice(&scene.view_mtx),
+        contents: cast_slice(&scene.camera.view_mtx.cols),
         usage: wgpu::BufferUsages::UNIFORM,
     });
 
