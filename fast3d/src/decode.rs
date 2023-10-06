@@ -380,10 +380,7 @@ pub fn decode_f3d_command<Ptr: Copy>(
                 lrt: w1 & 0xFFF,
             },
         ),
-        0xF0 => DPLoadTLUTCmd(
-            TileIndex(((w1 >> 24) & 0x7) as u8),
-            ((w1 >> 14) & 0x3FF) as u32,
-        ),
+        0xF0 => DPLoadTLUTCmd(TileIndex(((w1 >> 24) & 0x7) as u8), (w1 >> 14) & 0x3FF),
         0xEF => DPSetOtherMode(Unimplemented { w0, w1 }),
         0xEE => DPSetPrimDepth(PrimDepth {
             z: (w1 >> 16) as u16,

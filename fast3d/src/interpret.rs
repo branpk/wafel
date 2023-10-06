@@ -234,8 +234,8 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
             None => ScreenRectangle {
                 x: 0,
                 y: 0,
-                w: self.screen_size[0] as i32,
-                h: self.screen_size[1] as i32,
+                w: self.screen_size[0],
+                h: self.screen_size[1],
             },
         }
     }
@@ -260,8 +260,8 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
             None => ScreenRectangle {
                 x: 0,
                 y: 0,
-                w: self.screen_size[0] as i32,
-                h: self.screen_size[1] as i32,
+                w: self.screen_size[0],
+                h: self.screen_size[1],
             },
         }
     }
@@ -666,8 +666,8 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
         let viewport = ScreenRectangle {
             x: 0,
             y: 0,
-            w: self.screen_size[0] as i32,
-            h: self.screen_size[1] as i32,
+            w: self.screen_size[0],
+            h: self.screen_size[1],
         };
         let scissor = self.scissor_screen();
         let textures = self.load_textures(&pipeline)?;
@@ -723,8 +723,8 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
             mem::swap(&mut texture_width, &mut texture_height);
         }
 
-        let u0 = s as f32 / 32.0 / texture_width as f32;
-        let v0 = t as f32 / 32.0 / texture_height as f32;
+        let u0 = s / 32.0 / texture_width as f32;
+        let v0 = t / 32.0 / texture_height as f32;
         let u1 = u0 + dsdx * (lrx - ulx) / texture_width as f32;
         let v1 = v0 + dtdy * (lry - uly) / texture_height as f32;
 
@@ -776,8 +776,8 @@ impl<'m, M: F3DMemory> Interpreter<'m, M> {
             let viewport = ScreenRectangle {
                 x: 0,
                 y: 0,
-                w: self.screen_size[0] as i32,
-                h: self.screen_size[1] as i32,
+                w: self.screen_size[0],
+                h: self.screen_size[1],
             };
             let scissor = self.scissor_screen();
 

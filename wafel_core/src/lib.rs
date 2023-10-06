@@ -6,8 +6,6 @@
     rust_2018_idioms,
     unreachable_pub
 )]
-#![feature(try_blocks)]
-#![feature(backtrace)]
 
 pub mod error;
 pub mod geo;

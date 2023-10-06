@@ -1,4 +1,4 @@
-//! A wgpu renderer for the data produced by [crate::interpret].
+//! A wgpu renderer for the data produced by [crate::interpret] (requires feature `wgpu`).
 
 use std::{
     collections::HashMap,
@@ -143,11 +143,14 @@ impl F3DRenderer {
         writeln!(s)?;
 
         let mut bind_group_layouts: Vec<&wgpu::BindGroupLayout> = Vec::new();
-        #[rustfmt::skip]
         for i in 0..2 {
             if p.used_textures[i] {
                 writeln!(s, "@group({}) @binding(0) var r_sampler{}: sampler;", i, i)?;
-                writeln!(s, "@group({}) @binding(1) var r_texture{}: texture_2d<f32>;", i, i)?;
+                writeln!(
+                    s,
+                    "@group({}) @binding(1) var r_texture{}: texture_2d<f32>;",
+                    i, i
+                )?;
                 writeln!(s)?;
                 bind_group_layouts.push(&self.texture_bind_group_layout);
             }

@@ -58,7 +58,7 @@ assert game.read("gCurrLevelNum") == game.constant("LEVEL_CASTLE_GROUNDS")
 
 Installing:
 - For Python 3.7-3.9, download the latest [Wafel release](https://github.com/branpk/wafel/releases), and run `pip install --find-links=bindings/python wafel --upgrade`.
-- For Rust, include the dependency `wafel_api = { git = "https://github.com/branpk/wafel" }` (requires nightly).
+- For Rust, include the dependency `wafel_api = { git = "https://github.com/branpk/wafel" }`.
 
 Rust documentation is available [here](https://branpk.github.io/wafel/docs/dev/wafel_api/).
 
@@ -72,7 +72,7 @@ questions.
 ## Building
 
 To build from source, you'll need the following installed (be sure to use 64 bit versions):
-* [Latest Rust nightly](https://www.rust-lang.org/tools/install)
+* [Latest Rust](https://www.rust-lang.org/tools/install)
 * [Python 3.8 or above](https://www.python.org/downloads/)
 * [pipenv](https://pipenv.pypa.io/en/latest/install/#installing-pipenv)
 * [Visual C++ 2015 run-time](https://www.microsoft.com/en-us/download/details.aspx?id=52685)

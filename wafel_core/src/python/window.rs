@@ -1,8 +1,8 @@
 use crate::{
     graphics::scene::Scene,
     graphics::{
-        scene::Camera, ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, ImguiRenderer,
-        Renderer, VizContainer, IMGUI_FONT_TEXTURE_ID,
+        ImguiCommand, ImguiCommandList, ImguiConfig, ImguiDrawData, ImguiRenderer, Renderer,
+        VizContainer, IMGUI_FONT_TEXTURE_ID,
     },
     python::ImguiInput,
 };
@@ -103,7 +103,7 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
             let py = gil.python();
             let _gil_pool = unsafe { py.new_pool() }; // prevent memory leak
 
-            let result: PyResult<()> = try {
+            let result: PyResult<()> = (|| {
                 match event {
                     Event::WindowEvent { event, .. } => {
                         imgui_input.handle_event(py, &event)?;
@@ -175,7 +175,8 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
                     }
                     _ => {}
                 }
-            };
+                Ok(())
+            })();
 
             if let Err(error) = result {
                 // Most errors are caught within `update_fn` and are displayed in the UI. If

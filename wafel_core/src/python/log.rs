@@ -6,10 +6,11 @@ use pyo3::prelude::*;
 
 fn call_log_method(py: Python<'_>, method: &str, message: impl Into<String>) {
     let message_str = message.into();
-    let result: PyResult<()> = try {
+    let result: PyResult<()> = (|| {
         let log = PyModule::import(py, "wafel.log")?;
         log.call_method1(method, (&message_str,))?;
-    };
+        Ok(())
+    })();
     if result.is_err() {
         eprintln!(
             "Failed to log message (level = {}):\n{}",

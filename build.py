@@ -15,7 +15,7 @@ if 'clean' in sys.argv[1:]:
 
 if sys.argv[1:] == [] or 'dist' in sys.argv[1:]:
   subprocess.run(
-    ['cargo', '+nightly', 'build', '--release'],
+    ['cargo', 'build', '--release'],
     check=True,
   )
   shutil.copyfile('target/release/wafel_core.dll', 'wafel_core.pyd')
@@ -39,7 +39,6 @@ if 'lock' in sys.argv[1:]:
 if 'dist' in sys.argv[1:]:
   shutil.rmtree('build/dist', ignore_errors=True)
 
-  # TODO: Need to ensure it runs on nightly
   subprocess.run(
     [sys.executable, 'setup.py', 'bdist_wheel'],
     check=True,
