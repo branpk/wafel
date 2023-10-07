@@ -503,7 +503,7 @@ impl F3DRenderer {
         rp: &mut wgpu::RenderPass<'r>,
         cmd_indices: Range<usize>,
     ) {
-        if self.screen_size[0] <= 0 || self.screen_size[1] <= 0 {
+        if self.screen_size[0] <= 0 || self.screen_size[1] <= 0 || cmd_indices.is_empty() {
             return;
         }
 
