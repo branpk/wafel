@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use enum_map::Enum;
 
-use crate::data::{ColorVertex, PointInstance, PointVertex};
+use crate::data::{ColorVertex, ColorVertexWithDecal, PointInstance, PointVertex};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Enum)]
 pub enum PipelineId {
@@ -91,7 +91,7 @@ fn create_line_pipeline(
         vertex: wgpu::VertexState {
             module: &shader_module,
             entry_point: "vs_main",
-            buffers: &[ColorVertex::layout()],
+            buffers: &[ColorVertexWithDecal::layout()],
         },
         primitive: wgpu::PrimitiveState {
             topology: wgpu::PrimitiveTopology::LineList,

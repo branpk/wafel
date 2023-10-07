@@ -104,7 +104,8 @@ impl VizRenderData {
             assert_eq!(vertices.len(), 2);
             scene.add(
                 wafel_viz::LineElement::new([vertices[0].pos3(), vertices[1].pos3()])
-                    .with_color(vertices[0].color.into()),
+                    .with_color(vertices[0].color.into())
+                    .with_decal_amount(0.0002),
             );
         }
 

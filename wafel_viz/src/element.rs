@@ -43,6 +43,7 @@ pub struct PointElement {
     pub pos: Vec3,
     pub size: f32,
     pub color: Vec4,
+    pub decal_amount: f32,
 }
 
 impl PointElement {
@@ -51,6 +52,7 @@ impl PointElement {
             pos,
             size: 1.0,
             color: [1.0, 1.0, 1.0, 1.0].into(),
+            decal_amount: 0.0,
         }
     }
 
@@ -64,6 +66,11 @@ impl PointElement {
         self
     }
 
+    pub fn with_decal_amount(mut self, decal_amount: f32) -> Self {
+        self.decal_amount = decal_amount;
+        self
+    }
+
     pub fn bounding_rect(&self) -> Rect3 {
         Rect3::point(self.pos)
     }
@@ -74,6 +81,7 @@ impl PointElement {
 pub struct LineElement {
     pub vertices: [Vec3; 2],
     pub color: Vec4,
+    pub decal_amount: f32,
 }
 
 impl LineElement {
@@ -81,11 +89,17 @@ impl LineElement {
         Self {
             vertices,
             color: [1.0, 1.0, 1.0, 1.0].into(),
+            decal_amount: 0.0,
         }
     }
 
     pub fn with_color(mut self, color: Vec4) -> Self {
         self.color = color;
+        self
+    }
+
+    pub fn with_decal_amount(mut self, decal_amount: f32) -> Self {
+        self.decal_amount = decal_amount;
         self
     }
 

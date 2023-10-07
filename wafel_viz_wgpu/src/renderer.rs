@@ -8,9 +8,6 @@ use crate::{
     pipelines::{create_pipelines, PipelineId},
 };
 
-// TODO: Specify frag_depth as uniform / push constant, combine color_decal.wgsl and
-// color.wgsl, use for wall hitboxes instead of calculating by hand
-
 /// A wgpu renderer for [VizScene].
 #[derive(Debug)]
 pub struct VizRenderer {

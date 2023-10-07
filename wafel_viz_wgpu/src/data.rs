@@ -38,10 +38,49 @@ impl ColorVertex {
 
 #[derive(Debug, Clone, Copy, PartialEq, Default, Zeroable, Pod)]
 #[repr(C)]
+pub struct ColorVertexWithDecal {
+    pub pos: Vec4,
+    pub color: Vec4,
+    pub decal_amount: f32,
+}
+
+impl ColorVertexWithDecal {
+    pub fn layout() -> wgpu::VertexBufferLayout<'static> {
+        wgpu::VertexBufferLayout {
+            array_stride: size_of::<Self>() as u64,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: vec![
+                // pos
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x4,
+                    offset: offset_of!(Self, pos) as u64,
+                    shader_location: 0,
+                },
+                // color
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x4,
+                    offset: offset_of!(Self, color) as u64,
+                    shader_location: 1,
+                },
+                // decal_amount
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32,
+                    offset: offset_of!(Self, decal_amount) as u64,
+                    shader_location: 2,
+                },
+            ]
+            .leak(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Default, Zeroable, Pod)]
+#[repr(C)]
 pub struct PointInstance {
     pub center: Vec4,
     pub radius: Vec2,
     pub color: Vec4,
+    pub decal_amount: f32,
 }
 
 impl PointInstance {
@@ -68,6 +107,12 @@ impl PointInstance {
                     offset: offset_of!(Self, color) as u64,
                     shader_location: 2,
                 },
+                // decal_amount
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32,
+                    offset: offset_of!(Self, decal_amount) as u64,
+                    shader_location: 3,
+                },
             ]
             .leak(),
         }
@@ -90,7 +135,7 @@ impl PointVertex {
                 wgpu::VertexAttribute {
                     format: wgpu::VertexFormat::Float32x2,
                     offset: offset_of!(Self, offset) as u64,
-                    shader_location: 3,
+                    shader_location: 4,
                 },
             ]
             .leak(),
@@ -253,6 +298,7 @@ impl PerFrameData {
                         center: point.pos.into_homogeneous_point(),
                         radius: Vec2::broadcast(point.size * 2.0) / viewport.size(),
                         color: point.color,
+                        decal_amount: point.decal_amount,
                     }]));
                 }
                 Element::Line(line) => {
@@ -261,13 +307,15 @@ impl PerFrameData {
                     };
                     counts[buffer_id] += 2;
                     buffer_data[buffer_id].extend(cast_slice(&[
-                        ColorVertex {
+                        ColorVertexWithDecal {
                             pos: line.vertices[0].into_homogeneous_point(),
                             color: line.color,
+                            decal_amount: line.decal_amount,
                         },
-                        ColorVertex {
+                        ColorVertexWithDecal {
                             pos: line.vertices[1].into_homogeneous_point(),
                             color: line.color,
+                            decal_amount: line.decal_amount,
                         },
                     ]));
                 }

@@ -4,30 +4,34 @@
 struct VertexData {
     @location(0) pos: vec4<f32>,
     @location(1) color: vec4<f32>,
+    @location(2) decal_amount: f32,
 }
 
 struct VertexOutput {
-    @location(0) color: vec4<f32>,
     @builtin(position) position: vec4<f32>,
+    @location(0) color: vec4<f32>,
+    @location(1) decal_amount: f32,
 }
 
 @vertex
 fn vs_main(in: VertexData) -> VertexOutput {
     var out = VertexOutput();
-    out.color = in.color;
     out.position = r_proj * r_view * in.pos;
+    out.color = in.color;
+    out.decal_amount = in.decal_amount;
     return out;
 }
 
 struct FragmentOutput {
     @builtin(frag_depth) frag_depth: f32,
     @location(0) color: vec4<f32>,
+    @location(1) decal_amount: f32,
 }
 
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
     var out = FragmentOutput();
-    out.frag_depth = in.position.z - 0.0002;
+    out.frag_depth = in.position.z - in.decal_amount;
     out.color = in.color;
     return out;
 }

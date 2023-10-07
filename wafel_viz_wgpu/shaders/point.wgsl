@@ -5,12 +5,14 @@ struct VertexInput {
     @location(0) center: vec4<f32>,
     @location(1) radius: vec2<f32>,
     @location(2) color: vec4<f32>,
-    @location(3) offset: vec2<f32>,
+    @location(3) decal_amount: f32,
+    @location(4) offset: vec2<f32>,
 }
 
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) color: vec4<f32>,
+    @location(1) decal_amount: f32,
 }
 
 @vertex
@@ -20,6 +22,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     let screen_offset = in.radius * in.offset;
     out.position = screen_center + screen_center.w * vec4<f32>(screen_offset, 0.0, 0.0);
     out.color = in.color;
+    out.decal_amount = in.decal_amount;
     return out;
 }
 
@@ -31,7 +34,7 @@ struct FragmentOutput {
 @fragment
 fn fs_main(in: VertexOutput) -> FragmentOutput {
     var out = FragmentOutput();
-    out.frag_depth = in.position.z - 0.001;
+    out.frag_depth = in.position.z - in.decal_amount;
     out.color = in.color;
     return out;
 }
