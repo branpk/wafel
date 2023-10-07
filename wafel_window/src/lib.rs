@@ -19,10 +19,6 @@
 //!     });
 //! });
 //! ```
-//!
-//! # Features
-//! This crate has one optional feature, which is disabled by default:
-//! - `image`: Enables loading icons from .ico files (Windows only).
 
 #![warn(rust_2018_idioms, missing_debug_implementations, missing_docs)]
 #![allow(clippy::too_many_arguments)]

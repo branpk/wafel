@@ -12,7 +12,7 @@ tracing = "0.1.37"
 tracing-log = "0.1.3"
 tracing-subscriber = "0.3.17"
 pollster = "0.3.0"
-image = { version = "0.24.7", optional = true }
+image = { version = "0.24.7", default-features = false, features = ["ico"] }
 egui = "0.22.0"
 egui-wgpu = "0.22.0"
 egui-winit = "0.22.0"
