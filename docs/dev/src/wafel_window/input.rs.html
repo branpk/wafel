@@ -187,6 +187,16 @@
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
 <a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
 </pre></div><pre class="rust"><code><span class="comment">// TODO: Include physical and logical keys once winit 0.29.0 is released.
 // TODO: Custom bindings.
 
@@ -322,6 +332,16 @@
     <span class="doccomment">/// Returns the mouse wheel delta from this frame, in lines/rows.
     </span><span class="kw">pub fn </span>mouse_wheel_delta(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec2 {
         <span class="self">self</span>.mouse_wheel_delta
+    }
+
+    <span class="doccomment">/// Returns the mouse wheel delta from this frame if the cursor is in the
+    /// given rect, in lines/rows, and otherwise returns `Vec2::zero()`.
+    </span><span class="kw">pub fn </span>mouse_wheel_delta_in(<span class="kw-2">&amp;</span><span class="self">self</span>, rect: Rect2) -&gt; Vec2 {
+        <span class="kw">if </span><span class="self">self</span>.mouse_pos().filter(|<span class="kw-2">&amp;</span>p| rect.contains(p)).is_some() {
+            <span class="self">self</span>.mouse_wheel_delta
+        } <span class="kw">else </span>{
+            Vec2::zero()
+        }
     }
 }
 
