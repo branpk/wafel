@@ -1,10 +1,22 @@
 use ultraviolet::{Vec3, Vec4};
 
+use crate::Rect3;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Element {
     Point(PointElement),
     Line(LineElement),
     Triangle(TriangleElement),
+}
+
+impl Element {
+    pub fn bounding_rect(&self) -> Rect3 {
+        match self {
+            Self::Point(point) => point.bounding_rect(),
+            Self::Line(line) => line.bounding_rect(),
+            Self::Triangle(triangle) => triangle.bounding_rect(),
+        }
+    }
 }
 
 impl From<PointElement> for Element {
@@ -51,6 +63,10 @@ impl PointElement {
         self.color = color;
         self
     }
+
+    pub fn bounding_rect(&self) -> Rect3 {
+        Rect3::point(self.pos)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -71,6 +87,10 @@ impl LineElement {
     pub fn with_color(mut self, color: Vec4) -> Self {
         self.color = color;
         self
+    }
+
+    pub fn bounding_rect(&self) -> Rect3 {
+        Rect3::point(self.vertices[0]).enclose(Rect3::point(self.vertices[1]))
     }
 }
 
@@ -109,6 +129,12 @@ impl TriangleElement {
     pub fn with_transparency_hint(mut self, transparency_hint: TransparencyHint) -> Self {
         self.transparency_hint = transparency_hint;
         self
+    }
+
+    pub fn bounding_rect(&self) -> Rect3 {
+        Rect3::point(self.vertices[0])
+            .enclose(Rect3::point(self.vertices[1]))
+            .enclose(Rect3::point(self.vertices[2]))
     }
 }
 

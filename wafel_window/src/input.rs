@@ -134,6 +134,16 @@ impl Input {
     pub fn mouse_wheel_delta(&self) -> Vec2 {
         self.mouse_wheel_delta
     }
+
+    /// Returns the mouse wheel delta from this frame if the cursor is in the
+    /// given rect, in lines/rows, and otherwise returns `Vec2::zero()`.
+    pub fn mouse_wheel_delta_in(&self, rect: Rect2) -> Vec2 {
+        if self.mouse_pos().filter(|&p| rect.contains(p)).is_some() {
+            self.mouse_wheel_delta
+        } else {
+            Vec2::zero()
+        }
+    }
 }
 
 /// Helper struct which tracks the state of a mouse drag.

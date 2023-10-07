@@ -130,8 +130,8 @@ impl VizRenderer {
         rp.set_viewport(
             scaled_viewport.min_x(),
             scaled_viewport.min_y(),
-            scaled_viewport.width(),
-            scaled_viewport.height(),
+            scaled_viewport.size_x(),
+            scaled_viewport.size_y(),
             0.0,
             1.0,
         );
@@ -145,8 +145,8 @@ impl VizRenderer {
         rp.set_scissor_rect(
             scissor_rect.min_x() as u32,
             scissor_rect.min_y() as u32,
-            scissor_rect.width() as u32,
-            scissor_rect.height() as u32,
+            scissor_rect.size_x() as u32,
+            scissor_rect.size_y() as u32,
         );
 
         // Draw opaque triangles, lines, then points.

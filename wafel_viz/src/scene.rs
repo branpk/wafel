@@ -1,5 +1,5 @@
 use fast3d::interpret::F3DRenderData;
-use ultraviolet::Vec2;
+use ultraviolet::{Vec2, Vec3};
 
 use crate::{Camera, Element};
 
@@ -67,6 +67,13 @@ pub struct Rect2 {
 }
 
 impl Rect2 {
+    pub fn zero() -> Self {
+        Self {
+            min: Vec2::zero(),
+            max: Vec2::zero(),
+        }
+    }
+
     pub fn from_min_and_max(min: Vec2, max: Vec2) -> Self {
         Self { min, max }
     }
@@ -76,6 +83,10 @@ impl Rect2 {
             min,
             max: min + size,
         }
+    }
+
+    pub fn point(pos: Vec2) -> Self {
+        Self { min: pos, max: pos }
     }
 
     pub fn min_x(&self) -> f32 {
@@ -94,11 +105,15 @@ impl Rect2 {
         self.max.y
     }
 
-    pub fn width(&self) -> f32 {
+    pub fn size(&self) -> Vec2 {
+        self.max - self.min
+    }
+
+    pub fn size_x(&self) -> f32 {
         self.max.x - self.min.x
     }
 
-    pub fn height(&self) -> f32 {
+    pub fn size_y(&self) -> f32 {
         self.max.y - self.min.y
     }
 
@@ -106,8 +121,8 @@ impl Rect2 {
         (self.min + self.max) / 2.0
     }
 
-    pub fn size(&self) -> Vec2 {
-        self.max - self.min
+    pub fn aspect_ratio(&self) -> f32 {
+        self.size_x() / self.size_y()
     }
 
     pub fn contains(&self, point: Vec2) -> bool {
@@ -148,6 +163,148 @@ impl Rect2 {
             max: Vec2::new(
                 self.max.x.clamp(bounds.min.x, bounds.max.x),
                 self.max.y.clamp(bounds.min.y, bounds.max.y),
+            ),
+        }
+    }
+
+    pub fn enclose(&self, other: Rect2) -> Self {
+        Self {
+            min: Vec2::new(self.min.x.min(other.min.x), self.min.y.min(other.min.y)),
+            max: Vec2::new(self.max.x.max(other.max.x), self.max.y.max(other.max.y)),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Rect3 {
+    pub min: Vec3,
+    pub max: Vec3,
+}
+
+impl Rect3 {
+    pub fn zero() -> Self {
+        Self {
+            min: Vec3::zero(),
+            max: Vec3::zero(),
+        }
+    }
+
+    pub fn from_min_and_max(min: Vec3, max: Vec3) -> Self {
+        Self { min, max }
+    }
+
+    pub fn from_min_and_size(min: Vec3, size: Vec3) -> Self {
+        Self {
+            min,
+            max: min + size,
+        }
+    }
+
+    pub fn point(pos: Vec3) -> Self {
+        Self { min: pos, max: pos }
+    }
+
+    pub fn min_x(&self) -> f32 {
+        self.min.x
+    }
+
+    pub fn min_y(&self) -> f32 {
+        self.min.y
+    }
+
+    pub fn max_x(&self) -> f32 {
+        self.max.x
+    }
+
+    pub fn max_y(&self) -> f32 {
+        self.max.y
+    }
+
+    pub fn min_z(&self) -> f32 {
+        self.min.z
+    }
+
+    pub fn max_z(&self) -> f32 {
+        self.max.z
+    }
+
+    pub fn size(&self) -> Vec3 {
+        self.max - self.min
+    }
+
+    pub fn size_x(&self) -> f32 {
+        self.max.x - self.min.x
+    }
+
+    pub fn size_y(&self) -> f32 {
+        self.max.y - self.min.y
+    }
+
+    pub fn size_z(&self) -> f32 {
+        self.max.z - self.min.z
+    }
+
+    pub fn center(&self) -> Vec3 {
+        (self.min + self.max) / 2.0
+    }
+
+    pub fn contains(&self, point: Vec3) -> bool {
+        self.min.x <= point.x
+            && point.x <= self.max.x
+            && self.min.y <= point.y
+            && point.y <= self.max.y
+            && self.min.z <= point.z
+            && point.z <= self.max.z
+    }
+
+    pub fn has_positive_area(&self) -> bool {
+        self.min.x < self.max.x && self.min.y < self.max.y && self.min.z < self.max.z
+    }
+
+    pub fn has_nonnegative_area(&self) -> bool {
+        self.min.x <= self.max.x && self.min.y <= self.max.y && self.min.z <= self.max.z
+    }
+
+    pub fn translate(&self, amount: Vec3) -> Self {
+        Self {
+            min: self.min + amount,
+            max: self.max + amount,
+        }
+    }
+
+    pub fn scale(&self, amount: f32) -> Self {
+        Self {
+            min: self.min * amount,
+            max: self.max * amount,
+        }
+    }
+
+    pub fn clamp(&self, bounds: Rect3) -> Self {
+        Self {
+            min: Vec3::new(
+                self.min.x.clamp(bounds.min.x, bounds.max.x),
+                self.min.y.clamp(bounds.min.y, bounds.max.y),
+                self.min.z.clamp(bounds.min.z, bounds.max.z),
+            ),
+            max: Vec3::new(
+                self.max.x.clamp(bounds.min.x, bounds.max.x),
+                self.max.y.clamp(bounds.min.y, bounds.max.y),
+                self.max.z.clamp(bounds.min.z, bounds.max.z),
+            ),
+        }
+    }
+
+    pub fn enclose(&self, other: Rect3) -> Self {
+        Self {
+            min: Vec3::new(
+                self.min.x.min(other.min.x),
+                self.min.y.min(other.min.y),
+                self.min.z.min(other.min.z),
+            ),
+            max: Vec3::new(
+                self.max.x.max(other.max.x),
+                self.max.y.max(other.max.y),
+                self.max.z.max(other.max.z),
             ),
         }
     }
