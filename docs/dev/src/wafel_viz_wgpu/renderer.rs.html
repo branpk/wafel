@@ -243,9 +243,6 @@
 <a href="#243" id="243">243</a>
 <a href="#244" id="244">244</a>
 <a href="#245" id="245">245</a>
-<a href="#246" id="246">246</a>
-<a href="#247" id="247">247</a>
-<a href="#248" id="248">248</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::HashMap;
 
 <span class="kw">use </span>fast3d::render::F3DRenderer;
@@ -256,10 +253,7 @@
     pipelines::{create_pipelines, PipelineId},
 };
 
-<span class="comment">// TODO: Specify frag_depth as uniform / push constant, combine color_decal.wgsl and
-// color.wgsl, use for wall hitboxes instead of calculating by hand
-
-</span><span class="doccomment">/// A wgpu renderer for [VizScene].
+<span class="doccomment">/// A wgpu renderer for [VizScene].
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>VizRenderer {
     f3d_renderer: F3DRenderer,

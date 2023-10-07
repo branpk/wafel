@@ -431,6 +431,7 @@
 <a href="#431" id="431">431</a>
 <a href="#432" id="432">432</a>
 <a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytemuck::{Pod, Zeroable};
 <span class="kw">use </span>fast3d::{interpret::F3DRenderData, util::Matrixf};
 <span class="kw">use </span>wafel_data_access::MemoryLayout;
@@ -537,7 +538,8 @@
             <span class="macro">assert_eq!</span>(vertices.len(), <span class="number">2</span>);
             scene.add(
                 wafel_viz::LineElement::new([vertices[<span class="number">0</span>].pos3(), vertices[<span class="number">1</span>].pos3()])
-                    .with_color(vertices[<span class="number">0</span>].color.into()),
+                    .with_color(vertices[<span class="number">0</span>].color.into())
+                    .with_decal_amount(<span class="number">0.0002</span>),
             );
         }
 

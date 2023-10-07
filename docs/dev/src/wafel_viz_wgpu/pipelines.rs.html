@@ -291,7 +291,7 @@
 
 <span class="kw">use </span>enum_map::Enum;
 
-<span class="kw">use </span><span class="kw">crate</span>::data::{ColorVertex, PointInstance, PointVertex};
+<span class="kw">use </span><span class="kw">crate</span>::data::{ColorVertex, ColorVertexWithDecal, PointInstance, PointVertex};
 
 <span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Enum)]
 </span><span class="kw">pub enum </span>PipelineId {
@@ -380,7 +380,7 @@
         vertex: wgpu::VertexState {
             module: <span class="kw-2">&amp;</span>shader_module,
             entry_point: <span class="string">&quot;vs_main&quot;</span>,
-            buffers: <span class="kw-2">&amp;</span>[ColorVertex::layout()],
+            buffers: <span class="kw-2">&amp;</span>[ColorVertexWithDecal::layout()],
         },
         primitive: wgpu::PrimitiveState {
             topology: wgpu::PrimitiveTopology::LineList,
