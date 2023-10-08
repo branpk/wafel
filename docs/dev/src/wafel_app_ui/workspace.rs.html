@@ -49,6 +49,9 @@
 <a href="#49" id="49">49</a>
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
+<a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>wafel_api::{Emu, VizScene};
 
 <span class="kw">use crate</span>::{data_explorer::DataExplorer, pane::Pane, Env};
@@ -56,13 +59,13 @@
 <span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Workspace {
     emu: Emu,
-    tree: egui_dock::Tree&lt;Pane&gt;,
+    dock_state: egui_dock::DockState&lt;Pane&gt;,
 }
 
 <span class="kw">impl </span>Workspace {
     <span class="kw">pub fn </span>with_emu(emu: Emu) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>tree = egui_dock::Tree::new(<span class="macro">vec!</span>[Pane::DataExplorer(DataExplorer::new())]);
-        <span class="self">Self </span>{ emu, tree }
+        <span class="kw">let </span>dock_state = egui_dock::DockState::new(<span class="macro">vec!</span>[Pane::DataExplorer(DataExplorer::new())]);
+        <span class="self">Self </span>{ emu, dock_state }
     }
 
     <span class="kw">pub fn </span>show(<span class="kw-2">&amp;mut </span><span class="self">self</span>, env: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Env, ui: <span class="kw-2">&amp;mut </span>egui::Ui) -&gt; Vec&lt;VizScene&gt; {
@@ -72,11 +75,10 @@
             emu: <span class="kw-2">&amp;mut </span><span class="self">self</span>.emu,
             viz_render_data: <span class="kw-2">&amp;mut </span>viz_render_data,
         };
-        egui_dock::DockArea::new(<span class="kw-2">&amp;mut </span><span class="self">self</span>.tree)
+        egui_dock::DockArea::new(<span class="kw-2">&amp;mut </span><span class="self">self</span>.dock_state)
             .style(egui_dock::Style::from_egui(ui.style()))
             .show_close_buttons(<span class="bool-val">false</span>)
             .tab_context_menus(<span class="bool-val">false</span>)
-            .scroll_area_in_tabs(<span class="bool-val">false</span>)
             .show_inside(ui, <span class="kw-2">&amp;mut </span>tab_viewer);
         viz_render_data
     }
@@ -91,13 +93,17 @@
 <span class="kw">impl </span>egui_dock::TabViewer <span class="kw">for </span>TabViewer&lt;<span class="lifetime">&#39;_</span>&gt; {
     <span class="kw">type </span>Tab = Pane;
 
+    <span class="kw">fn </span>title(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tab: <span class="kw-2">&amp;mut </span>Pane) -&gt; egui::WidgetText {
+        tab.title().into()
+    }
+
+    <span class="kw">fn </span>scroll_bars(<span class="kw-2">&amp;</span><span class="self">self</span>, _tab: <span class="kw-2">&amp;</span><span class="self">Self</span>::Tab) -&gt; [bool; <span class="number">2</span>] {
+        [<span class="bool-val">false</span>; <span class="number">2</span>]
+    }
+
     <span class="kw">fn </span>ui(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ui: <span class="kw-2">&amp;mut </span>egui::Ui, tab: <span class="kw-2">&amp;mut </span>Pane) {
         <span class="kw">let </span>viz_render_data = tab.show(<span class="self">self</span>.env, <span class="self">self</span>.emu, ui);
         <span class="self">self</span>.viz_render_data.extend(viz_render_data);
-    }
-
-    <span class="kw">fn </span>title(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tab: <span class="kw-2">&amp;mut </span>Pane) -&gt; egui::WidgetText {
-        tab.title().into()
     }
 }
 </code></pre></div></section></main></body></html>
