@@ -8,13 +8,14 @@ use wafel_viz_wgpu::VizRenderer;
 use winit::{event::WindowEvent, window::Window};
 
 use crate::{
-    egui_state::EguiState, fps_counter::FpsCounter, logging, wgpu_util::CachedTexture,
-    window_env::AppEnv, AppConfig, Input,
+    app_env::AppEnv, egui_state::EguiState, fps_counter::FpsCounter, logging,
+    wgpu_util::CachedTexture, AppConfig, Input,
 };
 
 #[derive(Debug)]
-struct WindowEnvImpl<'a> {
+struct AppEnvImpl<'a> {
     config: &'a AppConfig,
+    first_run: bool,
     fps: f32,
     mspf: f32,
     egui_ctx: egui::Context,
@@ -22,11 +23,15 @@ struct WindowEnvImpl<'a> {
     input: &'a Input,
 }
 
-static_assertions::assert_impl_all!(WindowEnvImpl<'_>: Send, Sync);
+static_assertions::assert_impl_all!(AppEnvImpl<'_>: Send, Sync);
 
-impl AppEnv for WindowEnvImpl<'_> {
+impl AppEnv for AppEnvImpl<'_> {
     fn config(&self) -> &AppConfig {
         self.config
+    }
+
+    fn first_run(&self) -> bool {
+        self.first_run
     }
 
     fn fps(&self) -> f32 {
@@ -67,6 +72,7 @@ pub struct Container<D> {
     depth_texture: CachedTexture,
     fps_counter: FpsCounter,
     input: Input,
+    first_run: bool,
 }
 
 impl<D: FnMut(&dyn AppEnv)> Container<D> {
@@ -112,6 +118,7 @@ impl<D: FnMut(&dyn AppEnv)> Container<D> {
             depth_texture: CachedTexture::new(),
             fps_counter: FpsCounter::new(),
             input: Input::new(),
+            first_run: true,
         }
     }
 
@@ -130,8 +137,9 @@ impl<D: FnMut(&dyn AppEnv)> Container<D> {
         });
 
         egui_state.run(window, |ctx| {
-            let env = WindowEnvImpl {
+            let env = AppEnvImpl {
                 config: &self.config,
+                first_run: self.first_run,
                 fps: self.fps_counter.fps(),
                 mspf: self.fps_counter.mspf(),
                 egui_ctx: ctx.clone(),
@@ -142,6 +150,7 @@ impl<D: FnMut(&dyn AppEnv)> Container<D> {
             (self.draw)(&env);
 
             self.viz_scenes = env.viz_scenes.into_inner().unwrap();
+            self.first_run = false;
         });
 
         self.input.end_frame();

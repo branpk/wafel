@@ -6,7 +6,7 @@ use winit::{
     window::{WindowBuilder, WindowLevel},
 };
 
-use crate::{container::Container, window_env::AppEnv, AppConfig};
+use crate::{container::Container, AppConfig, AppEnv};
 
 /// Opens a maximized window and runs the application.
 ///

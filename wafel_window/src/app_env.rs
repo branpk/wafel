@@ -7,6 +7,9 @@ pub trait AppEnv {
     /// The config that was used when running the application.
     fn config(&self) -> &AppConfig;
 
+    /// True if this is the first time that the app callback has been called.
+    fn first_run(&self) -> bool;
+
     /// A recent fps measurement.
     fn fps(&self) -> f32;
 

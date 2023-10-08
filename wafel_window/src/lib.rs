@@ -23,11 +23,12 @@
 #![warn(rust_2018_idioms, missing_debug_implementations, missing_docs)]
 #![allow(clippy::too_many_arguments)]
 
+pub use app_env::*;
 pub use config::*;
 pub use input::*;
-pub use window_env::*;
 pub use winit::event::{MouseButton, VirtualKeyCode};
 
+mod app_env;
 mod config;
 mod container;
 mod egui_state;
@@ -36,7 +37,6 @@ mod input;
 mod logging;
 mod wgpu_util;
 mod window;
-mod window_env;
 
 /// Initializes logging, opens a window and runs the application.
 ///
