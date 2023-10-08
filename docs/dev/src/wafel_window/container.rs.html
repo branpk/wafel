@@ -319,6 +319,15 @@
 <a href="#319" id="319">319</a>
 <a href="#320" id="320">320</a>
 <a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     fmt,
     sync::{Arc, Mutex},
@@ -329,13 +338,14 @@
 <span class="kw">use </span>winit::{event::WindowEvent, window::Window};
 
 <span class="kw">use crate</span>::{
-    egui_state::EguiState, fps_counter::FpsCounter, logging, wgpu_util::CachedTexture,
-    window_env::AppEnv, AppConfig, Input,
+    app_env::AppEnv, egui_state::EguiState, fps_counter::FpsCounter, logging,
+    wgpu_util::CachedTexture, AppConfig, Input,
 };
 
 <span class="attr">#[derive(Debug)]
-</span><span class="kw">struct </span>WindowEnvImpl&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">struct </span>AppEnvImpl&lt;<span class="lifetime">&#39;a</span>&gt; {
     config: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>AppConfig,
+    first_run: bool,
     fps: f32,
     mspf: f32,
     egui_ctx: egui::Context,
@@ -343,11 +353,15 @@
     input: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Input,
 }
 
-<span class="macro">static_assertions::assert_impl_all!</span>(WindowEnvImpl&lt;<span class="lifetime">&#39;_</span>&gt;: Send, Sync);
+<span class="macro">static_assertions::assert_impl_all!</span>(AppEnvImpl&lt;<span class="lifetime">&#39;_</span>&gt;: Send, Sync);
 
-<span class="kw">impl </span>AppEnv <span class="kw">for </span>WindowEnvImpl&lt;<span class="lifetime">&#39;_</span>&gt; {
+<span class="kw">impl </span>AppEnv <span class="kw">for </span>AppEnvImpl&lt;<span class="lifetime">&#39;_</span>&gt; {
     <span class="kw">fn </span>config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>AppConfig {
         <span class="self">self</span>.config
+    }
+
+    <span class="kw">fn </span>first_run(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.first_run
     }
 
     <span class="kw">fn </span>fps(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; f32 {
@@ -388,6 +402,7 @@
     depth_texture: CachedTexture,
     fps_counter: FpsCounter,
     input: Input,
+    first_run: bool,
 }
 
 <span class="kw">impl</span>&lt;D: FnMut(<span class="kw-2">&amp;</span><span class="kw">dyn </span>AppEnv)&gt; Container&lt;D&gt; {
@@ -433,6 +448,7 @@
             depth_texture: CachedTexture::new(),
             fps_counter: FpsCounter::new(),
             input: Input::new(),
+            first_run: <span class="bool-val">true</span>,
         }
     }
 
@@ -451,8 +467,9 @@
         });
 
         egui_state.run(window, |ctx| {
-            <span class="kw">let </span>env = WindowEnvImpl {
+            <span class="kw">let </span>env = AppEnvImpl {
                 config: <span class="kw-2">&amp;</span><span class="self">self</span>.config,
+                first_run: <span class="self">self</span>.first_run,
                 fps: <span class="self">self</span>.fps_counter.fps(),
                 mspf: <span class="self">self</span>.fps_counter.mspf(),
                 egui_ctx: ctx.clone(),
@@ -463,6 +480,7 @@
             (<span class="self">self</span>.draw)(<span class="kw-2">&amp;</span>env);
 
             <span class="self">self</span>.viz_scenes = env.viz_scenes.into_inner().unwrap();
+            <span class="self">self</span>.first_run = <span class="bool-val">false</span>;
         });
 
         <span class="self">self</span>.input.end_frame();

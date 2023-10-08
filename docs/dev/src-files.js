@@ -20,6 +20,6 @@ var srcIndex = JSON.parse('{\
 "wafel_viz_sm64":["",[],["config.rs","error.rs","f3d_builder.rs","lib.rs","ortho_camera_control.rs","render_data.rs","rotate_camera_control.rs","skybox.rs","sm64_gfx_render.rs"]],\
 "wafel_viz_tests":["",[],["game_runner.rs","main.rs","renderer.rs","run_tests.rs","viz_tests.rs"]],\
 "wafel_viz_wgpu":["",[],["data.rs","lib.rs","pipelines.rs","renderer.rs"]],\
-"wafel_window":["",[],["config.rs","container.rs","egui_state.rs","fps_counter.rs","input.rs","lib.rs","logging.rs","wgpu_util.rs","window.rs","window_env.rs"]]\
+"wafel_window":["",[],["app_env.rs","config.rs","container.rs","egui_state.rs","fps_counter.rs","input.rs","lib.rs","logging.rs","wgpu_util.rs","window.rs"]]\
 }');
 createSrcSidebar();

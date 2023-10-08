@@ -85,11 +85,12 @@
 </span><span class="attr">#![warn(rust_2018_idioms, missing_debug_implementations, missing_docs)]
 #![allow(clippy::too_many_arguments)]
 
-</span><span class="kw">pub use </span>config::<span class="kw-2">*</span>;
+</span><span class="kw">pub use </span>app_env::<span class="kw-2">*</span>;
+<span class="kw">pub use </span>config::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>input::<span class="kw-2">*</span>;
-<span class="kw">pub use </span>window_env::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>winit::event::{MouseButton, VirtualKeyCode};
 
+<span class="kw">mod </span>app_env;
 <span class="kw">mod </span>config;
 <span class="kw">mod </span>container;
 <span class="kw">mod </span>egui_state;
@@ -98,7 +99,6 @@
 <span class="kw">mod </span>logging;
 <span class="kw">mod </span>wgpu_util;
 <span class="kw">mod </span>window;
-<span class="kw">mod </span>window_env;
 
 <span class="doccomment">/// Initializes logging, opens a window and runs the application.
 ///
