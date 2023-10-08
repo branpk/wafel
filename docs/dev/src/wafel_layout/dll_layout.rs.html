@@ -1036,6 +1036,7 @@
 <a href="#1036" id="1036">1036</a>
 <a href="#1037" id="1037">1037</a>
 <a href="#1038" id="1038">1038</a>
+<a href="#1039" id="1039">1039</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Debugging and structural information extracted from a DLL.
 
 </span><span class="kw">use </span>std::{
@@ -1466,22 +1467,23 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), DllLayoutErrorKind&gt; {
         <span class="kw">let </span>entry = node.entry();
         <span class="kw">let </span>name = <span class="self">self</span>.req_attr_string(entry, gimli::DW_AT_name)<span class="question-mark">?</span>;
+        <span class="kw">let </span>size = <span class="self">self</span>.req_attr_usize(entry, gimli::DW_AT_byte_size)<span class="question-mark">?</span>;
         <span class="kw">let </span>shallow_type = <span class="kw">match </span>name.as_ref() {
-            <span class="string">&quot;char&quot; </span>=&gt; ShallowDataType::Int(IntType::S8),
-            <span class="string">&quot;long long unsigned int&quot; </span>=&gt; ShallowDataType::Int(IntType::U64),
-            <span class="string">&quot;long long int&quot; </span>=&gt; ShallowDataType::Int(IntType::S64),
-            <span class="string">&quot;short unsigned int&quot; </span>=&gt; ShallowDataType::Int(IntType::U16),
-            <span class="string">&quot;int&quot; </span>=&gt; ShallowDataType::Int(IntType::S32),
-            <span class="string">&quot;long int&quot; </span>=&gt; ShallowDataType::Int(IntType::S32),
-            <span class="string">&quot;unsigned int&quot; </span>=&gt; ShallowDataType::Int(IntType::U32),
-            <span class="string">&quot;long unsigned int&quot; </span>=&gt; ShallowDataType::Int(IntType::U32),
-            <span class="string">&quot;unsigned char&quot; </span>=&gt; ShallowDataType::Int(IntType::U8),
+            <span class="string">&quot;char&quot; </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
+            <span class="string">&quot;long long unsigned int&quot; </span>=&gt; ShallowDataType::Int(IntType::unsigned_with_size(size)),
+            <span class="string">&quot;long long int&quot; </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
+            <span class="string">&quot;short unsigned int&quot; </span>=&gt; ShallowDataType::Int(IntType::unsigned_with_size(size)),
+            <span class="string">&quot;int&quot; </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
+            <span class="string">&quot;long int&quot; </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
+            <span class="string">&quot;unsigned int&quot; </span>=&gt; ShallowDataType::Int(IntType::unsigned_with_size(size)),
+            <span class="string">&quot;long unsigned int&quot; </span>=&gt; ShallowDataType::Int(IntType::unsigned_with_size(size)),
+            <span class="string">&quot;unsigned char&quot; </span>=&gt; ShallowDataType::Int(IntType::unsigned_with_size(size)),
             <span class="string">&quot;double&quot; </span>=&gt; ShallowDataType::Float(FloatType::F64),
             <span class="string">&quot;float&quot; </span>=&gt; ShallowDataType::Float(FloatType::F32),
             <span class="string">&quot;long double&quot; </span>=&gt; ShallowDataType::Void, <span class="comment">// f128 is not currently supported
-            </span><span class="string">&quot;signed char&quot; </span>=&gt; ShallowDataType::Int(IntType::S8),
-            <span class="string">&quot;short int&quot; </span>=&gt; ShallowDataType::Int(IntType::S16),
-            <span class="string">&quot;_Bool&quot; </span>=&gt; ShallowDataType::Int(IntType::S32),
+            </span><span class="string">&quot;signed char&quot; </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
+            <span class="string">&quot;short int&quot; </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
+            <span class="string">&quot;_Bool&quot; </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
             <span class="string">&quot;__int128 unsigned&quot; </span>=&gt; ShallowDataType::Array {
                 base: TypeId::U64,
                 length: <span class="prelude-val">Some</span>(<span class="number">2</span>),
@@ -1497,7 +1499,7 @@
             TypeId::Offset(entry.offset().<span class="number">0</span>),
             PreDataType {
                 shallow_type,
-                size: PreDataTypeSize::Known(<span class="self">self</span>.req_attr_usize(entry, gimli::DW_AT_byte_size)<span class="question-mark">?</span>),
+                size: PreDataTypeSize::Known(size),
             },
         );
         <span class="prelude-val">Ok</span>(())
