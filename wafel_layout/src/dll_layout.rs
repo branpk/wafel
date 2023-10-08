@@ -428,22 +428,23 @@ where
     ) -> Result<(), DllLayoutErrorKind> {
         let entry = node.entry();
         let name = self.req_attr_string(entry, gimli::DW_AT_name)?;
+        let size = self.req_attr_usize(entry, gimli::DW_AT_byte_size)?;
         let shallow_type = match name.as_ref() {
-            "char" => ShallowDataType::Int(IntType::S8),
-            "long long unsigned int" => ShallowDataType::Int(IntType::U64),
-            "long long int" => ShallowDataType::Int(IntType::S64),
-            "short unsigned int" => ShallowDataType::Int(IntType::U16),
-            "int" => ShallowDataType::Int(IntType::S32),
-            "long int" => ShallowDataType::Int(IntType::S32),
-            "unsigned int" => ShallowDataType::Int(IntType::U32),
-            "long unsigned int" => ShallowDataType::Int(IntType::U32),
-            "unsigned char" => ShallowDataType::Int(IntType::U8),
+            "char" => ShallowDataType::Int(IntType::signed_with_size(size)),
+            "long long unsigned int" => ShallowDataType::Int(IntType::unsigned_with_size(size)),
+            "long long int" => ShallowDataType::Int(IntType::signed_with_size(size)),
+            "short unsigned int" => ShallowDataType::Int(IntType::unsigned_with_size(size)),
+            "int" => ShallowDataType::Int(IntType::signed_with_size(size)),
+            "long int" => ShallowDataType::Int(IntType::signed_with_size(size)),
+            "unsigned int" => ShallowDataType::Int(IntType::unsigned_with_size(size)),
+            "long unsigned int" => ShallowDataType::Int(IntType::unsigned_with_size(size)),
+            "unsigned char" => ShallowDataType::Int(IntType::unsigned_with_size(size)),
             "double" => ShallowDataType::Float(FloatType::F64),
             "float" => ShallowDataType::Float(FloatType::F32),
             "long double" => ShallowDataType::Void, // f128 is not currently supported
-            "signed char" => ShallowDataType::Int(IntType::S8),
-            "short int" => ShallowDataType::Int(IntType::S16),
-            "_Bool" => ShallowDataType::Int(IntType::S32),
+            "signed char" => ShallowDataType::Int(IntType::signed_with_size(size)),
+            "short int" => ShallowDataType::Int(IntType::signed_with_size(size)),
+            "_Bool" => ShallowDataType::Int(IntType::signed_with_size(size)),
             "__int128 unsigned" => ShallowDataType::Array {
                 base: TypeId::U64,
                 length: Some(2),
@@ -459,7 +460,7 @@ where
             TypeId::Offset(entry.offset().0),
             PreDataType {
                 shallow_type,
-                size: PreDataTypeSize::Known(self.req_attr_usize(entry, gimli::DW_AT_byte_size)?),
+                size: PreDataTypeSize::Known(size),
             },
         );
         Ok(())

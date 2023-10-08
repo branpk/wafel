@@ -112,6 +112,28 @@ impl IntType {
             Self::S64 => 8,
         }
     }
+
+    /// Returns an unsigned int type with the given size in bytes.
+    pub fn unsigned_with_size(size: usize) -> Self {
+        match size {
+            1 => Self::U8,
+            2 => Self::U16,
+            4 => Self::U32,
+            8 => Self::U64,
+            _ => unimplemented!("unsigned int with size {}", size),
+        }
+    }
+
+    /// Returns a signed int type with the given size in bytes.
+    pub fn signed_with_size(size: usize) -> Self {
+        match size {
+            1 => Self::S8,
+            2 => Self::S16,
+            4 => Self::S32,
+            8 => Self::S64,
+            _ => unimplemented!("signed int with size {}", size),
+        }
+    }
 }
 
 impl FloatType {
