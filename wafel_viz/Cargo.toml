@@ -9,5 +9,5 @@ ultraviolet = "0.9.0"
 
 [dev-dependencies]
 wafel_window = { path = "../wafel_window" }
-egui = "0.22.0"
+egui.workspace = true
 wafel_api = { path = "../wafel_api" }

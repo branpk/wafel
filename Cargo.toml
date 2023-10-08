@@ -35,4 +35,7 @@ opt-level = 3
 debug = true
 
 [workspace.dependencies]
-wgpu = "0.16.3"
+wgpu = "0.17.0"
+egui = "0.23.0"
+egui-wgpu = "0.23.0"
+egui-winit = "0.23.0"
