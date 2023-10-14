@@ -15436,6 +15436,12 @@
         26
       ]
     },
+    "oAnimations": {
+      "array": "asAnims",
+      "indices": [
+        38
+      ]
+    },
     "oArrowLiftDisplacement": {
       "array": "asF32",
       "indices": [
@@ -15542,6 +15548,12 @@
       "array": "asS32",
       "indices": [
         27
+      ]
+    },
+    "oBitSPlatformBowser": {
+      "array": "asObject",
+      "indices": [
+        28
       ]
     },
     "oBitSPlatformTimer": {
@@ -15706,6 +15718,12 @@
         29
       ]
     },
+    "oBooParentBigBoo": {
+      "array": "asObject",
+      "indices": [
+        32
+      ]
+    },
     "oBooTargetOpacity": {
       "array": "asS32",
       "indices": [
@@ -15847,10 +15865,22 @@
         27
       ]
     },
+    "oBowserPuzzlePieceActionList": {
+      "array": "asVoidPtr",
+      "indices": [
+        33
+      ]
+    },
     "oBowserPuzzlePieceContinuePerformingAction": {
       "array": "asS32",
       "indices": [
         32
+      ]
+    },
+    "oBowserPuzzlePieceNextAction": {
+      "array": "asVoidPtr",
+      "indices": [
+        34
       ]
     },
     "oBowserPuzzlePieceOffsetX": {
@@ -16178,6 +16208,12 @@
       "array": "asS32",
       "indices": [
         32
+      ]
+    },
+    "oChainChompSegments": {
+      "array": "asChainSegment",
+      "indices": [
+        27
       ]
     },
     "oChainChompTargetPitch": {
@@ -16769,6 +16805,12 @@
         1
       ]
     },
+    "oFlameBowser": {
+      "array": "asObject",
+      "indices": [
+        30
+      ]
+    },
     "oFlameScale": {
       "array": "asF32",
       "indices": [
@@ -16821,6 +16863,12 @@
       "array": "asF32",
       "indices": [
         29
+      ]
+    },
+    "oFloor": {
+      "array": "asSurface",
+      "indices": [
+        78
       ]
     },
     "oFloorHeight": {
@@ -16999,6 +17047,12 @@
         0
       ]
     },
+    "oHauntedChairUnk100": {
+      "array": "asS32P",
+      "indices": [
+        30
+      ]
+    },
     "oHauntedChairUnk104": {
       "array": "asS32",
       "indices": [
@@ -17049,6 +17103,18 @@
     },
     "oHidden1UpNumTouchedTriggers": {
       "array": "asS32",
+      "indices": [
+        27
+      ]
+    },
+    "oHiddenBlueCoinSwitch": {
+      "array": "asObject",
+      "indices": [
+        28
+      ]
+    },
+    "oHiddenObjectPurpleSwitch": {
+      "array": "asObject",
       "indices": [
         27
       ]
@@ -17173,6 +17239,12 @@
         66
       ]
     },
+    "oIntroLakituCloud": {
+      "array": "asObject",
+      "indices": [
+        73
+      ]
+    },
     "oIntroLakituSplineSegment": {
       "array": "asF32",
       "indices": [
@@ -17231,6 +17303,12 @@
       "array": "asF32",
       "indices": [
         32
+      ]
+    },
+    "oJRBSlidingBoxUnkF4": {
+      "array": "asObject",
+      "indices": [
+        27
       ]
     },
     "oJRBSlidingBoxUnkF8": {
@@ -17744,6 +17822,12 @@
         27
       ]
     },
+    "oMontyMoleCurrentHole": {
+      "array": "asObject",
+      "indices": [
+        27
+      ]
+    },
     "oMontyMoleHeightRelativeToFloor": {
       "array": "asF32",
       "indices": [
@@ -17814,6 +17898,12 @@
       "array": "asF32",
       "indices": [
         29
+      ]
+    },
+    "oMrBlizzardHeldObj": {
+      "array": "asObject",
+      "indices": [
+        28
       ]
     },
     "oMrBlizzardScale": {
@@ -17888,6 +17978,12 @@
         61
       ]
     },
+    "oOpenableGrillPurpleSwitch": {
+      "array": "asObject",
+      "indices": [
+        27
+      ]
+    },
     "oOpenableGrillUnk88": {
       "array": "asS32",
       "indices": [
@@ -17912,10 +18008,22 @@
         46
       ]
     },
+    "oPathedPrevWaypoint": {
+      "array": "asWaypoint",
+      "indices": [
+        30
+      ]
+    },
     "oPathedPrevWaypointFlags": {
       "array": "asS32",
       "indices": [
         31
+      ]
+    },
+    "oPathedStartWaypoint": {
+      "array": "asWaypoint",
+      "indices": [
+        29
       ]
     },
     "oPathedTargetPitch": {
@@ -17998,6 +18106,12 @@
         32
       ]
     },
+    "oPlatformOnTrackPrevWaypoint": {
+      "array": "asWaypoint",
+      "indices": [
+        30
+      ]
+    },
     "oPlatformOnTrackPrevWaypointFlags": {
       "array": "asS32",
       "indices": [
@@ -18008,6 +18122,12 @@
       "array": "asF32",
       "indices": [
         28
+      ]
+    },
+    "oPlatformOnTrackStartWaypoint": {
+      "array": "asWaypoint",
+      "indices": [
+        29
       ]
     },
     "oPlatformOnTrackType": {
@@ -18218,6 +18338,12 @@
       "array": "asF32",
       "indices": [
         34
+      ]
+    },
+    "oRespawnerBehaviorToRespawn": {
+      "array": "asConstVoidPtr",
+      "indices": [
+        29
       ]
     },
     "oRespawnerMinSpawnDist": {
@@ -18615,6 +18741,12 @@
         29
       ]
     },
+    "oStrongWindParticlePenguinObj": {
+      "array": "asObject",
+      "indices": [
+        27
+      ]
+    },
     "oSubAction": {
       "array": "asS32",
       "indices": [
@@ -18849,6 +18981,18 @@
         27
       ]
     },
+    "oTTCTreadmillBigSurface": {
+      "array": "asS16P",
+      "indices": [
+        27
+      ]
+    },
+    "oTTCTreadmillSmallSurface": {
+      "array": "asS16P",
+      "indices": [
+        28
+      ]
+    },
     "oTTCTreadmillSpeed": {
       "array": "asF32",
       "indices": [
@@ -18919,6 +19063,12 @@
       "array": "asS32",
       "indices": [
         74
+      ]
+    },
+    "oToxBoxActionTable": {
+      "array": "asVoidPtr",
+      "indices": [
+        73
       ]
     },
     "oTreasureChestUnkF4": {
@@ -19413,6 +19563,12 @@
       "array": "asF32",
       "indices": [
         27
+      ]
+    },
+    "oWigglerSegments": {
+      "array": "asChainSegment",
+      "indices": [
+        28
       ]
     },
     "oWigglerSquishSpeed": {
