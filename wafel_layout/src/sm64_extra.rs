@@ -19,10 +19,10 @@ impl DataLayout {
         let json: JsonValue = serde_json::from_slice(include_bytes!("../sm64_macro_defns.json"))
             .expect("failed to deserialize sm64 macro defns");
         let fields = as_object(&json);
-        let constants_json = field(&fields, "constants");
-        let object_fields_json = field(&fields, "object_fields");
-        load_object_fields(self, &object_fields_json)?;
-        load_constants(self, &constants_json);
+        let constants_json = field(fields, "constants");
+        let object_fields_json = field(fields, "object_fields");
+        load_object_fields(self, object_fields_json)?;
+        load_constants(self, constants_json);
         Ok(())
     }
 }
@@ -36,7 +36,7 @@ fn load_object_fields(layout: &mut DataLayout, json: &JsonValue) -> Result<(), S
 
     let object_struct = DataTypeRef::get_mut(object_struct_ref).ok_or(ObjectStructInUse)?;
     if let DataType::Struct { fields } = object_struct {
-        let extra_fields = read_object_fields(&json, fields)?;
+        let extra_fields = read_object_fields(json, fields)?;
         fields.extend(extra_fields);
         Ok(())
     } else {
@@ -46,7 +46,7 @@ fn load_object_fields(layout: &mut DataLayout, json: &JsonValue) -> Result<(), S
 
 /// Load constants from the given json string.
 fn load_constants(layout: &mut DataLayout, json: &JsonValue) {
-    for (name, info) in as_object(&json) {
+    for (name, info) in as_object(json) {
         let info = as_object(info);
         let value_field = field(info, "value");
 
@@ -74,25 +74,18 @@ fn read_object_fields(
         Some(field) => field,
         None => return Err(MissingRawData),
     };
-    let raw_data_arrays = if let DataType::Union { fields } = raw_data_field.data_type.as_ref() {
-        fields
-    } else {
-        return Err(RawDataNotUnion);
-    };
 
     let mut object_fields: IndexMap<String, Field> = IndexMap::new();
     for (name, defn) in as_object(json) {
         let defn_fields = as_object(defn);
 
         let array_name = as_str(field(defn_fields, "array"));
-        let mut data_type = match raw_data_arrays.get(array_name) {
-            Some(array) => DataTypeRef::clone(&array.data_type),
-            None => return Err(MissingRawDataArray(array_name.to_string())),
-        };
+
+        let mut data_type = get_object_field_data_type(object_struct_fields, array_name)?;
 
         let indices: Vec<usize> = as_array(field(defn_fields, "indices"))
             .iter()
-            .map(|v| as_usize(v))
+            .map(as_usize)
             .collect();
 
         let mut offset = raw_data_field.offset;
@@ -120,6 +113,40 @@ fn read_object_fields(
     }
 
     Ok(object_fields)
+}
+
+fn get_object_field_data_type(
+    object_struct_fields: &IndexMap<String, Field>,
+    array_name: &str,
+) -> Result<DataTypeRef, SM64LayoutError> {
+    let raw_data_field = match object_struct_fields.get("rawData") {
+        Some(field) => field,
+        None => return Err(MissingRawData),
+    };
+    let raw_data_arrays = if let DataType::Union { fields } = raw_data_field.data_type.as_ref() {
+        fields
+    } else {
+        return Err(RawDataNotUnion);
+    };
+
+    if let Some(array) = raw_data_arrays.get(array_name) {
+        return Ok(array.data_type.clone());
+    }
+
+    if let Some(ptr_data_field) = object_struct_fields.get("ptrData") {
+        let ptr_data_arrays = if let DataType::Union { fields } = ptr_data_field.data_type.as_ref()
+        {
+            fields
+        } else {
+            return Err(RawDataNotUnion);
+        };
+
+        if let Some(array) = ptr_data_arrays.get(array_name) {
+            return Ok(array.data_type.clone());
+        }
+    }
+
+    Err(MissingRawDataArray(array_name.to_string()))
 }
 
 fn as_object(json: &JsonValue) -> &Map<String, JsonValue> {
