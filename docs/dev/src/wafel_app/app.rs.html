@@ -253,6 +253,8 @@
 <a href="#252" id="252">252</a>
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     fmt,
     sync::{Arc, Mutex},
@@ -317,9 +319,9 @@
         }
     }
 
-    <span class="kw">fn </span>window_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: <span class="kw-2">&amp;</span>WindowEvent&lt;<span class="lifetime">'_</span>&gt;) {
+    <span class="kw">fn </span>window_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, window: <span class="kw-2">&amp;</span>Window, event: <span class="kw-2">&amp;</span>WindowEvent) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(egui_state) = <span class="self">self</span>.egui_state.lock().unwrap().as_mut() {
-            <span class="kw">let </span>consumed = egui_state.window_event(event);
+            <span class="kw">let </span>consumed = egui_state.window_event(window, event);
             <span class="kw">if </span>!consumed {
                 <span class="comment">// handle event
             </span>}
@@ -444,10 +446,11 @@
                     resolve_target: <span class="prelude-val">Some</span>(output_view),
                     ops: wgpu::Operations {
                         load: clear_op.take().unwrap_or(wgpu::LoadOp::Load),
-                        store: <span class="bool-val">true</span>,
+                        store: wgpu::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: <span class="prelude-val">None</span>,
+                ..Default::default()
             });
 
             egui_state.render(<span class="kw-2">&amp;mut </span>rp);
@@ -484,17 +487,18 @@
                     resolve_target: <span class="prelude-val">Some</span>(output_view),
                     ops: wgpu::Operations {
                         load: clear_op.take().unwrap_or(wgpu::LoadOp::Load),
-                        store: <span class="bool-val">true</span>,
+                        store: wgpu::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: <span class="prelude-val">Some</span>(wgpu::RenderPassDepthStencilAttachment {
                     view: <span class="kw-2">&amp;</span>depth_texture_view,
                     depth_ops: <span class="prelude-val">Some</span>(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(<span class="number">1.0</span>),
-                        store: <span class="bool-val">true</span>,
+                        store: wgpu::StoreOp::Store,
                     }),
                     stencil_ops: <span class="prelude-val">None</span>,
                 }),
+                ..Default::default()
             });
 
             <span class="self">self</span>.viz_renderer.render(<span class="kw-2">&amp;mut </span>rp);

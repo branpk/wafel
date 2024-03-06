@@ -234,6 +234,7 @@
 <a href="#233" id="233">233</a>
 <a href="#234" id="234">234</a>
 <a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::env;
 
 <span class="kw">use </span>image::{Pixel, Rgb, RgbImage};
@@ -279,8 +280,8 @@
             .request_device(
                 <span class="kw-2">&amp;</span>wgpu::DeviceDescriptor {
                     label: <span class="prelude-val">None</span>,
-                    features: wgpu::Features::empty(),
-                    limits: wgpu::Limits::downlevel_defaults(),
+                    required_features: wgpu::Features::empty(),
+                    required_limits: wgpu::Limits::downlevel_defaults(),
                 },
                 <span class="prelude-val">None</span>,
             )
@@ -414,17 +415,18 @@
                         resolve_target: <span class="prelude-val">None</span>,
                         ops: wgpu::Operations {
                             load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                            store: <span class="bool-val">true</span>,
+                            store: wgpu::StoreOp::Store,
                         },
                     })],
                     depth_stencil_attachment: <span class="prelude-val">Some</span>(wgpu::RenderPassDepthStencilAttachment {
                         view: <span class="kw-2">&amp;</span>depth_texture_view,
                         depth_ops: <span class="prelude-val">Some</span>(wgpu::Operations {
                             load: wgpu::LoadOp::Clear(<span class="number">1.0</span>),
-                            store: <span class="bool-val">true</span>,
+                            store: wgpu::StoreOp::Store,
                         }),
                         stencil_ops: <span class="prelude-val">None</span>,
                     }),
+                    ..Default::default()
                 });
                 <span class="self">self</span>.viz_renderer.render(<span class="kw-2">&amp;mut </span>rp);
             }

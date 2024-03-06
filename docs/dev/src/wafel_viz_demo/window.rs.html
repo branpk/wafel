@@ -162,6 +162,11 @@
 <a href="#161" id="161">161</a>
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>env_logger::init;
 <span class="kw">use </span>wafel_api::Error;
 <span class="kw">use </span>winit::{
@@ -195,7 +200,7 @@
 }
 
 <span class="kw">async fn </span>open_window_and_run_impl&lt;A: App&gt;() {
-    <span class="kw">let </span>event_loop = EventLoop::new();
+    <span class="kw">let </span>event_loop = EventLoop::new().expect(<span class="string">"failed to create event loop"</span>);
     <span class="kw">let </span>max_screen_dim = event_loop
         .available_monitors()
         .flat_map(|m| [m.size().width, m.size().height])
@@ -226,14 +231,16 @@
         .<span class="kw">await
         </span>.expect(<span class="string">"failed to request GPU adapter"</span>);
 
-    <span class="kw">let </span>surface = <span class="kw">unsafe </span>{ instance.create_surface(<span class="kw-2">&amp;</span>window) }.expect(<span class="string">"failed to create surface"</span>);
+    <span class="kw">let </span>surface = instance
+        .create_surface(<span class="kw-2">&amp;</span>window)
+        .expect(<span class="string">"failed to create surface"</span>);
 
     <span class="kw">let </span>(device, queue) = adapter
         .request_device(
             <span class="kw-2">&amp;</span>wgpu::DeviceDescriptor {
                 label: <span class="prelude-val">None</span>,
-                features: wgpu::Features::empty(),
-                limits: wgpu::Limits {
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits {
                     max_texture_dimension_2d: max_screen_dim,
                     ..wgpu::Limits::downlevel_defaults()
                 },
@@ -253,6 +260,7 @@
         present_mode: wgpu::PresentMode::AutoNoVsync,
         alpha_mode: wgpu::CompositeAlphaMode::Auto,
         view_formats: Vec::new(),
+        desired_maximum_frame_latency: <span class="number">2</span>,
     };
     surface.configure(<span class="kw-2">&amp;</span>device, <span class="kw-2">&amp;</span>surface_config);
 
@@ -261,13 +269,13 @@
     window.set_visible(<span class="bool-val">true</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>first_render = <span class="bool-val">false</span>;
 
-    event_loop.run(<span class="kw">move </span>|event, <span class="kw">_</span>, control_flow| {
-        <span class="kw">let _ </span>= (<span class="kw-2">&amp;</span>instance, <span class="kw-2">&amp;</span>adapter);
+    <span class="kw">let </span>window = <span class="kw-2">&amp;</span>window;
 
-        <span class="kw-2">*</span>control_flow = ControlFlow::Poll;
+    event_loop
+        .run(<span class="kw">move </span>|event, event_loop| {
+            <span class="kw">let _ </span>= (<span class="kw-2">&amp;</span>instance, <span class="kw-2">&amp;</span>adapter);
 
-        <span class="kw">match </span>event {
-            Event::WindowEvent { event, .. } =&gt; {
+            <span class="kw">if let </span>Event::WindowEvent { event, .. } = event {
                 handle_err(app.window_event(<span class="kw-2">&amp;</span>event));
                 <span class="kw">match </span>event {
                     WindowEvent::Resized(size) =&gt; {
@@ -276,46 +284,48 @@
                         <span class="kw">if </span>surface_config.width != <span class="number">0 </span>&amp;&amp; surface_config.height != <span class="number">0 </span>{
                             surface.configure(<span class="kw-2">&amp;</span>device, <span class="kw-2">&amp;</span>surface_config);
                         }
+                        window.request_redraw();
                     }
                     WindowEvent::CloseRequested =&gt; {
-                        <span class="kw-2">*</span>control_flow = ControlFlow::Exit;
+                        event_loop.exit();
+                    }
+                    WindowEvent::RedrawRequested =&gt; {
+                        <span class="kw">if </span>!first_render {
+                            handle_err(app.update());
+                        }
+
+                        <span class="kw">if </span>surface_config.width != <span class="number">0 </span>&amp;&amp; surface_config.height != <span class="number">0 </span>{
+                            <span class="kw">let </span>frame = surface
+                                .get_current_texture()
+                                .expect(<span class="string">"failed to acquire next swap chain texture"</span>);
+                            <span class="kw">let </span>output_view = frame
+                                .texture
+                                .create_view(<span class="kw-2">&amp;</span>wgpu::TextureViewDescriptor::default());
+
+                            <span class="kw">if </span>first_render {
+                                <span class="comment">// Draw a black screen as quickly as possible
+                                </span>first_render = <span class="bool-val">false</span>;
+                            } <span class="kw">else </span>{
+                                handle_err(app.render(
+                                    <span class="kw-2">&amp;</span>device,
+                                    <span class="kw-2">&amp;</span>queue,
+                                    <span class="kw-2">&amp;</span>output_view,
+                                    output_format,
+                                    [surface_config.width, surface_config.height],
+                                    window.scale_factor() <span class="kw">as </span>f32,
+                                ));
+                            }
+
+                            frame.present();
+                        }
+
+                        window.request_redraw();
                     }
                     <span class="kw">_ </span>=&gt; {}
                 }
             }
-            Event::MainEventsCleared =&gt; {
-                <span class="kw">if </span>!first_render {
-                    handle_err(app.update());
-                }
-
-                <span class="kw">if </span>surface_config.width != <span class="number">0 </span>&amp;&amp; surface_config.height != <span class="number">0 </span>{
-                    <span class="kw">let </span>frame = surface
-                        .get_current_texture()
-                        .expect(<span class="string">"failed to acquire next swap chain texture"</span>);
-                    <span class="kw">let </span>output_view = frame
-                        .texture
-                        .create_view(<span class="kw-2">&amp;</span>wgpu::TextureViewDescriptor::default());
-
-                    <span class="kw">if </span>first_render {
-                        <span class="comment">// Draw a black screen as quickly as possible
-                        </span>first_render = <span class="bool-val">false</span>;
-                    } <span class="kw">else </span>{
-                        handle_err(app.render(
-                            <span class="kw-2">&amp;</span>device,
-                            <span class="kw-2">&amp;</span>queue,
-                            <span class="kw-2">&amp;</span>output_view,
-                            output_format,
-                            [surface_config.width, surface_config.height],
-                            window.scale_factor() <span class="kw">as </span>f32,
-                        ));
-                    }
-
-                    frame.present();
-                }
-            }
-            <span class="kw">_ </span>=&gt; {}
-        }
-    });
+        })
+        .expect(<span class="string">"event loop error"</span>);
 }
 
 <span class="attr">#[track_caller]

@@ -95,10 +95,18 @@
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
 <a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt;
 
 <span class="kw">use </span>egui::{ClippedPrimitive, Context, TexturesDelta};
-<span class="kw">use </span>egui_wgpu::{renderer::ScreenDescriptor, Renderer};
+<span class="kw">use </span>egui_wgpu::{Renderer, ScreenDescriptor};
 <span class="kw">use </span>egui_winit::State;
 <span class="kw">use </span>winit::{event::WindowEvent, window::Window};
 
@@ -118,10 +126,16 @@
         output_format: wgpu::TextureFormat,
         msaa_samples: u32,
     ) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>state = State::new(window);
-        state.set_pixels_per_point(window.scale_factor() <span class="kw">as </span>f32);
+        <span class="kw">let </span>context = Context::default();
+        <span class="kw">let </span>state = State::new(
+            context.clone(),
+            context.viewport_id(),
+            <span class="kw-2">&amp;</span>window,
+            <span class="prelude-val">Some</span>(window.scale_factor() <span class="kw">as </span>f32),
+            <span class="prelude-val">None</span>,
+        );
         EguiState {
-            context: Context::default(),
+            context,
             state,
             renderer: Renderer::new(device, output_format, <span class="prelude-val">None</span>, msaa_samples),
             primitives: Vec::new(),
@@ -130,8 +144,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>window_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: <span class="kw-2">&amp;</span>WindowEvent&lt;<span class="lifetime">'_</span>&gt;) -&gt; bool {
-        <span class="kw">let </span>response = <span class="self">self</span>.state.on_event(<span class="kw-2">&amp;</span><span class="self">self</span>.context, event);
+    <span class="kw">pub fn </span>window_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, window: <span class="kw-2">&amp;</span>Window, event: <span class="kw-2">&amp;</span>WindowEvent) -&gt; bool {
+        <span class="kw">let </span>response = <span class="self">self</span>.state.on_window_event(window, event);
         <span class="kw">if </span>response.repaint {
             <span class="self">self</span>.context.request_repaint();
         }
@@ -147,8 +161,10 @@
             run_ui(ctx);
         });
         <span class="self">self</span>.state
-            .handle_platform_output(window, <span class="kw-2">&amp;</span><span class="self">self</span>.context, egui_output.platform_output);
-        <span class="self">self</span>.primitives = <span class="self">self</span>.context.tessellate(egui_output.shapes);
+            .handle_platform_output(window, egui_output.platform_output);
+        <span class="self">self</span>.primitives = <span class="self">self
+            </span>.context
+            .tessellate(egui_output.shapes, egui_output.pixels_per_point);
         <span class="self">self</span>.textures_delta = egui_output.textures_delta;
     }
 

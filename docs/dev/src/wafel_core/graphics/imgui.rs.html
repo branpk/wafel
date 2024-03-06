@@ -382,6 +382,7 @@
 <a href="#381" id="381">381</a>
 <a href="#382" id="382">382</a>
 <a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Renderer for imgui.
 
 </span><span class="kw">use </span>bytemuck::cast_slice;
@@ -711,10 +712,11 @@
                     resolve_target: <span class="prelude-val">None</span>,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Load,
-                        store: <span class="bool-val">true</span>,
+                        store: wgpu::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: <span class="prelude-val">None</span>,
+                ..Default::default()
             });
 
             render_pass.set_pipeline(<span class="kw-2">&amp;</span><span class="self">self</span>.pipeline);

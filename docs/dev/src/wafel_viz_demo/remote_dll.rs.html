@@ -199,7 +199,10 @@
 <span class="kw">use </span>wafel_api::{Error, RemoteDll};
 <span class="kw">use </span>wafel_viz_sm64::{InGameRenderMode, ObjectCull, PerspCameraControl, SurfaceMode, VizConfig};
 <span class="kw">use </span>wafel_viz_wgpu::VizRenderer;
-<span class="kw">use </span>winit::event::{ElementState, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowEvent};
+<span class="kw">use </span>winit::{
+    event::{ElementState, MouseButton, MouseScrollDelta, WindowEvent},
+    keyboard::{KeyCode, PhysicalKey},
+};
 
 <span class="kw">use </span><span class="kw">crate</span>::window::App;
 
@@ -207,7 +210,7 @@
 </span><span class="kw">pub struct </span>RemoteDllApp {
     remote_dll: RemoteDll,
     camera_control: PerspCameraControl,
-    held_keys: HashSet&lt;VirtualKeyCode&gt;,
+    held_keys: HashSet&lt;KeyCode&gt;,
     viz_renderer: VizRenderer,
 }
 
@@ -247,18 +250,14 @@
                 };
                 <span class="self">self</span>.camera_control.scroll_wheel(amount);
             }
-            WindowEvent::KeyboardInput { input, .. } =&gt; {
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(key) = input.virtual_keycode {
-                    <span class="kw">match </span>input.state {
+            WindowEvent::KeyboardInput { event, .. } =&gt; {
+                <span class="kw">if let </span>PhysicalKey::Code(key) = event.physical_key {
+                    <span class="kw">match </span>event.state {
                         ElementState::Pressed =&gt; {
-                            <span class="kw">if </span>key == VirtualKeyCode::C
-                                &amp;&amp; !<span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>VirtualKeyCode::C)
-                            {
+                            <span class="kw">if </span>key == KeyCode::KeyC &amp;&amp; !<span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>KeyCode::KeyC) {
                                 <span class="self">self</span>.camera_control.lock_to_in_game_camera();
                             }
-                            <span class="kw">if </span>key == VirtualKeyCode::M
-                                &amp;&amp; !<span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>VirtualKeyCode::M)
-                            {
+                            <span class="kw">if </span>key == KeyCode::KeyM &amp;&amp; !<span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>KeyCode::KeyM) {
                                 <span class="self">self</span>.camera_control.lock_to_mario();
                             }
                             <span class="self">self</span>.held_keys.insert(key);
@@ -277,22 +276,22 @@
 
     <span class="kw">fn </span>update(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>camera_move = [<span class="number">0.0</span>, <span class="number">0.0</span>, <span class="number">0.0</span>];
-        <span class="kw">if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>VirtualKeyCode::S) {
+        <span class="kw">if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>KeyCode::KeyS) {
             camera_move[<span class="number">0</span>] += <span class="number">1.0</span>;
         }
-        <span class="kw">if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>VirtualKeyCode::A) {
+        <span class="kw">if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>KeyCode::KeyA) {
             camera_move[<span class="number">0</span>] -= <span class="number">1.0</span>;
         }
-        <span class="kw">if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>VirtualKeyCode::Space) {
+        <span class="kw">if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>KeyCode::Space) {
             camera_move[<span class="number">1</span>] += <span class="number">1.0</span>;
         }
-        <span class="kw">if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>VirtualKeyCode::LShift) {
+        <span class="kw">if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>KeyCode::ShiftLeft) {
             camera_move[<span class="number">1</span>] -= <span class="number">1.0</span>;
         }
-        <span class="kw">if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>VirtualKeyCode::R) {
+        <span class="kw">if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>KeyCode::KeyR) {
             camera_move[<span class="number">2</span>] += <span class="number">1.0</span>;
         }
-        <span class="kw">if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>VirtualKeyCode::W) {
+        <span class="kw">if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>KeyCode::KeyW) {
             camera_move[<span class="number">2</span>] -= <span class="number">1.0</span>;
         }
 
@@ -319,9 +318,9 @@
                 (output_size[<span class="number">0</span>] <span class="kw">as </span>f32 / scale_factor) <span class="kw">as </span>i32,
                 (output_size[<span class="number">1</span>] <span class="kw">as </span>f32 / scale_factor) <span class="kw">as </span>i32,
             ],
-            in_game_render_mode: <span class="kw">if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>VirtualKeyCode::X) {
+            in_game_render_mode: <span class="kw">if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>KeyCode::KeyX) {
                 InGameRenderMode::DisplayList
-            } <span class="kw">else if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>VirtualKeyCode::Z) {
+            } <span class="kw">else if </span><span class="self">self</span>.held_keys.contains(<span class="kw-2">&amp;</span>KeyCode::KeyZ) {
                 InGameRenderMode::Disabled
             } <span class="kw">else </span>{
                 InGameRenderMode::Rerender
@@ -369,17 +368,18 @@
                     resolve_target: <span class="prelude-val">None</span>,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                        store: <span class="bool-val">true</span>,
+                        store: wgpu::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: <span class="prelude-val">Some</span>(wgpu::RenderPassDepthStencilAttachment {
                     view: <span class="kw-2">&amp;</span>depth_texture_view,
                     depth_ops: <span class="prelude-val">Some</span>(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(<span class="number">1.0</span>),
-                        store: <span class="bool-val">true</span>,
+                        store: wgpu::StoreOp::Store,
                     }),
                     stencil_ops: <span class="prelude-val">None</span>,
                 }),
+                ..Default::default()
             });
 
             <span class="self">self</span>.viz_renderer.render(<span class="kw-2">&amp;mut </span>rp);

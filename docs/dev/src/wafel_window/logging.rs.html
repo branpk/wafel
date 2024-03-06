@@ -139,7 +139,6 @@
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::{Lazy, OnceCell};
 <span class="kw">use </span>std::{
     backtrace::Backtrace,
@@ -163,7 +162,6 @@
 
 <span class="kw">pub fn </span>init(log_file_path: <span class="kw-2">&amp;</span>Path) {
     <span class="kw">let </span>log_file = fs::OpenOptions::new()
-        .write(<span class="bool-val">true</span>)
         .append(<span class="bool-val">true</span>)
         .create(<span class="bool-val">true</span>)
         .open(log_file_path)

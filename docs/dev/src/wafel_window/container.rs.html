@@ -329,6 +329,10 @@
 <a href="#328" id="328">328</a>
 <a href="#329" id="329">329</a>
 <a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     fmt,
     sync::{Arc, Mutex},
@@ -453,9 +457,9 @@
         }
     }
 
-    <span class="kw">pub fn </span>window_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, window: <span class="kw-2">&amp;</span>Window, event: <span class="kw-2">&amp;</span>WindowEvent&lt;<span class="lifetime">'_</span>&gt;) {
+    <span class="kw">pub fn </span>window_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, window: <span class="kw-2">&amp;</span>Window, event: <span class="kw-2">&amp;</span>WindowEvent) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(egui_state) = <span class="self">self</span>.egui_state.lock().unwrap().as_mut() {
-            <span class="kw">let </span>egui_consumed = egui_state.window_event(event);
+            <span class="kw">let </span>egui_consumed = egui_state.window_event(window, event);
             <span class="self">self</span>.input.handle_event(window, event, egui_consumed);
         }
     }
@@ -543,8 +547,10 @@
         </span><span class="kw">let </span><span class="kw-2">mut </span>first_render_pass = <span class="bool-val">true</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>get_color_attachment = || {
             <span class="kw">let </span>(view, resolve_target, store) = <span class="kw">match </span><span class="kw-2">&amp;</span>msaa_output_view {
-                <span class="prelude-val">Some</span>(msaa_output_view) =&gt; (msaa_output_view, <span class="prelude-val">Some</span>(output_view), <span class="bool-val">true</span>),
-                <span class="prelude-val">None </span>=&gt; (output_view, <span class="prelude-val">None</span>, <span class="bool-val">true</span>),
+                <span class="prelude-val">Some</span>(msaa_output_view) =&gt; {
+                    (msaa_output_view, <span class="prelude-val">Some</span>(output_view), wgpu::StoreOp::Store)
+                }
+                <span class="prelude-val">None </span>=&gt; (output_view, <span class="prelude-val">None</span>, wgpu::StoreOp::Store),
             };
 
             <span class="kw">let </span>load = <span class="kw">if </span>first_render_pass {
@@ -609,6 +615,7 @@
                 label: <span class="prelude-val">Some</span>(<span class="string">"egui"</span>),
                 color_attachments: <span class="kw-2">&amp;</span>[<span class="prelude-val">Some</span>(get_color_attachment())],
                 depth_stencil_attachment: <span class="prelude-val">None</span>,
+                ..Default::default()
             });
 
             egui_state.render(<span class="kw-2">&amp;mut </span>rp);
@@ -643,10 +650,11 @@
                     view: depth_texture_view,
                     depth_ops: <span class="prelude-val">Some</span>(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(<span class="number">1.0</span>),
-                        store: <span class="bool-val">true</span>,
+                        store: wgpu::StoreOp::Store,
                     }),
                     stencil_ops: <span class="prelude-val">None</span>,
                 }),
+                ..Default::default()
             });
 
             <span class="self">self</span>.viz_renderer.render(<span class="kw-2">&amp;mut </span>rp);

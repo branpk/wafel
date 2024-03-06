@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["MouseButton","VirtualKeyCode"],"fn":["run"],"struct":["AppConfig","DragState","Input"],"trait":["AppEnv"]};
+window.SIDEBAR_ITEMS = {"enum":["MouseButton"],"fn":["run"],"struct":["AppConfig","DragState","Input"],"trait":["AppEnv"]};

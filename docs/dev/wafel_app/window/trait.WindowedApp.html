@@ -8,7 +8,7 @@
         output_format: TextureFormat,
         msaa_samples: <a class="primitive" href="https://doc.rust-lang.org/1.76.0/std/primitive.u32.html">u32</a>
     ) -&gt; Self;
-<span class="item-spacer"></span>    fn <a href="#tymethod.window_event" class="fn">window_event</a>(&amp;mut self, event: &amp;WindowEvent&lt;'_&gt;);
+<span class="item-spacer"></span>    fn <a href="#tymethod.window_event" class="fn">window_event</a>(&amp;mut self, window: &amp;Window, event: &amp;WindowEvent);
 <span class="item-spacer"></span>    fn <a href="#tymethod.update" class="fn">update</a>(&amp;mut self, window: &amp;Window, device: &amp;Device);
 <span class="item-spacer"></span>    fn <a href="#tymethod.render" class="fn">render</a>(
         &amp;mut self,
@@ -25,7 +25,7 @@
     device: &amp;Device,
     output_format: TextureFormat,
     msaa_samples: <a class="primitive" href="https://doc.rust-lang.org/1.76.0/std/primitive.u32.html">u32</a>
-) -&gt; Self</h4></section><section id="tymethod.window_event" class="method"><a class="src rightside" href="../../src/wafel_app/window.rs.html#21">source</a><h4 class="code-header">fn <a href="#tymethod.window_event" class="fn">window_event</a>(&amp;mut self, event: &amp;WindowEvent&lt;'_&gt;)</h4></section><section id="tymethod.update" class="method"><a class="src rightside" href="../../src/wafel_app/window.rs.html#23">source</a><h4 class="code-header">fn <a href="#tymethod.update" class="fn">update</a>(&amp;mut self, window: &amp;Window, device: &amp;Device)</h4></section><section id="tymethod.render" class="method"><a class="src rightside" href="../../src/wafel_app/window.rs.html#25-33">source</a><h4 class="code-header">fn <a href="#tymethod.render" class="fn">render</a>(
+) -&gt; Self</h4></section><section id="tymethod.window_event" class="method"><a class="src rightside" href="../../src/wafel_app/window.rs.html#21">source</a><h4 class="code-header">fn <a href="#tymethod.window_event" class="fn">window_event</a>(&amp;mut self, window: &amp;Window, event: &amp;WindowEvent)</h4></section><section id="tymethod.update" class="method"><a class="src rightside" href="../../src/wafel_app/window.rs.html#23">source</a><h4 class="code-header">fn <a href="#tymethod.update" class="fn">update</a>(&amp;mut self, window: &amp;Window, device: &amp;Device)</h4></section><section id="tymethod.render" class="method"><a class="src rightside" href="../../src/wafel_app/window.rs.html#25-33">source</a><h4 class="code-header">fn <a href="#tymethod.render" class="fn">render</a>(
     &amp;mut self,
     device: &amp;Device,
     queue: &amp;Queue,

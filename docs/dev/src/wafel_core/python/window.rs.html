@@ -286,6 +286,11 @@
 <a href="#285" id="285">285</a>
 <a href="#286" id="286">286</a>
 <a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     graphics::scene::Scene,
     graphics::{
@@ -315,7 +320,7 @@
             ..Default::default()
         });
 
-        <span class="kw">let </span>event_loop = EventLoop::new();
+        <span class="kw">let </span>event_loop = EventLoop::new().expect(<span class="string">"failed to create event loop"</span>);
         <span class="kw">let </span>window = WindowBuilder::new()
             .with_title(title)
             .with_window_icon(<span class="prelude-val">Some</span>(load_window_icon()))
@@ -344,8 +349,8 @@
             .request_device(
                 <span class="kw-2">&amp;</span>wgpu::DeviceDescriptor {
                     label: <span class="prelude-val">None</span>,
-                    features: wgpu::Features::empty(),
-                    limits: wgpu::Limits::downlevel_webgl2_defaults()
+                    required_features: wgpu::Features::empty(),
+                    required_limits: wgpu::Limits::downlevel_webgl2_defaults()
                         .using_resolution(adapter.limits()),
                 },
                 <span class="prelude-val">None</span>,
@@ -366,6 +371,7 @@
             present_mode: wgpu::PresentMode::AutoNoVsync,
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
             view_formats: Vec::new(),
+            desired_maximum_frame_latency: <span class="number">2</span>,
         };
         surface.configure(<span class="kw-2">&amp;</span>device, <span class="kw-2">&amp;</span>config);
 
@@ -386,14 +392,15 @@
 
         drop(gil);
 
-        event_loop.run(<span class="kw">move </span>|event, <span class="kw">_</span>, control_flow| {
-            <span class="kw">let </span>gil = Python::acquire_gil();
-            <span class="kw">let </span>py = gil.python();
-            <span class="kw">let </span>_gil_pool = <span class="kw">unsafe </span>{ py.new_pool() }; <span class="comment">// prevent memory leak
+        <span class="kw">let </span>window = <span class="kw-2">&amp;</span>window;
+        event_loop
+            .run(<span class="kw">move </span>|event, event_loop| {
+                <span class="kw">let </span>gil = Python::acquire_gil();
+                <span class="kw">let </span>py = gil.python();
+                <span class="kw">let </span>_gil_pool = <span class="kw">unsafe </span>{ py.new_pool() }; <span class="comment">// prevent memory leak
 
-            </span><span class="kw">let </span>result: PyResult&lt;()&gt; = (|| {
-                <span class="kw">match </span>event {
-                    Event::WindowEvent { event, .. } =&gt; {
+                </span><span class="kw">let </span>result: PyResult&lt;()&gt; = (|| {
+                    <span class="kw">if let </span>Event::WindowEvent { event, .. } = event {
                         imgui_input.handle_event(py, <span class="kw-2">&amp;</span>event)<span class="question-mark">?</span>;
                         <span class="kw">match </span>event {
                             WindowEvent::Resized(size) =&gt; {
@@ -402,77 +409,80 @@
                                 <span class="kw">if </span>size.width &gt; <span class="number">0 </span>&amp;&amp; size.height &gt; <span class="number">0 </span>{
                                     surface.configure(<span class="kw-2">&amp;</span>device, <span class="kw-2">&amp;</span>config);
                                 }
+                                window.request_redraw();
                             }
-                            WindowEvent::CloseRequested =&gt; <span class="kw-2">*</span>control_flow = ControlFlow::Exit,
+                            WindowEvent::CloseRequested =&gt; event_loop.exit(),
+                            WindowEvent::RedrawRequested =&gt; {
+                                <span class="kw">let </span>delta_time = last_frame_time.elapsed().as_secs_f64();
+                                last_frame_time = Instant::now();
+                                imgui_input.set_delta_time(py, delta_time)<span class="question-mark">?</span>;
+
+                                <span class="kw">let </span>output_size = (config.width, config.height);
+                                imgui_input.set_display_size(py, output_size)<span class="question-mark">?</span>;
+
+                                <span class="kw">let </span>(py_imgui_draw_data, scenes, viz_scenes): (
+                                    <span class="kw-2">&amp;</span>PyAny,
+                                    Vec&lt;Scene&gt;,
+                                    Vec&lt;PyVizScene&gt;,
+                                ) = update_fn.as_ref(py).call0()<span class="question-mark">?</span>.extract()<span class="question-mark">?</span>;
+                                <span class="kw">let </span>imgui_draw_data =
+                                    extract_imgui_draw_data(<span class="kw-2">&amp;</span>imgui_config, py_imgui_draw_data)<span class="question-mark">?</span>;
+
+                                <span class="kw">if </span>output_size.<span class="number">0 </span>&gt; <span class="number">0 </span>&amp;&amp; output_size.<span class="number">1 </span>&gt; <span class="number">0 </span>{
+                                    <span class="kw">let </span>frame = surface.get_current_texture().unwrap();
+                                    <span class="kw">let </span>output_view = frame
+                                        .texture
+                                        .create_view(<span class="kw-2">&amp;</span>wgpu::TextureViewDescriptor::default());
+
+                                    renderer.render(
+                                        <span class="kw-2">&amp;</span>device,
+                                        <span class="kw-2">&amp;</span>queue,
+                                        <span class="kw-2">&amp;</span>output_view,
+                                        output_size,
+                                        config.format,
+                                        <span class="kw-2">&amp;</span>scenes,
+                                    );
+
+                                    <span class="kw">let </span>viz_scenes: Vec&lt;VizScene&gt; =
+                                        viz_scenes.into_iter().map(|s| s.inner).collect();
+                                    viz_container.render(
+                                        <span class="kw-2">&amp;</span>device,
+                                        <span class="kw-2">&amp;</span>queue,
+                                        <span class="kw-2">&amp;</span>output_view,
+                                        output_size,
+                                        config.format,
+                                        <span class="kw-2">&amp;</span>viz_scenes,
+                                    );
+
+                                    imgui_renderer.render(
+                                        <span class="kw-2">&amp;</span>device,
+                                        <span class="kw-2">&amp;</span>queue,
+                                        <span class="kw-2">&amp;</span>output_view,
+                                        output_size,
+                                        <span class="kw-2">&amp;</span>imgui_draw_data,
+                                    );
+
+                                    frame.present();
+                                }
+
+                                window.request_redraw();
+                            }
                             <span class="kw">_ </span>=&gt; {}
                         }
                     }
-                    Event::MainEventsCleared =&gt; window.request_redraw(),
-                    Event::RedrawRequested(<span class="kw">_</span>) =&gt; {
-                        <span class="kw">let </span>delta_time = last_frame_time.elapsed().as_secs_f64();
-                        last_frame_time = Instant::now();
-                        imgui_input.set_delta_time(py, delta_time)<span class="question-mark">?</span>;
+                    <span class="prelude-val">Ok</span>(())
+                })();
 
-                        <span class="kw">let </span>output_size = (config.width, config.height);
-                        imgui_input.set_display_size(py, output_size)<span class="question-mark">?</span>;
-
-                        <span class="kw">let </span>(py_imgui_draw_data, scenes, viz_scenes): (
-                            <span class="kw-2">&amp;</span>PyAny,
-                            Vec&lt;Scene&gt;,
-                            Vec&lt;PyVizScene&gt;,
-                        ) = update_fn.as_ref(py).call0()<span class="question-mark">?</span>.extract()<span class="question-mark">?</span>;
-                        <span class="kw">let </span>imgui_draw_data =
-                            extract_imgui_draw_data(<span class="kw-2">&amp;</span>imgui_config, py_imgui_draw_data)<span class="question-mark">?</span>;
-
-                        <span class="kw">if </span>output_size.<span class="number">0 </span>&gt; <span class="number">0 </span>&amp;&amp; output_size.<span class="number">1 </span>&gt; <span class="number">0 </span>{
-                            <span class="kw">let </span>frame = surface.get_current_texture().unwrap();
-                            <span class="kw">let </span>output_view = frame
-                                .texture
-                                .create_view(<span class="kw-2">&amp;</span>wgpu::TextureViewDescriptor::default());
-
-                            renderer.render(
-                                <span class="kw-2">&amp;</span>device,
-                                <span class="kw-2">&amp;</span>queue,
-                                <span class="kw-2">&amp;</span>output_view,
-                                output_size,
-                                config.format,
-                                <span class="kw-2">&amp;</span>scenes,
-                            );
-
-                            <span class="kw">let </span>viz_scenes: Vec&lt;VizScene&gt; =
-                                viz_scenes.into_iter().map(|s| s.inner).collect();
-                            viz_container.render(
-                                <span class="kw-2">&amp;</span>device,
-                                <span class="kw-2">&amp;</span>queue,
-                                <span class="kw-2">&amp;</span>output_view,
-                                output_size,
-                                config.format,
-                                <span class="kw-2">&amp;</span>viz_scenes,
-                            );
-
-                            imgui_renderer.render(
-                                <span class="kw-2">&amp;</span>device,
-                                <span class="kw-2">&amp;</span>queue,
-                                <span class="kw-2">&amp;</span>output_view,
-                                output_size,
-                                <span class="kw-2">&amp;</span>imgui_draw_data,
-                            );
-
-                            frame.present();
-                        }
-                    }
-                    <span class="kw">_ </span>=&gt; {}
+                <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
+                    <span class="comment">// Most errors are caught within `update_fn` and are displayed in the UI. If
+                    // an error occurs outside of that scope, then just print the error to the log
+                    // and crash.
+                    </span><span class="macro">panic!</span>(<span class="string">"(Fatal) {}"</span>, error);
                 }
-                <span class="prelude-val">Ok</span>(())
-            })();
+            })
+            .expect(<span class="string">"event loop error"</span>);
 
-            <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
-                <span class="comment">// Most errors are caught within `update_fn` and are displayed in the UI. If
-                // an error occurs outside of that scope, then just print the error to the log
-                // and crash.
-                </span><span class="macro">panic!</span>(<span class="string">"(Fatal) {}"</span>, error);
-            }
-        })
+        <span class="prelude-val">Ok</span>(())
     })
 }
 

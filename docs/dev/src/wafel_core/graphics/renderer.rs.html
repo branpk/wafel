@@ -1100,6 +1100,7 @@
 <a href="#1099" id="1099">1099</a>
 <a href="#1100" id="1100">1100</a>
 <a href="#1101" id="1101">1101</a>
+<a href="#1102" id="1102">1102</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::geo::{direction_to_pitch_yaw, Matrix4f, Point3f, StoredPoint3f, Vector3f, Vector4f};
 <span class="kw">use </span>bytemuck::{cast_slice, offset_of, Pod, Zeroable};
 <span class="kw">use </span>nalgebra::distance;
@@ -1407,17 +1408,18 @@
                             b: <span class="number">0.06</span>,
                             a: <span class="number">1.0</span>,
                         }),
-                        store: <span class="bool-val">true</span>,
+                        store: wgpu::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: <span class="prelude-val">Some</span>(wgpu::RenderPassDepthStencilAttachment {
                     view: <span class="kw-2">&amp;</span>depth_texture_view,
                     depth_ops: <span class="prelude-val">Some</span>(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(<span class="number">1.0</span>),
-                        store: <span class="bool-val">true</span>,
+                        store: wgpu::StoreOp::Store,
                     }),
                     stencil_ops: <span class="prelude-val">None</span>,
                 }),
+                ..Default::default()
             });
 
             <span class="kw">for </span>(scene, bundle) <span class="kw">in </span>scenes.iter().zip(<span class="kw-2">&amp;</span>scene_bundles) {
