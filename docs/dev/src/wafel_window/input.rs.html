@@ -198,6 +198,7 @@
 <a href="#197" id="197">197</a>
 <a href="#198" id="198">198</a>
 <a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
 </pre></div><pre class="rust"><code><span class="comment">// TODO: Include physical and logical keys once winit 0.29.0 is released.
 // TODO: Custom bindings.
 
@@ -205,15 +206,16 @@
 <span class="kw">use </span>wafel_viz::{Rect2, Vec2};
 <span class="kw">use </span>winit::{
     event::{ElementState, MouseButton, MouseScrollDelta, WindowEvent},
+    keyboard::{KeyCode, PhysicalKey},
     window::Window,
 };
 
 <span class="doccomment">/// Access to keyboard state and events.
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Input {
-    <span class="comment">// prev_keys_down: IndexSet&lt;KeyCode&gt;,
-    // keys_down: IndexSet&lt;KeyCode&gt;,
-    </span>prev_mouse_buttons_down: IndexSet&lt;MouseButton&gt;,
+    prev_keys_down: IndexSet&lt;KeyCode&gt;,
+    keys_down: IndexSet&lt;KeyCode&gt;,
+    prev_mouse_buttons_down: IndexSet&lt;MouseButton&gt;,
     mouse_buttons_down: IndexSet&lt;MouseButton&gt;,
     mouse_pos: <span class="prelude-ty">Option</span>&lt;Vec2&gt;,
     mouse_wheel_delta: Vec2,
@@ -222,9 +224,9 @@
 <span class="kw">impl </span>Input {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            <span class="comment">// prev_keys_down: IndexSet::new(),
-            // keys_down: IndexSet::new(),
-            </span>mouse_pos: <span class="prelude-val">None</span>,
+            prev_keys_down: IndexSet::new(),
+            keys_down: IndexSet::new(),
+            mouse_pos: <span class="prelude-val">None</span>,
             mouse_wheel_delta: Vec2::zero(),
             prev_mouse_buttons_down: IndexSet::new(),
             mouse_buttons_down: IndexSet::new(),
@@ -235,24 +237,24 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         window: <span class="kw-2">&amp;</span>Window,
         event: <span class="kw-2">&amp;</span>WindowEvent,
-        _egui_consumed: bool,
+        egui_consumed: bool,
     ) {
         <span class="kw">match </span>event {
-            <span class="comment">// WindowEvent::KeyboardInput { input, .. } =&gt; {
-            //     if let Some(key_code) = input.virtual_keycode {
-            //         match input.state {
-            //             ElementState::Pressed =&gt; {
-            //                 if !egui_consumed {
-            //                     self.keys_down.insert(key_code);
-            //                 }
-            //             }
-            //             ElementState::Released =&gt; {
-            //                 self.keys_down.remove(&amp;key_code);
-            //             }
-            //         }
-            //     }
-            // }
-            </span>WindowEvent::CursorMoved { position, .. } =&gt; {
+            WindowEvent::KeyboardInput { event, .. } =&gt; {
+                <span class="kw">if let </span>PhysicalKey::Code(key_code) = event.physical_key {
+                    <span class="kw">match </span>event.state {
+                        ElementState::Pressed =&gt; {
+                            <span class="kw">if </span>!egui_consumed {
+                                <span class="self">self</span>.keys_down.insert(key_code);
+                            }
+                        }
+                        ElementState::Released =&gt; {
+                            <span class="self">self</span>.keys_down.swap_remove(<span class="kw-2">&amp;</span>key_code);
+                        }
+                    }
+                }
+            }
+            WindowEvent::CursorMoved { position, .. } =&gt; {
                 <span class="kw">let </span>logical = position.to_logical::&lt;f32&gt;(window.scale_factor());
                 <span class="self">self</span>.mouse_pos = <span class="prelude-val">Some</span>([logical.x, logical.y].into());
             }
@@ -283,27 +285,27 @@
     }
 
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>end_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="comment">// self.prev_keys_down = self.keys_down.clone();
-        </span><span class="self">self</span>.mouse_wheel_delta = Vec2::zero();
+        <span class="self">self</span>.prev_keys_down = <span class="self">self</span>.keys_down.clone();
+        <span class="self">self</span>.mouse_wheel_delta = Vec2::zero();
         <span class="self">self</span>.prev_mouse_buttons_down = <span class="self">self</span>.mouse_buttons_down.clone();
     }
 
-    <span class="comment">//     /// Returns true if the key is currently down.
-    //     pub fn key_down(&amp;self, key_code: VirtualKeyCode) -&gt; bool {
-    //         self.keys_down.contains(&amp;key_code)
-    //     }
-    //
-    //     /// Returns true if the key was pressed this frame.
-    //     pub fn key_pressed(&amp;self, key_code: VirtualKeyCode) -&gt; bool {
-    //         !self.prev_keys_down.contains(&amp;key_code) &amp;&amp; self.keys_down.contains(&amp;key_code)
-    //     }
-    //
-    //     /// Returns true if the key was released this frame.
-    //     pub fn key_released(&amp;self, key_code: VirtualKeyCode) -&gt; bool {
-    //         self.prev_keys_down.contains(&amp;key_code) &amp;&amp; !self.keys_down.contains(&amp;key_code)
-    //     }
+    <span class="doccomment">/// Returns true if the physical key is currently down.
+    </span><span class="kw">pub fn </span>key_down(<span class="kw-2">&amp;</span><span class="self">self</span>, key_code: KeyCode) -&gt; bool {
+        <span class="self">self</span>.keys_down.contains(<span class="kw-2">&amp;</span>key_code)
+    }
 
-    </span><span class="doccomment">/// Returns true if the mouse button is currently down.
+    <span class="doccomment">/// Returns true if the physical key was pressed this frame.
+    </span><span class="kw">pub fn </span>key_pressed(<span class="kw-2">&amp;</span><span class="self">self</span>, key_code: KeyCode) -&gt; bool {
+        !<span class="self">self</span>.prev_keys_down.contains(<span class="kw-2">&amp;</span>key_code) &amp;&amp; <span class="self">self</span>.keys_down.contains(<span class="kw-2">&amp;</span>key_code)
+    }
+
+    <span class="doccomment">/// Returns true if the physical key was released this frame.
+    </span><span class="kw">pub fn </span>key_released(<span class="kw-2">&amp;</span><span class="self">self</span>, key_code: KeyCode) -&gt; bool {
+        <span class="self">self</span>.prev_keys_down.contains(<span class="kw-2">&amp;</span>key_code) &amp;&amp; !<span class="self">self</span>.keys_down.contains(<span class="kw-2">&amp;</span>key_code)
+    }
+
+    <span class="doccomment">/// Returns true if the mouse button is currently down.
     </span><span class="kw">pub fn </span>mouse_down(<span class="kw-2">&amp;</span><span class="self">self</span>, button: MouseButton) -&gt; bool {
         <span class="self">self</span>.mouse_buttons_down.contains(<span class="kw-2">&amp;</span>button)
     }
