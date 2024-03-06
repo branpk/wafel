@@ -5,14 +5,15 @@ use indexmap::IndexSet;
 use wafel_viz::{Rect2, Vec2};
 use winit::{
     event::{ElementState, MouseButton, MouseScrollDelta, WindowEvent},
+    keyboard::{KeyCode, PhysicalKey},
     window::Window,
 };
 
 /// Access to keyboard state and events.
 #[derive(Debug)]
 pub struct Input {
-    // prev_keys_down: IndexSet<KeyCode>,
-    // keys_down: IndexSet<KeyCode>,
+    prev_keys_down: IndexSet<KeyCode>,
+    keys_down: IndexSet<KeyCode>,
     prev_mouse_buttons_down: IndexSet<MouseButton>,
     mouse_buttons_down: IndexSet<MouseButton>,
     mouse_pos: Option<Vec2>,
@@ -22,8 +23,8 @@ pub struct Input {
 impl Input {
     pub(crate) fn new() -> Self {
         Self {
-            // prev_keys_down: IndexSet::new(),
-            // keys_down: IndexSet::new(),
+            prev_keys_down: IndexSet::new(),
+            keys_down: IndexSet::new(),
             mouse_pos: None,
             mouse_wheel_delta: Vec2::zero(),
             prev_mouse_buttons_down: IndexSet::new(),
@@ -35,23 +36,23 @@ impl Input {
         &mut self,
         window: &Window,
         event: &WindowEvent,
-        _egui_consumed: bool,
+        egui_consumed: bool,
     ) {
         match event {
-            // WindowEvent::KeyboardInput { input, .. } => {
-            //     if let Some(key_code) = input.virtual_keycode {
-            //         match input.state {
-            //             ElementState::Pressed => {
-            //                 if !egui_consumed {
-            //                     self.keys_down.insert(key_code);
-            //                 }
-            //             }
-            //             ElementState::Released => {
-            //                 self.keys_down.remove(&key_code);
-            //             }
-            //         }
-            //     }
-            // }
+            WindowEvent::KeyboardInput { event, .. } => {
+                if let PhysicalKey::Code(key_code) = event.physical_key {
+                    match event.state {
+                        ElementState::Pressed => {
+                            if !egui_consumed {
+                                self.keys_down.insert(key_code);
+                            }
+                        }
+                        ElementState::Released => {
+                            self.keys_down.swap_remove(&key_code);
+                        }
+                    }
+                }
+            }
             WindowEvent::CursorMoved { position, .. } => {
                 let logical = position.to_logical::<f32>(window.scale_factor());
                 self.mouse_pos = Some([logical.x, logical.y].into());
@@ -83,25 +84,25 @@ impl Input {
     }
 
     pub(crate) fn end_frame(&mut self) {
-        // self.prev_keys_down = self.keys_down.clone();
+        self.prev_keys_down = self.keys_down.clone();
         self.mouse_wheel_delta = Vec2::zero();
         self.prev_mouse_buttons_down = self.mouse_buttons_down.clone();
     }
 
-    //     /// Returns true if the key is currently down.
-    //     pub fn key_down(&self, key_code: VirtualKeyCode) -> bool {
-    //         self.keys_down.contains(&key_code)
-    //     }
-    //
-    //     /// Returns true if the key was pressed this frame.
-    //     pub fn key_pressed(&self, key_code: VirtualKeyCode) -> bool {
-    //         !self.prev_keys_down.contains(&key_code) && self.keys_down.contains(&key_code)
-    //     }
-    //
-    //     /// Returns true if the key was released this frame.
-    //     pub fn key_released(&self, key_code: VirtualKeyCode) -> bool {
-    //         self.prev_keys_down.contains(&key_code) && !self.keys_down.contains(&key_code)
-    //     }
+    /// Returns true if the physical key is currently down.
+    pub fn key_down(&self, key_code: KeyCode) -> bool {
+        self.keys_down.contains(&key_code)
+    }
+
+    /// Returns true if the physical key was pressed this frame.
+    pub fn key_pressed(&self, key_code: KeyCode) -> bool {
+        !self.prev_keys_down.contains(&key_code) && self.keys_down.contains(&key_code)
+    }
+
+    /// Returns true if the physical key was released this frame.
+    pub fn key_released(&self, key_code: KeyCode) -> bool {
+        self.prev_keys_down.contains(&key_code) && !self.keys_down.contains(&key_code)
+    }
 
     /// Returns true if the mouse button is currently down.
     pub fn mouse_down(&self, button: MouseButton) -> bool {
