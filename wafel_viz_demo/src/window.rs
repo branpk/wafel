@@ -31,7 +31,7 @@ pub fn open_window_and_run<A: App>() {
 }
 
 async fn open_window_and_run_impl<A: App>() {
-    let event_loop = EventLoop::new();
+    let event_loop = EventLoop::new().expect("failed to create event loop");
     let max_screen_dim = event_loop
         .available_monitors()
         .flat_map(|m| [m.size().width, m.size().height])
@@ -62,14 +62,16 @@ async fn open_window_and_run_impl<A: App>() {
         .await
         .expect("failed to request GPU adapter");
 
-    let surface = unsafe { instance.create_surface(&window) }.expect("failed to create surface");
+    let surface = instance
+        .create_surface(&window)
+        .expect("failed to create surface");
 
     let (device, queue) = adapter
         .request_device(
             &wgpu::DeviceDescriptor {
                 label: None,
-                features: wgpu::Features::empty(),
-                limits: wgpu::Limits {
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits {
                     max_texture_dimension_2d: max_screen_dim,
                     ..wgpu::Limits::downlevel_defaults()
                 },
@@ -89,6 +91,7 @@ async fn open_window_and_run_impl<A: App>() {
         present_mode: wgpu::PresentMode::AutoNoVsync,
         alpha_mode: wgpu::CompositeAlphaMode::Auto,
         view_formats: Vec::new(),
+        desired_maximum_frame_latency: 2,
     };
     surface.configure(&device, &surface_config);
 
@@ -97,13 +100,13 @@ async fn open_window_and_run_impl<A: App>() {
     window.set_visible(true);
     let mut first_render = false;
 
-    event_loop.run(move |event, _, control_flow| {
-        let _ = (&instance, &adapter);
+    let window = &window;
 
-        *control_flow = ControlFlow::Poll;
+    event_loop
+        .run(move |event, event_loop| {
+            let _ = (&instance, &adapter);
 
-        match event {
-            Event::WindowEvent { event, .. } => {
+            if let Event::WindowEvent { event, .. } = event {
                 handle_err(app.window_event(&event));
                 match event {
                     WindowEvent::Resized(size) => {
@@ -112,46 +115,48 @@ async fn open_window_and_run_impl<A: App>() {
                         if surface_config.width != 0 && surface_config.height != 0 {
                             surface.configure(&device, &surface_config);
                         }
+                        window.request_redraw();
                     }
                     WindowEvent::CloseRequested => {
-                        *control_flow = ControlFlow::Exit;
+                        event_loop.exit();
+                    }
+                    WindowEvent::RedrawRequested => {
+                        if !first_render {
+                            handle_err(app.update());
+                        }
+
+                        if surface_config.width != 0 && surface_config.height != 0 {
+                            let frame = surface
+                                .get_current_texture()
+                                .expect("failed to acquire next swap chain texture");
+                            let output_view = frame
+                                .texture
+                                .create_view(&wgpu::TextureViewDescriptor::default());
+
+                            if first_render {
+                                // Draw a black screen as quickly as possible
+                                first_render = false;
+                            } else {
+                                handle_err(app.render(
+                                    &device,
+                                    &queue,
+                                    &output_view,
+                                    output_format,
+                                    [surface_config.width, surface_config.height],
+                                    window.scale_factor() as f32,
+                                ));
+                            }
+
+                            frame.present();
+                        }
+
+                        window.request_redraw();
                     }
                     _ => {}
                 }
             }
-            Event::MainEventsCleared => {
-                if !first_render {
-                    handle_err(app.update());
-                }
-
-                if surface_config.width != 0 && surface_config.height != 0 {
-                    let frame = surface
-                        .get_current_texture()
-                        .expect("failed to acquire next swap chain texture");
-                    let output_view = frame
-                        .texture
-                        .create_view(&wgpu::TextureViewDescriptor::default());
-
-                    if first_render {
-                        // Draw a black screen as quickly as possible
-                        first_render = false;
-                    } else {
-                        handle_err(app.render(
-                            &device,
-                            &queue,
-                            &output_view,
-                            output_format,
-                            [surface_config.width, surface_config.height],
-                            window.scale_factor() as f32,
-                        ));
-                    }
-
-                    frame.present();
-                }
-            }
-            _ => {}
-        }
-    });
+        })
+        .expect("event loop error");
 }
 
 #[track_caller]

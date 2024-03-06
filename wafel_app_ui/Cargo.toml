@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-egui.workspace = true
-egui_dock = "0.8.1"
+egui = { workspace = true }
+egui_dock = { workspace = true }
 itertools = "0.11.0"
 log = "0.4.20"
 once_cell = "1.18.0"

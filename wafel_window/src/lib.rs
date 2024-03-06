@@ -26,7 +26,7 @@
 pub use app_env::*;
 pub use config::*;
 pub use input::*;
-pub use winit::event::{MouseButton, VirtualKeyCode};
+pub use winit::event::{MouseButton /*VirtualKeyCode*/};
 
 mod app_env;
 mod config;

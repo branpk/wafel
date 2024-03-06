@@ -27,7 +27,7 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
             ..Default::default()
         });
 
-        let event_loop = EventLoop::new();
+        let event_loop = EventLoop::new().expect("failed to create event loop");
         let window = WindowBuilder::new()
             .with_title(title)
             .with_window_icon(Some(load_window_icon()))
@@ -56,8 +56,8 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
             .request_device(
                 &wgpu::DeviceDescriptor {
                     label: None,
-                    features: wgpu::Features::empty(),
-                    limits: wgpu::Limits::downlevel_webgl2_defaults()
+                    required_features: wgpu::Features::empty(),
+                    required_limits: wgpu::Limits::downlevel_webgl2_defaults()
                         .using_resolution(adapter.limits()),
                 },
                 None,
@@ -78,6 +78,7 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
             present_mode: wgpu::PresentMode::AutoNoVsync,
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
             view_formats: Vec::new(),
+            desired_maximum_frame_latency: 2,
         };
         surface.configure(&device, &config);
 
@@ -98,14 +99,15 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
 
         drop(gil);
 
-        event_loop.run(move |event, _, control_flow| {
-            let gil = Python::acquire_gil();
-            let py = gil.python();
-            let _gil_pool = unsafe { py.new_pool() }; // prevent memory leak
+        let window = &window;
+        event_loop
+            .run(move |event, event_loop| {
+                let gil = Python::acquire_gil();
+                let py = gil.python();
+                let _gil_pool = unsafe { py.new_pool() }; // prevent memory leak
 
-            let result: PyResult<()> = (|| {
-                match event {
-                    Event::WindowEvent { event, .. } => {
+                let result: PyResult<()> = (|| {
+                    if let Event::WindowEvent { event, .. } = event {
                         imgui_input.handle_event(py, &event)?;
                         match event {
                             WindowEvent::Resized(size) => {
@@ -114,77 +116,80 @@ pub fn open_window_and_run_impl(title: &str, update_fn: PyObject) -> PyResult<()
                                 if size.width > 0 && size.height > 0 {
                                     surface.configure(&device, &config);
                                 }
+                                window.request_redraw();
                             }
-                            WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+                            WindowEvent::CloseRequested => event_loop.exit(),
+                            WindowEvent::RedrawRequested => {
+                                let delta_time = last_frame_time.elapsed().as_secs_f64();
+                                last_frame_time = Instant::now();
+                                imgui_input.set_delta_time(py, delta_time)?;
+
+                                let output_size = (config.width, config.height);
+                                imgui_input.set_display_size(py, output_size)?;
+
+                                let (py_imgui_draw_data, scenes, viz_scenes): (
+                                    &PyAny,
+                                    Vec<Scene>,
+                                    Vec<PyVizScene>,
+                                ) = update_fn.as_ref(py).call0()?.extract()?;
+                                let imgui_draw_data =
+                                    extract_imgui_draw_data(&imgui_config, py_imgui_draw_data)?;
+
+                                if output_size.0 > 0 && output_size.1 > 0 {
+                                    let frame = surface.get_current_texture().unwrap();
+                                    let output_view = frame
+                                        .texture
+                                        .create_view(&wgpu::TextureViewDescriptor::default());
+
+                                    renderer.render(
+                                        &device,
+                                        &queue,
+                                        &output_view,
+                                        output_size,
+                                        config.format,
+                                        &scenes,
+                                    );
+
+                                    let viz_scenes: Vec<VizScene> =
+                                        viz_scenes.into_iter().map(|s| s.inner).collect();
+                                    viz_container.render(
+                                        &device,
+                                        &queue,
+                                        &output_view,
+                                        output_size,
+                                        config.format,
+                                        &viz_scenes,
+                                    );
+
+                                    imgui_renderer.render(
+                                        &device,
+                                        &queue,
+                                        &output_view,
+                                        output_size,
+                                        &imgui_draw_data,
+                                    );
+
+                                    frame.present();
+                                }
+
+                                window.request_redraw();
+                            }
                             _ => {}
                         }
                     }
-                    Event::MainEventsCleared => window.request_redraw(),
-                    Event::RedrawRequested(_) => {
-                        let delta_time = last_frame_time.elapsed().as_secs_f64();
-                        last_frame_time = Instant::now();
-                        imgui_input.set_delta_time(py, delta_time)?;
+                    Ok(())
+                })();
 
-                        let output_size = (config.width, config.height);
-                        imgui_input.set_display_size(py, output_size)?;
-
-                        let (py_imgui_draw_data, scenes, viz_scenes): (
-                            &PyAny,
-                            Vec<Scene>,
-                            Vec<PyVizScene>,
-                        ) = update_fn.as_ref(py).call0()?.extract()?;
-                        let imgui_draw_data =
-                            extract_imgui_draw_data(&imgui_config, py_imgui_draw_data)?;
-
-                        if output_size.0 > 0 && output_size.1 > 0 {
-                            let frame = surface.get_current_texture().unwrap();
-                            let output_view = frame
-                                .texture
-                                .create_view(&wgpu::TextureViewDescriptor::default());
-
-                            renderer.render(
-                                &device,
-                                &queue,
-                                &output_view,
-                                output_size,
-                                config.format,
-                                &scenes,
-                            );
-
-                            let viz_scenes: Vec<VizScene> =
-                                viz_scenes.into_iter().map(|s| s.inner).collect();
-                            viz_container.render(
-                                &device,
-                                &queue,
-                                &output_view,
-                                output_size,
-                                config.format,
-                                &viz_scenes,
-                            );
-
-                            imgui_renderer.render(
-                                &device,
-                                &queue,
-                                &output_view,
-                                output_size,
-                                &imgui_draw_data,
-                            );
-
-                            frame.present();
-                        }
-                    }
-                    _ => {}
+                if let Err(error) = result {
+                    // Most errors are caught within `update_fn` and are displayed in the UI. If
+                    // an error occurs outside of that scope, then just print the error to the log
+                    // and crash.
+                    panic!("(Fatal) {}", error);
                 }
-                Ok(())
-            })();
+            })
+            .expect("event loop error");
 
-            if let Err(error) = result {
-                // Most errors are caught within `update_fn` and are displayed in the UI. If
-                // an error occurs outside of that scope, then just print the error to the log
-                // and crash.
-                panic!("(Fatal) {}", error);
-            }
-        })
+        Ok(())
     })
 }
 

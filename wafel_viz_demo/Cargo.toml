@@ -13,4 +13,4 @@ wafel_viz_sm64 = { path = "../wafel_viz_sm64" }
 wafel_viz = { path = "../wafel_viz" }
 wafel_viz_wgpu = { path = "../wafel_viz_wgpu" }
 wgpu = { workspace = true }
-winit = "0.28.6"
+winit = { workspace = true }

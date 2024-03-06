@@ -6,16 +6,16 @@ edition = "2021"
 [dependencies]
 chrono = "0.4.29"
 wgpu = { workspace = true }
-winit = "0.28.6"
 once_cell = "1.18.0"
 tracing = "0.1.37"
 tracing-log = "0.1.3"
 tracing-subscriber = "0.3.17"
 pollster = "0.3.0"
 image = { version = "0.24.7", default-features = false, features = ["ico"] }
-egui.workspace = true
-egui-wgpu.workspace = true
-egui-winit.workspace = true
+egui = { workspace = true }
+egui-wgpu = { workspace = true }
+egui-winit = { workspace = true }
+winit = { workspace = true }
 hot-lib-reloader = "0.6.5"
 wafel_viz = { path = "../wafel_viz" }
 wafel_viz_wgpu = { path = "../wafel_viz_wgpu" }

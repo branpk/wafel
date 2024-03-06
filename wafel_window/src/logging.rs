@@ -21,7 +21,6 @@ static RECENT_PANIC_DETAILS: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::n
 
 pub fn init(log_file_path: &Path) {
     let log_file = fs::OpenOptions::new()
-        .write(true)
         .append(true)
         .create(true)
         .open(log_file_path)

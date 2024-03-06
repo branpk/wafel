@@ -1,7 +1,7 @@
 use std::fmt;
 
 use egui::{ClippedPrimitive, Context, TexturesDelta};
-use egui_wgpu::{renderer::ScreenDescriptor, Renderer};
+use egui_wgpu::{Renderer, ScreenDescriptor};
 use egui_winit::State;
 use winit::{event::WindowEvent, window::Window};
 
@@ -21,10 +21,16 @@ impl EguiState {
         output_format: wgpu::TextureFormat,
         msaa_samples: u32,
     ) -> Self {
-        let mut state = State::new(window);
-        state.set_pixels_per_point(window.scale_factor() as f32);
+        let context = Context::default();
+        let state = State::new(
+            context.clone(),
+            context.viewport_id(),
+            &window,
+            Some(window.scale_factor() as f32),
+            None,
+        );
         EguiState {
-            context: Context::default(),
+            context,
             state,
             renderer: Renderer::new(device, output_format, None, msaa_samples),
             primitives: Vec::new(),
@@ -33,8 +39,8 @@ impl EguiState {
         }
     }
 
-    pub fn window_event(&mut self, event: &WindowEvent<'_>) -> bool {
-        let response = self.state.on_event(&self.context, event);
+    pub fn window_event(&mut self, window: &Window, event: &WindowEvent) -> bool {
+        let response = self.state.on_window_event(window, event);
         if response.repaint {
             self.context.request_repaint();
         }
@@ -50,8 +56,10 @@ impl EguiState {
             run_ui(ctx);
         });
         self.state
-            .handle_platform_output(window, &self.context, egui_output.platform_output);
-        self.primitives = self.context.tessellate(egui_output.shapes);
+            .handle_platform_output(window, egui_output.platform_output);
+        self.primitives = self
+            .context
+            .tessellate(egui_output.shapes, egui_output.pixels_per_point);
         self.textures_delta = egui_output.textures_delta;
     }
 

@@ -122,9 +122,9 @@ impl<D: FnMut(&dyn AppEnv)> Container<D> {
         }
     }
 
-    pub fn window_event(&mut self, window: &Window, event: &WindowEvent<'_>) {
+    pub fn window_event(&mut self, window: &Window, event: &WindowEvent) {
         if let Some(egui_state) = self.egui_state.lock().unwrap().as_mut() {
-            let egui_consumed = egui_state.window_event(event);
+            let egui_consumed = egui_state.window_event(window, event);
             self.input.handle_event(window, event, egui_consumed);
         }
     }
@@ -212,8 +212,10 @@ impl<D: FnMut(&dyn AppEnv)> Container<D> {
         let mut first_render_pass = true;
         let mut get_color_attachment = || {
             let (view, resolve_target, store) = match &msaa_output_view {
-                Some(msaa_output_view) => (msaa_output_view, Some(output_view), true),
-                None => (output_view, None, true),
+                Some(msaa_output_view) => {
+                    (msaa_output_view, Some(output_view), wgpu::StoreOp::Store)
+                }
+                None => (output_view, None, wgpu::StoreOp::Store),
             };
 
             let load = if first_render_pass {
@@ -278,6 +280,7 @@ impl<D: FnMut(&dyn AppEnv)> Container<D> {
                 label: Some("egui"),
                 color_attachments: &[Some(get_color_attachment())],
                 depth_stencil_attachment: None,
+                ..Default::default()
             });
 
             egui_state.render(&mut rp);
@@ -312,10 +315,11 @@ impl<D: FnMut(&dyn AppEnv)> Container<D> {
                     view: depth_texture_view,
                     depth_ops: Some(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(1.0),
-                        store: true,
+                        store: wgpu::StoreOp::Store,
                     }),
                     stencil_ops: None,
                 }),
+                ..Default::default()
             });
 
             self.viz_renderer.render(&mut rp);

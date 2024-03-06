@@ -62,9 +62,9 @@ impl WindowedApp for WafelApp {
         }
     }
 
-    fn window_event(&mut self, event: &WindowEvent<'_>) {
+    fn window_event(&mut self, window: &Window, event: &WindowEvent) {
         if let Some(egui_state) = self.egui_state.lock().unwrap().as_mut() {
-            let consumed = egui_state.window_event(event);
+            let consumed = egui_state.window_event(window, event);
             if !consumed {
                 // handle event
             }
@@ -189,10 +189,11 @@ impl WafelApp {
                     resolve_target: Some(output_view),
                     ops: wgpu::Operations {
                         load: clear_op.take().unwrap_or(wgpu::LoadOp::Load),
-                        store: true,
+                        store: wgpu::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: None,
+                ..Default::default()
             });
 
             egui_state.render(&mut rp);
@@ -229,17 +230,18 @@ impl WafelApp {
                     resolve_target: Some(output_view),
                     ops: wgpu::Operations {
                         load: clear_op.take().unwrap_or(wgpu::LoadOp::Load),
-                        store: true,
+                        store: wgpu::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                     view: &depth_texture_view,
                     depth_ops: Some(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(1.0),
-                        store: true,
+                        store: wgpu::StoreOp::Store,
                     }),
                     stencil_ops: None,
                 }),
+                ..Default::default()
             });
 
             self.viz_renderer.render(&mut rp);

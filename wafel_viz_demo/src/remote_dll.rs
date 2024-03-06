@@ -3,7 +3,10 @@ use std::collections::HashSet;
 use wafel_api::{Error, RemoteDll};
 use wafel_viz_sm64::{InGameRenderMode, ObjectCull, PerspCameraControl, SurfaceMode, VizConfig};
 use wafel_viz_wgpu::VizRenderer;
-use winit::event::{ElementState, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowEvent};
+use winit::{
+    event::{ElementState, MouseButton, MouseScrollDelta, WindowEvent},
+    keyboard::{KeyCode, PhysicalKey},
+};
 
 use crate::window::App;
 
@@ -11,7 +14,7 @@ use crate::window::App;
 pub struct RemoteDllApp {
     remote_dll: RemoteDll,
     camera_control: PerspCameraControl,
-    held_keys: HashSet<VirtualKeyCode>,
+    held_keys: HashSet<KeyCode>,
     viz_renderer: VizRenderer,
 }
 
@@ -51,18 +54,14 @@ impl App for RemoteDllApp {
                 };
                 self.camera_control.scroll_wheel(amount);
             }
-            WindowEvent::KeyboardInput { input, .. } => {
-                if let Some(key) = input.virtual_keycode {
-                    match input.state {
+            WindowEvent::KeyboardInput { event, .. } => {
+                if let PhysicalKey::Code(key) = event.physical_key {
+                    match event.state {
                         ElementState::Pressed => {
-                            if key == VirtualKeyCode::C
-                                && !self.held_keys.contains(&VirtualKeyCode::C)
-                            {
+                            if key == KeyCode::KeyC && !self.held_keys.contains(&KeyCode::KeyC) {
                                 self.camera_control.lock_to_in_game_camera();
                             }
-                            if key == VirtualKeyCode::M
-                                && !self.held_keys.contains(&VirtualKeyCode::M)
-                            {
+                            if key == KeyCode::KeyM && !self.held_keys.contains(&KeyCode::KeyM) {
                                 self.camera_control.lock_to_mario();
                             }
                             self.held_keys.insert(key);
@@ -81,22 +80,22 @@ impl App for RemoteDllApp {
 
     fn update(&mut self) -> Result<(), Error> {
         let mut camera_move = [0.0, 0.0, 0.0];
-        if self.held_keys.contains(&VirtualKeyCode::S) {
+        if self.held_keys.contains(&KeyCode::KeyS) {
             camera_move[0] += 1.0;
         }
-        if self.held_keys.contains(&VirtualKeyCode::A) {
+        if self.held_keys.contains(&KeyCode::KeyA) {
             camera_move[0] -= 1.0;
         }
-        if self.held_keys.contains(&VirtualKeyCode::Space) {
+        if self.held_keys.contains(&KeyCode::Space) {
             camera_move[1] += 1.0;
         }
-        if self.held_keys.contains(&VirtualKeyCode::LShift) {
+        if self.held_keys.contains(&KeyCode::ShiftLeft) {
             camera_move[1] -= 1.0;
         }
-        if self.held_keys.contains(&VirtualKeyCode::R) {
+        if self.held_keys.contains(&KeyCode::KeyR) {
             camera_move[2] += 1.0;
         }
-        if self.held_keys.contains(&VirtualKeyCode::W) {
+        if self.held_keys.contains(&KeyCode::KeyW) {
             camera_move[2] -= 1.0;
         }
 
@@ -123,9 +122,9 @@ impl App for RemoteDllApp {
                 (output_size[0] as f32 / scale_factor) as i32,
                 (output_size[1] as f32 / scale_factor) as i32,
             ],
-            in_game_render_mode: if self.held_keys.contains(&VirtualKeyCode::X) {
+            in_game_render_mode: if self.held_keys.contains(&KeyCode::KeyX) {
                 InGameRenderMode::DisplayList
-            } else if self.held_keys.contains(&VirtualKeyCode::Z) {
+            } else if self.held_keys.contains(&KeyCode::KeyZ) {
                 InGameRenderMode::Disabled
             } else {
                 InGameRenderMode::Rerender
@@ -173,17 +172,18 @@ impl App for RemoteDllApp {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                        store: true,
+                        store: wgpu::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                     view: &depth_texture_view,
                     depth_ops: Some(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(1.0),
-                        store: true,
+                        store: wgpu::StoreOp::Store,
                     }),
                     stencil_ops: None,
                 }),
+                ..Default::default()
             });
 
             self.viz_renderer.render(&mut rp);

@@ -18,7 +18,7 @@ pub trait WindowedApp: Sized + 'static {
         msaa_samples: u32,
     ) -> Self;
 
-    fn window_event(&mut self, event: &WindowEvent<'_>);
+    fn window_event(&mut self, window: &Window, event: &WindowEvent);
 
     fn update(&mut self, window: &Window, device: &wgpu::Device);
 
@@ -43,7 +43,7 @@ pub fn run_app<A: WindowedApp>(env: WafelEnv, title: &str) {
             ..Default::default()
         });
 
-        let event_loop = EventLoop::new();
+        let event_loop = EventLoop::new().expect("failed to create event loop");
         let max_screen_dim = event_loop
             .available_monitors()
             .flat_map(|m| [m.size().width, m.size().height])
@@ -66,8 +66,9 @@ pub fn run_app<A: WindowedApp>(env: WafelEnv, title: &str) {
             window.set_window_level(WindowLevel::AlwaysOnTop); // TODO: Add config option
         }
 
-        let surface =
-            unsafe { instance.create_surface(&window) }.expect("failed to create surface");
+        let surface = instance
+            .create_surface(&window)
+            .expect("failed to create surface");
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
@@ -90,8 +91,8 @@ pub fn run_app<A: WindowedApp>(env: WafelEnv, title: &str) {
             .request_device(
                 &wgpu::DeviceDescriptor {
                     label: None,
-                    features: wgpu::Features::empty(),
-                    limits: wgpu::Limits {
+                    required_features: wgpu::Features::empty(),
+                    required_limits: wgpu::Limits {
                         max_texture_dimension_2d,
                         ..wgpu::Limits::downlevel_webgl2_defaults()
                     },
@@ -124,6 +125,7 @@ pub fn run_app<A: WindowedApp>(env: WafelEnv, title: &str) {
             present_mode,
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
             view_formats: Vec::new(),
+            desired_maximum_frame_latency: 2,
         };
         surface.configure(&device, &surface_config);
 
@@ -139,17 +141,17 @@ pub fn run_app<A: WindowedApp>(env: WafelEnv, title: &str) {
         window.set_visible(true);
         let mut first_render = false;
 
-        event_loop.run(move |event, _, control_flow| {
-            // Since event_loop.run never returns, we should move all Drop objects
-            // into this closure. These ones aren't referenced elsewhere in the
-            // closure, so we reference them explicitly here.
-            let _ = (&instance, &adapter);
+        let window = &window;
 
-            *control_flow = ControlFlow::Poll;
+        event_loop
+            .run(move |event, event_loop| {
+                // Since event_loop.run never returns, we should move all Drop objects
+                // into this closure. These ones aren't referenced elsewhere in the
+                // closure, so we reference them explicitly here.
+                let _ = (&instance, &adapter);
 
-            match event {
-                Event::WindowEvent { event, .. } => {
-                    app.window_event(&event);
+                if let Event::WindowEvent { event, .. } = event {
+                    app.window_event(window, &event);
                     match event {
                         WindowEvent::Resized(size) => {
                             surface_config.width = size.width;
@@ -157,46 +159,48 @@ pub fn run_app<A: WindowedApp>(env: WafelEnv, title: &str) {
                             if surface_config.width > 0 && surface_config.height > 0 {
                                 surface.configure(&device, &surface_config);
                             }
+                            window.request_redraw();
                         }
                         WindowEvent::CloseRequested => {
-                            *control_flow = ControlFlow::Exit;
+                            event_loop.exit();
+                        }
+                        WindowEvent::RedrawRequested => {
+                            if !first_render {
+                                app.update(window, &device);
+                            }
+
+                            if surface_config.width != 0 && surface_config.height != 0 {
+                                let frame = surface
+                                    .get_current_texture()
+                                    .expect("failed to acquire next swap chain texture");
+                                let output_view = frame
+                                    .texture
+                                    .create_view(&wgpu::TextureViewDescriptor::default());
+
+                                if first_render {
+                                    // Draw a black screen as quickly as possible
+                                    first_render = false;
+                                } else {
+                                    app.render(
+                                        &device,
+                                        &queue,
+                                        &output_view,
+                                        output_format,
+                                        [surface_config.width, surface_config.height],
+                                        window.scale_factor() as f32,
+                                    );
+                                }
+
+                                frame.present();
+                            }
+
+                            window.request_redraw();
                         }
                         _ => {}
                     }
                 }
-                Event::MainEventsCleared => {
-                    if !first_render {
-                        app.update(&window, &device);
-                    }
-
-                    if surface_config.width != 0 && surface_config.height != 0 {
-                        let frame = surface
-                            .get_current_texture()
-                            .expect("failed to acquire next swap chain texture");
-                        let output_view = frame
-                            .texture
-                            .create_view(&wgpu::TextureViewDescriptor::default());
-
-                        if first_render {
-                            // Draw a black screen as quickly as possible
-                            first_render = false;
-                        } else {
-                            app.render(
-                                &device,
-                                &queue,
-                                &output_view,
-                                output_format,
-                                [surface_config.width, surface_config.height],
-                                window.scale_factor() as f32,
-                            );
-                        }
-
-                        frame.present();
-                    }
-                }
-                _ => {}
-            }
-        });
+            })
+            .expect("event loop error");
     });
 }
 

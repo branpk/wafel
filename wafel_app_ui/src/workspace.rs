@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use wafel_api::{Emu, VizScene};
 
 use crate::{data_explorer::DataExplorer, pane::Pane, Env};

@@ -20,7 +20,7 @@ indexmap = "1.6.2"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 wgpu = { workspace = true }
 futures = "0.3.15"
-winit = "0.28.6"
+winit = { workspace = true }
 bytemuck = "1.5.1"
 nalgebra = "0.31.0"
 image = "0.23.14"

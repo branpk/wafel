@@ -14,8 +14,12 @@ use wafel_viz_sm64::{
     PerspCameraControl, Point, SurfaceMode, VizConfig,
 };
 use wafel_viz_wgpu::VizRenderer;
+use wgpu::naga::SourceLocation;
 use window::{open_window_and_run, App};
-use winit::event::{ElementState, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowEvent};
+use winit::{
+    event::{ElementState, MouseButton, MouseScrollDelta, WindowEvent},
+    keyboard::{Key, KeyCode, PhysicalKey},
+};
 
 mod remote_dll;
 mod window;
@@ -31,7 +35,7 @@ struct VizApp {
     inputs: Vec<Input>,
     save_states: HashMap<u32, Rc<SaveState>>,
     camera_control: PerspCameraControl,
-    held_keys: HashSet<VirtualKeyCode>,
+    held_keys: HashSet<KeyCode>,
     viz_renderer: VizRenderer,
     last_update: Instant,
     time_since_game_advance: Duration,
@@ -45,7 +49,7 @@ impl VizApp {
         if let Some(&input) = self.inputs.get(self.game.frame() as usize) {
             self.game.try_set_input(input)?;
         }
-        if self.held_keys.contains(&VirtualKeyCode::Q) {
+        if self.held_keys.contains(&KeyCode::KeyQ) {
             self.game.write("gQuickRender", 1.into());
         }
         self.game.advance();
@@ -114,35 +118,31 @@ impl App for VizApp {
                 };
                 self.camera_control.scroll_wheel(amount);
             }
-            WindowEvent::KeyboardInput { input, .. } => {
-                if let Some(key) = input.virtual_keycode {
-                    match input.state {
+            WindowEvent::KeyboardInput { event, .. } => {
+                if let PhysicalKey::Code(key) = event.physical_key {
+                    match event.state {
                         ElementState::Pressed => {
-                            if key == VirtualKeyCode::Return {
+                            if key == KeyCode::Enter {
                                 eprintln!("frame = {}", self.game.frame());
                             }
-                            if key == VirtualKeyCode::Key1 {
-                                if self.held_keys.contains(&VirtualKeyCode::Right) {
-                                    self.held_keys.remove(&VirtualKeyCode::Right);
+                            if key == KeyCode::Digit1 {
+                                if self.held_keys.contains(&KeyCode::ArrowRight) {
+                                    self.held_keys.remove(&KeyCode::ArrowRight);
                                 } else {
-                                    self.held_keys.insert(VirtualKeyCode::Right);
+                                    self.held_keys.insert(KeyCode::ArrowRight);
                                 }
                             }
-                            if key == VirtualKeyCode::Left {
+                            if key == KeyCode::ArrowLeft {
                                 let frame = self.game.frame().saturating_sub(1) / SAVE_STATE_FREQ
                                     * SAVE_STATE_FREQ;
                                 if let Some(state) = self.save_states.get(&frame) {
                                     self.game.try_load_state(state)?;
                                 }
                             }
-                            if key == VirtualKeyCode::C
-                                && !self.held_keys.contains(&VirtualKeyCode::C)
-                            {
+                            if key == KeyCode::KeyC && !self.held_keys.contains(&KeyCode::KeyC) {
                                 self.camera_control.lock_to_in_game_camera();
                             }
-                            if key == VirtualKeyCode::M
-                                && !self.held_keys.contains(&VirtualKeyCode::M)
-                            {
+                            if key == KeyCode::KeyM && !self.held_keys.contains(&KeyCode::KeyM) {
                                 self.camera_control.lock_to_mario();
                             }
                             self.held_keys.insert(key);
@@ -163,11 +163,11 @@ impl App for VizApp {
         self.time_since_game_advance += self.last_update.elapsed();
         self.last_update = Instant::now();
 
-        let speed = if self.held_keys.contains(&VirtualKeyCode::Right) {
+        let speed = if self.held_keys.contains(&KeyCode::ArrowRight) {
             1
-        } else if self.held_keys.contains(&VirtualKeyCode::Down) {
+        } else if self.held_keys.contains(&KeyCode::ArrowDown) {
             10
-        } else if self.held_keys.contains(&VirtualKeyCode::Up) {
+        } else if self.held_keys.contains(&KeyCode::ArrowUp) {
             100
         } else {
             0
@@ -184,22 +184,22 @@ impl App for VizApp {
         }
 
         let mut camera_move = [0.0, 0.0, 0.0];
-        if self.held_keys.contains(&VirtualKeyCode::S) {
+        if self.held_keys.contains(&KeyCode::KeyD) {
             camera_move[0] += 1.0;
         }
-        if self.held_keys.contains(&VirtualKeyCode::A) {
+        if self.held_keys.contains(&KeyCode::KeyA) {
             camera_move[0] -= 1.0;
         }
-        if self.held_keys.contains(&VirtualKeyCode::Space) {
+        if self.held_keys.contains(&KeyCode::Space) {
             camera_move[1] += 1.0;
         }
-        if self.held_keys.contains(&VirtualKeyCode::LShift) {
+        if self.held_keys.contains(&KeyCode::ShiftLeft) {
             camera_move[1] -= 1.0;
         }
-        if self.held_keys.contains(&VirtualKeyCode::R) {
+        if self.held_keys.contains(&KeyCode::KeyS) {
             camera_move[2] += 1.0;
         }
-        if self.held_keys.contains(&VirtualKeyCode::W) {
+        if self.held_keys.contains(&KeyCode::KeyW) {
             camera_move[2] -= 1.0;
         }
         self.camera_control.update(
@@ -235,9 +235,9 @@ impl App for VizApp {
                 (output_size[0] as f32 / scale_factor) as i32,
                 (output_size[1] as f32 / scale_factor) as i32,
             ],
-            in_game_render_mode: if self.held_keys.contains(&VirtualKeyCode::X) {
+            in_game_render_mode: if self.held_keys.contains(&KeyCode::KeyX) {
                 InGameRenderMode::DisplayList
-            } else if self.held_keys.contains(&VirtualKeyCode::Z) {
+            } else if self.held_keys.contains(&KeyCode::KeyZ) {
                 InGameRenderMode::Disabled
             } else {
                 InGameRenderMode::Rerender
@@ -319,17 +319,18 @@ impl App for VizApp {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                        store: true,
+                        store: wgpu::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                     view: &depth_texture_view,
                     depth_ops: Some(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(1.0),
-                        store: true,
+                        store: wgpu::StoreOp::Store,
                     }),
                     stencil_ops: None,
                 }),
+                ..Default::default()
             });
 
             self.viz_renderer.render(&mut rp);
