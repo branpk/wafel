@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_core/src/python/imgui_input.rs`."><title>imgui_input.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-cb6f1f67f1bcd037.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="wafel_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.73.0 (cc66ad468 2023-10-03)" data-channel="1.73.0" data-search-js="search-6dfdfced5eff6596.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-1596385f77d47ef2.css" data-theme-dark-css="dark-0a43001d3fc2282c.css" data-theme-ayu-css="ayu-fd19013d6ce078bf.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-1596385f77d47ef2.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-0a43001d3fc2282c.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../wafel_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_core/src/python/imgui_input.rs`."><title>imgui_input.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="wafel_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -313,13 +314,13 @@
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>ImguiInput {
     winit_to_glfw_key: HashMap&lt;VirtualKeyCode, u32&gt;,
-    modifier_keys: Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, u32, u32)&gt;,
+    modifier_keys: Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, u32, u32)&gt;,
 }
 
 <span class="kw">impl </span>ImguiInput {
     <span class="doccomment">/// Initialize a new `ImguiInput`.
-    </span><span class="kw">pub fn </span>new(py: Python&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; PyResult&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>glfw = PyModule::import(py, <span class="string">&quot;glfw&quot;</span>)<span class="question-mark">?</span>;
+    </span><span class="kw">pub fn </span>new(py: Python&lt;<span class="lifetime">'_</span>&gt;) -&gt; PyResult&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>glfw = PyModule::import(py, <span class="string">"glfw"</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>winit_to_glfw_key = HashMap::new();
         <span class="kw">for </span>(glfw_name, winit_key) <span class="kw">in </span>GLFW_WINIT_KEY_MAP {
@@ -333,10 +334,10 @@
             <span class="prelude-val">Ok</span>((imgui_name, glfw_key_l, glfw_key_r))
         };
         <span class="kw">let </span>modifier_keys = <span class="macro">vec!</span>[
-            modifier_key(<span class="string">&quot;key_ctrl&quot;</span>, <span class="string">&quot;KEY_LEFT_CONTROL&quot;</span>, <span class="string">&quot;KEY_RIGHT_CONTROL&quot;</span>)<span class="question-mark">?</span>,
-            modifier_key(<span class="string">&quot;key_alt&quot;</span>, <span class="string">&quot;KEY_LEFT_ALT&quot;</span>, <span class="string">&quot;KEY_RIGHT_ALT&quot;</span>)<span class="question-mark">?</span>,
-            modifier_key(<span class="string">&quot;key_shift&quot;</span>, <span class="string">&quot;KEY_LEFT_SHIFT&quot;</span>, <span class="string">&quot;KEY_RIGHT_SHIFT&quot;</span>)<span class="question-mark">?</span>,
-            modifier_key(<span class="string">&quot;key_super&quot;</span>, <span class="string">&quot;KEY_LEFT_SUPER&quot;</span>, <span class="string">&quot;KEY_RIGHT_SUPER&quot;</span>)<span class="question-mark">?</span>,
+            modifier_key(<span class="string">"key_ctrl"</span>, <span class="string">"KEY_LEFT_CONTROL"</span>, <span class="string">"KEY_RIGHT_CONTROL"</span>)<span class="question-mark">?</span>,
+            modifier_key(<span class="string">"key_alt"</span>, <span class="string">"KEY_LEFT_ALT"</span>, <span class="string">"KEY_RIGHT_ALT"</span>)<span class="question-mark">?</span>,
+            modifier_key(<span class="string">"key_shift"</span>, <span class="string">"KEY_LEFT_SHIFT"</span>, <span class="string">"KEY_RIGHT_SHIFT"</span>)<span class="question-mark">?</span>,
+            modifier_key(<span class="string">"key_super"</span>, <span class="string">"KEY_LEFT_SUPER"</span>, <span class="string">"KEY_RIGHT_SUPER"</span>)<span class="question-mark">?</span>,
         ];
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
@@ -346,42 +347,42 @@
     }
 
     <span class="doccomment">/// Initialize the imgui key map.
-    </span><span class="kw">pub fn </span>set_key_map(<span class="kw-2">&amp;mut </span><span class="self">self</span>, py: Python&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; PyResult&lt;()&gt; {
-        <span class="kw">let </span>ig = PyModule::import(py, <span class="string">&quot;imgui&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>io = ig.call_method0(<span class="string">&quot;get_io&quot;</span>)<span class="question-mark">?</span>;
+    </span><span class="kw">pub fn </span>set_key_map(<span class="kw-2">&amp;mut </span><span class="self">self</span>, py: Python&lt;<span class="lifetime">'_</span>&gt;) -&gt; PyResult&lt;()&gt; {
+        <span class="kw">let </span>ig = PyModule::import(py, <span class="string">"imgui"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>io = ig.call_method0(<span class="string">"get_io"</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>glfw = PyModule::import(py, <span class="string">&quot;glfw&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>glfw = PyModule::import(py, <span class="string">"glfw"</span>)<span class="question-mark">?</span>;
 
         <span class="kw">for </span>(imgui_name, glfw_name) <span class="kw">in </span>IMGUI_GLFW_KEY_MAP {
             <span class="kw">let </span>imgui_key = ig.getattr(imgui_name)<span class="question-mark">?</span>;
             <span class="kw">let </span>glfw_key = glfw.getattr(glfw_name)<span class="question-mark">?</span>;
-            io.getattr(<span class="string">&quot;key_map&quot;</span>)<span class="question-mark">?</span>.set_item(imgui_key, glfw_key)<span class="question-mark">?</span>;
+            io.getattr(<span class="string">"key_map"</span>)<span class="question-mark">?</span>.set_item(imgui_key, glfw_key)<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Update delta time for a frame.
-    </span><span class="kw">pub fn </span>set_delta_time(<span class="kw-2">&amp;mut </span><span class="self">self</span>, py: Python&lt;<span class="lifetime">&#39;_</span>&gt;, delta_time: f64) -&gt; PyResult&lt;()&gt; {
-        <span class="kw">let </span>ig = PyModule::import(py, <span class="string">&quot;imgui&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>io = ig.call_method0(<span class="string">&quot;get_io&quot;</span>)<span class="question-mark">?</span>;
+    </span><span class="kw">pub fn </span>set_delta_time(<span class="kw-2">&amp;mut </span><span class="self">self</span>, py: Python&lt;<span class="lifetime">'_</span>&gt;, delta_time: f64) -&gt; PyResult&lt;()&gt; {
+        <span class="kw">let </span>ig = PyModule::import(py, <span class="string">"imgui"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>io = ig.call_method0(<span class="string">"get_io"</span>)<span class="question-mark">?</span>;
 
-        io.setattr(<span class="string">&quot;delta_time&quot;</span>, delta_time)<span class="question-mark">?</span>;
+        io.setattr(<span class="string">"delta_time"</span>, delta_time)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Set the display size for a frame.
-    </span><span class="kw">pub fn </span>set_display_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>, py: Python&lt;<span class="lifetime">&#39;_</span>&gt;, display_size: (u32, u32)) -&gt; PyResult&lt;()&gt; {
-        <span class="kw">let </span>ig = PyModule::import(py, <span class="string">&quot;imgui&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>io = ig.call_method0(<span class="string">&quot;get_io&quot;</span>)<span class="question-mark">?</span>;
+    </span><span class="kw">pub fn </span>set_display_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>, py: Python&lt;<span class="lifetime">'_</span>&gt;, display_size: (u32, u32)) -&gt; PyResult&lt;()&gt; {
+        <span class="kw">let </span>ig = PyModule::import(py, <span class="string">"imgui"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>io = ig.call_method0(<span class="string">"get_io"</span>)<span class="question-mark">?</span>;
 
-        io.setattr(<span class="string">&quot;display_size&quot;</span>, display_size)<span class="question-mark">?</span>;
+        io.setattr(<span class="string">"display_size"</span>, display_size)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Handle a winit window event.
-    </span><span class="kw">pub fn </span>handle_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, py: Python&lt;<span class="lifetime">&#39;_</span>&gt;, event: <span class="kw-2">&amp;</span>WindowEvent&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; PyResult&lt;()&gt; {
-        <span class="kw">let </span>ig = PyModule::import(py, <span class="string">&quot;imgui&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>io = ig.call_method0(<span class="string">&quot;get_io&quot;</span>)<span class="question-mark">?</span>;
+    </span><span class="kw">pub fn </span>handle_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, py: Python&lt;<span class="lifetime">'_</span>&gt;, event: <span class="kw-2">&amp;</span>WindowEvent&lt;<span class="lifetime">'_</span>&gt;) -&gt; PyResult&lt;()&gt; {
+        <span class="kw">let </span>ig = PyModule::import(py, <span class="string">"imgui"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>io = ig.call_method0(<span class="string">"get_io"</span>)<span class="question-mark">?</span>;
 
         <span class="kw">match </span>event {
             WindowEvent::ReceivedCharacter(c) =&gt; <span class="self">self</span>.received_character(io, <span class="kw-2">*</span>c),
@@ -396,7 +397,7 @@
     <span class="kw">fn </span>received_character(<span class="kw-2">&amp;mut </span><span class="self">self</span>, io: <span class="kw-2">&amp;</span>PyAny, c: char) -&gt; PyResult&lt;()&gt; {
         <span class="kw">let </span>c = c <span class="kw">as </span>u32;
         <span class="kw">if </span>c &lt; <span class="number">0x10000 </span>{
-            io.call_method1(<span class="string">&quot;add_input_character&quot;</span>, (c,))<span class="question-mark">?</span>;
+            io.call_method1(<span class="string">"add_input_character"</span>, (c,))<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(())
     }
@@ -408,27 +409,27 @@
         };
         <span class="kw">if let </span><span class="prelude-val">Some</span>(winit_key) = input.virtual_keycode {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>glfw_key) = <span class="self">self</span>.winit_to_glfw_key.get(<span class="kw-2">&amp;</span>winit_key) {
-                io.getattr(<span class="string">&quot;keys_down&quot;</span>)<span class="question-mark">?</span>.set_item(glfw_key, is_down)<span class="question-mark">?</span>;
+                io.getattr(<span class="string">"keys_down"</span>)<span class="question-mark">?</span>.set_item(glfw_key, is_down)<span class="question-mark">?</span>;
             }
         }
 
         <span class="kw">for </span>(imgui_prop, glfw_key_l, glfw_key_r) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.modifier_keys {
-            <span class="kw">let </span>down_l: u32 = io.getattr(<span class="string">&quot;keys_down&quot;</span>)<span class="question-mark">?</span>.get_item(glfw_key_l)<span class="question-mark">?</span>.extract()<span class="question-mark">?</span>;
-            <span class="kw">let </span>down_r: u32 = io.getattr(<span class="string">&quot;keys_down&quot;</span>)<span class="question-mark">?</span>.get_item(glfw_key_r)<span class="question-mark">?</span>.extract()<span class="question-mark">?</span>;
+            <span class="kw">let </span>down_l: u32 = io.getattr(<span class="string">"keys_down"</span>)<span class="question-mark">?</span>.get_item(glfw_key_l)<span class="question-mark">?</span>.extract()<span class="question-mark">?</span>;
+            <span class="kw">let </span>down_r: u32 = io.getattr(<span class="string">"keys_down"</span>)<span class="question-mark">?</span>.get_item(glfw_key_r)<span class="question-mark">?</span>.extract()<span class="question-mark">?</span>;
             io.setattr(imgui_prop, down_l != <span class="number">0 </span>|| down_r != <span class="number">0</span>)<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">fn </span>cursor_moved(<span class="kw-2">&amp;mut </span><span class="self">self</span>, io: <span class="kw-2">&amp;</span>PyAny, position: PhysicalPosition&lt;f64&gt;) -&gt; PyResult&lt;()&gt; {
-        io.setattr(<span class="string">&quot;mouse_pos&quot;</span>, (position.x, position.y))<span class="question-mark">?</span>;
+        io.setattr(<span class="string">"mouse_pos"</span>, (position.x, position.y))<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">fn </span>mouse_wheel(<span class="kw-2">&amp;mut </span><span class="self">self</span>, io: <span class="kw-2">&amp;</span>PyAny, delta: MouseScrollDelta) -&gt; PyResult&lt;()&gt; {
         <span class="kw">if let </span>MouseScrollDelta::LineDelta(<span class="kw">_</span>, y) = delta {
-            <span class="kw">let </span>mouse_wheel: f32 = io.getattr(<span class="string">&quot;mouse_wheel&quot;</span>)<span class="question-mark">?</span>.extract()<span class="question-mark">?</span>;
-            io.setattr(<span class="string">&quot;mouse_wheel&quot;</span>, mouse_wheel + y)<span class="question-mark">?</span>;
+            <span class="kw">let </span>mouse_wheel: f32 = io.getattr(<span class="string">"mouse_wheel"</span>)<span class="question-mark">?</span>.extract()<span class="question-mark">?</span>;
+            io.setattr(<span class="string">"mouse_wheel"</span>, mouse_wheel + y)<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(())
     }
@@ -450,156 +451,156 @@
             MouseButton::Other(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
         };
         <span class="kw">if let </span><span class="prelude-val">Some</span>(button_index) = button_index {
-            io.getattr(<span class="string">&quot;mouse_down&quot;</span>)<span class="question-mark">?</span>.set_item(button_index, is_down)<span class="question-mark">?</span>;
+            io.getattr(<span class="string">"mouse_down"</span>)<span class="question-mark">?</span>.set_item(button_index, is_down)<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(())
     }
 }
 
 <span class="kw">const </span>IMGUI_GLFW_KEY_MAP: <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)] = <span class="kw-2">&amp;</span>[
-    (<span class="string">&quot;KEY_TAB&quot;</span>, <span class="string">&quot;KEY_TAB&quot;</span>),
-    (<span class="string">&quot;KEY_LEFT_ARROW&quot;</span>, <span class="string">&quot;KEY_LEFT&quot;</span>),
-    (<span class="string">&quot;KEY_RIGHT_ARROW&quot;</span>, <span class="string">&quot;KEY_RIGHT&quot;</span>),
-    (<span class="string">&quot;KEY_UP_ARROW&quot;</span>, <span class="string">&quot;KEY_UP&quot;</span>),
-    (<span class="string">&quot;KEY_DOWN_ARROW&quot;</span>, <span class="string">&quot;KEY_DOWN&quot;</span>),
-    (<span class="string">&quot;KEY_PAGE_UP&quot;</span>, <span class="string">&quot;KEY_PAGE_UP&quot;</span>),
-    (<span class="string">&quot;KEY_PAGE_DOWN&quot;</span>, <span class="string">&quot;KEY_PAGE_DOWN&quot;</span>),
-    (<span class="string">&quot;KEY_HOME&quot;</span>, <span class="string">&quot;KEY_HOME&quot;</span>),
-    (<span class="string">&quot;KEY_END&quot;</span>, <span class="string">&quot;KEY_END&quot;</span>),
-    (<span class="string">&quot;KEY_DELETE&quot;</span>, <span class="string">&quot;KEY_DELETE&quot;</span>),
-    (<span class="string">&quot;KEY_BACKSPACE&quot;</span>, <span class="string">&quot;KEY_BACKSPACE&quot;</span>),
-    (<span class="string">&quot;KEY_ENTER&quot;</span>, <span class="string">&quot;KEY_ENTER&quot;</span>),
-    (<span class="string">&quot;KEY_ESCAPE&quot;</span>, <span class="string">&quot;KEY_ESCAPE&quot;</span>),
-    (<span class="string">&quot;KEY_A&quot;</span>, <span class="string">&quot;KEY_A&quot;</span>),
-    (<span class="string">&quot;KEY_C&quot;</span>, <span class="string">&quot;KEY_C&quot;</span>),
-    (<span class="string">&quot;KEY_V&quot;</span>, <span class="string">&quot;KEY_V&quot;</span>),
-    (<span class="string">&quot;KEY_X&quot;</span>, <span class="string">&quot;KEY_X&quot;</span>),
-    (<span class="string">&quot;KEY_Y&quot;</span>, <span class="string">&quot;KEY_Y&quot;</span>),
-    (<span class="string">&quot;KEY_Z&quot;</span>, <span class="string">&quot;KEY_Z&quot;</span>),
+    (<span class="string">"KEY_TAB"</span>, <span class="string">"KEY_TAB"</span>),
+    (<span class="string">"KEY_LEFT_ARROW"</span>, <span class="string">"KEY_LEFT"</span>),
+    (<span class="string">"KEY_RIGHT_ARROW"</span>, <span class="string">"KEY_RIGHT"</span>),
+    (<span class="string">"KEY_UP_ARROW"</span>, <span class="string">"KEY_UP"</span>),
+    (<span class="string">"KEY_DOWN_ARROW"</span>, <span class="string">"KEY_DOWN"</span>),
+    (<span class="string">"KEY_PAGE_UP"</span>, <span class="string">"KEY_PAGE_UP"</span>),
+    (<span class="string">"KEY_PAGE_DOWN"</span>, <span class="string">"KEY_PAGE_DOWN"</span>),
+    (<span class="string">"KEY_HOME"</span>, <span class="string">"KEY_HOME"</span>),
+    (<span class="string">"KEY_END"</span>, <span class="string">"KEY_END"</span>),
+    (<span class="string">"KEY_DELETE"</span>, <span class="string">"KEY_DELETE"</span>),
+    (<span class="string">"KEY_BACKSPACE"</span>, <span class="string">"KEY_BACKSPACE"</span>),
+    (<span class="string">"KEY_ENTER"</span>, <span class="string">"KEY_ENTER"</span>),
+    (<span class="string">"KEY_ESCAPE"</span>, <span class="string">"KEY_ESCAPE"</span>),
+    (<span class="string">"KEY_A"</span>, <span class="string">"KEY_A"</span>),
+    (<span class="string">"KEY_C"</span>, <span class="string">"KEY_C"</span>),
+    (<span class="string">"KEY_V"</span>, <span class="string">"KEY_V"</span>),
+    (<span class="string">"KEY_X"</span>, <span class="string">"KEY_X"</span>),
+    (<span class="string">"KEY_Y"</span>, <span class="string">"KEY_Y"</span>),
+    (<span class="string">"KEY_Z"</span>, <span class="string">"KEY_Z"</span>),
 ];
 
 <span class="comment">// TODO: Stop using GLFW for input. Will have to define a mapping from VirtualKeyCode
 // to int though
 </span><span class="kw">const </span>GLFW_WINIT_KEY_MAP: <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, VirtualKeyCode)] = <span class="kw-2">&amp;</span>[
-    (<span class="string">&quot;KEY_SPACE&quot;</span>, VirtualKeyCode::Space),
-    (<span class="string">&quot;KEY_APOSTROPHE&quot;</span>, VirtualKeyCode::Apostrophe),
-    (<span class="string">&quot;KEY_COMMA&quot;</span>, VirtualKeyCode::Comma),
-    (<span class="string">&quot;KEY_MINUS&quot;</span>, VirtualKeyCode::Minus),
-    (<span class="string">&quot;KEY_PERIOD&quot;</span>, VirtualKeyCode::Period),
-    (<span class="string">&quot;KEY_SLASH&quot;</span>, VirtualKeyCode::Slash),
-    (<span class="string">&quot;KEY_0&quot;</span>, VirtualKeyCode::Key0),
-    (<span class="string">&quot;KEY_1&quot;</span>, VirtualKeyCode::Key1),
-    (<span class="string">&quot;KEY_2&quot;</span>, VirtualKeyCode::Key2),
-    (<span class="string">&quot;KEY_3&quot;</span>, VirtualKeyCode::Key3),
-    (<span class="string">&quot;KEY_4&quot;</span>, VirtualKeyCode::Key4),
-    (<span class="string">&quot;KEY_5&quot;</span>, VirtualKeyCode::Key5),
-    (<span class="string">&quot;KEY_6&quot;</span>, VirtualKeyCode::Key6),
-    (<span class="string">&quot;KEY_7&quot;</span>, VirtualKeyCode::Key7),
-    (<span class="string">&quot;KEY_8&quot;</span>, VirtualKeyCode::Key8),
-    (<span class="string">&quot;KEY_9&quot;</span>, VirtualKeyCode::Key9),
-    (<span class="string">&quot;KEY_SEMICOLON&quot;</span>, VirtualKeyCode::Semicolon),
-    (<span class="string">&quot;KEY_EQUAL&quot;</span>, VirtualKeyCode::Equals),
-    (<span class="string">&quot;KEY_A&quot;</span>, VirtualKeyCode::A),
-    (<span class="string">&quot;KEY_B&quot;</span>, VirtualKeyCode::B),
-    (<span class="string">&quot;KEY_C&quot;</span>, VirtualKeyCode::C),
-    (<span class="string">&quot;KEY_D&quot;</span>, VirtualKeyCode::D),
-    (<span class="string">&quot;KEY_E&quot;</span>, VirtualKeyCode::E),
-    (<span class="string">&quot;KEY_F&quot;</span>, VirtualKeyCode::F),
-    (<span class="string">&quot;KEY_G&quot;</span>, VirtualKeyCode::G),
-    (<span class="string">&quot;KEY_H&quot;</span>, VirtualKeyCode::H),
-    (<span class="string">&quot;KEY_I&quot;</span>, VirtualKeyCode::I),
-    (<span class="string">&quot;KEY_J&quot;</span>, VirtualKeyCode::J),
-    (<span class="string">&quot;KEY_K&quot;</span>, VirtualKeyCode::K),
-    (<span class="string">&quot;KEY_L&quot;</span>, VirtualKeyCode::L),
-    (<span class="string">&quot;KEY_M&quot;</span>, VirtualKeyCode::M),
-    (<span class="string">&quot;KEY_N&quot;</span>, VirtualKeyCode::N),
-    (<span class="string">&quot;KEY_O&quot;</span>, VirtualKeyCode::O),
-    (<span class="string">&quot;KEY_P&quot;</span>, VirtualKeyCode::P),
-    (<span class="string">&quot;KEY_Q&quot;</span>, VirtualKeyCode::Q),
-    (<span class="string">&quot;KEY_R&quot;</span>, VirtualKeyCode::R),
-    (<span class="string">&quot;KEY_S&quot;</span>, VirtualKeyCode::S),
-    (<span class="string">&quot;KEY_T&quot;</span>, VirtualKeyCode::T),
-    (<span class="string">&quot;KEY_U&quot;</span>, VirtualKeyCode::U),
-    (<span class="string">&quot;KEY_V&quot;</span>, VirtualKeyCode::V),
-    (<span class="string">&quot;KEY_W&quot;</span>, VirtualKeyCode::W),
-    (<span class="string">&quot;KEY_X&quot;</span>, VirtualKeyCode::X),
-    (<span class="string">&quot;KEY_Y&quot;</span>, VirtualKeyCode::Y),
-    (<span class="string">&quot;KEY_Z&quot;</span>, VirtualKeyCode::Z),
-    (<span class="string">&quot;KEY_LEFT_BRACKET&quot;</span>, VirtualKeyCode::LBracket),
-    (<span class="string">&quot;KEY_BACKSLASH&quot;</span>, VirtualKeyCode::Backslash),
-    (<span class="string">&quot;KEY_RIGHT_BRACKET&quot;</span>, VirtualKeyCode::RBracket),
-    (<span class="string">&quot;KEY_GRAVE_ACCENT&quot;</span>, VirtualKeyCode::Grave),
-    <span class="comment">// (&quot;KEY_WORLD_1&quot;, VirtualKeyCode::WORLD_1),
-    // (&quot;KEY_WORLD_2&quot;, VirtualKeyCode::WORLD_2),
-    </span>(<span class="string">&quot;KEY_ESCAPE&quot;</span>, VirtualKeyCode::Escape),
-    (<span class="string">&quot;KEY_ENTER&quot;</span>, VirtualKeyCode::Return),
-    (<span class="string">&quot;KEY_TAB&quot;</span>, VirtualKeyCode::Tab),
-    (<span class="string">&quot;KEY_BACKSPACE&quot;</span>, VirtualKeyCode::Back),
-    (<span class="string">&quot;KEY_INSERT&quot;</span>, VirtualKeyCode::Insert),
-    (<span class="string">&quot;KEY_DELETE&quot;</span>, VirtualKeyCode::Delete),
-    (<span class="string">&quot;KEY_RIGHT&quot;</span>, VirtualKeyCode::Right),
-    (<span class="string">&quot;KEY_LEFT&quot;</span>, VirtualKeyCode::Left),
-    (<span class="string">&quot;KEY_DOWN&quot;</span>, VirtualKeyCode::Down),
-    (<span class="string">&quot;KEY_UP&quot;</span>, VirtualKeyCode::Up),
-    (<span class="string">&quot;KEY_PAGE_UP&quot;</span>, VirtualKeyCode::PageUp),
-    (<span class="string">&quot;KEY_PAGE_DOWN&quot;</span>, VirtualKeyCode::PageDown),
-    (<span class="string">&quot;KEY_HOME&quot;</span>, VirtualKeyCode::Home),
-    (<span class="string">&quot;KEY_END&quot;</span>, VirtualKeyCode::End),
-    (<span class="string">&quot;KEY_CAPS_LOCK&quot;</span>, VirtualKeyCode::Capital),
-    (<span class="string">&quot;KEY_SCROLL_LOCK&quot;</span>, VirtualKeyCode::Scroll),
-    (<span class="string">&quot;KEY_NUM_LOCK&quot;</span>, VirtualKeyCode::Numlock),
-    (<span class="string">&quot;KEY_PRINT_SCREEN&quot;</span>, VirtualKeyCode::Snapshot),
-    (<span class="string">&quot;KEY_PAUSE&quot;</span>, VirtualKeyCode::Pause),
-    (<span class="string">&quot;KEY_F1&quot;</span>, VirtualKeyCode::F1),
-    (<span class="string">&quot;KEY_F2&quot;</span>, VirtualKeyCode::F2),
-    (<span class="string">&quot;KEY_F3&quot;</span>, VirtualKeyCode::F3),
-    (<span class="string">&quot;KEY_F4&quot;</span>, VirtualKeyCode::F4),
-    (<span class="string">&quot;KEY_F5&quot;</span>, VirtualKeyCode::F5),
-    (<span class="string">&quot;KEY_F6&quot;</span>, VirtualKeyCode::F6),
-    (<span class="string">&quot;KEY_F7&quot;</span>, VirtualKeyCode::F7),
-    (<span class="string">&quot;KEY_F8&quot;</span>, VirtualKeyCode::F8),
-    (<span class="string">&quot;KEY_F9&quot;</span>, VirtualKeyCode::F9),
-    (<span class="string">&quot;KEY_F10&quot;</span>, VirtualKeyCode::F10),
-    (<span class="string">&quot;KEY_F11&quot;</span>, VirtualKeyCode::F11),
-    (<span class="string">&quot;KEY_F12&quot;</span>, VirtualKeyCode::F12),
-    (<span class="string">&quot;KEY_F13&quot;</span>, VirtualKeyCode::F13),
-    (<span class="string">&quot;KEY_F14&quot;</span>, VirtualKeyCode::F14),
-    (<span class="string">&quot;KEY_F15&quot;</span>, VirtualKeyCode::F15),
-    (<span class="string">&quot;KEY_F16&quot;</span>, VirtualKeyCode::F16),
-    (<span class="string">&quot;KEY_F17&quot;</span>, VirtualKeyCode::F17),
-    (<span class="string">&quot;KEY_F18&quot;</span>, VirtualKeyCode::F18),
-    (<span class="string">&quot;KEY_F19&quot;</span>, VirtualKeyCode::F19),
-    (<span class="string">&quot;KEY_F20&quot;</span>, VirtualKeyCode::F20),
-    (<span class="string">&quot;KEY_F21&quot;</span>, VirtualKeyCode::F21),
-    (<span class="string">&quot;KEY_F22&quot;</span>, VirtualKeyCode::F22),
-    (<span class="string">&quot;KEY_F23&quot;</span>, VirtualKeyCode::F23),
-    (<span class="string">&quot;KEY_F24&quot;</span>, VirtualKeyCode::F24),
-    <span class="comment">// (&quot;KEY_F25&quot;, VirtualKeyCode::F25),
-    </span>(<span class="string">&quot;KEY_KP_0&quot;</span>, VirtualKeyCode::Numpad0),
-    (<span class="string">&quot;KEY_KP_1&quot;</span>, VirtualKeyCode::Numpad1),
-    (<span class="string">&quot;KEY_KP_2&quot;</span>, VirtualKeyCode::Numpad2),
-    (<span class="string">&quot;KEY_KP_3&quot;</span>, VirtualKeyCode::Numpad3),
-    (<span class="string">&quot;KEY_KP_4&quot;</span>, VirtualKeyCode::Numpad4),
-    (<span class="string">&quot;KEY_KP_5&quot;</span>, VirtualKeyCode::Numpad5),
-    (<span class="string">&quot;KEY_KP_6&quot;</span>, VirtualKeyCode::Numpad6),
-    (<span class="string">&quot;KEY_KP_7&quot;</span>, VirtualKeyCode::Numpad7),
-    (<span class="string">&quot;KEY_KP_8&quot;</span>, VirtualKeyCode::Numpad8),
-    (<span class="string">&quot;KEY_KP_9&quot;</span>, VirtualKeyCode::Numpad9),
-    (<span class="string">&quot;KEY_KP_DECIMAL&quot;</span>, VirtualKeyCode::NumpadDecimal),
-    (<span class="string">&quot;KEY_KP_DIVIDE&quot;</span>, VirtualKeyCode::NumpadDivide),
-    (<span class="string">&quot;KEY_KP_MULTIPLY&quot;</span>, VirtualKeyCode::NumpadMultiply),
-    (<span class="string">&quot;KEY_KP_SUBTRACT&quot;</span>, VirtualKeyCode::NumpadSubtract),
-    (<span class="string">&quot;KEY_KP_ADD&quot;</span>, VirtualKeyCode::NumpadAdd),
-    (<span class="string">&quot;KEY_KP_ENTER&quot;</span>, VirtualKeyCode::NumpadEnter),
-    (<span class="string">&quot;KEY_KP_EQUAL&quot;</span>, VirtualKeyCode::NumpadEquals),
-    (<span class="string">&quot;KEY_LEFT_SHIFT&quot;</span>, VirtualKeyCode::LShift),
-    (<span class="string">&quot;KEY_LEFT_CONTROL&quot;</span>, VirtualKeyCode::LControl),
-    (<span class="string">&quot;KEY_LEFT_ALT&quot;</span>, VirtualKeyCode::LAlt),
-    (<span class="string">&quot;KEY_LEFT_SUPER&quot;</span>, VirtualKeyCode::LWin),
-    (<span class="string">&quot;KEY_RIGHT_SHIFT&quot;</span>, VirtualKeyCode::RShift),
-    (<span class="string">&quot;KEY_RIGHT_CONTROL&quot;</span>, VirtualKeyCode::RControl),
-    (<span class="string">&quot;KEY_RIGHT_ALT&quot;</span>, VirtualKeyCode::RAlt),
-    (<span class="string">&quot;KEY_RIGHT_SUPER&quot;</span>, VirtualKeyCode::RWin),
-    <span class="comment">// (&quot;KEY_MENU&quot;, VirtualKeyCode::MENU),
+    (<span class="string">"KEY_SPACE"</span>, VirtualKeyCode::Space),
+    (<span class="string">"KEY_APOSTROPHE"</span>, VirtualKeyCode::Apostrophe),
+    (<span class="string">"KEY_COMMA"</span>, VirtualKeyCode::Comma),
+    (<span class="string">"KEY_MINUS"</span>, VirtualKeyCode::Minus),
+    (<span class="string">"KEY_PERIOD"</span>, VirtualKeyCode::Period),
+    (<span class="string">"KEY_SLASH"</span>, VirtualKeyCode::Slash),
+    (<span class="string">"KEY_0"</span>, VirtualKeyCode::Key0),
+    (<span class="string">"KEY_1"</span>, VirtualKeyCode::Key1),
+    (<span class="string">"KEY_2"</span>, VirtualKeyCode::Key2),
+    (<span class="string">"KEY_3"</span>, VirtualKeyCode::Key3),
+    (<span class="string">"KEY_4"</span>, VirtualKeyCode::Key4),
+    (<span class="string">"KEY_5"</span>, VirtualKeyCode::Key5),
+    (<span class="string">"KEY_6"</span>, VirtualKeyCode::Key6),
+    (<span class="string">"KEY_7"</span>, VirtualKeyCode::Key7),
+    (<span class="string">"KEY_8"</span>, VirtualKeyCode::Key8),
+    (<span class="string">"KEY_9"</span>, VirtualKeyCode::Key9),
+    (<span class="string">"KEY_SEMICOLON"</span>, VirtualKeyCode::Semicolon),
+    (<span class="string">"KEY_EQUAL"</span>, VirtualKeyCode::Equals),
+    (<span class="string">"KEY_A"</span>, VirtualKeyCode::A),
+    (<span class="string">"KEY_B"</span>, VirtualKeyCode::B),
+    (<span class="string">"KEY_C"</span>, VirtualKeyCode::C),
+    (<span class="string">"KEY_D"</span>, VirtualKeyCode::D),
+    (<span class="string">"KEY_E"</span>, VirtualKeyCode::E),
+    (<span class="string">"KEY_F"</span>, VirtualKeyCode::F),
+    (<span class="string">"KEY_G"</span>, VirtualKeyCode::G),
+    (<span class="string">"KEY_H"</span>, VirtualKeyCode::H),
+    (<span class="string">"KEY_I"</span>, VirtualKeyCode::I),
+    (<span class="string">"KEY_J"</span>, VirtualKeyCode::J),
+    (<span class="string">"KEY_K"</span>, VirtualKeyCode::K),
+    (<span class="string">"KEY_L"</span>, VirtualKeyCode::L),
+    (<span class="string">"KEY_M"</span>, VirtualKeyCode::M),
+    (<span class="string">"KEY_N"</span>, VirtualKeyCode::N),
+    (<span class="string">"KEY_O"</span>, VirtualKeyCode::O),
+    (<span class="string">"KEY_P"</span>, VirtualKeyCode::P),
+    (<span class="string">"KEY_Q"</span>, VirtualKeyCode::Q),
+    (<span class="string">"KEY_R"</span>, VirtualKeyCode::R),
+    (<span class="string">"KEY_S"</span>, VirtualKeyCode::S),
+    (<span class="string">"KEY_T"</span>, VirtualKeyCode::T),
+    (<span class="string">"KEY_U"</span>, VirtualKeyCode::U),
+    (<span class="string">"KEY_V"</span>, VirtualKeyCode::V),
+    (<span class="string">"KEY_W"</span>, VirtualKeyCode::W),
+    (<span class="string">"KEY_X"</span>, VirtualKeyCode::X),
+    (<span class="string">"KEY_Y"</span>, VirtualKeyCode::Y),
+    (<span class="string">"KEY_Z"</span>, VirtualKeyCode::Z),
+    (<span class="string">"KEY_LEFT_BRACKET"</span>, VirtualKeyCode::LBracket),
+    (<span class="string">"KEY_BACKSLASH"</span>, VirtualKeyCode::Backslash),
+    (<span class="string">"KEY_RIGHT_BRACKET"</span>, VirtualKeyCode::RBracket),
+    (<span class="string">"KEY_GRAVE_ACCENT"</span>, VirtualKeyCode::Grave),
+    <span class="comment">// ("KEY_WORLD_1", VirtualKeyCode::WORLD_1),
+    // ("KEY_WORLD_2", VirtualKeyCode::WORLD_2),
+    </span>(<span class="string">"KEY_ESCAPE"</span>, VirtualKeyCode::Escape),
+    (<span class="string">"KEY_ENTER"</span>, VirtualKeyCode::Return),
+    (<span class="string">"KEY_TAB"</span>, VirtualKeyCode::Tab),
+    (<span class="string">"KEY_BACKSPACE"</span>, VirtualKeyCode::Back),
+    (<span class="string">"KEY_INSERT"</span>, VirtualKeyCode::Insert),
+    (<span class="string">"KEY_DELETE"</span>, VirtualKeyCode::Delete),
+    (<span class="string">"KEY_RIGHT"</span>, VirtualKeyCode::Right),
+    (<span class="string">"KEY_LEFT"</span>, VirtualKeyCode::Left),
+    (<span class="string">"KEY_DOWN"</span>, VirtualKeyCode::Down),
+    (<span class="string">"KEY_UP"</span>, VirtualKeyCode::Up),
+    (<span class="string">"KEY_PAGE_UP"</span>, VirtualKeyCode::PageUp),
+    (<span class="string">"KEY_PAGE_DOWN"</span>, VirtualKeyCode::PageDown),
+    (<span class="string">"KEY_HOME"</span>, VirtualKeyCode::Home),
+    (<span class="string">"KEY_END"</span>, VirtualKeyCode::End),
+    (<span class="string">"KEY_CAPS_LOCK"</span>, VirtualKeyCode::Capital),
+    (<span class="string">"KEY_SCROLL_LOCK"</span>, VirtualKeyCode::Scroll),
+    (<span class="string">"KEY_NUM_LOCK"</span>, VirtualKeyCode::Numlock),
+    (<span class="string">"KEY_PRINT_SCREEN"</span>, VirtualKeyCode::Snapshot),
+    (<span class="string">"KEY_PAUSE"</span>, VirtualKeyCode::Pause),
+    (<span class="string">"KEY_F1"</span>, VirtualKeyCode::F1),
+    (<span class="string">"KEY_F2"</span>, VirtualKeyCode::F2),
+    (<span class="string">"KEY_F3"</span>, VirtualKeyCode::F3),
+    (<span class="string">"KEY_F4"</span>, VirtualKeyCode::F4),
+    (<span class="string">"KEY_F5"</span>, VirtualKeyCode::F5),
+    (<span class="string">"KEY_F6"</span>, VirtualKeyCode::F6),
+    (<span class="string">"KEY_F7"</span>, VirtualKeyCode::F7),
+    (<span class="string">"KEY_F8"</span>, VirtualKeyCode::F8),
+    (<span class="string">"KEY_F9"</span>, VirtualKeyCode::F9),
+    (<span class="string">"KEY_F10"</span>, VirtualKeyCode::F10),
+    (<span class="string">"KEY_F11"</span>, VirtualKeyCode::F11),
+    (<span class="string">"KEY_F12"</span>, VirtualKeyCode::F12),
+    (<span class="string">"KEY_F13"</span>, VirtualKeyCode::F13),
+    (<span class="string">"KEY_F14"</span>, VirtualKeyCode::F14),
+    (<span class="string">"KEY_F15"</span>, VirtualKeyCode::F15),
+    (<span class="string">"KEY_F16"</span>, VirtualKeyCode::F16),
+    (<span class="string">"KEY_F17"</span>, VirtualKeyCode::F17),
+    (<span class="string">"KEY_F18"</span>, VirtualKeyCode::F18),
+    (<span class="string">"KEY_F19"</span>, VirtualKeyCode::F19),
+    (<span class="string">"KEY_F20"</span>, VirtualKeyCode::F20),
+    (<span class="string">"KEY_F21"</span>, VirtualKeyCode::F21),
+    (<span class="string">"KEY_F22"</span>, VirtualKeyCode::F22),
+    (<span class="string">"KEY_F23"</span>, VirtualKeyCode::F23),
+    (<span class="string">"KEY_F24"</span>, VirtualKeyCode::F24),
+    <span class="comment">// ("KEY_F25", VirtualKeyCode::F25),
+    </span>(<span class="string">"KEY_KP_0"</span>, VirtualKeyCode::Numpad0),
+    (<span class="string">"KEY_KP_1"</span>, VirtualKeyCode::Numpad1),
+    (<span class="string">"KEY_KP_2"</span>, VirtualKeyCode::Numpad2),
+    (<span class="string">"KEY_KP_3"</span>, VirtualKeyCode::Numpad3),
+    (<span class="string">"KEY_KP_4"</span>, VirtualKeyCode::Numpad4),
+    (<span class="string">"KEY_KP_5"</span>, VirtualKeyCode::Numpad5),
+    (<span class="string">"KEY_KP_6"</span>, VirtualKeyCode::Numpad6),
+    (<span class="string">"KEY_KP_7"</span>, VirtualKeyCode::Numpad7),
+    (<span class="string">"KEY_KP_8"</span>, VirtualKeyCode::Numpad8),
+    (<span class="string">"KEY_KP_9"</span>, VirtualKeyCode::Numpad9),
+    (<span class="string">"KEY_KP_DECIMAL"</span>, VirtualKeyCode::NumpadDecimal),
+    (<span class="string">"KEY_KP_DIVIDE"</span>, VirtualKeyCode::NumpadDivide),
+    (<span class="string">"KEY_KP_MULTIPLY"</span>, VirtualKeyCode::NumpadMultiply),
+    (<span class="string">"KEY_KP_SUBTRACT"</span>, VirtualKeyCode::NumpadSubtract),
+    (<span class="string">"KEY_KP_ADD"</span>, VirtualKeyCode::NumpadAdd),
+    (<span class="string">"KEY_KP_ENTER"</span>, VirtualKeyCode::NumpadEnter),
+    (<span class="string">"KEY_KP_EQUAL"</span>, VirtualKeyCode::NumpadEquals),
+    (<span class="string">"KEY_LEFT_SHIFT"</span>, VirtualKeyCode::LShift),
+    (<span class="string">"KEY_LEFT_CONTROL"</span>, VirtualKeyCode::LControl),
+    (<span class="string">"KEY_LEFT_ALT"</span>, VirtualKeyCode::LAlt),
+    (<span class="string">"KEY_LEFT_SUPER"</span>, VirtualKeyCode::LWin),
+    (<span class="string">"KEY_RIGHT_SHIFT"</span>, VirtualKeyCode::RShift),
+    (<span class="string">"KEY_RIGHT_CONTROL"</span>, VirtualKeyCode::RControl),
+    (<span class="string">"KEY_RIGHT_ALT"</span>, VirtualKeyCode::RAlt),
+    (<span class="string">"KEY_RIGHT_SUPER"</span>, VirtualKeyCode::RWin),
+    <span class="comment">// ("KEY_MENU", VirtualKeyCode::MENU),
 </span>];
 </code></pre></div></section></main></body></html>

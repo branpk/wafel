@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_memory/src/dll_memory.rs`."><title>dll_memory.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-cb6f1f67f1bcd037.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_memory" data-themes="" data-resource-suffix="" data-rustdoc-version="1.73.0 (cc66ad468 2023-10-03)" data-channel="1.73.0" data-search-js="search-6dfdfced5eff6596.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-1596385f77d47ef2.css" data-theme-dark-css="dark-0a43001d3fc2282c.css" data-theme-ayu-css="ayu-fd19013d6ce078bf.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-1596385f77d47ef2.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-0a43001d3fc2282c.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../wafel_memory/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_memory/src/dll_memory.rs`."><title>dll_memory.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_memory" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -701,7 +702,7 @@
 }
 
 <span class="attr">#[allow(clippy::mutex_atomic)]
-</span><span class="kw">fn </span>memory_id_mutex() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Mutex&lt;usize&gt; {
+</span><span class="kw">fn </span>memory_id_mutex() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Mutex&lt;usize&gt; {
     <span class="kw">static </span>NEXT_MEMORY_ID: OnceCell&lt;Mutex&lt;usize&gt;&gt; = OnceCell::new();
     NEXT_MEMORY_ID.get_or_init(|| Mutex::new(<span class="number">1</span>))
 }
@@ -724,7 +725,7 @@
     <span class="doccomment">/// Info on the segments that are included in backup slots (.data and .bss).
     </span>data_segments: Vec&lt;DllSegment&gt;,
     next_buffer_id: AtomicUsize,
-    update_function: <span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn</span>(),
+    update_function: <span class="kw">unsafe extern </span><span class="string">"C" </span><span class="kw">fn</span>(),
 }
 
 <span class="kw">impl </span>DllGameMemory {
@@ -759,10 +760,10 @@
 
         <span class="kw">let </span>library = UniqueLibrary::open(<span class="kw-2">&amp;</span>dll_path)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>init_function: <span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn</span>() = library
+        <span class="kw">let </span>init_function: <span class="kw">unsafe extern </span><span class="string">"C" </span><span class="kw">fn</span>() = library
             .symbol(init_function_name)
             .map_err(|<span class="kw">_</span>| MemoryInitError::UndefinedSymbol(init_function_name.to_string()))<span class="question-mark">?</span>;
-        <span class="kw">let </span>update_function: <span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn</span>() = library
+        <span class="kw">let </span>update_function: <span class="kw">unsafe extern </span><span class="string">"C" </span><span class="kw">fn</span>() = library
             .symbol(update_function_name)
             .map_err(|<span class="kw">_</span>| MemoryInitError::UndefinedSymbol(update_function_name.to_string()))<span class="question-mark">?</span>;
 
@@ -800,7 +801,7 @@
         <span class="macro">assert_eq!</span>(
             slot.<span class="number">0</span>.memory_id(),
             <span class="self">self</span>.id,
-            <span class="string">&quot;slot is not owned by this dll memory&quot;
+            <span class="string">"slot is not owned by this dll memory"
         </span>)
     }
 
@@ -808,7 +809,7 @@
         <span class="self">self</span>.validate_slot(slot);
         <span class="macro">assert!</span>(
             slot.is_base_slot(),
-            <span class="string">&quot;operation requires the base slot, but a buffer slot was used&quot;
+            <span class="string">"operation requires the base slot, but a buffer slot was used"
         </span>);
     }
 
@@ -820,7 +821,7 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), MemoryError&gt; {
         <span class="kw">let </span>data_size = mem::size_of::&lt;T&gt;()
             .checked_mul(len)
-            .expect(<span class="string">&quot;buffer is too large&quot;</span>);
+            .expect(<span class="string">"buffer is too large"</span>);
         <span class="kw">if </span>offset + data_size &gt; range_size {
             <span class="prelude-val">Err</span>(InvalidAddress)
         } <span class="kw">else </span>{
@@ -916,7 +917,7 @@
         }
     }
 
-    <span class="doccomment">/// Translate the address to a pointer, returning an error if it isn&#39;t a static address.
+    <span class="doccomment">/// Translate the address to a pointer, returning an error if it isn't a static address.
     ///
     /// Performs validation and bounds checking, so the result should be a valid pointer.
     /// Dereferencing should be safe provided junk data is acceptable in T.
@@ -974,7 +975,7 @@
     ///
     /// # Safety
     ///
-    /// See [dlopen::Library::symbol]. Also, if the symbol is used to modify the base slot&#39;s
+    /// See [dlopen::Library::symbol]. Also, if the symbol is used to modify the base slot's
     /// memory (e.g. calling a function), base_slot should not be used until this is complete.
     </span><span class="kw">pub unsafe fn </span>symbol_pointer&lt;T&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -1000,19 +1001,19 @@
 <span class="kw">impl </span>GameMemory <span class="kw">for </span>DllGameMemory {
     <span class="kw">type </span>Slot = DllSlot;
 
-    <span class="kw">type </span>StaticView&lt;<span class="lifetime">&#39;a</span>&gt; = DllStaticMemoryView&lt;<span class="lifetime">&#39;a</span>&gt;;
-    <span class="kw">type </span>SlotView&lt;<span class="lifetime">&#39;a</span>&gt; = DllSlotMemoryView&lt;<span class="lifetime">&#39;a</span>&gt;;
-    <span class="kw">type </span>SlotViewMut&lt;<span class="lifetime">&#39;a</span>&gt; = DllSlotMemoryViewMut&lt;<span class="lifetime">&#39;a</span>&gt;;
+    <span class="kw">type </span>StaticView&lt;<span class="lifetime">'a</span>&gt; = DllStaticMemoryView&lt;<span class="lifetime">'a</span>&gt;;
+    <span class="kw">type </span>SlotView&lt;<span class="lifetime">'a</span>&gt; = DllSlotMemoryView&lt;<span class="lifetime">'a</span>&gt;;
+    <span class="kw">type </span>SlotViewMut&lt;<span class="lifetime">'a</span>&gt; = DllSlotMemoryViewMut&lt;<span class="lifetime">'a</span>&gt;;
 
-    <span class="kw">fn </span>static_view(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::StaticView&lt;<span class="lifetime">&#39;_</span>&gt; {
+    <span class="kw">fn </span>static_view(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::StaticView&lt;<span class="lifetime">'_</span>&gt; {
         DllStaticMemoryView { memory: <span class="self">self </span>}
     }
 
-    <span class="kw">fn </span>with_slot&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, slot: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">Self</span>::Slot) -&gt; <span class="self">Self</span>::SlotView&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="kw">fn </span>with_slot&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, slot: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">Self</span>::Slot) -&gt; <span class="self">Self</span>::SlotView&lt;<span class="lifetime">'a</span>&gt; {
         DllSlotMemoryView { memory: <span class="self">self</span>, slot }
     }
 
-    <span class="kw">fn </span>with_slot_mut&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, slot: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">Self</span>::Slot) -&gt; <span class="self">Self</span>::SlotViewMut&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="kw">fn </span>with_slot_mut&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, slot: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="self">Self</span>::Slot) -&gt; <span class="self">Self</span>::SlotViewMut&lt;<span class="lifetime">'a</span>&gt; {
         DllSlotMemoryViewMut { memory: <span class="self">self</span>, slot }
     }
 
@@ -1051,7 +1052,7 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>dll_base_pointer(
     arbitrary_symbol_pointer: <span class="kw-2">*const </span>(),
 ) -&gt; <span class="prelude-ty">Result</span>&lt;BasePointer, dlopen::Error&gt; {
-    <span class="attr">#[cfg(target_os = <span class="string">&quot;windows&quot;</span>)]
+    <span class="attr">#[cfg(target_os = <span class="string">"windows"</span>)]
     </span>{
         <span class="kw">use </span>winapi::um::{dbghelp::SymCleanup, processthreadsapi::GetCurrentProcess};
 
@@ -1064,7 +1065,7 @@
     <span class="comment">// dlopen API requires looking up a symbol to get the base address
     </span><span class="kw">let </span>addr_info = AddressInfoObtainer::new().obtain(arbitrary_symbol_pointer)<span class="question-mark">?</span>;
 
-    <span class="comment">// This cast is UB, but there&#39;s not really a way to avoid it when doing this kind of
+    <span class="comment">// This cast is UB, but there's not really a way to avoid it when doing this kind of
     // thing with a DLL
     </span><span class="prelude-val">Ok</span>(BasePointer(addr_info.dll_base_addr <span class="kw">as </span><span class="kw-2">*mut </span>u8))
 }
@@ -1077,11 +1078,11 @@
 ///
 /// See [GameMemory::static_view].
 </span><span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>DllStaticMemoryView&lt;<span class="lifetime">&#39;a</span>&gt; {
-    memory: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>DllGameMemory,
+</span><span class="kw">pub struct </span>DllStaticMemoryView&lt;<span class="lifetime">'a</span>&gt; {
+    memory: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>DllGameMemory,
 }
 
-<span class="kw">impl </span>MemoryRead <span class="kw">for </span>DllStaticMemoryView&lt;<span class="lifetime">&#39;_</span>&gt; {
+<span class="kw">impl </span>MemoryRead <span class="kw">for </span>DllStaticMemoryView&lt;<span class="lifetime">'_</span>&gt; {
     <span class="kw">fn </span>read_u8s(<span class="kw-2">&amp;</span><span class="self">self</span>, addr: Address, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), MemoryError&gt; {
         <span class="kw">let </span>ptr = <span class="self">self
             </span>.memory
@@ -1139,12 +1140,12 @@
 ///
 /// See [GameMemory::with_slot].
 </span><span class="attr">#[derive(Debug, Clone, Copy)]
-</span><span class="kw">pub struct </span>DllSlotMemoryView&lt;<span class="lifetime">&#39;a</span>&gt; {
-    memory: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>DllGameMemory,
-    slot: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>DllSlot,
+</span><span class="kw">pub struct </span>DllSlotMemoryView&lt;<span class="lifetime">'a</span>&gt; {
+    memory: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>DllGameMemory,
+    slot: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>DllSlot,
 }
 
-<span class="kw">impl </span>MemoryRead <span class="kw">for </span>DllSlotMemoryView&lt;<span class="lifetime">&#39;_</span>&gt; {
+<span class="kw">impl </span>MemoryRead <span class="kw">for </span>DllSlotMemoryView&lt;<span class="lifetime">'_</span>&gt; {
     <span class="kw">fn </span>read_u8s(<span class="kw-2">&amp;</span><span class="self">self</span>, addr: Address, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), MemoryError&gt; {
         <span class="kw">let </span>ptr = <span class="self">self
             </span>.memory
@@ -1202,12 +1203,12 @@
 ///
 /// See [GameMemory::with_slot_mut].
 </span><span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>DllSlotMemoryViewMut&lt;<span class="lifetime">&#39;a</span>&gt; {
-    memory: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>DllGameMemory,
-    slot: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>DllSlot,
+</span><span class="kw">pub struct </span>DllSlotMemoryViewMut&lt;<span class="lifetime">'a</span>&gt; {
+    memory: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>DllGameMemory,
+    slot: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>DllSlot,
 }
 
-<span class="kw">impl </span>MemoryRead <span class="kw">for </span>DllSlotMemoryViewMut&lt;<span class="lifetime">&#39;_</span>&gt; {
+<span class="kw">impl </span>MemoryRead <span class="kw">for </span>DllSlotMemoryViewMut&lt;<span class="lifetime">'_</span>&gt; {
     <span class="kw">fn </span>read_u8s(<span class="kw-2">&amp;</span><span class="self">self</span>, addr: Address, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), MemoryError&gt; {
         <span class="kw">let </span>ptr = <span class="self">self
             </span>.memory
@@ -1260,7 +1261,7 @@
     }
 }
 
-<span class="kw">impl </span>MemoryWrite <span class="kw">for </span>DllSlotMemoryViewMut&lt;<span class="lifetime">&#39;_</span>&gt; {
+<span class="kw">impl </span>MemoryWrite <span class="kw">for </span>DllSlotMemoryViewMut&lt;<span class="lifetime">'_</span>&gt; {
     <span class="kw">fn </span>write_u8s(<span class="kw-2">&amp;mut </span><span class="self">self</span>, addr: Address, buf: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), MemoryError&gt; {
         <span class="kw">let </span>ptr = <span class="self">self
             </span>.memory

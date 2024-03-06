@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `sm64_var_dump/src/main.rs`."><title>main.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-cb6f1f67f1bcd037.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="sm64_var_dump" data-themes="" data-resource-suffix="" data-rustdoc-version="1.73.0 (cc66ad468 2023-10-03)" data-channel="1.73.0" data-search-js="search-6dfdfced5eff6596.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-1596385f77d47ef2.css" data-theme-dark-css="dark-0a43001d3fc2282c.css" data-theme-ayu-css="ayu-fd19013d6ce078bf.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-1596385f77d47ef2.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-0a43001d3fc2282c.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../sm64_var_dump/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `sm64_var_dump/src/main.rs`."><title>main.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="sm64_var_dump" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -303,116 +304,116 @@
 <span class="comment">// TODO: None, arrays, structs
 
 </span><span class="kw">pub fn </span>main() {
-    <span class="kw">let </span>matches = App::new(<span class="string">&quot;sm64_var_dump&quot;</span>)
-        .about(<span class="string">&quot;Reads SM64 variables in an emulator or libsm64&quot;</span>)
+    <span class="kw">let </span>matches = App::new(<span class="string">"sm64_var_dump"</span>)
+        .about(<span class="string">"Reads SM64 variables in an emulator or libsm64"</span>)
         .after_help(
-            <span class="string">&quot;
+            <span class="string">"
 To use libsm64: --libsm64 &lt;FILE&gt; --m64 &lt;FILE&gt;
 To attach to an emulator: --pid &lt;PID&gt; --base &lt;ADDR&gt; --version &lt;VERSION&gt;
-&quot;
+"
             </span>.trim(),
         )
         <span class="comment">// Game options
         </span>.arg(
-            Arg::with_name(<span class="string">&quot;libsm64&quot;</span>)
-                .long(<span class="string">&quot;libsm64&quot;</span>)
-                .value_name(<span class="string">&quot;FILE&quot;</span>)
-                .help(<span class="string">&quot;path to sm64_xx.dll (NOT the .locked file)&quot;</span>)
-                .requires(<span class="string">&quot;m64&quot;</span>),
+            Arg::with_name(<span class="string">"libsm64"</span>)
+                .long(<span class="string">"libsm64"</span>)
+                .value_name(<span class="string">"FILE"</span>)
+                .help(<span class="string">"path to sm64_xx.dll (NOT the .locked file)"</span>)
+                .requires(<span class="string">"m64"</span>),
         )
         .arg(
-            Arg::with_name(<span class="string">&quot;m64&quot;</span>)
-                .long(<span class="string">&quot;m64&quot;</span>)
-                .value_name(<span class="string">&quot;FILE&quot;</span>)
-                .help(<span class="string">&quot;path to .m64 TAS to replay (only for --libsm64)&quot;</span>),
+            Arg::with_name(<span class="string">"m64"</span>)
+                .long(<span class="string">"m64"</span>)
+                .value_name(<span class="string">"FILE"</span>)
+                .help(<span class="string">"path to .m64 TAS to replay (only for --libsm64)"</span>),
         )
         .arg(
-            Arg::with_name(<span class="string">&quot;pid&quot;</span>)
-                .long(<span class="string">&quot;pid&quot;</span>)
-                .value_name(<span class="string">&quot;PID&quot;</span>)
-                .help(<span class="string">&quot;PID of emulator process to attach to&quot;</span>)
-                .requires_all(<span class="kw-2">&amp;</span>[<span class="string">&quot;base&quot;</span>, <span class="string">&quot;version&quot;</span>]),
+            Arg::with_name(<span class="string">"pid"</span>)
+                .long(<span class="string">"pid"</span>)
+                .value_name(<span class="string">"PID"</span>)
+                .help(<span class="string">"PID of emulator process to attach to"</span>)
+                .requires_all(<span class="kw-2">&amp;</span>[<span class="string">"base"</span>, <span class="string">"version"</span>]),
         )
         .arg(
-            Arg::with_name(<span class="string">&quot;base&quot;</span>)
-                .long(<span class="string">&quot;base&quot;</span>)
-                .value_name(<span class="string">&quot;ADDR&quot;</span>)
-                .help(<span class="string">&quot;base address (in hex) of the emulator process&quot;</span>),
+            Arg::with_name(<span class="string">"base"</span>)
+                .long(<span class="string">"base"</span>)
+                .value_name(<span class="string">"ADDR"</span>)
+                .help(<span class="string">"base address (in hex) of the emulator process"</span>),
         )
         .arg(
-            Arg::with_name(<span class="string">&quot;version&quot;</span>)
-                .long(<span class="string">&quot;version&quot;</span>)
-                .value_name(<span class="string">&quot;VERSION&quot;</span>)
-                .help(<span class="string">&quot;SM64 version to use (us/jp/eu/sh). Only needed for emulator attachment&quot;</span>),
+            Arg::with_name(<span class="string">"version"</span>)
+                .long(<span class="string">"version"</span>)
+                .value_name(<span class="string">"VERSION"</span>)
+                .help(<span class="string">"SM64 version to use (us/jp/eu/sh). Only needed for emulator attachment"</span>),
         )
         .arg(
-            Arg::with_name(<span class="string">&quot;no-watch&quot;</span>)
-                .long(<span class="string">&quot;no-watch&quot;</span>)
-                .help(<span class="string">&quot;Print the values once rather than watching emulation&quot;</span>),
+            Arg::with_name(<span class="string">"no-watch"</span>)
+                .long(<span class="string">"no-watch"</span>)
+                .help(<span class="string">"Print the values once rather than watching emulation"</span>),
         )
         .group(
-            ArgGroup::with_name(<span class="string">&quot;game-option&quot;</span>)
-                .args(<span class="kw-2">&amp;</span>[<span class="string">&quot;libsm64&quot;</span>, <span class="string">&quot;pid&quot;</span>])
+            ArgGroup::with_name(<span class="string">"game-option"</span>)
+                .args(<span class="kw-2">&amp;</span>[<span class="string">"libsm64"</span>, <span class="string">"pid"</span>])
                 .required(<span class="bool-val">true</span>)
                 .multiple(<span class="bool-val">false</span>),
         )
         <span class="comment">// Variable options
         </span>.arg(
-            Arg::with_name(<span class="string">&quot;vars&quot;</span>)
-                .long(<span class="string">&quot;vars&quot;</span>)
-                .alias(<span class="string">&quot;var&quot;</span>)
-                .value_name(<span class="string">&quot;VARS&quot;</span>)
-                .help(<span class="string">&quot;variables to dump in wafel path format&quot;</span>)
+            Arg::with_name(<span class="string">"vars"</span>)
+                .long(<span class="string">"vars"</span>)
+                .alias(<span class="string">"var"</span>)
+                .value_name(<span class="string">"VARS"</span>)
+                .help(<span class="string">"variables to dump in wafel path format"</span>)
                 .min_values(<span class="number">1</span>),
         )
         .arg(
-            Arg::with_name(<span class="string">&quot;var_file&quot;</span>)
-                .long(<span class="string">&quot;var_file&quot;</span>)
-                .alias(<span class="string">&quot;vars_file&quot;</span>)
-                .value_name(<span class="string">&quot;FILE&quot;</span>)
-                .help(<span class="string">&quot;path to file containing one variable per line&quot;</span>),
+            Arg::with_name(<span class="string">"var_file"</span>)
+                .long(<span class="string">"var_file"</span>)
+                .alias(<span class="string">"vars_file"</span>)
+                .value_name(<span class="string">"FILE"</span>)
+                .help(<span class="string">"path to file containing one variable per line"</span>),
         )
         .group(
-            ArgGroup::with_name(<span class="string">&quot;var-options&quot;</span>)
-                .args(<span class="kw-2">&amp;</span>[<span class="string">&quot;vars&quot;</span>, <span class="string">&quot;var_file&quot;</span>])
+            ArgGroup::with_name(<span class="string">"var-options"</span>)
+                .args(<span class="kw-2">&amp;</span>[<span class="string">"vars"</span>, <span class="string">"var_file"</span>])
                 .required(<span class="bool-val">true</span>)
                 .multiple(<span class="bool-val">true</span>),
         )
         .arg(
-            Arg::with_name(<span class="string">&quot;min_frame&quot;</span>)
-                .long(<span class="string">&quot;min_frame&quot;</span>)
-                .value_name(<span class="string">&quot;FRAME&quot;</span>)
-                .help(<span class="string">&quot;min value of global timer to record&quot;</span>),
+            Arg::with_name(<span class="string">"min_frame"</span>)
+                .long(<span class="string">"min_frame"</span>)
+                .value_name(<span class="string">"FRAME"</span>)
+                .help(<span class="string">"min value of global timer to record"</span>),
         )
         .arg(
-            Arg::with_name(<span class="string">&quot;max_frame&quot;</span>)
-                .long(<span class="string">&quot;max_frame&quot;</span>)
-                .value_name(<span class="string">&quot;FRAME&quot;</span>)
-                .help(<span class="string">&quot;max value of global timer to record&quot;</span>),
+            Arg::with_name(<span class="string">"max_frame"</span>)
+                .long(<span class="string">"max_frame"</span>)
+                .value_name(<span class="string">"FRAME"</span>)
+                .help(<span class="string">"max value of global timer to record"</span>),
         )
         <span class="comment">// Output options
         </span>.arg(
-            Arg::with_name(<span class="string">&quot;output&quot;</span>)
-                .short(<span class="string">&quot;o&quot;</span>)
-                .long(<span class="string">&quot;output&quot;</span>)
-                .value_name(<span class="string">&quot;FILE&quot;</span>)
-                .help(<span class="string">&quot;path to the output CSV file&quot;</span>),
+            Arg::with_name(<span class="string">"output"</span>)
+                .short(<span class="string">"o"</span>)
+                .long(<span class="string">"output"</span>)
+                .value_name(<span class="string">"FILE"</span>)
+                .help(<span class="string">"path to the output CSV file"</span>),
         )
         .arg(
-            Arg::with_name(<span class="string">&quot;stdout&quot;</span>)
-                .long(<span class="string">&quot;stdout&quot;</span>)
-                .help(<span class="string">&quot;print the CSV text to stdout&quot;</span>),
+            Arg::with_name(<span class="string">"stdout"</span>)
+                .long(<span class="string">"stdout"</span>)
+                .help(<span class="string">"print the CSV text to stdout"</span>),
         )
         .group(
-            ArgGroup::with_name(<span class="string">&quot;output-option&quot;</span>)
-                .args(<span class="kw-2">&amp;</span>[<span class="string">&quot;output&quot;</span>, <span class="string">&quot;stdout&quot;</span>])
+            ArgGroup::with_name(<span class="string">"output-option"</span>)
+                .args(<span class="kw-2">&amp;</span>[<span class="string">"output"</span>, <span class="string">"stdout"</span>])
                 .required(<span class="bool-val">true</span>)
                 .multiple(<span class="bool-val">true</span>),
         )
         .get_matches();
 
     run(<span class="kw-2">&amp;</span>matches).unwrap_or_else(|error| {
-        <span class="macro">eprintln!</span>(<span class="string">&quot;Error: {}&quot;</span>, error);
+        <span class="macro">eprintln!</span>(<span class="string">"Error: {}"</span>, error);
         process::exit(<span class="number">1</span>);
     });
 }
@@ -421,38 +422,38 @@ To attach to an emulator: --pid &lt;PID&gt; --base &lt;ADDR&gt; --version &lt;VE
     <span class="kw">let </span><span class="kw-2">mut </span>streams = open_streams(matches)<span class="question-mark">?</span>;
     <span class="kw">let </span>vars = get_vars(matches)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>min_global_timer = <span class="kw">match </span>matches.value_of(<span class="string">&quot;min_frame&quot;</span>) {
+    <span class="kw">let </span>min_global_timer = <span class="kw">match </span>matches.value_of(<span class="string">"min_frame"</span>) {
         <span class="prelude-val">Some</span>(arg) =&gt; arg.parse::&lt;u32&gt;()<span class="question-mark">?</span>,
         <span class="prelude-val">None </span>=&gt; <span class="number">0</span>,
     };
-    <span class="kw">let </span>max_global_timer = <span class="kw">match </span>matches.value_of(<span class="string">&quot;max_frame&quot;</span>) {
+    <span class="kw">let </span>max_global_timer = <span class="kw">match </span>matches.value_of(<span class="string">"max_frame"</span>) {
         <span class="prelude-val">Some</span>(arg) =&gt; arg.parse::&lt;u32&gt;()<span class="question-mark">?</span>,
         <span class="prelude-val">None </span>=&gt; u32::MAX,
     };
 
     print_headers(<span class="kw-2">&amp;mut </span>streams, <span class="kw-2">&amp;</span>vars)<span class="question-mark">?</span>;
 
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(libsm64_path) = matches.value_of(<span class="string">&quot;libsm64&quot;</span>) {
-        <span class="macro">eprintln!</span>(<span class="string">&quot;Loading {}&quot;</span>, libsm64_path);
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(libsm64_path) = matches.value_of(<span class="string">"libsm64"</span>) {
+        <span class="macro">eprintln!</span>(<span class="string">"Loading {}"</span>, libsm64_path);
         <span class="kw">let </span><span class="kw-2">mut </span>game = <span class="kw">unsafe </span>{ Game::try_new(libsm64_path)<span class="question-mark">? </span>};
 
-        <span class="kw">let </span>m64_path = matches.value_of(<span class="string">&quot;m64&quot;</span>).unwrap();
+        <span class="kw">let </span>m64_path = matches.value_of(<span class="string">"m64"</span>).unwrap();
         <span class="kw">let </span>(<span class="kw">_</span>, inputs) = try_load_m64(m64_path)<span class="question-mark">?</span>;
 
-        <span class="macro">eprintln!</span>(<span class="string">&quot;Running {} ({} frames)&quot;</span>, m64_path, inputs.len());
+        <span class="macro">eprintln!</span>(<span class="string">"Running {} ({} frames)"</span>, m64_path, inputs.len());
 
-        <span class="kw">let </span>global_timer = game.try_read(<span class="string">&quot;gGlobalTimer&quot;</span>)<span class="question-mark">?</span>.as_int() <span class="kw">as </span>u32;
+        <span class="kw">let </span>global_timer = game.try_read(<span class="string">"gGlobalTimer"</span>)<span class="question-mark">?</span>.as_int() <span class="kw">as </span>u32;
         <span class="kw">if </span>(min_global_timer..=max_global_timer).contains(<span class="kw-2">&amp;</span>global_timer) {
             print_vars(<span class="kw-2">&amp;mut </span>streams, <span class="kw-2">&amp;</span>vars, |var| game.try_read(var))<span class="question-mark">?</span>;
         }
 
         <span class="kw">for </span>input <span class="kw">in </span><span class="kw-2">&amp;</span>inputs {
-            game.try_write(<span class="string">&quot;gControllerPads[0].button&quot;</span>, input.buttons.into())<span class="question-mark">?</span>;
-            game.try_write(<span class="string">&quot;gControllerPads[0].stick_x&quot;</span>, input.stick_x.into())<span class="question-mark">?</span>;
-            game.try_write(<span class="string">&quot;gControllerPads[0].stick_y&quot;</span>, input.stick_y.into())<span class="question-mark">?</span>;
+            game.try_write(<span class="string">"gControllerPads[0].button"</span>, input.buttons.into())<span class="question-mark">?</span>;
+            game.try_write(<span class="string">"gControllerPads[0].stick_x"</span>, input.stick_x.into())<span class="question-mark">?</span>;
+            game.try_write(<span class="string">"gControllerPads[0].stick_y"</span>, input.stick_y.into())<span class="question-mark">?</span>;
             game.advance();
 
-            <span class="kw">let </span>global_timer = game.try_read(<span class="string">&quot;gGlobalTimer&quot;</span>)<span class="question-mark">?</span>.as_int() <span class="kw">as </span>u32;
+            <span class="kw">let </span>global_timer = game.try_read(<span class="string">"gGlobalTimer"</span>)<span class="question-mark">?</span>.as_int() <span class="kw">as </span>u32;
             <span class="kw">if </span>global_timer &gt; max_global_timer {
                 <span class="kw">break</span>;
             } <span class="kw">else if </span>global_timer &gt;= min_global_timer {
@@ -460,30 +461,30 @@ To attach to an emulator: --pid &lt;PID&gt; --base &lt;ADDR&gt; --version &lt;VE
             }
         }
 
-        <span class="macro">eprintln!</span>(<span class="string">&quot;Finished&quot;</span>);
+        <span class="macro">eprintln!</span>(<span class="string">"Finished"</span>);
     } <span class="kw">else </span>{
-        <span class="kw">let </span>pid = matches.value_of(<span class="string">&quot;pid&quot;</span>).unwrap().parse::&lt;u32&gt;()<span class="question-mark">?</span>;
+        <span class="kw">let </span>pid = matches.value_of(<span class="string">"pid"</span>).unwrap().parse::&lt;u32&gt;()<span class="question-mark">?</span>;
         <span class="kw">let </span>base_address =
-            usize::from_str_radix(<span class="kw-2">&amp;</span>matches.value_of(<span class="string">&quot;base&quot;</span>).unwrap().replace(<span class="string">&quot;0x&quot;</span>, <span class="string">&quot;&quot;</span>), <span class="number">16</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>version = matches.value_of(<span class="string">&quot;version&quot;</span>).unwrap();
+            usize::from_str_radix(<span class="kw-2">&amp;</span>matches.value_of(<span class="string">"base"</span>).unwrap().replace(<span class="string">"0x"</span>, <span class="string">""</span>), <span class="number">16</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>version = matches.value_of(<span class="string">"version"</span>).unwrap();
 
         <span class="kw">let </span>sm64_version = <span class="kw">match </span>version.to_lowercase().as_str() {
-            <span class="string">&quot;jp&quot; </span>| <span class="string">&quot;j&quot; </span>=&gt; SM64Version::JP,
-            <span class="string">&quot;us&quot; </span>| <span class="string">&quot;u&quot; </span>=&gt; SM64Version::US,
-            <span class="string">&quot;eu&quot; </span>| <span class="string">&quot;pal&quot; </span>=&gt; SM64Version::EU,
-            <span class="string">&quot;sh&quot; </span>=&gt; SM64Version::SH,
-            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;invalid SM64 version: {}&quot;</span>, version).into()),
+            <span class="string">"jp" </span>| <span class="string">"j" </span>=&gt; SM64Version::JP,
+            <span class="string">"us" </span>| <span class="string">"u" </span>=&gt; SM64Version::US,
+            <span class="string">"eu" </span>| <span class="string">"pal" </span>=&gt; SM64Version::EU,
+            <span class="string">"sh" </span>=&gt; SM64Version::SH,
+            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"invalid SM64 version: {}"</span>, version).into()),
         };
 
         <span class="kw">let </span>emu = Emu::attach(pid, base_address, sm64_version);
 
-        <span class="kw">if </span>matches.is_present(<span class="string">&quot;no-watch&quot;</span>) {
+        <span class="kw">if </span>matches.is_present(<span class="string">"no-watch"</span>) {
             print_vars(<span class="kw-2">&amp;mut </span>streams, <span class="kw-2">&amp;</span>vars, |var| emu.try_read(var))<span class="question-mark">?</span>;
         } <span class="kw">else </span>{
-            <span class="macro">eprintln!</span>(<span class="string">&quot;Watching emulation. Press Ctrl-C to stop&quot;</span>);
+            <span class="macro">eprintln!</span>(<span class="string">"Watching emulation. Press Ctrl-C to stop"</span>);
             <span class="kw">let </span><span class="kw-2">mut </span>prev_global_timer = <span class="prelude-val">None</span>;
             <span class="kw">loop </span>{
-                <span class="kw">let </span>current_global_timer = emu.try_read(<span class="string">&quot;gGlobalTimer&quot;</span>)<span class="question-mark">?</span>.as_int() <span class="kw">as </span>u32;
+                <span class="kw">let </span>current_global_timer = emu.try_read(<span class="string">"gGlobalTimer"</span>)<span class="question-mark">?</span>.as_int() <span class="kw">as </span>u32;
                 <span class="kw">if </span><span class="prelude-val">Some</span>(current_global_timer) != prev_global_timer {
                     prev_global_timer = <span class="prelude-val">Some</span>(current_global_timer);
 
@@ -500,12 +501,12 @@ To attach to an emulator: --pid &lt;PID&gt; --base &lt;ADDR&gt; --version &lt;VE
 
 <span class="kw">fn </span>open_streams(matches: <span class="kw-2">&amp;</span>ArgMatches) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Box&lt;<span class="kw">dyn </span>Write&gt;&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>streams: Vec&lt;Box&lt;<span class="kw">dyn </span>Write&gt;&gt; = Vec::new();
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(filename) = matches.value_of(<span class="string">&quot;output&quot;</span>) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(filename) = matches.value_of(<span class="string">"output"</span>) {
         <span class="kw">let </span>file = fs::File::create(filename)<span class="question-mark">?</span>;
         <span class="kw">let </span>writer = BufWriter::new(file);
         streams.push(Box::new(writer));
     }
-    <span class="kw">if </span>matches.is_present(<span class="string">&quot;stdout&quot;</span>) {
+    <span class="kw">if </span>matches.is_present(<span class="string">"stdout"</span>) {
         streams.push(Box::new(stdout()))
     }
     <span class="prelude-val">Ok</span>(streams)
@@ -513,12 +514,12 @@ To attach to an emulator: --pid &lt;PID&gt; --base &lt;ADDR&gt; --version &lt;VE
 
 <span class="kw">fn </span>get_vars(matches: <span class="kw-2">&amp;</span>ArgMatches) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;String&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>var_names = Vec::new();
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(vars) = matches.values_of(<span class="string">&quot;vars&quot;</span>) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(vars) = matches.values_of(<span class="string">"vars"</span>) {
         <span class="kw">for </span>var <span class="kw">in </span>vars {
             var_names.push(var.to_string());
         }
     }
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(var_file) = matches.value_of(<span class="string">&quot;var_file&quot;</span>) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(var_file) = matches.value_of(<span class="string">"var_file"</span>) {
         <span class="kw">let </span>file = fs::File::open(var_file)<span class="question-mark">?</span>;
         <span class="kw">let </span>reader = BufReader::new(file);
         <span class="kw">for </span>line <span class="kw">in </span>reader.lines() {
@@ -533,7 +534,7 @@ To attach to an emulator: --pid &lt;PID&gt; --base &lt;ADDR&gt; --version &lt;VE
 
 <span class="kw">fn </span>print_headers(streams: <span class="kw-2">&amp;mut </span>[Box&lt;<span class="kw">dyn </span>Write&gt;], vars: <span class="kw-2">&amp;</span>[String]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">for </span>f <span class="kw">in </span>streams {
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;{}&quot;</span>, format_csv_line(vars))<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"{}"</span>, format_csv_line(vars))<span class="question-mark">?</span>;
         f.flush()<span class="question-mark">?</span>;
     }
     <span class="prelude-val">Ok</span>(())
@@ -555,7 +556,7 @@ To attach to an emulator: --pid &lt;PID&gt; --base &lt;ADDR&gt; --version &lt;VE
     }
 
     <span class="kw">for </span>f <span class="kw">in </span>streams {
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;{}&quot;</span>, format_csv_line(<span class="kw-2">&amp;</span>values))<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"{}"</span>, format_csv_line(<span class="kw-2">&amp;</span>values))<span class="question-mark">?</span>;
         f.flush()<span class="question-mark">?</span>;
     }
 
@@ -567,13 +568,13 @@ To attach to an emulator: --pid &lt;PID&gt; --base &lt;ADDR&gt; --version &lt;VE
         .iter()
         .map(|s| escape_csv(s))
         .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-        .join(<span class="string">&quot;,&quot;</span>)
+        .join(<span class="string">","</span>)
 }
 
 <span class="kw">fn </span>escape_csv(s: <span class="kw-2">&amp;</span>str) -&gt; String {
-    <span class="kw">let </span>s = s.replace(<span class="string">&#39;&quot;&#39;</span>, <span class="string">&quot;\&quot;\&quot;&quot;</span>);
-    <span class="kw">if </span>s.contains([<span class="string">&#39;,&#39;</span>, <span class="string">&#39;&quot;&#39;</span>, <span class="string">&#39;\n&#39;</span>, <span class="string">&#39;\r&#39;</span>]) {
-        <span class="macro">format!</span>(<span class="string">&quot;\&quot;{}\&quot;&quot;</span>, s)
+    <span class="kw">let </span>s = s.replace(<span class="string">'"'</span>, <span class="string">"\"\""</span>);
+    <span class="kw">if </span>s.contains([<span class="string">','</span>, <span class="string">'"'</span>, <span class="string">'\n'</span>, <span class="string">'\r'</span>]) {
+        <span class="macro">format!</span>(<span class="string">"\"{}\""</span>, s)
     } <span class="kw">else </span>{
         s
     }

@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_viz_sm64/src/sm64_gfx_render.rs`."><title>sm64_gfx_render.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-cb6f1f67f1bcd037.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_viz_sm64" data-themes="" data-resource-suffix="" data-rustdoc-version="1.73.0 (cc66ad468 2023-10-03)" data-channel="1.73.0" data-search-js="search-6dfdfced5eff6596.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-1596385f77d47ef2.css" data-theme-dark-css="dark-0a43001d3fc2282c.css" data-theme-ayu-css="ayu-fd19013d6ce078bf.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-1596385f77d47ef2.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-0a43001d3fc2282c.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../wafel_viz_sm64/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_viz_sm64/src/sm64_gfx_render.rs`."><title>sm64_gfx_render.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_viz_sm64" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1737,7 +1738,7 @@
         ));
     }
 
-    <span class="kw">let </span>input_dl_addr = layout.global_path(<span class="string">&quot;gGfxPool?&quot;</span>)<span class="question-mark">?</span>.read(memory)<span class="question-mark">?</span>;
+    <span class="kw">let </span>input_dl_addr = layout.global_path(<span class="string">"gGfxPool?"</span>)<span class="question-mark">?</span>.read(memory)<span class="question-mark">?</span>;
     <span class="kw">if </span>input_dl_addr.is_none() {
         <span class="kw">return </span><span class="prelude-val">Ok</span>((
             F3DRenderData::new(config.screen_top_left, config.screen_size),
@@ -1748,7 +1749,7 @@
 
     <span class="kw">let </span>seg_table = <span class="kw">if </span>use_segment_table {
         <span class="kw">let </span><span class="kw-2">mut </span>seg_table: Vec&lt;u32&gt; = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">32</span>];
-        <span class="kw">let </span>seg_table_addr = layout.symbol_address(<span class="string">&quot;sSegmentTable&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>seg_table_addr = layout.symbol_address(<span class="string">"sSegmentTable"</span>)<span class="question-mark">?</span>;
         memory.read_u32s(seg_table_addr, seg_table.as_mut_slice())<span class="question-mark">?</span>;
         <span class="prelude-val">Some</span>(seg_table)
     } <span class="kw">else </span>{
@@ -1756,25 +1757,25 @@
     </span>};
 
     <span class="comment">// if DEBUG_PRINT {
-    //     println!(&quot;\n\n------- FRAME -------&quot;);
+    //     println!("\n\n------- FRAME -------");
     //     let cmds = decode_f3d_display_list(RawDlIter {
     //         memory,
     //         addr: input_dl_addr,
     //     });
     //     for cmd in cmds {
-    //         println!(&quot;  {:?}&quot;, cmd?);
+    //         println!("  {:?}", cmd?);
     //     }
-    //     println!(&quot;\n\n&quot;);
+    //     println!("\n\n");
     // }
 
     </span><span class="kw">let </span>(f3d_memory, render_output) = <span class="kw">match </span>config.in_game_render_mode {
         InGameRenderMode::Rerender =&gt; {
             <span class="kw">let </span>pause_rendering = layout
-                .global_path(<span class="string">&quot;gWarpTransition.pauseRendering&quot;</span>)<span class="question-mark">?
+                .global_path(<span class="string">"gWarpTransition.pauseRendering"</span>)<span class="question-mark">?
                 </span>.read(memory)<span class="question-mark">?
                 </span>.try_as_int()<span class="question-mark">?
                 </span>!= <span class="number">0</span>;
-            <span class="kw">let </span>root_addr = layout.global_path(<span class="string">&quot;gCurrentArea?.unk04&quot;</span>)<span class="question-mark">?</span>.read(memory)<span class="question-mark">?</span>;
+            <span class="kw">let </span>root_addr = layout.global_path(<span class="string">"gCurrentArea?.unk04"</span>)<span class="question-mark">?</span>.read(memory)<span class="question-mark">?</span>;
 
             <span class="kw">let </span><span class="kw-2">mut </span>renderer = NodeRenderer::new(config, layout, memory, input_dl_addr, seg_table)<span class="question-mark">?</span>;
             renderer.render_game(root_addr, pause_rendering)<span class="question-mark">?</span>;
@@ -1824,11 +1825,11 @@
 }
 
 <span class="attr">#[derive(Debug)]
-</span><span class="kw">struct </span>NodeRenderer&lt;<span class="lifetime">&#39;m</span>, L, M: MemoryRead&gt; {
-    config: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m </span>VizConfig,
-    layout: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m </span>L,
-    memory: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m </span>M,
-    builder: F3DBuilder&lt;<span class="lifetime">&#39;m</span>, M&gt;,
+</span><span class="kw">struct </span>NodeRenderer&lt;<span class="lifetime">'m</span>, L, M: MemoryRead&gt; {
+    config: <span class="kw-2">&amp;</span><span class="lifetime">'m </span>VizConfig,
+    layout: <span class="kw-2">&amp;</span><span class="lifetime">'m </span>L,
+    memory: <span class="kw-2">&amp;</span><span class="lifetime">'m </span>M,
+    builder: F3DBuilder&lt;<span class="lifetime">'m</span>, M&gt;,
     output: GfxRenderOutput,
     reader: Reader&lt;GfxTreeNode&gt;,
     object_fields_reader: Reader&lt;ObjectFields&gt;,
@@ -1932,7 +1933,7 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;Object&quot;</span>)]
+#[struct_name(<span class="string">"Object"</span>)]
 </span><span class="kw">struct </span>ObjectFields {
     active_flags: i16,
     o_anim_state: i32,
@@ -1941,22 +1942,22 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;LakituState&quot;</span>)]
+#[struct_name(<span class="string">"LakituState"</span>)]
 </span><span class="kw">struct </span>LakituState {
     pos: [f32; <span class="number">3</span>],
     focus: [f32; <span class="number">3</span>],
     roll: Angle,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;m</span>, L, M&gt; NodeRenderer&lt;<span class="lifetime">&#39;m</span>, L, M&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'m</span>, L, M&gt; NodeRenderer&lt;<span class="lifetime">'m</span>, L, M&gt;
 <span class="kw">where
     </span>L: MemoryLayout,
     M: MemoryRead,
 {
     <span class="kw">fn </span>new(
-        config: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m </span>VizConfig,
-        layout: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m </span>L,
-        memory: <span class="kw-2">&amp;</span><span class="lifetime">&#39;m </span>M,
+        config: <span class="kw-2">&amp;</span><span class="lifetime">'m </span>VizConfig,
+        layout: <span class="kw-2">&amp;</span><span class="lifetime">'m </span>L,
+        memory: <span class="kw-2">&amp;</span><span class="lifetime">'m </span>M,
         input_dl_addr: Address,
         seg_table: <span class="prelude-ty">Option</span>&lt;Vec&lt;u32&gt;&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, VizError&gt; {
@@ -2009,7 +2010,7 @@
                 <span class="prelude-val">Some</span>(addr) =&gt; {
                     <span class="kw">let </span>object = <span class="self">self</span>.object_fields_reader.read(<span class="self">self</span>.memory, addr)<span class="question-mark">?</span>;
                     object.collision_data.is_not_null()
-                        || object.behavior == <span class="self">self</span>.layout.symbol_address(<span class="string">&quot;bhvStaticObject&quot;</span>)<span class="question-mark">?
+                        || object.behavior == <span class="self">self</span>.layout.symbol_address(<span class="string">"bhvStaticObject"</span>)<span class="question-mark">?
                 </span>}
                 <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
             };
@@ -2090,19 +2091,19 @@
             (<span class="bool-val">true</span>, <span class="number">5</span>) =&gt; RenderMode::RM_AA_ZB_XLU_SURF(),
             (<span class="bool-val">true</span>, <span class="number">6</span>) =&gt; RenderMode::RM_AA_ZB_XLU_DECAL(),
             (<span class="bool-val">true</span>, <span class="number">7</span>) =&gt; RenderMode::RM_AA_ZB_XLU_INTER(),
-            <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(<span class="string">&quot;z_buffer={}, layer={}&quot;</span>, z_buffer, layer),
+            <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(<span class="string">"z_buffer={}, layer={}"</span>, z_buffer, layer),
         }
     }
 
     <span class="kw">fn </span>set_animation_globals(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>AnimInfo) -&gt; <span class="prelude-ty">Result</span>&lt;(), VizError&gt; {
         <span class="kw">let </span>animation_struct = <span class="self">self</span>.layout.data_layout().data_type(<span class="kw-2">&amp;</span>TypeName {
             namespace: Namespace::Struct,
-            name: <span class="string">&quot;Animation&quot;</span>.to_string(),
+            name: <span class="string">"Animation"</span>.to_string(),
         })<span class="question-mark">?</span>;
         <span class="kw">let </span>reader = <span class="self">self</span>.layout.data_type_reader(animation_struct)<span class="question-mark">?</span>;
         <span class="kw">let </span>anim = reader.read(<span class="self">self</span>.memory, node.cur_anim)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>flags = anim.try_field(<span class="string">&quot;flags&quot;</span>)<span class="question-mark">?</span>.try_as_int()<span class="question-mark">? </span><span class="kw">as </span>i16;
+        <span class="kw">let </span>flags = anim.try_field(<span class="string">"flags"</span>)<span class="question-mark">?</span>.try_as_int()<span class="question-mark">? </span><span class="kw">as </span>i16;
 
         <span class="kw">let </span>ty;
         <span class="kw">if </span>flags &amp; (<span class="number">1 </span>&lt;&lt; <span class="number">3</span>) != <span class="number">0 </span>{
@@ -2116,15 +2117,15 @@
         }
 
         <span class="kw">let </span>y_trans = node.anim_y_trans;
-        <span class="kw">let </span>y_trans_divisor = anim.try_field(<span class="string">&quot;animYTransDivisor&quot;</span>)<span class="question-mark">?</span>.try_as_int()<span class="question-mark">? </span><span class="kw">as </span>i16;
+        <span class="kw">let </span>y_trans_divisor = anim.try_field(<span class="string">"animYTransDivisor"</span>)<span class="question-mark">?</span>.try_as_int()<span class="question-mark">? </span><span class="kw">as </span>i16;
         <span class="kw">let </span>translation_multiplier = <span class="kw">if </span>y_trans_divisor == <span class="number">0 </span>{
             <span class="number">1.0
         </span>} <span class="kw">else </span>{
             y_trans <span class="kw">as </span>f32 / y_trans_divisor <span class="kw">as </span>f32
         };
 
-        <span class="kw">let </span>attribute = Segmented(anim.try_field(<span class="string">&quot;index&quot;</span>)<span class="question-mark">?</span>.try_as_address()<span class="question-mark">?</span>);
-        <span class="kw">let </span>data = Segmented(anim.try_field(<span class="string">&quot;values&quot;</span>)<span class="question-mark">?</span>.try_as_address()<span class="question-mark">?</span>);
+        <span class="kw">let </span>attribute = Segmented(anim.try_field(<span class="string">"index"</span>)<span class="question-mark">?</span>.try_as_address()<span class="question-mark">?</span>);
+        <span class="kw">let </span>data = Segmented(anim.try_field(<span class="string">"values"</span>)<span class="question-mark">?</span>.try_as_address()<span class="question-mark">?</span>);
 
         <span class="self">self</span>.anim = <span class="prelude-val">Some</span>(AnimState {
             ty,
@@ -2180,7 +2181,7 @@
                 == <span class="self">self
                     </span>.layout
                     .data_layout()
-                    .constant(<span class="string">&quot;GRAPH_NODE_TYPE_SWITCH_CASE&quot;</span>)<span class="question-mark">?
+                    .constant(<span class="string">"GRAPH_NODE_TYPE_SWITCH_CASE"</span>)<span class="question-mark">?
                     </span>.value
             {
                 iterate_siblings = <span class="bool-val">false</span>;
@@ -2205,12 +2206,12 @@
                     <span class="kw">let </span>active_flag_active = <span class="self">self
                         </span>.layout
                         .data_layout()
-                        .constant(<span class="string">&quot;ACTIVE_FLAG_ACTIVE&quot;</span>)<span class="question-mark">?
+                        .constant(<span class="string">"ACTIVE_FLAG_ACTIVE"</span>)<span class="question-mark">?
                         </span>.value <span class="kw">as </span>i16;
                     <span class="kw">let </span>active_flag_far_away = <span class="self">self
                         </span>.layout
                         .data_layout()
-                        .constant(<span class="string">&quot;ACTIVE_FLAG_FAR_AWAY&quot;</span>)<span class="question-mark">?
+                        .constant(<span class="string">"ACTIVE_FLAG_FAR_AWAY"</span>)<span class="question-mark">?
                         </span>.value <span class="kw">as </span>i16;
 
                     <span class="kw">if </span>(active_flags &amp; active_flag_active) != <span class="number">0
@@ -2226,8 +2227,8 @@
                     <span class="self">self</span>.process_node_and_siblings(cur_node.node().children)<span class="question-mark">?</span>;
                 } <span class="kw">else </span>{
                     <span class="kw">if </span>DEBUG_PRINT {
-                        <span class="kw">let </span>indent_str = <span class="string">&quot;    &quot;</span>.repeat(<span class="self">self</span>.indent);
-                        <span class="macro">println!</span>(<span class="string">&quot;{}- {:?} {:?} {{&quot;</span>, indent_str, cur_addr, cur_node);
+                        <span class="kw">let </span>indent_str = <span class="string">"    "</span>.repeat(<span class="self">self</span>.indent);
+                        <span class="macro">println!</span>(<span class="string">"{}- {:?} {:?} {{"</span>, indent_str, cur_addr, cur_node);
                     }
 
                     <span class="self">self</span>.indent += <span class="number">1</span>;
@@ -2268,8 +2269,8 @@
                     <span class="self">self</span>.indent -= <span class="number">1</span>;
 
                     <span class="kw">if </span>DEBUG_PRINT {
-                        <span class="kw">let </span>indent_str = <span class="string">&quot;  &quot;</span>.repeat(<span class="self">self</span>.indent);
-                        <span class="macro">println!</span>(<span class="string">&quot;{}}}&quot;</span>, indent_str);
+                        <span class="kw">let </span>indent_str = <span class="string">"  "</span>.repeat(<span class="self">self</span>.indent);
+                        <span class="macro">println!</span>(<span class="string">"{}}}"</span>, indent_str);
                     }
                 }
             }
@@ -2373,12 +2374,12 @@
 
         <span class="kw">if </span>PRINT_DISPLAY_LISTS {
             <span class="macro">println!</span>();
-            <span class="macro">println!</span>(<span class="string">&quot;Original:&quot;</span>);
+            <span class="macro">println!</span>(<span class="string">"Original:"</span>);
         }
 
         <span class="kw">for </span>layer <span class="kw">in </span><span class="number">0</span>..<span class="number">8 </span>{
             <span class="kw">if </span>PRINT_DISPLAY_LISTS {
-                <span class="macro">println!</span>(<span class="string">&quot;  Layer {}:&quot;</span>, layer);
+                <span class="macro">println!</span>(<span class="string">"  Layer {}:"</span>, layer);
             }
 
             <span class="kw">let </span><span class="kw-2">mut </span>dl_node_addr = node.list_heads[layer <span class="kw">as </span>usize];
@@ -2401,7 +2402,7 @@
 
                     <span class="kw">if </span>PRINT_DISPLAY_LISTS {
                         <span class="kw">let </span>dl = dl_node.display_list;
-                        <span class="macro">println!</span>(<span class="string">&quot;    {} ({:?})&quot;</span>, dl, <span class="self">self</span>.layout.address_to_symbol(dl).ok());
+                        <span class="macro">println!</span>(<span class="string">"    {} ({:?})"</span>, dl, <span class="self">self</span>.layout.address_to_symbol(dl).ok());
                     }
 
                     original_lists[layer <span class="kw">as </span>usize].push((transform_ptr, display_list_ptr));
@@ -2413,14 +2414,14 @@
 
         <span class="kw">let </span>pool_start = <span class="self">self
             </span>.layout
-            .global_path(<span class="string">&quot;gGfxPool.buffer&quot;</span>)<span class="question-mark">?
+            .global_path(<span class="string">"gGfxPool.buffer"</span>)<span class="question-mark">?
             </span>.address(<span class="self">self</span>.memory)<span class="question-mark">?
             </span>.unwrap();
         <span class="kw">let </span>cmd_size = <span class="number">2 </span>* <span class="self">self</span>.memory.pointer_int_type().size();
         <span class="kw">let </span>pool_size =
-            <span class="self">self</span>.layout.data_layout().constant(<span class="string">&quot;GFX_POOL_SIZE&quot;</span>)<span class="question-mark">?</span>.value <span class="kw">as </span>usize * cmd_size;
+            <span class="self">self</span>.layout.data_layout().constant(<span class="string">"GFX_POOL_SIZE"</span>)<span class="question-mark">?</span>.value <span class="kw">as </span>usize * cmd_size;
         <span class="kw">let </span>pool_end = pool_start + pool_size;
-        <span class="kw">let </span>is_dynamic = |output: <span class="kw-2">&amp;</span>F3DBuilder&lt;<span class="lifetime">&#39;_</span>, <span class="kw">_</span>&gt;, dl: Pointer| {
+        <span class="kw">let </span>is_dynamic = |output: <span class="kw-2">&amp;</span>F3DBuilder&lt;<span class="lifetime">'_</span>, <span class="kw">_</span>&gt;, dl: Pointer| {
             <span class="kw">if let </span>Pointer::Segmented(segmented) = dl {
                 <span class="kw">let </span>addr = output.seg_to_virt(segmented);
                 addr &gt;= pool_start &amp;&amp; addr &lt; pool_end
@@ -2431,34 +2432,34 @@
 
         <span class="kw">if </span>PRINT_DISPLAY_LISTS {
             <span class="macro">println!</span>();
-            <span class="macro">println!</span>(<span class="string">&quot;Edits:&quot;</span>);
+            <span class="macro">println!</span>(<span class="string">"Edits:"</span>);
 
             <span class="kw">for </span>(layer, edits) <span class="kw">in </span><span class="self">self</span>.master_lists.iter().enumerate() {
-                <span class="macro">println!</span>(<span class="string">&quot;  Layer {}:&quot;</span>, layer);
+                <span class="macro">println!</span>(<span class="string">"  Layer {}:"</span>, layer);
                 <span class="kw">let </span>name = |ptr: Pointer| <span class="kw">match </span>ptr {
                     Pointer::Segmented(seg) =&gt; <span class="macro">format!</span>(
-                        <span class="string">&quot;{} ({:?})&quot;</span>,
+                        <span class="string">"{} ({:?})"</span>,
                         seg.<span class="number">0</span>,
                         <span class="self">self</span>.layout.address_to_symbol(seg.<span class="number">0</span>).ok()
                     ),
-                    Pointer::BufferOffset(<span class="kw">_</span>) =&gt; <span class="string">&quot;buf&quot;</span>.to_string(),
+                    Pointer::BufferOffset(<span class="kw">_</span>) =&gt; <span class="string">"buf"</span>.to_string(),
                 };
                 <span class="kw">for </span>edit <span class="kw">in </span>edits {
                     <span class="kw">match </span>edit {
                         MasterListEdit::Copy { display_list, .. } =&gt; {
-                            <span class="macro">println!</span>(<span class="string">&quot;    Copy {}&quot;</span>, name(<span class="kw-2">*</span>display_list));
+                            <span class="macro">println!</span>(<span class="string">"    Copy {}"</span>, name(<span class="kw-2">*</span>display_list));
                         }
                         MasterListEdit::Skip(dl) =&gt; {
-                            <span class="macro">println!</span>(<span class="string">&quot;    Skip {}&quot;</span>, name(<span class="kw-2">*</span>dl));
+                            <span class="macro">println!</span>(<span class="string">"    Skip {}"</span>, name(<span class="kw-2">*</span>dl));
                         }
                         MasterListEdit::Insert { display_list, .. } =&gt; {
-                            <span class="macro">println!</span>(<span class="string">&quot;    Skip {}&quot;</span>, name(<span class="kw-2">*</span>display_list));
+                            <span class="macro">println!</span>(<span class="string">"    Skip {}"</span>, name(<span class="kw-2">*</span>display_list));
                         }
                         MasterListEdit::OptDynamic =&gt; {
-                            <span class="macro">println!</span>(<span class="string">&quot;    OptDynamic&quot;</span>);
+                            <span class="macro">println!</span>(<span class="string">"    OptDynamic"</span>);
                         }
                         MasterListEdit::SkipDynamic =&gt; {
-                            <span class="macro">println!</span>(<span class="string">&quot;    SkipDynamic&quot;</span>);
+                            <span class="macro">println!</span>(<span class="string">"    SkipDynamic"</span>);
                         }
                     }
                 }
@@ -2494,7 +2495,7 @@
                             .copied()
                             .filter(|<span class="kw-2">&amp;</span>(<span class="kw">_</span>, dl)| dl == <span class="kw-2">*</span>display_list)
                             .ok_or_else(|| VizError::MasterListDiscrepancy {
-                                descr: <span class="macro">format!</span>(<span class="string">&quot;copying {}&quot;</span>, display_list),
+                                descr: <span class="macro">format!</span>(<span class="string">"copying {}"</span>, display_list),
                             })<span class="question-mark">?</span>;
 
                         <span class="kw">if </span>DEBUG_CALC_TRANSFORMS || <span class="self">self</span>.used_camera() != Camera::InGame {
@@ -2510,7 +2511,7 @@
                             .copied()
                             .filter(|<span class="kw-2">&amp;</span>(<span class="kw">_</span>, dl)| dl == <span class="kw-2">*</span>addr)
                             .ok_or_else(|| VizError::MasterListDiscrepancy {
-                                descr: <span class="macro">format!</span>(<span class="string">&quot;skipping {}&quot;</span>, addr),
+                                descr: <span class="macro">format!</span>(<span class="string">"skipping {}"</span>, addr),
                             })<span class="question-mark">?</span>;
                     }
                     MasterListEdit::Insert {
@@ -2542,7 +2543,7 @@
                             .copied()
                             .filter(|<span class="kw-2">&amp;</span>(<span class="kw">_</span>, dl)| is_dynamic(<span class="kw-2">&amp;</span><span class="self">self</span>.builder, dl))
                             .ok_or_else(|| VizError::MasterListDiscrepancy {
-                                descr: <span class="string">&quot;skip dynamic&quot;</span>.to_string(),
+                                descr: <span class="string">"skip dynamic"</span>.to_string(),
                             })<span class="question-mark">?</span>;
                     }
                 }
@@ -2574,14 +2575,14 @@
                 <span class="kw">if </span>old_list.len() != new_list.len() {
                     matches = <span class="bool-val">false</span>;
                     <span class="kw">if </span>ASSERT_CALC_TRANSFORMS {
-                        <span class="macro">eprintln!</span>(<span class="string">&quot;{}: len {} -&gt; {}&quot;</span>, layer, old_list.len(), new_list.len());
+                        <span class="macro">eprintln!</span>(<span class="string">"{}: len {} -&gt; {}"</span>, layer, old_list.len(), new_list.len());
                     }
                 }
                 <span class="kw">for </span>(old_node, new_node) <span class="kw">in </span>old_list.iter().zip(new_list.iter()) {
                     <span class="kw">if </span>old_node.<span class="number">1 </span>!= new_node.<span class="number">1 </span>{
                         matches = <span class="bool-val">false</span>;
                         <span class="kw">if </span>ASSERT_CALC_TRANSFORMS {
-                            <span class="macro">eprintln!</span>(<span class="string">&quot;{}: dl {:?} -&gt; {:?}&quot;</span>, layer, old_node.<span class="number">1</span>, new_node.<span class="number">1</span>);
+                            <span class="macro">eprintln!</span>(<span class="string">"{}: dl {:?} -&gt; {:?}"</span>, layer, old_node.<span class="number">1</span>, new_node.<span class="number">1</span>);
                         }
                     }
                     <span class="kw">let </span>old_mtx = <span class="self">self</span>.read_fixed(old_node.<span class="number">0</span>)<span class="question-mark">?</span>;
@@ -2592,7 +2593,7 @@
                             <span class="kw">let </span>transform_addr =
                                 <span class="self">self</span>.builder.seg_to_virt(old_node.<span class="number">1</span>.segmented().unwrap());
                             <span class="macro">eprintln!</span>(
-                                <span class="string">&quot;{}: mtx ({:?})\n{:?}\n{:?}&quot;</span>,
+                                <span class="string">"{}: mtx ({:?})\n{:?}\n{:?}"</span>,
                                 layer,
                                 <span class="self">self</span>.symbol_name(transform_addr),
                                 Matrixf::from_fixed(<span class="kw-2">&amp;</span>old_mtx),
@@ -2604,7 +2605,7 @@
             }
 
             <span class="kw">if </span>!matches {
-                <span class="macro">eprintln!</span>(<span class="string">&quot;display list mismatch&quot;</span>);
+                <span class="macro">eprintln!</span>(<span class="string">"display list mismatch"</span>);
             }
         }
 
@@ -2673,7 +2674,7 @@
             </span><span class="kw">if </span>!node.fn_node.func.is_null() {
                 <span class="kw">let </span>geo_switch_anim_state = <span class="self">self
                     </span>.layout
-                    .global_path(<span class="string">&quot;geo_switch_anim_state&quot;</span>)<span class="question-mark">?
+                    .global_path(<span class="string">"geo_switch_anim_state"</span>)<span class="question-mark">?
                     </span>.address(<span class="self">self</span>.memory)<span class="question-mark">?
                     </span>.unwrap();
 
@@ -2863,7 +2864,7 @@
             </span>.cur_perspective
             .as_ref()
             .ok_or(VizError::InvalidGfxTree {
-                descr: <span class="string">&quot;no perspective set&quot;</span>,
+                descr: <span class="string">"no perspective set"</span>,
             })<span class="question-mark">?
             </span>.fov;
         <span class="kw">let </span>half_fov = Wrapping(((fov / <span class="number">2.0 </span>+ <span class="number">1.0</span>) * <span class="number">32768.0 </span>/ <span class="number">180.0 </span>+ <span class="number">0.5</span>) <span class="kw">as </span>i16);
@@ -2898,7 +2899,7 @@
     </span><span class="kw">fn </span>is_mario(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;bool, VizError&gt; {
         <span class="kw">let </span>mario_object = <span class="self">self
             </span>.layout
-            .global_path(<span class="string">&quot;gMarioObject&quot;</span>)<span class="question-mark">?
+            .global_path(<span class="string">"gMarioObject"</span>)<span class="question-mark">?
             </span>.read(<span class="self">self</span>.memory)<span class="question-mark">?
             </span>.try_as_address()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.cur_object_addr == <span class="prelude-val">Some</span>(mario_object))
@@ -2908,25 +2909,25 @@
         <span class="comment">// TODO: Need more accurate condition for checking if align_with_floor was called
         //         if self.is_mario()? {
         //             let align_action_names = [
-        //                 &quot;ACT_CRAWLING&quot;,
-        //                 &quot;ACT_BUTT_SLIDE&quot;,
-        //                 &quot;ACT_HOLD_BUTT_SLIDE&quot;,
-        //                 &quot;ACT_CROUCH_SLIDE&quot;,
-        //                 &quot;ACT_DIVE_SLIDE&quot;,
-        //                 &quot;ACT_STOMACH_SLIDE&quot;,
-        //                 &quot;ACT_HOLD_STOMACH_SLIDE&quot;,
+        //                 "ACT_CRAWLING",
+        //                 "ACT_BUTT_SLIDE",
+        //                 "ACT_HOLD_BUTT_SLIDE",
+        //                 "ACT_CROUCH_SLIDE",
+        //                 "ACT_DIVE_SLIDE",
+        //                 "ACT_STOMACH_SLIDE",
+        //                 "ACT_HOLD_STOMACH_SLIDE",
         //             ];
         //             let mut align_actions = HashSet::new();
         //             for name in &amp;align_action_names {
         //                 align_actions.insert(self.layout.constant(name)?.value);
         //             }
         //
-        //             let action = (self.get_path)(&quot;gMarioState.action&quot;)?
+        //             let action = (self.get_path)("gMarioState.action")?
         //                 .read(self.memory)?
         //                 .try_as_int()?;
         //
         //             if align_actions.contains(&amp;action) {
-        //                 let mtx_addr = (self.get_path)(&quot;sFloorAlignMatrix[0]&quot;)?
+        //                 let mtx_addr = (self.get_path)("sFloorAlignMatrix[0]")?
         //                     .address(self.memory)?
         //                     .unwrap();
         //
@@ -2943,7 +2944,7 @@
     <span class="kw">fn </span>calculated_camera(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Camera, VizError&gt; {
         <span class="kw">match </span><span class="self">self</span>.used_camera() {
             Camera::InGame =&gt; {
-                <span class="kw">let </span>lakitu_state_addr = <span class="self">self</span>.layout.symbol_address(<span class="string">&quot;gLakituState&quot;</span>)<span class="question-mark">?</span>;
+                <span class="kw">let </span>lakitu_state_addr = <span class="self">self</span>.layout.symbol_address(<span class="string">"gLakituState"</span>)<span class="question-mark">?</span>;
                 <span class="kw">let </span>LakituState { pos, focus, roll } =
                     LakituState::reader(<span class="self">self</span>.layout)<span class="question-mark">?</span>.read(<span class="self">self</span>.memory, lakitu_state_addr)<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(Camera::LookAt(LookAtCamera { pos, focus, roll }))
@@ -2965,7 +2966,7 @@
         <span class="prelude-val">Ok</span>(<span class="kw">match </span><span class="self">self</span>.used_camera() {
             Camera::InGame =&gt; {
                 <span class="kw">let </span>camera = <span class="self">self</span>.cur_camera.as_ref().ok_or(VizError::InvalidGfxTree {
-                    descr: <span class="string">&quot;no current camra&quot;</span>,
+                    descr: <span class="string">"no current camra"</span>,
                 })<span class="question-mark">?</span>;
                 camera.roll
             }
@@ -2987,7 +2988,7 @@
                     <span class="self">self</span>.cur_camera
                         .as_ref()
                         .ok_or(VizError::InvalidGfxTree {
-                            descr: <span class="string">&quot;no camera set&quot;</span>,
+                            descr: <span class="string">"no camera set"</span>,
                         })<span class="question-mark">?
                         </span>.roll,
                 );
@@ -3104,7 +3105,7 @@
             <span class="self">self</span>.cur_camera
                 .as_ref()
                 .ok_or(VizError::InvalidGfxTree {
-                    descr: <span class="string">&quot;no current camera&quot;</span>,
+                    descr: <span class="string">"no current camera"</span>,
                 })<span class="question-mark">?
                 </span>.roll,
         );
@@ -3191,7 +3192,7 @@
     <span class="kw">fn </span>lakitu_state_for_background(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;LookAtCamera, VizError&gt; {
         <span class="kw">match </span><span class="self">self</span>.used_camera() {
             Camera::InGame =&gt; {
-                <span class="kw">let </span>lakitu_state_addr = <span class="self">self</span>.layout.symbol_address(<span class="string">&quot;gLakituState&quot;</span>)<span class="question-mark">?</span>;
+                <span class="kw">let </span>lakitu_state_addr = <span class="self">self</span>.layout.symbol_address(<span class="string">"gLakituState"</span>)<span class="question-mark">?</span>;
                 <span class="kw">let </span>LakituState { pos, focus, roll } =
                     LakituState::reader(<span class="self">self</span>.layout)<span class="question-mark">?</span>.read(<span class="self">self</span>.memory, lakitu_state_addr)<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(LookAtCamera { pos, focus, roll })
@@ -3245,7 +3246,7 @@
                         <span class="self">self</span>.cur_object_throw_mtx
                             .clone()
                             .ok_or(VizError::InvalidGfxTree {
-                                descr: <span class="string">&quot;no current object&quot;</span>,
+                                descr: <span class="string">"no current object"</span>,
                             })<span class="question-mark">?</span>;
                     throw.cols[<span class="number">3</span>][<span class="number">0</span>] = <span class="self">self</span>.mtx_stack.cur.cols[<span class="number">3</span>][<span class="number">0</span>];
                     throw.cols[<span class="number">3</span>][<span class="number">1</span>] = <span class="self">self</span>.mtx_stack.cur.cols[<span class="number">3</span>][<span class="number">1</span>];
@@ -3255,7 +3256,7 @@
                         <span class="self">self</span>.cur_object_mod_throw_mtx
                             .clone()
                             .ok_or(VizError::InvalidGfxTree {
-                                descr: <span class="string">&quot;no current object&quot;</span>,
+                                descr: <span class="string">"no current object"</span>,
                             })<span class="question-mark">?</span>;
                     mod_throw.cols[<span class="number">3</span>][<span class="number">0</span>] = <span class="self">self</span>.mod_mtx_stack.cur.cols[<span class="number">3</span>][<span class="number">0</span>];
                     mod_throw.cols[<span class="number">3</span>][<span class="number">1</span>] = <span class="self">self</span>.mod_mtx_stack.cur.cols[<span class="number">3</span>][<span class="number">1</span>];
@@ -3330,7 +3331,7 @@
         <span class="prelude-val">Ok</span>(proj_mtx)
     } <span class="kw">else </span>{
         <span class="kw">let </span>fov = layout
-            .global_path(<span class="string">&quot;sFOVState.fov&quot;</span>)<span class="question-mark">?
+            .global_path(<span class="string">"sFOVState.fov"</span>)<span class="question-mark">?
             </span>.read(memory)<span class="question-mark">?
             </span>.try_as_f32()<span class="question-mark">?</span>;
         <span class="kw">let </span>aspect = <span class="number">320.0 </span>/ <span class="number">240.0</span>;
@@ -3347,11 +3348,11 @@
     <span class="kw">let </span>view_mtx = <span class="kw">match </span><span class="kw-2">*</span>camera {
         Camera::InGame =&gt; {
             <span class="kw">let </span>pos = layout
-                .global_path(<span class="string">&quot;gLakituState.pos&quot;</span>)<span class="question-mark">?
+                .global_path(<span class="string">"gLakituState.pos"</span>)<span class="question-mark">?
                 </span>.read(memory)<span class="question-mark">?
                 </span>.try_as_f32_3()<span class="question-mark">?</span>;
             <span class="kw">let </span>focus = layout
-                .global_path(<span class="string">&quot;gLakituState.focus&quot;</span>)<span class="question-mark">?
+                .global_path(<span class="string">"gLakituState.focus"</span>)<span class="question-mark">?
                 </span>.read(memory)<span class="question-mark">?
                 </span>.try_as_f32_3()<span class="question-mark">?</span>;
             Matrixf::look_at(pos, focus, Wrapping(<span class="number">0</span>))
@@ -3384,7 +3385,7 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Camera, VizError&gt; {
     <span class="kw">match </span><span class="kw-2">*</span>camera {
         Camera::InGame =&gt; {
-            <span class="kw">let </span>lakitu_state_addr = layout.symbol_address(<span class="string">&quot;gLakituState&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>lakitu_state_addr = layout.symbol_address(<span class="string">"gLakituState"</span>)<span class="question-mark">?</span>;
             <span class="kw">let </span>LakituState { pos, focus, roll } =
                 LakituState::reader(layout)<span class="question-mark">?</span>.read(memory, lakitu_state_addr)<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(Camera::LookAt(LookAtCamera { pos, focus, roll }))

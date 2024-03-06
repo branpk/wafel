@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_sm64/src/gfx.rs`."><title>gfx.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-cb6f1f67f1bcd037.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_sm64" data-themes="" data-resource-suffix="" data-rustdoc-version="1.73.0 (cc66ad468 2023-10-03)" data-channel="1.73.0" data-search-js="search-6dfdfced5eff6596.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-1596385f77d47ef2.css" data-theme-dark-css="dark-0a43001d3fc2282c.css" data-theme-ayu-css="ayu-fd19013d6ce078bf.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-1596385f77d47ef2.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-0a43001d3fc2282c.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../wafel_sm64/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_sm64/src/gfx.rs`."><title>gfx.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_sm64" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -496,9 +497,9 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNode&quot;</span>)]
+#[struct_name(<span class="string">"GraphNode"</span>)]
 </span><span class="kw">pub struct </span>GraphNode {
-    <span class="attr">#[field_name(<span class="string">&quot;type&quot;</span>)]
+    <span class="attr">#[field_name(<span class="string">"type"</span>)]
     </span><span class="kw">pub </span>ty: i16,
     <span class="kw">pub </span>flags: i16,
     <span class="kw">pub </span>prev: Address,
@@ -515,7 +516,7 @@
 
 <span class="macro">bitflags! </span>{
     <span class="attr">#[derive(DataReadable)]
-    #[struct_name(<span class="string">&quot;GraphRenderFlags&quot;</span>)]
+    #[struct_name(<span class="string">"GraphRenderFlags"</span>)]
     </span><span class="kw">pub struct </span>GraphRenderFlags: i16 {
         <span class="kw">const </span>ACTIVE         = <span class="number">1 </span>&lt;&lt; <span class="number">0</span>;
         <span class="kw">const </span>CHILDREN_FIRST = <span class="number">1 </span>&lt;&lt; <span class="number">1</span>;
@@ -527,14 +528,14 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;FnGraphNode&quot;</span>)]
+#[struct_name(<span class="string">"FnGraphNode"</span>)]
 </span><span class="kw">pub struct </span>FnGraphNode {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>func: Address,
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeRoot&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeRoot"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeRoot {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>area_index: u8,
@@ -548,14 +549,14 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeOrthoProjection&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeOrthoProjection"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeOrthoProjection {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>scale: f32,
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodePerspective&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodePerspective"</span>)]
 </span><span class="kw">pub struct </span>GraphNodePerspective {
     <span class="kw">pub </span>fn_node: FnGraphNode,
     <span class="kw">pub </span>fov: f32,
@@ -564,7 +565,7 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeMasterList&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeMasterList"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeMasterList {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>list_heads: [Address; <span class="number">8</span>],
@@ -572,13 +573,13 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeStart&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeStart"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeStart {
     <span class="kw">pub </span>node: GraphNode,
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeLevelOfDetail&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeLevelOfDetail"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeLevelOfDetail {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>min_distance: i16,
@@ -586,7 +587,7 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeSwitchCase&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeSwitchCase"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeSwitchCase {
     <span class="kw">pub </span>fn_node: FnGraphNode,
     <span class="kw">pub </span>num_cases: i16,
@@ -594,10 +595,10 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeCamera&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeCamera"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeCamera {
     <span class="kw">pub </span>fn_node: FnGraphNode,
-    <span class="attr">#[field_name(<span class="string">&quot;config&quot;</span>)]
+    <span class="attr">#[field_name(<span class="string">"config"</span>)]
     </span><span class="kw">pub </span>camera: Address,
     <span class="kw">pub </span>pos: [f32; <span class="number">3</span>],
     <span class="kw">pub </span>focus: [f32; <span class="number">3</span>],
@@ -607,7 +608,7 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeTranslationRotation&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeTranslationRotation"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeTranslationRotation {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>display_list: Address,
@@ -616,7 +617,7 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeTranslation&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeTranslation"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeTranslation {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>display_list: Address,
@@ -624,7 +625,7 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeRotation&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeRotation"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeRotation {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>display_list: Address,
@@ -632,9 +633,9 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;AnimInfo&quot;</span>)]
+#[struct_name(<span class="string">"AnimInfo"</span>)]
 </span><span class="kw">pub struct </span>AnimInfo {
-    <span class="attr">#[field_name(<span class="string">&quot;animID&quot;</span>)]
+    <span class="attr">#[field_name(<span class="string">"animID"</span>)]
     </span><span class="kw">pub </span>anim_id: i16,
     <span class="kw">pub </span>anim_y_trans: i16,
     <span class="kw">pub </span>cur_anim: Address,
@@ -645,7 +646,7 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeObject&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeObject"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeObject {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>shared_child: Address,
@@ -655,14 +656,14 @@
     <span class="kw">pub </span>pos: [f32; <span class="number">3</span>],
     <span class="kw">pub </span>scale: [f32; <span class="number">3</span>],
     <span class="kw">pub </span>anim_info: AnimInfo,
-    <span class="attr">#[field_name(<span class="string">&quot;unk4C&quot;</span>)]
+    <span class="attr">#[field_name(<span class="string">"unk4C"</span>)]
     </span><span class="kw">pub </span>unk_4c: Address,
     <span class="kw">pub </span>throw_matrix: Address,
     <span class="kw">pub </span>camera_to_object: [f32; <span class="number">3</span>],
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeAnimatedPart&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeAnimatedPart"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeAnimatedPart {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>display_list: Address,
@@ -670,7 +671,7 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeBillboard&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeBillboard"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeBillboard {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>display_list: Address,
@@ -678,14 +679,14 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeDisplayList&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeDisplayList"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeDisplayList {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>display_list: Address,
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeScale&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeScale"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeScale {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>display_list: Address,
@@ -693,7 +694,7 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeShadow&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeShadow"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeShadow {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>shadow_scale: i16,
@@ -702,28 +703,28 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeObjectParent&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeObjectParent"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeObjectParent {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>shared_child: Address,
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeGenerated&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeGenerated"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeGenerated {
     <span class="kw">pub </span>fn_node: FnGraphNode,
     <span class="kw">pub </span>parameter: u32,
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeBackground&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeBackground"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeBackground {
     <span class="kw">pub </span>fn_node: FnGraphNode,
     <span class="kw">pub </span>background: i32,
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeHeldObject&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeHeldObject"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeHeldObject {
     <span class="kw">pub </span>fn_node: FnGraphNode,
     <span class="kw">pub </span>player_index: i32,
@@ -732,7 +733,7 @@
 }
 
 <span class="attr">#[derive(Debug, Clone, DataReadable)]
-#[struct_name(<span class="string">&quot;GraphNodeCullingRadius&quot;</span>)]
+#[struct_name(<span class="string">"GraphNodeCullingRadius"</span>)]
 </span><span class="kw">pub struct </span>GraphNodeCullingRadius {
     <span class="kw">pub </span>node: GraphNode,
     <span class="kw">pub </span>culling_radius: i16,
@@ -791,7 +792,7 @@
             <span class="number">0x12C </span>=&gt; <span class="self">self</span>.background_reader.read(memory, addr).map(GfxTreeNode::Background),
             <span class="number">0x12E </span>=&gt; <span class="self">self</span>.held_object_reader.read(memory, addr).map(GfxTreeNode::HeldObject),
             <span class="number">0x02F </span>=&gt; <span class="self">self</span>.culling_radius_reader.read(memory, addr).map(GfxTreeNode::CullingRadius),
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(DataError::InvalidValue { expected: <span class="string">&quot;gfx node id&quot;</span>.to_string(), value: type_id.into() })
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(DataError::InvalidValue { expected: <span class="string">"gfx node id"</span>.to_string(), value: type_id.into() })
         }
     }
 }

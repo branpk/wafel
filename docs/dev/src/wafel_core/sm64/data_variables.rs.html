@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_core/src/sm64/data_variables.rs`."><title>data_variables.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-cb6f1f67f1bcd037.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="wafel_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.73.0 (cc66ad468 2023-10-03)" data-channel="1.73.0" data-search-js="search-6dfdfced5eff6596.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-1596385f77d47ef2.css" data-theme-dark-css="dark-0a43001d3fc2282c.css" data-theme-ayu-css="ayu-fd19013d6ce078bf.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-1596385f77d47ef2.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-0a43001d3fc2282c.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../wafel_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_core/src/sm64/data_variables.rs`."><title>data_variables.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="wafel_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -356,70 +357,70 @@
 
 <span class="attr">#[rustfmt::skip]
 </span><span class="kw">fn </span>build_variables(builder: <span class="kw-2">&amp;mut </span>Builder) {
-    builder.group(<span class="string">&quot;Input&quot;</span>, |group| {
-        group.variable(<span class="string">&quot;input-stick-x&quot;</span>).path(<span class="string">&quot;gControllerPads[0].stick_x&quot;</span>).label(<span class="string">&quot;stick x&quot;</span>);
-        group.variable(<span class="string">&quot;input-stick-y&quot;</span>).path(<span class="string">&quot;gControllerPads[0].stick_y&quot;</span>).label(<span class="string">&quot;stick y&quot;</span>);
-        group.variable(<span class="string">&quot;input-buttons&quot;</span>).path(<span class="string">&quot;gControllerPads[0].button&quot;</span>);
-        group.variable(<span class="string">&quot;input-button-a&quot;</span>).path(<span class="string">&quot;gControllerPads[0].button&quot;</span>).flag(<span class="string">&quot;A_BUTTON&quot;</span>).label(<span class="string">&quot;A&quot;</span>);
-        group.variable(<span class="string">&quot;input-button-b&quot;</span>).path(<span class="string">&quot;gControllerPads[0].button&quot;</span>).flag(<span class="string">&quot;B_BUTTON&quot;</span>).label(<span class="string">&quot;B&quot;</span>);
-        group.variable(<span class="string">&quot;input-button-z&quot;</span>).path(<span class="string">&quot;gControllerPads[0].button&quot;</span>).flag(<span class="string">&quot;Z_TRIG&quot;</span>).label(<span class="string">&quot;Z&quot;</span>);
-        group.variable(<span class="string">&quot;input-button-s&quot;</span>).path(<span class="string">&quot;gControllerPads[0].button&quot;</span>).flag(<span class="string">&quot;START_BUTTON&quot;</span>).label(<span class="string">&quot;S&quot;</span>);
-        group.variable(<span class="string">&quot;input-button-l&quot;</span>).path(<span class="string">&quot;gControllerPads[0].button&quot;</span>).flag(<span class="string">&quot;L_TRIG&quot;</span>).label(<span class="string">&quot;L&quot;</span>);
-        group.variable(<span class="string">&quot;input-button-r&quot;</span>).path(<span class="string">&quot;gControllerPads[0].button&quot;</span>).flag(<span class="string">&quot;R_TRIG&quot;</span>).label(<span class="string">&quot;R&quot;</span>);
-        group.variable(<span class="string">&quot;input-button-cu&quot;</span>).path(<span class="string">&quot;gControllerPads[0].button&quot;</span>).flag(<span class="string">&quot;U_CBUTTONS&quot;</span>).label(<span class="string">&quot;C^&quot;</span>);
-        group.variable(<span class="string">&quot;input-button-cl&quot;</span>).path(<span class="string">&quot;gControllerPads[0].button&quot;</span>).flag(<span class="string">&quot;L_CBUTTONS&quot;</span>).label(<span class="string">&quot;C&lt;&quot;</span>);
-        group.variable(<span class="string">&quot;input-button-cr&quot;</span>).path(<span class="string">&quot;gControllerPads[0].button&quot;</span>).flag(<span class="string">&quot;R_CBUTTONS&quot;</span>).label(<span class="string">&quot;C&gt;&quot;</span>);
-        group.variable(<span class="string">&quot;input-button-cd&quot;</span>).path(<span class="string">&quot;gControllerPads[0].button&quot;</span>).flag(<span class="string">&quot;D_CBUTTONS&quot;</span>).label(<span class="string">&quot;Cv&quot;</span>);
-        group.variable(<span class="string">&quot;input-button-du&quot;</span>).path(<span class="string">&quot;gControllerPads[0].button&quot;</span>).flag(<span class="string">&quot;U_JPAD&quot;</span>).label(<span class="string">&quot;D^&quot;</span>);
-        group.variable(<span class="string">&quot;input-button-dl&quot;</span>).path(<span class="string">&quot;gControllerPads[0].button&quot;</span>).flag(<span class="string">&quot;L_JPAD&quot;</span>).label(<span class="string">&quot;D&lt;&quot;</span>);
-        group.variable(<span class="string">&quot;input-button-dr&quot;</span>).path(<span class="string">&quot;gControllerPads[0].button&quot;</span>).flag(<span class="string">&quot;R_JPAD&quot;</span>).label(<span class="string">&quot;D&gt;&quot;</span>);
-        group.variable(<span class="string">&quot;input-button-dd&quot;</span>).path(<span class="string">&quot;gControllerPads[0].button&quot;</span>).flag(<span class="string">&quot;D_JPAD&quot;</span>).label(<span class="string">&quot;Dv&quot;</span>);
+    builder.group(<span class="string">"Input"</span>, |group| {
+        group.variable(<span class="string">"input-stick-x"</span>).path(<span class="string">"gControllerPads[0].stick_x"</span>).label(<span class="string">"stick x"</span>);
+        group.variable(<span class="string">"input-stick-y"</span>).path(<span class="string">"gControllerPads[0].stick_y"</span>).label(<span class="string">"stick y"</span>);
+        group.variable(<span class="string">"input-buttons"</span>).path(<span class="string">"gControllerPads[0].button"</span>);
+        group.variable(<span class="string">"input-button-a"</span>).path(<span class="string">"gControllerPads[0].button"</span>).flag(<span class="string">"A_BUTTON"</span>).label(<span class="string">"A"</span>);
+        group.variable(<span class="string">"input-button-b"</span>).path(<span class="string">"gControllerPads[0].button"</span>).flag(<span class="string">"B_BUTTON"</span>).label(<span class="string">"B"</span>);
+        group.variable(<span class="string">"input-button-z"</span>).path(<span class="string">"gControllerPads[0].button"</span>).flag(<span class="string">"Z_TRIG"</span>).label(<span class="string">"Z"</span>);
+        group.variable(<span class="string">"input-button-s"</span>).path(<span class="string">"gControllerPads[0].button"</span>).flag(<span class="string">"START_BUTTON"</span>).label(<span class="string">"S"</span>);
+        group.variable(<span class="string">"input-button-l"</span>).path(<span class="string">"gControllerPads[0].button"</span>).flag(<span class="string">"L_TRIG"</span>).label(<span class="string">"L"</span>);
+        group.variable(<span class="string">"input-button-r"</span>).path(<span class="string">"gControllerPads[0].button"</span>).flag(<span class="string">"R_TRIG"</span>).label(<span class="string">"R"</span>);
+        group.variable(<span class="string">"input-button-cu"</span>).path(<span class="string">"gControllerPads[0].button"</span>).flag(<span class="string">"U_CBUTTONS"</span>).label(<span class="string">"C^"</span>);
+        group.variable(<span class="string">"input-button-cl"</span>).path(<span class="string">"gControllerPads[0].button"</span>).flag(<span class="string">"L_CBUTTONS"</span>).label(<span class="string">"C&lt;"</span>);
+        group.variable(<span class="string">"input-button-cr"</span>).path(<span class="string">"gControllerPads[0].button"</span>).flag(<span class="string">"R_CBUTTONS"</span>).label(<span class="string">"C&gt;"</span>);
+        group.variable(<span class="string">"input-button-cd"</span>).path(<span class="string">"gControllerPads[0].button"</span>).flag(<span class="string">"D_CBUTTONS"</span>).label(<span class="string">"Cv"</span>);
+        group.variable(<span class="string">"input-button-du"</span>).path(<span class="string">"gControllerPads[0].button"</span>).flag(<span class="string">"U_JPAD"</span>).label(<span class="string">"D^"</span>);
+        group.variable(<span class="string">"input-button-dl"</span>).path(<span class="string">"gControllerPads[0].button"</span>).flag(<span class="string">"L_JPAD"</span>).label(<span class="string">"D&lt;"</span>);
+        group.variable(<span class="string">"input-button-dr"</span>).path(<span class="string">"gControllerPads[0].button"</span>).flag(<span class="string">"R_JPAD"</span>).label(<span class="string">"D&gt;"</span>);
+        group.variable(<span class="string">"input-button-dd"</span>).path(<span class="string">"gControllerPads[0].button"</span>).flag(<span class="string">"D_JPAD"</span>).label(<span class="string">"Dv"</span>);
     });
-    builder.group(<span class="string">&quot;Mario&quot;</span>, |group| {
-        group.variable(<span class="string">&quot;mario-pos-x&quot;</span>).path(<span class="string">&quot;gMarioState-&gt;pos[0]&quot;</span>).label(<span class="string">&quot;pos x&quot;</span>);
-        group.variable(<span class="string">&quot;mario-pos-y&quot;</span>).path(<span class="string">&quot;gMarioState-&gt;pos[1]&quot;</span>).label(<span class="string">&quot;pos y&quot;</span>);
-        group.variable(<span class="string">&quot;mario-pos-z&quot;</span>).path(<span class="string">&quot;gMarioState-&gt;pos[2]&quot;</span>).label(<span class="string">&quot;pos z&quot;</span>);
-        group.variable(<span class="string">&quot;mario-vel-f&quot;</span>).path(<span class="string">&quot;gMarioState-&gt;forwardVel&quot;</span>).label(<span class="string">&quot;vel f&quot;</span>);
-        group.variable(<span class="string">&quot;mario-vel-x&quot;</span>).path(<span class="string">&quot;gMarioState-&gt;vel[0]&quot;</span>).label(<span class="string">&quot;vel x&quot;</span>);
-        group.variable(<span class="string">&quot;mario-vel-y&quot;</span>).path(<span class="string">&quot;gMarioState-&gt;vel[1]&quot;</span>).label(<span class="string">&quot;vel y&quot;</span>);
-        group.variable(<span class="string">&quot;mario-vel-z&quot;</span>).path(<span class="string">&quot;gMarioState-&gt;vel[2]&quot;</span>).label(<span class="string">&quot;vel z&quot;</span>);
-        group.variable(<span class="string">&quot;mario-face-pitch&quot;</span>).path(<span class="string">&quot;gMarioState-&gt;faceAngle[0]&quot;</span>).label(<span class="string">&quot;face pitch&quot;</span>);
-        group.variable(<span class="string">&quot;mario-face-yaw&quot;</span>).path(<span class="string">&quot;gMarioState-&gt;faceAngle[1]&quot;</span>).label(<span class="string">&quot;face yaw&quot;</span>);
-        group.variable(<span class="string">&quot;mario-face-roll&quot;</span>).path(<span class="string">&quot;gMarioState-&gt;faceAngle[2]&quot;</span>).label(<span class="string">&quot;face roll&quot;</span>);
-        group.variable(<span class="string">&quot;mario-action&quot;</span>).path(<span class="string">&quot;gMarioState-&gt;action&quot;</span>).label(<span class="string">&quot;action&quot;</span>);
+    builder.group(<span class="string">"Mario"</span>, |group| {
+        group.variable(<span class="string">"mario-pos-x"</span>).path(<span class="string">"gMarioState-&gt;pos[0]"</span>).label(<span class="string">"pos x"</span>);
+        group.variable(<span class="string">"mario-pos-y"</span>).path(<span class="string">"gMarioState-&gt;pos[1]"</span>).label(<span class="string">"pos y"</span>);
+        group.variable(<span class="string">"mario-pos-z"</span>).path(<span class="string">"gMarioState-&gt;pos[2]"</span>).label(<span class="string">"pos z"</span>);
+        group.variable(<span class="string">"mario-vel-f"</span>).path(<span class="string">"gMarioState-&gt;forwardVel"</span>).label(<span class="string">"vel f"</span>);
+        group.variable(<span class="string">"mario-vel-x"</span>).path(<span class="string">"gMarioState-&gt;vel[0]"</span>).label(<span class="string">"vel x"</span>);
+        group.variable(<span class="string">"mario-vel-y"</span>).path(<span class="string">"gMarioState-&gt;vel[1]"</span>).label(<span class="string">"vel y"</span>);
+        group.variable(<span class="string">"mario-vel-z"</span>).path(<span class="string">"gMarioState-&gt;vel[2]"</span>).label(<span class="string">"vel z"</span>);
+        group.variable(<span class="string">"mario-face-pitch"</span>).path(<span class="string">"gMarioState-&gt;faceAngle[0]"</span>).label(<span class="string">"face pitch"</span>);
+        group.variable(<span class="string">"mario-face-yaw"</span>).path(<span class="string">"gMarioState-&gt;faceAngle[1]"</span>).label(<span class="string">"face yaw"</span>);
+        group.variable(<span class="string">"mario-face-roll"</span>).path(<span class="string">"gMarioState-&gt;faceAngle[2]"</span>).label(<span class="string">"face roll"</span>);
+        group.variable(<span class="string">"mario-action"</span>).path(<span class="string">"gMarioState-&gt;action"</span>).label(<span class="string">"action"</span>);
     });
-    builder.group(<span class="string">&quot;Misc&quot;</span>, |group| {
-        group.variable(<span class="string">&quot;global-timer&quot;</span>).path(<span class="string">&quot;gGlobalTimer&quot;</span>).label(<span class="string">&quot;global timer&quot;</span>);
-        group.variable(<span class="string">&quot;camera-yaw&quot;</span>).path(<span class="string">&quot;gMarioState-&gt;area?-&gt;camera?-&gt;yaw&quot;</span>).label(<span class="string">&quot;camera yaw&quot;</span>);
-        group.variable(<span class="string">&quot;level-num&quot;</span>).path(<span class="string">&quot;gCurrLevelNum&quot;</span>).label(<span class="string">&quot;level&quot;</span>);
-        group.variable(<span class="string">&quot;area-index&quot;</span>).path(<span class="string">&quot;gCurrAreaIndex&quot;</span>).label(<span class="string">&quot;area&quot;</span>);
+    builder.group(<span class="string">"Misc"</span>, |group| {
+        group.variable(<span class="string">"global-timer"</span>).path(<span class="string">"gGlobalTimer"</span>).label(<span class="string">"global timer"</span>);
+        group.variable(<span class="string">"camera-yaw"</span>).path(<span class="string">"gMarioState-&gt;area?-&gt;camera?-&gt;yaw"</span>).label(<span class="string">"camera yaw"</span>);
+        group.variable(<span class="string">"level-num"</span>).path(<span class="string">"gCurrLevelNum"</span>).label(<span class="string">"level"</span>);
+        group.variable(<span class="string">"area-index"</span>).path(<span class="string">"gCurrAreaIndex"</span>).label(<span class="string">"area"</span>);
     });
-    builder.group(<span class="string">&quot;Object&quot;</span>, |group| {
-        group.variable(<span class="string">&quot;obj-active-flags-active&quot;</span>).path(<span class="string">&quot;struct Object.activeFlags&quot;</span>).flag(<span class="string">&quot;ACTIVE_FLAG_ACTIVE&quot;</span>).label(<span class="string">&quot;active&quot;</span>);
-        group.variable(<span class="string">&quot;obj-behavior-ptr&quot;</span>).path(<span class="string">&quot;struct Object.behavior&quot;</span>);
-        group.variable(<span class="string">&quot;obj-hitbox-radius&quot;</span>).path(<span class="string">&quot;struct Object.hitboxRadius&quot;</span>).label(<span class="string">&quot;hitbox radius&quot;</span>);
-        group.variable(<span class="string">&quot;obj-hitbox-height&quot;</span>).path(<span class="string">&quot;struct Object.hitboxHeight&quot;</span>).label(<span class="string">&quot;hitbox height&quot;</span>);
-        group.variable(<span class="string">&quot;obj-pos-x&quot;</span>).path(<span class="string">&quot;struct Object.oPosX&quot;</span>).label(<span class="string">&quot;pos x&quot;</span>);
-        group.variable(<span class="string">&quot;obj-pos-y&quot;</span>).path(<span class="string">&quot;struct Object.oPosY&quot;</span>).label(<span class="string">&quot;pos y&quot;</span>);
-        group.variable(<span class="string">&quot;obj-pos-z&quot;</span>).path(<span class="string">&quot;struct Object.oPosZ&quot;</span>).label(<span class="string">&quot;pos z&quot;</span>);
-        group.variable(<span class="string">&quot;obj-vel-f&quot;</span>).path(<span class="string">&quot;struct Object.oForwardVel&quot;</span>).label(<span class="string">&quot;vel f&quot;</span>);
-        group.variable(<span class="string">&quot;obj-vel-x&quot;</span>).path(<span class="string">&quot;struct Object.oVelX&quot;</span>).label(<span class="string">&quot;vel x&quot;</span>);
-        group.variable(<span class="string">&quot;obj-vel-y&quot;</span>).path(<span class="string">&quot;struct Object.oVelY&quot;</span>).label(<span class="string">&quot;vel y&quot;</span>);
-        group.variable(<span class="string">&quot;obj-vel-z&quot;</span>).path(<span class="string">&quot;struct Object.oVelZ&quot;</span>).label(<span class="string">&quot;vel z&quot;</span>);
+    builder.group(<span class="string">"Object"</span>, |group| {
+        group.variable(<span class="string">"obj-active-flags-active"</span>).path(<span class="string">"struct Object.activeFlags"</span>).flag(<span class="string">"ACTIVE_FLAG_ACTIVE"</span>).label(<span class="string">"active"</span>);
+        group.variable(<span class="string">"obj-behavior-ptr"</span>).path(<span class="string">"struct Object.behavior"</span>);
+        group.variable(<span class="string">"obj-hitbox-radius"</span>).path(<span class="string">"struct Object.hitboxRadius"</span>).label(<span class="string">"hitbox radius"</span>);
+        group.variable(<span class="string">"obj-hitbox-height"</span>).path(<span class="string">"struct Object.hitboxHeight"</span>).label(<span class="string">"hitbox height"</span>);
+        group.variable(<span class="string">"obj-pos-x"</span>).path(<span class="string">"struct Object.oPosX"</span>).label(<span class="string">"pos x"</span>);
+        group.variable(<span class="string">"obj-pos-y"</span>).path(<span class="string">"struct Object.oPosY"</span>).label(<span class="string">"pos y"</span>);
+        group.variable(<span class="string">"obj-pos-z"</span>).path(<span class="string">"struct Object.oPosZ"</span>).label(<span class="string">"pos z"</span>);
+        group.variable(<span class="string">"obj-vel-f"</span>).path(<span class="string">"struct Object.oForwardVel"</span>).label(<span class="string">"vel f"</span>);
+        group.variable(<span class="string">"obj-vel-x"</span>).path(<span class="string">"struct Object.oVelX"</span>).label(<span class="string">"vel x"</span>);
+        group.variable(<span class="string">"obj-vel-y"</span>).path(<span class="string">"struct Object.oVelY"</span>).label(<span class="string">"vel y"</span>);
+        group.variable(<span class="string">"obj-vel-z"</span>).path(<span class="string">"struct Object.oVelZ"</span>).label(<span class="string">"vel z"</span>);
     });
-    builder.group(<span class="string">&quot;Surface&quot;</span>, |group| {
-        group.variable(<span class="string">&quot;surface-normal-x&quot;</span>).path(<span class="string">&quot;struct Surface.normal.x&quot;</span>).label(<span class="string">&quot;normal x&quot;</span>);
-        group.variable(<span class="string">&quot;surface-normal-y&quot;</span>).path(<span class="string">&quot;struct Surface.normal.y&quot;</span>).label(<span class="string">&quot;normal y&quot;</span>);
-        group.variable(<span class="string">&quot;surface-normal-z&quot;</span>).path(<span class="string">&quot;struct Surface.normal.z&quot;</span>).label(<span class="string">&quot;normal z&quot;</span>);
-        group.variable(<span class="string">&quot;surface-vertex1-x&quot;</span>).path(<span class="string">&quot;struct Surface.vertex1[0]&quot;</span>).label(<span class="string">&quot;x1&quot;</span>);
-        group.variable(<span class="string">&quot;surface-vertex1-y&quot;</span>).path(<span class="string">&quot;struct Surface.vertex1[1]&quot;</span>).label(<span class="string">&quot;y1&quot;</span>);
-        group.variable(<span class="string">&quot;surface-vertex1-z&quot;</span>).path(<span class="string">&quot;struct Surface.vertex1[2]&quot;</span>).label(<span class="string">&quot;z1&quot;</span>);
-        group.variable(<span class="string">&quot;surface-vertex2-x&quot;</span>).path(<span class="string">&quot;struct Surface.vertex2[0]&quot;</span>).label(<span class="string">&quot;x2&quot;</span>);
-        group.variable(<span class="string">&quot;surface-vertex2-y&quot;</span>).path(<span class="string">&quot;struct Surface.vertex2[1]&quot;</span>).label(<span class="string">&quot;y2&quot;</span>);
-        group.variable(<span class="string">&quot;surface-vertex2-z&quot;</span>).path(<span class="string">&quot;struct Surface.vertex2[2]&quot;</span>).label(<span class="string">&quot;z2&quot;</span>);
-        group.variable(<span class="string">&quot;surface-vertex3-x&quot;</span>).path(<span class="string">&quot;struct Surface.vertex3[0]&quot;</span>).label(<span class="string">&quot;x3&quot;</span>);
-        group.variable(<span class="string">&quot;surface-vertex3-y&quot;</span>).path(<span class="string">&quot;struct Surface.vertex3[1]&quot;</span>).label(<span class="string">&quot;y3&quot;</span>);
-        group.variable(<span class="string">&quot;surface-vertex3-z&quot;</span>).path(<span class="string">&quot;struct Surface.vertex3[2]&quot;</span>).label(<span class="string">&quot;z3&quot;</span>);
+    builder.group(<span class="string">"Surface"</span>, |group| {
+        group.variable(<span class="string">"surface-normal-x"</span>).path(<span class="string">"struct Surface.normal.x"</span>).label(<span class="string">"normal x"</span>);
+        group.variable(<span class="string">"surface-normal-y"</span>).path(<span class="string">"struct Surface.normal.y"</span>).label(<span class="string">"normal y"</span>);
+        group.variable(<span class="string">"surface-normal-z"</span>).path(<span class="string">"struct Surface.normal.z"</span>).label(<span class="string">"normal z"</span>);
+        group.variable(<span class="string">"surface-vertex1-x"</span>).path(<span class="string">"struct Surface.vertex1[0]"</span>).label(<span class="string">"x1"</span>);
+        group.variable(<span class="string">"surface-vertex1-y"</span>).path(<span class="string">"struct Surface.vertex1[1]"</span>).label(<span class="string">"y1"</span>);
+        group.variable(<span class="string">"surface-vertex1-z"</span>).path(<span class="string">"struct Surface.vertex1[2]"</span>).label(<span class="string">"z1"</span>);
+        group.variable(<span class="string">"surface-vertex2-x"</span>).path(<span class="string">"struct Surface.vertex2[0]"</span>).label(<span class="string">"x2"</span>);
+        group.variable(<span class="string">"surface-vertex2-y"</span>).path(<span class="string">"struct Surface.vertex2[1]"</span>).label(<span class="string">"y2"</span>);
+        group.variable(<span class="string">"surface-vertex2-z"</span>).path(<span class="string">"struct Surface.vertex2[2]"</span>).label(<span class="string">"z2"</span>);
+        group.variable(<span class="string">"surface-vertex3-x"</span>).path(<span class="string">"struct Surface.vertex3[0]"</span>).label(<span class="string">"x3"</span>);
+        group.variable(<span class="string">"surface-vertex3-y"</span>).path(<span class="string">"struct Surface.vertex3[1]"</span>).label(<span class="string">"y3"</span>);
+        group.variable(<span class="string">"surface-vertex3-z"</span>).path(<span class="string">"struct Surface.vertex3[2]"</span>).label(<span class="string">"z3"</span>);
     });
 }
 
@@ -452,7 +453,7 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ specs })
     }
 
-    <span class="kw">pub fn </span>group&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, group: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str) -&gt; <span class="kw">impl </span>Iterator&lt;Item = Variable&gt; + <span class="lifetime">&#39;a </span>{
+    <span class="kw">pub fn </span>group&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, group: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str) -&gt; <span class="kw">impl </span>Iterator&lt;Item = Variable&gt; + <span class="lifetime">'a </span>{
         <span class="self">self</span>.specs
             .iter()
             .filter(<span class="kw">move </span>|(<span class="kw">_</span>, spec)| spec.group == group)
@@ -507,7 +508,7 @@
         };
 
         <span class="kw">match </span>(path, spec.flag.clone()) {
-            (<span class="prelude-val">Some</span>(path), <span class="prelude-val">Some</span>(flag)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;{} &amp; {}&quot;</span>, path, flag))),
+            (<span class="prelude-val">Some</span>(path), <span class="prelude-val">Some</span>(flag)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">"{} &amp; {}"</span>, path, flag))),
             (path, <span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(path),
         }
     }
@@ -615,9 +616,9 @@
         <span class="kw">for </span>group <span class="kw">in </span><span class="self">self</span>.groups {
             <span class="kw">for </span>variable <span class="kw">in </span>group.variables {
                 <span class="kw">let </span>path_source = variable.path.unwrap();
-                <span class="kw">let </span>path = <span class="kw">if </span>path_source.starts_with(<span class="string">&quot;struct Object&quot;</span>) {
+                <span class="kw">let </span>path = <span class="kw">if </span>path_source.starts_with(<span class="string">"struct Object"</span>) {
                     Path::Object(path_source)
-                } <span class="kw">else if </span>path_source.starts_with(<span class="string">&quot;struct Surface&quot;</span>) {
+                } <span class="kw">else if </span>path_source.starts_with(<span class="string">"struct Surface"</span>) {
                     Path::Surface(path_source)
                 } <span class="kw">else </span>{
                     Path::Global(path_source)

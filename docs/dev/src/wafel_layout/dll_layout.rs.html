@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_layout/src/dll_layout.rs`."><title>dll_layout.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-cb6f1f67f1bcd037.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_layout" data-themes="" data-resource-suffix="" data-rustdoc-version="1.73.0 (cc66ad468 2023-10-03)" data-channel="1.73.0" data-search-js="search-6dfdfced5eff6596.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-1596385f77d47ef2.css" data-theme-dark-css="dark-0a43001d3fc2282c.css" data-theme-ayu-css="ayu-fd19013d6ce078bf.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-1596385f77d47ef2.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-0a43001d3fc2282c.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../wafel_layout/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_layout/src/dll_layout.rs`."><title>dll_layout.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_layout" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1079,27 +1080,27 @@
     </span><span class="kw">pub </span>name: String,
     <span class="doccomment">/// The virtual address that the segment is loaded to.
     ///
-    /// This is the offset from the loaded DLL&#39;s base address.
+    /// This is the offset from the loaded DLL's base address.
     </span><span class="kw">pub </span>virtual_address: u64,
     <span class="doccomment">/// The size that the segment has when loaded into memory.
     </span><span class="kw">pub </span>virtual_size: u64,
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>DllLayout {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;segments:&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="macro">writeln!</span>(f, <span class="string">"segments:"</span>)<span class="question-mark">?</span>;
         <span class="kw">for </span>segment <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.segments {
-            <span class="macro">writeln!</span>(f, <span class="string">&quot;  {}&quot;</span>, segment)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(f, <span class="string">"  {}"</span>, segment)<span class="question-mark">?</span>;
         }
-        <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.data_layout)
+        <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.data_layout)
     }
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>DllSegment {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         <span class="macro">write!</span>(
             f,
-            <span class="string">&quot;{}: vaddr={:#X}, size={:#X}&quot;</span>,
+            <span class="string">"{}: vaddr={:#X}, size={:#X}"</span>,
             <span class="self">self</span>.name, <span class="self">self</span>.virtual_address, <span class="self">self</span>.virtual_size
         )
     }
@@ -1117,7 +1118,7 @@
         <span class="kw">let </span>segments = read_dll_segments_impl(<span class="kw-2">&amp;</span>object)<span class="question-mark">?</span>;
 
         <span class="comment">// Load dwarf info
-        </span><span class="kw">let </span>load_section = |id: SectionId| -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;<span class="lifetime">&#39;_</span>, [u8]&gt;, object::Error&gt; {
+        </span><span class="kw">let </span>load_section = |id: SectionId| -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;<span class="lifetime">'_</span>, [u8]&gt;, object::Error&gt; {
             <span class="prelude-val">Ok</span>(object
                 .section_by_name(id.name())
                 .map(|<span class="kw-2">ref </span>section| section.uncompressed_data())
@@ -1149,23 +1150,23 @@
         <span class="kw">let </span><span class="kw-2">mut </span>filename = filename.to_string_lossy().into_owned();
 
         <span class="comment">// This allows opening a DLL on a different platform
-        </span><span class="kw">if </span>filename.ends_with(<span class="string">&quot;.dll&quot;</span>) || filename.ends_with(<span class="string">&quot;.so&quot;</span>) {
+        </span><span class="kw">if </span>filename.ends_with(<span class="string">".dll"</span>) || filename.ends_with(<span class="string">".so"</span>) {
             <span class="kw">return </span>path.to_path_buf();
         }
 
-        <span class="attr">#[cfg(target_os = <span class="string">&quot;windows&quot;</span>)]
+        <span class="attr">#[cfg(target_os = <span class="string">"windows"</span>)]
         </span>{
-            <span class="kw">if </span>!filename.ends_with(<span class="string">&quot;.dll&quot;</span>) {
-                filename = <span class="macro">format!</span>(<span class="string">&quot;{}.dll&quot;</span>, filename);
+            <span class="kw">if </span>!filename.ends_with(<span class="string">".dll"</span>) {
+                filename = <span class="macro">format!</span>(<span class="string">"{}.dll"</span>, filename);
             }
         }
-        <span class="attr">#[cfg(not(target_os = <span class="string">&quot;windows&quot;</span>))]
+        <span class="attr">#[cfg(not(target_os = <span class="string">"windows"</span>))]
         </span>{
-            <span class="kw">if </span>!filename.starts_with(<span class="string">&quot;lib&quot;</span>) {
-                filename = <span class="macro">format!</span>(<span class="string">&quot;lib{}&quot;</span>, filename);
+            <span class="kw">if </span>!filename.starts_with(<span class="string">"lib"</span>) {
+                filename = <span class="macro">format!</span>(<span class="string">"lib{}"</span>, filename);
             }
-            <span class="kw">if </span>!filename.ends_with(<span class="string">&quot;.so&quot;</span>) {
-                filename = <span class="macro">format!</span>(<span class="string">&quot;{}.so&quot;</span>, filename);
+            <span class="kw">if </span>!filename.ends_with(<span class="string">".so"</span>) {
+                filename = <span class="macro">format!</span>(<span class="string">"{}.so"</span>, filename);
             }
         }
 
@@ -1180,10 +1181,10 @@
 
     <span class="kw">let </span><span class="kw-2">mut </span>sym_path = OsString::new();
     sym_path.push(dll_path);
-    sym_path.push(<span class="string">&quot;.dSYM&quot;</span>);
+    sym_path.push(<span class="string">".dSYM"</span>);
     <span class="kw">if </span>Path::new(<span class="kw-2">&amp;</span>sym_path).exists() {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(filename) = dll_path.file_name() {
-            sym_path.push(<span class="string">&quot;/Contents/Resources/DWARF/&quot;</span>);
+            sym_path.push(<span class="string">"/Contents/Resources/DWARF/"</span>);
             sym_path.push(filename);
             <span class="kw">return </span>PathBuf::from(sym_path);
         }
@@ -1199,7 +1200,7 @@
     <span class="prelude-val">Ok</span>(segments)
 }
 
-<span class="kw">fn </span>read_dll_segments_impl(object: <span class="kw-2">&amp;</span>object::File&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;DllSegment&gt;, DllLayoutError&gt; {
+<span class="kw">fn </span>read_dll_segments_impl(object: <span class="kw-2">&amp;</span>object::File&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;DllSegment&gt;, DllLayoutError&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>segments = Vec::new();
     <span class="kw">for </span>segment <span class="kw">in </span>object.segments() {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = segment.name()<span class="question-mark">? </span>{
@@ -1218,7 +1219,7 @@
     <span class="comment">// .data and .bss segments are the only ones that need to be copied in backup slots
     </span><span class="kw">let </span><span class="kw-2">mut </span>data_segments: Vec&lt;DllSegment&gt; = all_segments
         .iter()
-        .filter(|<span class="kw-2">&amp;</span>segment| [<span class="string">&quot;.data&quot;</span>, <span class="string">&quot;.bss&quot;</span>, <span class="string">&quot;__DATA&quot;</span>].contains(<span class="kw-2">&amp;</span>segment.name.as_str()))
+        .filter(|<span class="kw-2">&amp;</span>segment| [<span class="string">".data"</span>, <span class="string">".bss"</span>, <span class="string">"__DATA"</span>].contains(<span class="kw-2">&amp;</span>segment.name.as_str()))
         .cloned()
         .collect();
 
@@ -1236,7 +1237,7 @@
         <span class="kw">let </span>segment2 = <span class="kw-2">&amp;</span>data_segments[i + <span class="number">1</span>];
         <span class="macro">assert!</span>(
             segment1.virtual_address + segment1.virtual_size &lt;= segment2.virtual_address,
-            <span class="string">&quot;overlapping dll segments&quot;
+            <span class="string">"overlapping dll segments"
         </span>);
     }
 
@@ -1264,8 +1265,8 @@
         };
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = <span class="kw-2">&amp;</span>unit_name {
-            <span class="kw">if </span>path.starts_with(<span class="string">&quot;C:/M/mingw-w64-crt-git&quot;</span>)
-                || path.starts_with(<span class="string">&quot;C:/M/B/src/mingw-w64&quot;</span>)
+            <span class="kw">if </span>path.starts_with(<span class="string">"C:/M/mingw-w64-crt-git"</span>)
+                || path.starts_with(<span class="string">"C:/M/B/src/mingw-w64"</span>)
             {
                 <span class="kw">continue</span>;
             }
@@ -1293,7 +1294,7 @@
 <span class="doccomment">/// A placeholder id for a type reference within a compilation unit.
 </span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 </span><span class="kw">enum </span>TypeId&lt;O&gt; {
-    <span class="doccomment">/// The offset to the type&#39;s dwarf entry.
+    <span class="doccomment">/// The offset to the type's dwarf entry.
     </span>Offset(O),
     Temp(O, usize),
     Void,
@@ -1301,20 +1302,20 @@
 }
 
 <span class="kw">impl</span>&lt;O: fmt::Display&gt; fmt::Display <span class="kw">for </span>TypeId&lt;O&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         <span class="kw">match </span><span class="self">self </span>{
-            TypeId::Offset(offset) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, offset),
-            TypeId::Temp(offset, id) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{}_{}&quot;</span>, offset, id),
-            TypeId::Void =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;void&quot;</span>),
-            TypeId::U64 =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;u64&quot;</span>),
+            TypeId::Offset(offset) =&gt; <span class="macro">write!</span>(f, <span class="string">"{}"</span>, offset),
+            TypeId::Temp(offset, id) =&gt; <span class="macro">write!</span>(f, <span class="string">"{}_{}"</span>, offset, id),
+            TypeId::Void =&gt; <span class="macro">write!</span>(f, <span class="string">"void"</span>),
+            TypeId::U64 =&gt; <span class="macro">write!</span>(f, <span class="string">"u64"</span>),
         }
     }
 }
 
 <span class="doccomment">/// State that is tracked when reading a single compilation unit.
-</span><span class="kw">struct </span>UnitReader&lt;<span class="lifetime">&#39;a</span>, R: Reader&gt; {
-    dwarf: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Dwarf&lt;R&gt;,
-    unit: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Unit&lt;R&gt;,
+</span><span class="kw">struct </span>UnitReader&lt;<span class="lifetime">'a</span>, R: Reader&gt; {
+    dwarf: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Dwarf&lt;R&gt;,
+    unit: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Unit&lt;R&gt;,
     relative_address_base: u64,
     <span class="doccomment">/// The types that have been defined so far.
     ///
@@ -1336,12 +1337,12 @@
     </span>constants: HashMap&lt;String, Constant&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, R&gt; UnitReader&lt;<span class="lifetime">&#39;a</span>, R&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, R&gt; UnitReader&lt;<span class="lifetime">'a</span>, R&gt;
 <span class="kw">where
     </span>R: Reader,
     R::Offset: fmt::Display,
 {
-    <span class="kw">fn </span>new(dwarf: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Dwarf&lt;R&gt;, unit: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Unit&lt;R&gt;, relative_address_base: u64) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>new(dwarf: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Dwarf&lt;R&gt;, unit: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Unit&lt;R&gt;, relative_address_base: u64) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             dwarf,
             unit,
@@ -1362,13 +1363,13 @@
         <span class="self">self</span>.extract_definitions()<span class="question-mark">?</span>;
         <span class="comment">// TODO: Use a more meaningful string than the TypeId
         </span><span class="self">self</span>.update_layout(layout)
-            .map_err(|e| e.map(|id| <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, id)))<span class="question-mark">?</span>;
+            .map_err(|e| e.map(|id| <span class="macro">format!</span>(<span class="string">"{}"</span>, id)))<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Extract type and variable definitions from the compilation unit dwarf info.
     </span><span class="kw">fn </span>extract_definitions(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), DllLayoutErrorKind&gt; {
-        <span class="comment">// Define a void type for convenience since the dwarf info doesn&#39;t define one
+        <span class="comment">// Define a void type for convenience since the dwarf info doesn't define one
         </span><span class="self">self</span>.pre_types.insert(
             TypeId::Void,
             PreDataType {
@@ -1384,7 +1385,7 @@
             },
         );
 
-        <span class="kw">let </span><span class="kw-2">mut </span>tree: EntriesTree&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt; = <span class="self">self</span>.unit.entries_tree(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>tree: EntriesTree&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt; = <span class="self">self</span>.unit.entries_tree(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>root = tree.root()<span class="question-mark">?</span>;
 
         <span class="self">self</span>.expect_tag(root.entry(), gimli::DW_TAG_compile_unit)<span class="question-mark">?</span>;
@@ -1463,36 +1464,36 @@
 
     <span class="kw">fn </span>read_base_type(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        node: EntriesTreeNode&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        node: EntriesTreeNode&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), DllLayoutErrorKind&gt; {
         <span class="kw">let </span>entry = node.entry();
         <span class="kw">let </span>name = <span class="self">self</span>.req_attr_string(entry, gimli::DW_AT_name)<span class="question-mark">?</span>;
         <span class="kw">let </span>size = <span class="self">self</span>.req_attr_usize(entry, gimli::DW_AT_byte_size)<span class="question-mark">?</span>;
         <span class="kw">let </span>shallow_type = <span class="kw">match </span>name.as_ref() {
-            <span class="string">&quot;char&quot; </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
-            <span class="string">&quot;long long unsigned int&quot; </span>=&gt; ShallowDataType::Int(IntType::unsigned_with_size(size)),
-            <span class="string">&quot;long long int&quot; </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
-            <span class="string">&quot;short unsigned int&quot; </span>=&gt; ShallowDataType::Int(IntType::unsigned_with_size(size)),
-            <span class="string">&quot;int&quot; </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
-            <span class="string">&quot;long int&quot; </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
-            <span class="string">&quot;unsigned int&quot; </span>=&gt; ShallowDataType::Int(IntType::unsigned_with_size(size)),
-            <span class="string">&quot;long unsigned int&quot; </span>=&gt; ShallowDataType::Int(IntType::unsigned_with_size(size)),
-            <span class="string">&quot;unsigned char&quot; </span>=&gt; ShallowDataType::Int(IntType::unsigned_with_size(size)),
-            <span class="string">&quot;double&quot; </span>=&gt; ShallowDataType::Float(FloatType::F64),
-            <span class="string">&quot;float&quot; </span>=&gt; ShallowDataType::Float(FloatType::F32),
-            <span class="string">&quot;long double&quot; </span>=&gt; ShallowDataType::Void, <span class="comment">// f128 is not currently supported
-            </span><span class="string">&quot;signed char&quot; </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
-            <span class="string">&quot;short int&quot; </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
-            <span class="string">&quot;_Bool&quot; </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
-            <span class="string">&quot;__int128 unsigned&quot; </span>=&gt; ShallowDataType::Array {
+            <span class="string">"char" </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
+            <span class="string">"long long unsigned int" </span>=&gt; ShallowDataType::Int(IntType::unsigned_with_size(size)),
+            <span class="string">"long long int" </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
+            <span class="string">"short unsigned int" </span>=&gt; ShallowDataType::Int(IntType::unsigned_with_size(size)),
+            <span class="string">"int" </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
+            <span class="string">"long int" </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
+            <span class="string">"unsigned int" </span>=&gt; ShallowDataType::Int(IntType::unsigned_with_size(size)),
+            <span class="string">"long unsigned int" </span>=&gt; ShallowDataType::Int(IntType::unsigned_with_size(size)),
+            <span class="string">"unsigned char" </span>=&gt; ShallowDataType::Int(IntType::unsigned_with_size(size)),
+            <span class="string">"double" </span>=&gt; ShallowDataType::Float(FloatType::F64),
+            <span class="string">"float" </span>=&gt; ShallowDataType::Float(FloatType::F32),
+            <span class="string">"long double" </span>=&gt; ShallowDataType::Void, <span class="comment">// f128 is not currently supported
+            </span><span class="string">"signed char" </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
+            <span class="string">"short int" </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
+            <span class="string">"_Bool" </span>=&gt; ShallowDataType::Int(IntType::signed_with_size(size)),
+            <span class="string">"__int128 unsigned" </span>=&gt; ShallowDataType::Array {
                 base: TypeId::U64,
                 length: <span class="prelude-val">Some</span>(<span class="number">2</span>),
             },
-            <span class="string">&quot;_Float128&quot; </span>=&gt; ShallowDataType::Array {
+            <span class="string">"_Float128" </span>=&gt; ShallowDataType::Array {
                 base: TypeId::U64,
                 length: <span class="prelude-val">Some</span>(<span class="number">2</span>),
             },
-            <span class="string">&quot;_Float16&quot; </span>=&gt; ShallowDataType::Int(IntType::U16),
+            <span class="string">"_Float16" </span>=&gt; ShallowDataType::Int(IntType::U16),
             <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(DllLayoutErrorKind::UnknownBaseTypeName { name }),
         };
         <span class="self">self</span>.pre_types.insert(
@@ -1507,7 +1508,7 @@
 
     <span class="kw">fn </span>read_modified_type(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        node: EntriesTreeNode&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        node: EntriesTreeNode&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), DllLayoutErrorKind&gt; {
         <span class="comment">// Ignore attributes and treat as a type alias
         </span><span class="kw">let </span>entry = node.entry();
@@ -1524,7 +1525,7 @@
 
     <span class="kw">fn </span>read_typedef(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        node: EntriesTreeNode&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        node: EntriesTreeNode&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), DllLayoutErrorKind&gt; {
         <span class="kw">let </span>entry = node.entry();
         <span class="kw">let </span>type_name = TypeName {
@@ -1548,7 +1549,7 @@
 
     <span class="kw">fn </span>read_pointer_type(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        node: EntriesTreeNode&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        node: EntriesTreeNode&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), DllLayoutErrorKind&gt; {
         <span class="kw">let </span>entry = node.entry();
         <span class="self">self</span>.pre_types.insert(
@@ -1565,7 +1566,7 @@
 
     <span class="kw">fn </span>read_struct_or_union_type(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        node: EntriesTreeNode&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        node: EntriesTreeNode&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), DllLayoutErrorKind&gt; {
         <span class="kw">let </span>entry = node.entry();
 
@@ -1658,7 +1659,7 @@
 
     <span class="kw">fn </span>read_enumeration_type(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        node: EntriesTreeNode&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        node: EntriesTreeNode&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), DllLayoutErrorKind&gt; {
         <span class="kw">let </span>entry = node.entry();
         <span class="kw">let </span>name = <span class="self">self</span>.attr_string(entry, gimli::DW_AT_name)<span class="question-mark">?</span>;
@@ -1692,7 +1693,7 @@
 
     <span class="kw">fn </span>read_array_type(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        node: EntriesTreeNode&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        node: EntriesTreeNode&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), DllLayoutErrorKind&gt; {
         <span class="kw">let </span>entry = node.entry();
 
@@ -1756,7 +1757,7 @@
 
     <span class="kw">fn </span>read_subroutine_type(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        node: EntriesTreeNode&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        node: EntriesTreeNode&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), DllLayoutErrorKind&gt; {
         <span class="comment">// TODO: Function types
         </span><span class="kw">let </span>entry = node.entry();
@@ -1772,7 +1773,7 @@
 
     <span class="kw">fn </span>read_variable(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        node: EntriesTreeNode&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        node: EntriesTreeNode&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), DllLayoutErrorKind&gt; {
         <span class="kw">let </span>entry = node.entry();
 
@@ -1813,7 +1814,7 @@
 
     <span class="kw">fn </span>read_subprogram(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        node: EntriesTreeNode&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        node: EntriesTreeNode&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), DllLayoutErrorKind&gt; {
         <span class="comment">// TODO: Functions
         </span><span class="kw">let </span>entry = node.entry();
@@ -1843,13 +1844,13 @@
                     evaluation_result = evaluation
                         .resume_with_relocated_address(address - <span class="self">self</span>.relative_address_base)<span class="question-mark">?</span>;
                 }
-                result =&gt; <span class="macro">unimplemented!</span>(<span class="string">&quot;{:?}&quot;</span>, result),
+                result =&gt; <span class="macro">unimplemented!</span>(<span class="string">"{:?}"</span>, result),
             }
         };
-        <span class="macro">assert_eq!</span>(address_result.len(), <span class="number">1</span>, <span class="string">&quot;invalid DW_AT_location result&quot;</span>);
+        <span class="macro">assert_eq!</span>(address_result.len(), <span class="number">1</span>, <span class="string">"invalid DW_AT_location result"</span>);
         <span class="kw">let </span>address = <span class="kw">match </span>address_result[<span class="number">0</span>].location {
             gimli::Location::Address { address } =&gt; address,
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;invalid DW_AT_location result&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"invalid DW_AT_location result"</span>),
         };
         <span class="prelude-val">Ok</span>(address)
     }
@@ -1860,7 +1861,7 @@
     /// Return an error if the attribute is present but is not a string.
     </span><span class="kw">fn </span>attr_string(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
         attr_name: DwAt,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;String&gt;, DllLayoutErrorKind&gt; {
         <span class="prelude-val">Ok</span>(<span class="kw">match </span>entry.attr_value(attr_name)<span class="question-mark">? </span>{
@@ -1881,7 +1882,7 @@
     /// Return an error if the attribute is present but is not an offset.
     </span><span class="kw">fn </span>attr_offset(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
         attr_name: DwAt,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;R::Offset&gt;, DllLayoutErrorKind&gt; {
         <span class="prelude-val">Ok</span>(entry.attr(attr_name)<span class="question-mark">?</span>.and_then(|attr| {
@@ -1899,7 +1900,7 @@
     /// Return an error if the attribute is present but is not an unsigned int.
     </span><span class="kw">fn </span>attr_usize(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
         attr_name: DwAt,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;usize&gt;, DllLayoutErrorKind&gt; {
         <span class="prelude-val">Ok</span>(entry
@@ -1913,7 +1914,7 @@
     /// Return an error if the attribute is present but not a signed int.
     </span><span class="kw">fn </span>attr_i64(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
         attr_name: DwAt,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;i64&gt;, DllLayoutErrorKind&gt; {
         <span class="prelude-val">Ok</span>(entry.attr(attr_name)<span class="question-mark">?</span>.and_then(|attr| attr.sdata_value()))
@@ -1924,7 +1925,7 @@
     /// Return an error if the attribute is not present or is not a string.
     </span><span class="kw">fn </span>req_attr_string(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
         attr_name: DwAt,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;String, DllLayoutErrorKind&gt; {
         <span class="self">self</span>.attr_string(entry, attr_name)<span class="question-mark">?
@@ -1936,7 +1937,7 @@
     /// Return an error if the attribute is not present or is not an offset.
     </span><span class="kw">fn </span>req_attr_offset(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
         attr_name: DwAt,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;R::Offset, DllLayoutErrorKind&gt; {
         <span class="self">self</span>.attr_offset(entry, attr_name)<span class="question-mark">?
@@ -1948,7 +1949,7 @@
     /// Return an error if the attribute is not present or is not an unsigned int.
     </span><span class="kw">fn </span>req_attr_usize(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
         attr_name: DwAt,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;usize, DllLayoutErrorKind&gt; {
         <span class="self">self</span>.attr_usize(entry, attr_name)<span class="question-mark">?
@@ -1960,7 +1961,7 @@
     /// Return an error if the attribute is not present or is not an signed int.
     </span><span class="kw">fn </span>req_attr_i64(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
         attr_name: DwAt,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;i64, DllLayoutErrorKind&gt; {
         <span class="self">self</span>.attr_i64(entry, attr_name)<span class="question-mark">?
@@ -1973,7 +1974,7 @@
     /// Return an error if the attribute is not an offset.
     </span><span class="kw">fn </span>req_attr_type_id(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
         attr_name: DwAt,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;TypeId&lt;R::Offset&gt;, DllLayoutErrorKind&gt; {
         <span class="prelude-val">Ok</span>(<span class="kw">match </span><span class="self">self</span>.attr_offset(entry, attr_name)<span class="question-mark">? </span>{
@@ -1983,16 +1984,16 @@
     }
 
     <span class="doccomment">/// Return a debug label for an entry.
-    </span><span class="kw">fn </span>entry_label(<span class="kw-2">&amp;</span><span class="self">self</span>, entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;) -&gt; String {
+    </span><span class="kw">fn </span>entry_label(<span class="kw-2">&amp;</span><span class="self">self</span>, entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;) -&gt; String {
         <span class="kw">match </span><span class="self">self</span>.attr_string(entry, gimli::DW_AT_name) {
-            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(name)) =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}: {}&quot;</span>, entry.offset(), name),
-            <span class="kw">_ </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, entry.offset()),
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(name)) =&gt; <span class="macro">format!</span>(<span class="string">"{:?}: {}"</span>, entry.offset(), name),
+            <span class="kw">_ </span>=&gt; <span class="macro">format!</span>(<span class="string">"{:?}"</span>, entry.offset()),
         }
     }
 
     <span class="kw">fn </span>missing_attribute(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
         attr_name: DwAt,
     ) -&gt; DllLayoutErrorKind {
         DllLayoutErrorKind::MissingAttribute {
@@ -2003,7 +2004,7 @@
 
     <span class="kw">fn </span>expect_tag(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, R&gt;,
+        entry: <span class="kw-2">&amp;</span>DebuggingInformationEntry&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, R&gt;,
         tag: gimli::DwTag,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), DllLayoutErrorKind&gt; {
         <span class="kw">if </span>entry.tag() == tag {
@@ -2019,11 +2020,11 @@
 }
 
 <span class="doccomment">/// The prefix used for naming anonymous fields.
-</span><span class="kw">const </span>ANON_FIELD_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;__anon&quot;</span>;
+</span><span class="kw">const </span>ANON_FIELD_NAME: <span class="kw-2">&amp;</span>str = <span class="string">"__anon"</span>;
 
-<span class="doccomment">/// Return a name that isn&#39;t present in `used_names`.
+<span class="doccomment">/// Return a name that isn't present in `used_names`.
 </span><span class="kw">fn </span>unique_name(used_names: <span class="kw-2">&amp;</span>HashSet&lt;String&gt;, base_name: <span class="kw-2">&amp;</span>str) -&gt; String {
-    <span class="kw">let </span>fallbacks = (<span class="number">1</span>..).map(|k| <span class="macro">format!</span>(<span class="string">&quot;{}_{}&quot;</span>, base_name, k));
+    <span class="kw">let </span>fallbacks = (<span class="number">1</span>..).map(|k| <span class="macro">format!</span>(<span class="string">"{}_{}"</span>, base_name, k));
     iter::once(base_name.to_owned())
         .chain(fallbacks)
         .find(|name| !used_names.contains(name))

@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `fast3d/src/render.rs`."><title>render.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-cb6f1f67f1bcd037.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="fast3d" data-themes="" data-resource-suffix="" data-rustdoc-version="1.73.0 (cc66ad468 2023-10-03)" data-channel="1.73.0" data-search-js="search-6dfdfced5eff6596.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-1596385f77d47ef2.css" data-theme-dark-css="dark-0a43001d3fc2282c.css" data-theme-ayu-css="ayu-fd19013d6ce078bf.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-1596385f77d47ef2.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-0a43001d3fc2282c.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../fast3d/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `fast3d/src/render.rs`."><title>render.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="fast3d" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -607,8 +608,8 @@
     commands: Vec&lt;DrawCommand&lt;wgpu::Buffer&gt;&gt;,
 }
 
-<span class="kw">fn </span>label(prefix: <span class="kw-2">&amp;</span>str, pipeline_id: PipelineId) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
-    <span class="kw">let </span>label = <span class="macro">format!</span>(<span class="string">&quot;{}-{:?}&quot;</span>, prefix, pipeline_id);
+<span class="kw">fn </span>label(prefix: <span class="kw-2">&amp;</span>str, pipeline_id: PipelineId) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+    <span class="kw">let </span>label = <span class="macro">format!</span>(<span class="string">"{}-{:?}"</span>, prefix, pipeline_id);
     Box::leak(label.into_boxed_str())
 }
 
@@ -616,34 +617,34 @@
 </span><span class="kw">fn </span>write_fragment_shader_body(s: <span class="kw-2">&amp;mut </span>String, p: <span class="kw-2">&amp;</span>PipelineInfo) -&gt; <span class="prelude-ty">Result</span>&lt;(), fmt::Error&gt; {
     <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">2 </span>{
         <span class="kw">if </span>p.used_textures[i] {
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;    let tex{} = textureSample(r_texture{}, r_sampler{}, in.uv);&quot;</span>, i, i, i)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"    let tex{} = textureSample(r_texture{}, r_sampler{}, in.uv);"</span>, i, i, i)<span class="question-mark">?</span>;
         }
     }
 
     <span class="kw">if </span>p.blend &amp;&amp; p.output_color.rgb == p.output_color.a {
-        <span class="macro">writeln!</span>(s, <span class="string">&quot;    out.color = {};&quot;</span>, color_expr(p.output_color.rgb))<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(s, <span class="string">"    out.color = {};"</span>, color_expr(p.output_color.rgb))<span class="question-mark">?</span>;
     } <span class="kw">else </span>{
-        <span class="macro">writeln!</span>(s, <span class="string">&quot;    let rgb = ({}).rgb;&quot;</span>, color_expr(p.output_color.rgb))<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(s, <span class="string">"    let rgb = ({}).rgb;"</span>, color_expr(p.output_color.rgb))<span class="question-mark">?</span>;
         <span class="kw">if </span>p.blend {
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;    let a = ({}).a;&quot;</span>, color_expr(p.output_color.a))<span class="question-mark">?</span>;
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;    out.color = vec4&lt;f32&gt;(rgb, a);&quot;</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"    let a = ({}).a;"</span>, color_expr(p.output_color.a))<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"    out.color = vec4&lt;f32&gt;(rgb, a);"</span>)<span class="question-mark">?</span>;
         }
         <span class="kw">else </span>{
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;    out.color = vec4&lt;f32&gt;(rgb, 1.0);&quot;</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"    out.color = vec4&lt;f32&gt;(rgb, 1.0);"</span>)<span class="question-mark">?</span>;
         }
     }
 
     <span class="kw">if </span>p.texture_edge &amp;&amp; p.blend {
-        <span class="macro">writeln!</span>(s, <span class="string">&quot;    if out.color.a &gt; 0.3 {{&quot;</span>)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(s, <span class="string">&quot;        out.color = vec4&lt;f32&gt;(out.color.rgb, 1.0);&quot;</span>)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(s, <span class="string">&quot;    }} else {{&quot;</span>)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(s, <span class="string">&quot;        discard;&quot;</span>)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(s, <span class="string">&quot;    }}&quot;</span>)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(s, <span class="string">"    if out.color.a &gt; 0.3 {{"</span>)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(s, <span class="string">"        out.color = vec4&lt;f32&gt;(out.color.rgb, 1.0);"</span>)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(s, <span class="string">"    }} else {{"</span>)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(s, <span class="string">"        discard;"</span>)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(s, <span class="string">"    }}"</span>)<span class="question-mark">?</span>;
     }
 
     <span class="kw">if </span>p.fog {
-        <span class="macro">writeln!</span>(s, <span class="string">&quot;    let fog_mixed = mix(out.color.rgb, in.fog.rgb, in.fog.a);&quot;</span>)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(s, <span class="string">&quot;    out.color = vec4&lt;f32&gt;(fog_mixed, out.color.a);&quot;</span>)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(s, <span class="string">"    let fog_mixed = mix(out.color.rgb, in.fog.rgb, in.fog.a);"</span>)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(s, <span class="string">"    out.color = vec4&lt;f32&gt;(fog_mixed, out.color.a);"</span>)<span class="question-mark">?</span>;
     }
 
     <span class="comment">// TODO: Noise
@@ -653,7 +654,7 @@
 
 <span class="kw">fn </span>color_expr(args: [ColorArg; <span class="number">4</span>]) -&gt; String {
     <span class="macro">format!</span>(
-        <span class="string">&quot;({} - {}) * {} + {}&quot;</span>,
+        <span class="string">"({} - {}) * {} + {}"</span>,
         arg_expr(args[<span class="number">0</span>]),
         arg_expr(args[<span class="number">1</span>]),
         arg_expr(args[<span class="number">2</span>]),
@@ -663,11 +664,11 @@
 
 <span class="kw">fn </span>arg_expr(arg: ColorArg) -&gt; String {
     <span class="kw">match </span>arg {
-        ColorArg::Zero =&gt; <span class="string">&quot;vec4&lt;f32&gt;()&quot;</span>.to_string(),
-        ColorArg::Input(i) =&gt; <span class="macro">format!</span>(<span class="string">&quot;in.input{}&quot;</span>, i),
-        ColorArg::Texel0 =&gt; <span class="string">&quot;tex0&quot;</span>.to_string(),
-        ColorArg::Texel0Alpha =&gt; <span class="string">&quot;vec4&lt;f32&gt;(tex0.a)&quot;</span>.to_string(),
-        ColorArg::Texel1 =&gt; <span class="string">&quot;tex1&quot;</span>.to_string(),
+        ColorArg::Zero =&gt; <span class="string">"vec4&lt;f32&gt;()"</span>.to_string(),
+        ColorArg::Input(i) =&gt; <span class="macro">format!</span>(<span class="string">"in.input{}"</span>, i),
+        ColorArg::Texel0 =&gt; <span class="string">"tex0"</span>.to_string(),
+        ColorArg::Texel0Alpha =&gt; <span class="string">"vec4&lt;f32&gt;(tex0.a)"</span>.to_string(),
+        ColorArg::Texel1 =&gt; <span class="string">"tex1"</span>.to_string(),
     }
 }
 
@@ -720,17 +721,17 @@
         p: <span class="kw-2">&amp;</span>PipelineInfo,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;wgpu::RenderPipeline, fmt::Error&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>s = String::new();
-        <span class="macro">writeln!</span>(s, <span class="string">&quot;// Pipeline {:?}:&quot;</span>, pipeline_id)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(s, <span class="string">&quot;/*\n{:#?}\n*/&quot;</span>, p)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(s, <span class="string">"// Pipeline {:?}:"</span>, pipeline_id)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(s, <span class="string">"/*\n{:#?}\n*/"</span>, p)<span class="question-mark">?</span>;
         <span class="macro">writeln!</span>(s)<span class="question-mark">?</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>bind_group_layouts: Vec&lt;<span class="kw-2">&amp;</span>wgpu::BindGroupLayout&gt; = Vec::new();
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">2 </span>{
             <span class="kw">if </span>p.used_textures[i] {
-                <span class="macro">writeln!</span>(s, <span class="string">&quot;@group({}) @binding(0) var r_sampler{}: sampler;&quot;</span>, i, i)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(s, <span class="string">"@group({}) @binding(0) var r_sampler{}: sampler;"</span>, i, i)<span class="question-mark">?</span>;
                 <span class="macro">writeln!</span>(
                     s,
-                    <span class="string">&quot;@group({}) @binding(1) var r_texture{}: texture_2d&lt;f32&gt;;&quot;</span>,
+                    <span class="string">"@group({}) @binding(1) var r_texture{}: texture_2d&lt;f32&gt;;"</span>,
                     i, i
                 )<span class="question-mark">?</span>;
                 <span class="macro">writeln!</span>(s)<span class="question-mark">?</span>;
@@ -748,9 +749,9 @@
             <span class="kw">let </span><span class="kw-2">mut </span>offset = <span class="number">0</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>loc = <span class="number">0</span>;
 
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;struct VertexData {{&quot;</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"struct VertexData {{"</span>)<span class="question-mark">?</span>;
             {
-                <span class="macro">writeln!</span>(s, <span class="string">&quot;    @location({}) pos: vec4&lt;f32&gt;,&quot;</span>, loc)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(s, <span class="string">"    @location({}) pos: vec4&lt;f32&gt;,"</span>, loc)<span class="question-mark">?</span>;
                 vertex_attributes.push(wgpu::VertexAttribute {
                     format: wgpu::VertexFormat::Float32x4,
                     offset,
@@ -760,7 +761,7 @@
                 loc += <span class="number">1</span>;
 
                 <span class="kw">if </span>p.uses_textures() {
-                    <span class="macro">writeln!</span>(s, <span class="string">&quot;    @location({}) uv: vec2&lt;f32&gt;,&quot;</span>, loc)<span class="question-mark">?</span>;
+                    <span class="macro">writeln!</span>(s, <span class="string">"    @location({}) uv: vec2&lt;f32&gt;,"</span>, loc)<span class="question-mark">?</span>;
                     vertex_attributes.push(wgpu::VertexAttribute {
                         format: wgpu::VertexFormat::Float32x2,
                         offset,
@@ -771,7 +772,7 @@
                 }
 
                 <span class="kw">if </span>p.fog {
-                    <span class="macro">writeln!</span>(s, <span class="string">&quot;    @location({}) fog: vec4&lt;f32&gt;,&quot;</span>, loc)<span class="question-mark">?</span>;
+                    <span class="macro">writeln!</span>(s, <span class="string">"    @location({}) fog: vec4&lt;f32&gt;,"</span>, loc)<span class="question-mark">?</span>;
                     vertex_attributes.push(wgpu::VertexAttribute {
                         format: wgpu::VertexFormat::Float32x4,
                         offset,
@@ -782,7 +783,7 @@
                 }
 
                 <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..p.num_inputs {
-                    <span class="macro">writeln!</span>(s, <span class="string">&quot;    @location({}) input{}: vec4&lt;f32&gt;,&quot;</span>, loc, i)<span class="question-mark">?</span>;
+                    <span class="macro">writeln!</span>(s, <span class="string">"    @location({}) input{}: vec4&lt;f32&gt;,"</span>, loc, i)<span class="question-mark">?</span>;
                     vertex_attributes.push(wgpu::VertexAttribute {
                         format: wgpu::VertexFormat::Float32x4,
                         offset,
@@ -792,7 +793,7 @@
                     loc += <span class="number">1</span>;
                 }
             }
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;}}&quot;</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"}}"</span>)<span class="question-mark">?</span>;
             <span class="macro">writeln!</span>(s)<span class="question-mark">?</span>;
 
             wgpu::VertexBufferLayout {
@@ -803,78 +804,78 @@
         };
 
         {
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;struct VertexOutput {{&quot;</span>)<span class="question-mark">?</span>;
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;    @builtin(position) position: vec4&lt;f32&gt;,&quot;</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"struct VertexOutput {{"</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"    @builtin(position) position: vec4&lt;f32&gt;,"</span>)<span class="question-mark">?</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>location = <span class="number">0</span>;
             <span class="kw">if </span>p.uses_textures() {
-                <span class="macro">writeln!</span>(s, <span class="string">&quot;    @location({}) uv: vec2&lt;f32&gt;,&quot;</span>, location)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(s, <span class="string">"    @location({}) uv: vec2&lt;f32&gt;,"</span>, location)<span class="question-mark">?</span>;
                 location += <span class="number">1</span>;
             }
             <span class="kw">if </span>p.fog {
-                <span class="macro">writeln!</span>(s, <span class="string">&quot;    @location({}) fog: vec4&lt;f32&gt;,&quot;</span>, location)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(s, <span class="string">"    @location({}) fog: vec4&lt;f32&gt;,"</span>, location)<span class="question-mark">?</span>;
                 location += <span class="number">1</span>;
             }
             <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..p.num_inputs {
-                <span class="macro">writeln!</span>(s, <span class="string">&quot;    @location({}) input{}: vec4&lt;f32&gt;,&quot;</span>, location, i)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(s, <span class="string">"    @location({}) input{}: vec4&lt;f32&gt;,"</span>, location, i)<span class="question-mark">?</span>;
                 location += <span class="number">1</span>;
             }
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;}}&quot;</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"}}"</span>)<span class="question-mark">?</span>;
             <span class="macro">writeln!</span>(s)<span class="question-mark">?</span>;
         }
 
         {
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;@vertex&quot;</span>)<span class="question-mark">?</span>;
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;fn vs_main(in: VertexData) -&gt; VertexOutput {{&quot;</span>)<span class="question-mark">?</span>;
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;    var out = VertexOutput();&quot;</span>)<span class="question-mark">?</span>;
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;    out.position = in.pos;&quot;</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"@vertex"</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"fn vs_main(in: VertexData) -&gt; VertexOutput {{"</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"    var out = VertexOutput();"</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"    out.position = in.pos;"</span>)<span class="question-mark">?</span>;
             <span class="kw">if </span>p.uses_textures() {
-                <span class="macro">writeln!</span>(s, <span class="string">&quot;    out.uv = in.uv;&quot;</span>)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(s, <span class="string">"    out.uv = in.uv;"</span>)<span class="question-mark">?</span>;
             }
             <span class="kw">if </span>p.fog {
-                <span class="macro">writeln!</span>(s, <span class="string">&quot;    out.fog = in.fog;&quot;</span>)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(s, <span class="string">"    out.fog = in.fog;"</span>)<span class="question-mark">?</span>;
             }
             <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..p.num_inputs {
-                <span class="macro">writeln!</span>(s, <span class="string">&quot;    out.input{} = in.input{};&quot;</span>, i, i)<span class="question-mark">?
+                <span class="macro">writeln!</span>(s, <span class="string">"    out.input{} = in.input{};"</span>, i, i)<span class="question-mark">?
             </span>}
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;    return out;&quot;</span>)<span class="question-mark">?</span>;
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;}}&quot;</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"    return out;"</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"}}"</span>)<span class="question-mark">?</span>;
             <span class="macro">writeln!</span>(s)<span class="question-mark">?</span>;
         }
 
         {
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;struct FragmentOutput {{&quot;</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"struct FragmentOutput {{"</span>)<span class="question-mark">?</span>;
             <span class="kw">if </span>p.decal {
-                <span class="macro">writeln!</span>(s, <span class="string">&quot;    @builtin(frag_depth) frag_depth: f32,&quot;</span>)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(s, <span class="string">"    @builtin(frag_depth) frag_depth: f32,"</span>)<span class="question-mark">?</span>;
             }
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;    @location(0) color: vec4&lt;f32&gt;,&quot;</span>)<span class="question-mark">?</span>;
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;}}&quot;</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"    @location(0) color: vec4&lt;f32&gt;,"</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"}}"</span>)<span class="question-mark">?</span>;
             <span class="macro">writeln!</span>(s)<span class="question-mark">?</span>;
         }
 
         {
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;@fragment&quot;</span>)<span class="question-mark">?</span>;
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;fn fs_main(in: VertexOutput) -&gt; FragmentOutput {{&quot;</span>)<span class="question-mark">?</span>;
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;    var out = FragmentOutput();&quot;</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"@fragment"</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"fn fs_main(in: VertexOutput) -&gt; FragmentOutput {{"</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"    var out = FragmentOutput();"</span>)<span class="question-mark">?</span>;
             <span class="kw">if </span>p.decal {
-                <span class="macro">writeln!</span>(s, <span class="string">&quot;    out.frag_depth = in.position.z - 0.001;&quot;</span>)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(s, <span class="string">"    out.frag_depth = in.position.z - 0.001;"</span>)<span class="question-mark">?</span>;
             }
             write_fragment_shader_body(<span class="kw-2">&amp;mut </span>s, p)<span class="question-mark">?</span>;
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;    return out;&quot;</span>)<span class="question-mark">?</span>;
-            <span class="macro">writeln!</span>(s, <span class="string">&quot;}}&quot;</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"    return out;"</span>)<span class="question-mark">?</span>;
+            <span class="macro">writeln!</span>(s, <span class="string">"}}"</span>)<span class="question-mark">?</span>;
             <span class="macro">writeln!</span>(s)<span class="question-mark">?</span>;
         }
 
         <span class="kw">let </span>shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: <span class="prelude-val">Some</span>(label(<span class="string">&quot;shader&quot;</span>, pipeline_id)),
+            label: <span class="prelude-val">Some</span>(label(<span class="string">"shader"</span>, pipeline_id)),
             source: wgpu::ShaderSource::Wgsl(s.into()),
         });
 
         <span class="kw">let </span>pipeline = device.create_render_pipeline(<span class="kw-2">&amp;</span>wgpu::RenderPipelineDescriptor {
-            label: <span class="prelude-val">Some</span>(label(<span class="string">&quot;pipeline&quot;</span>, pipeline_id)),
+            label: <span class="prelude-val">Some</span>(label(<span class="string">"pipeline"</span>, pipeline_id)),
             layout: <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>pipeline_layout),
             vertex: wgpu::VertexState {
                 module: <span class="kw-2">&amp;</span>shader_module,
-                entry_point: <span class="string">&quot;vs_main&quot;</span>,
+                entry_point: <span class="string">"vs_main"</span>,
                 buffers: <span class="kw-2">&amp;</span>[vertex_buffer_layout],
             },
             primitive: wgpu::PrimitiveState {
@@ -905,7 +906,7 @@
             },
             fragment: <span class="prelude-val">Some</span>(wgpu::FragmentState {
                 module: <span class="kw-2">&amp;</span>shader_module,
-                entry_point: <span class="string">&quot;fs_main&quot;</span>,
+                entry_point: <span class="string">"fs_main"</span>,
                 targets: <span class="kw-2">&amp;</span>[<span class="prelude-val">Some</span>(wgpu::ColorTargetState {
                     format: output_format,
                     blend: <span class="prelude-val">Some</span>(wgpu::BlendState::ALPHA_BLENDING).filter(|<span class="kw">_</span>| p.blend),
@@ -968,7 +969,7 @@
         queue: <span class="kw-2">&amp;</span>wgpu::Queue,
         data: <span class="kw-2">&amp;</span>TextureData,
     ) -&gt; wgpu::Texture {
-        <span class="macro">assert!</span>(data.width * data.height != <span class="number">0</span>, <span class="string">&quot;texture of zero size&quot;</span>);
+        <span class="macro">assert!</span>(data.width * data.height != <span class="number">0</span>, <span class="string">"texture of zero size"</span>);
 
         <span class="kw">let </span>texture = device.create_texture(<span class="kw-2">&amp;</span>wgpu::TextureDescriptor {
             label: <span class="prelude-val">None</span>,
@@ -1076,13 +1077,13 @@
         }
     }
 
-    <span class="kw">pub fn </span>render&lt;<span class="lifetime">&#39;r</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span><span class="self">self</span>, rp: <span class="kw-2">&amp;mut </span>wgpu::RenderPass&lt;<span class="lifetime">&#39;r</span>&gt;) {
+    <span class="kw">pub fn </span>render&lt;<span class="lifetime">'r</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'r </span><span class="self">self</span>, rp: <span class="kw-2">&amp;mut </span>wgpu::RenderPass&lt;<span class="lifetime">'r</span>&gt;) {
         <span class="self">self</span>.render_command_range(rp, <span class="number">0</span>..<span class="self">self</span>.commands.len());
     }
 
-    <span class="kw">pub fn </span>render_command_range&lt;<span class="lifetime">&#39;r</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span><span class="self">self</span>,
-        rp: <span class="kw-2">&amp;mut </span>wgpu::RenderPass&lt;<span class="lifetime">&#39;r</span>&gt;,
+    <span class="kw">pub fn </span>render_command_range&lt;<span class="lifetime">'r</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'r </span><span class="self">self</span>,
+        rp: <span class="kw-2">&amp;mut </span>wgpu::RenderPass&lt;<span class="lifetime">'r</span>&gt;,
         cmd_indices: Range&lt;usize&gt;,
     ) {
         <span class="kw">if </span><span class="self">self</span>.screen_size[<span class="number">0</span>] &lt;= <span class="number">0 </span>|| <span class="self">self</span>.screen_size[<span class="number">1</span>] &lt;= <span class="number">0 </span>|| cmd_indices.is_empty() {
@@ -1091,7 +1092,7 @@
 
         <span class="kw">let </span>output_size_physical = <span class="self">self
             </span>.output_size_physical
-            .expect(<span class="string">&quot;missing call to F3DRenderer::render&quot;</span>);
+            .expect(<span class="string">"missing call to F3DRenderer::render"</span>);
         <span class="kw">let </span>scale_factor = <span class="self">self</span>.scale_factor;
         <span class="kw">let </span>output_size_logical = output_size_physical.map(|n| (n <span class="kw">as </span>f32 / scale_factor) <span class="kw">as </span>i32);
 
@@ -1143,7 +1144,7 @@
                 <span class="kw">let </span>pipeline = <span class="self">self
                     </span>.pipelines
                     .get(<span class="kw-2">&amp;</span>command.pipeline)
-                    .expect(<span class="string">&quot;pipeline not prepared&quot;</span>);
+                    .expect(<span class="string">"pipeline not prepared"</span>);
                 rp.set_pipeline(pipeline);
             }
 
@@ -1152,7 +1153,7 @@
                     <span class="kw">let </span>bind_group = <span class="self">self
                         </span>.texture_bind_groups
                         .get(<span class="kw-2">&amp;</span>texture_index)
-                        .expect(<span class="string">&quot;texture bind group not prepared&quot;</span>);
+                        .expect(<span class="string">"texture bind group not prepared"</span>);
                     rp.set_bind_group(i <span class="kw">as </span>u32, bind_group, <span class="kw-2">&amp;</span>[]);
                 }
             }

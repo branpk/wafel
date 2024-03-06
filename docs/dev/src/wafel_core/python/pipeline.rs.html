@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_core/src/python/pipeline.rs`."><title>pipeline.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-cb6f1f67f1bcd037.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="wafel_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.73.0 (cc66ad468 2023-10-03)" data-channel="1.73.0" data-search-js="search-6dfdfced5eff6596.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-1596385f77d47ef2.css" data-theme-dark-css="dark-0a43001d3fc2282c.css" data-theme-ayu-css="ayu-fd19013d6ce078bf.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-1596385f77d47ef2.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-0a43001d3fc2282c.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../wafel_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_core/src/python/pipeline.rs`."><title>pipeline.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="wafel_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -475,7 +476,7 @@
 ///
 /// Note that writing a value to a variable and then reading the variable does not
 /// necessarily result in the original value.
-</span><span class="attr">#[pyclass(name = <span class="string">&quot;Pipeline&quot;</span>, unsendable)]
+</span><span class="attr">#[pyclass(name = <span class="string">"Pipeline"</span>, unsendable)]
 #[derive(Debug)]
 </span><span class="kw">pub struct </span>PyPipeline {
     valid: <span class="prelude-ty">Option</span>&lt;ValidPipeline&gt;,
@@ -498,11 +499,11 @@
     }
 
     <span class="kw">fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>ValidPipeline {
-        <span class="self">self</span>.valid.as_ref().expect(<span class="string">&quot;pipeline has been invalidated&quot;</span>)
+        <span class="self">self</span>.valid.as_ref().expect(<span class="string">"pipeline has been invalidated"</span>)
     }
 
     <span class="kw">fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>ValidPipeline {
-        <span class="self">self</span>.valid.as_mut().expect(<span class="string">&quot;pipeline has been invalidated&quot;</span>)
+        <span class="self">self</span>.valid.as_mut().expect(<span class="string">"pipeline has been invalidated"</span>)
     }
 }
 
@@ -517,7 +518,7 @@
     ///
     /// This method is inherently unsafe. See docs for [Timeline::open](wafel_api::Timeline::open).
     </span><span class="attr">#[staticmethod]
-    </span><span class="kw">pub unsafe fn </span>load(py: Python&lt;<span class="lifetime">&#39;_</span>&gt;, dll_path: <span class="kw-2">&amp;</span>str) -&gt; PyResult&lt;Py&lt;<span class="self">Self</span>&gt;&gt; {
+    </span><span class="kw">pub unsafe fn </span>load(py: Python&lt;<span class="lifetime">'_</span>&gt;, dll_path: <span class="kw-2">&amp;</span>str) -&gt; PyResult&lt;Py&lt;<span class="self">Self</span>&gt;&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>valid_pipelines = VALID_PIPELINES.lock().unwrap();
 
         <span class="comment">// Drop all known existing dll::Memory instances for safety
@@ -542,14 +543,14 @@
     /// This method is inherently unsafe. See docs for [Timeline::open](wafel_api::Timeline::open).
     </span><span class="attr">#[staticmethod]
     </span><span class="kw">pub unsafe fn </span>load_reusing_edits(
-        py: Python&lt;<span class="lifetime">&#39;_</span>&gt;,
+        py: Python&lt;<span class="lifetime">'_</span>&gt;,
         dll_path: <span class="kw-2">&amp;</span>str,
         prev_pipeline: Py&lt;PyPipeline&gt;,
     ) -&gt; PyResult&lt;Py&lt;<span class="self">Self</span>&gt;&gt; {
         <span class="kw">let </span>edits = prev_pipeline
             .borrow_mut(py)
             .invalidate()
-            .expect(<span class="string">&quot;pipeline has been invalidated&quot;</span>)
+            .expect(<span class="string">"pipeline has been invalidated"</span>)
             .pipeline
             .into_edits();
 
@@ -566,8 +567,8 @@
     <span class="doccomment">/// Read a variable.
     ///
     /// If the variable is a data variable, the value will be read from memory
-    /// on the variable&#39;s frame.
-    </span><span class="kw">pub fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, py: Python&lt;<span class="lifetime">&#39;_</span>&gt;, variable: <span class="kw-2">&amp;</span>PyVariable) -&gt; PyResult&lt;PyObject&gt; {
+    /// on the variable's frame.
+    </span><span class="kw">pub fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, py: Python&lt;<span class="lifetime">'_</span>&gt;, variable: <span class="kw-2">&amp;</span>PyVariable) -&gt; PyResult&lt;PyObject&gt; {
         <span class="kw">let </span>value = <span class="self">self</span>.get().pipeline.try_read(<span class="kw-2">&amp;</span>variable.variable)<span class="question-mark">?</span>;
         <span class="kw">let </span>py_object = value_to_py_object(py, <span class="kw-2">&amp;</span>value)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(py_object)
@@ -576,10 +577,10 @@
     <span class="doccomment">/// Write a variable.
     ///
     /// If the variable is a data variable, the value will be truncated and written
-    /// to memory on the variable&#39;s frame.
+    /// to memory on the variable's frame.
     </span><span class="kw">pub fn </span>write(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        py: Python&lt;<span class="lifetime">&#39;_</span>&gt;,
+        py: Python&lt;<span class="lifetime">'_</span>&gt;,
         variable: <span class="kw-2">&amp;</span>PyVariable,
         value: PyObject,
     ) -&gt; PyResult&lt;()&gt; {
@@ -610,7 +611,7 @@
     }
 
     <span class="doccomment">/// Read from the given path.
-    </span><span class="kw">pub fn </span>path_read(<span class="kw-2">&amp;</span><span class="self">self</span>, py: Python&lt;<span class="lifetime">&#39;_</span>&gt;, frame: u32, path: <span class="kw-2">&amp;</span>str) -&gt; PyResult&lt;PyObject&gt; {
+    </span><span class="kw">pub fn </span>path_read(<span class="kw-2">&amp;</span><span class="self">self</span>, py: Python&lt;<span class="lifetime">'_</span>&gt;, frame: u32, path: <span class="kw-2">&amp;</span>str) -&gt; PyResult&lt;PyObject&gt; {
         <span class="kw">let </span>value = <span class="self">self
             </span>.get()
             .pipeline
@@ -636,7 +637,7 @@
     <span class="doccomment">/// Begin a drag operation starting at `source_variable`.
     </span><span class="kw">pub fn </span>begin_drag(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        py: Python&lt;<span class="lifetime">&#39;_</span>&gt;,
+        py: Python&lt;<span class="lifetime">'_</span>&gt;,
         source_variable: <span class="kw-2">&amp;</span>PyVariable,
         source_value: PyObject,
     ) -&gt; PyResult&lt;()&gt; {
@@ -649,7 +650,7 @@
 
     <span class="doccomment">/// Drag from `source_variable` to `target_frame`.
     ///
-    /// The ranges will appear to be updated, but won&#39;t be committed until `release_drag` is
+    /// The ranges will appear to be updated, but won't be committed until `release_drag` is
     /// called.
     </span><span class="kw">pub fn </span>update_drag(<span class="kw-2">&amp;mut </span><span class="self">self</span>, target_frame: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), PyErr&gt; {
         <span class="self">self</span>.get_mut().pipeline.try_update_drag(target_frame)<span class="question-mark">?</span>;
@@ -754,12 +755,12 @@
     }
 
     <span class="doccomment">/// Read a null terminated byte string from the given address on the given frame.
-    </span><span class="kw">pub fn </span>read_string&lt;<span class="lifetime">&#39;p</span>&gt;(
+    </span><span class="kw">pub fn </span>read_string&lt;<span class="lifetime">'p</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        py: Python&lt;<span class="lifetime">&#39;p</span>&gt;,
+        py: Python&lt;<span class="lifetime">'p</span>&gt;,
         frame: u32,
         address: <span class="kw-2">&amp;</span>PyAddress,
-    ) -&gt; PyResult&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;p </span>PyBytes&gt; {
+    ) -&gt; PyResult&lt;<span class="kw-2">&amp;</span><span class="lifetime">'p </span>PyBytes&gt; {
         <span class="kw">let </span>timeline = <span class="self">self</span>.get().pipeline.timeline();
         <span class="kw">let </span>bytes = timeline
             .try_read_string_at(frame, address.address)
@@ -776,9 +777,9 @@
             .map(|(value, name)| {
                 (
                     value,
-                    name.strip_prefix(<span class="string">&quot;ACT_&quot;</span>)
+                    name.strip_prefix(<span class="string">"ACT_"</span>)
                         .unwrap()
-                        .replace(<span class="string">&quot;_&quot;</span>, <span class="string">&quot; &quot;</span>)
+                        .replace(<span class="string">"_"</span>, <span class="string">" "</span>)
                         .to_lowercase(),
                 )
             })
@@ -803,8 +804,8 @@
         <span class="kw">let </span>timeline = <span class="self">self</span>.get().pipeline.timeline();
 
         <span class="kw">match </span>timeline.address_to_symbol(address) {
-            <span class="prelude-val">Some</span>(symbol) =&gt; symbol.strip_prefix(<span class="string">&quot;bhv&quot;</span>).unwrap_or(<span class="kw-2">&amp;</span>symbol).to_owned(),
-            <span class="prelude-val">None </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;Object[{}]&quot;</span>, address),
+            <span class="prelude-val">Some</span>(symbol) =&gt; symbol.strip_prefix(<span class="string">"bhv"</span>).unwrap_or(<span class="kw-2">&amp;</span>symbol).to_owned(),
+            <span class="prelude-val">None </span>=&gt; <span class="macro">format!</span>(<span class="string">"Object[{}]"</span>, address),
         }
     }
 
@@ -813,7 +814,7 @@
     /// The events in the frame log occurred on the previous frame.
     </span><span class="kw">pub fn </span>frame_log(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        py: Python&lt;<span class="lifetime">&#39;_</span>&gt;,
+        py: Python&lt;<span class="lifetime">'_</span>&gt;,
         frame: u32,
     ) -&gt; PyResult&lt;Vec&lt;HashMap&lt;String, PyObject&gt;&gt;&gt; {
         <span class="kw">let </span>timeline = <span class="self">self</span>.get().pipeline.timeline();
@@ -829,7 +830,7 @@
         events.into_iter().map(convert_event).collect()
     }
 
-    <span class="doccomment">/// Trace a ray until it hits a surface, and return the surface&#39;s index in the surface pool.
+    <span class="doccomment">/// Trace a ray until it hits a surface, and return the surface's index in the surface pool.
     </span><span class="kw">pub fn </span>trace_ray_to_surface(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         frame: u32,
@@ -869,7 +870,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>nodes = Vec::new();
         <span class="kw">for </span>frame <span class="kw">in </span>frame_start..frame_end {
             <span class="kw">let </span>pos_coords = timeline
-                .try_read(frame, <span class="string">&quot;gMarioState-&gt;pos&quot;</span>)
+                .try_read(frame, <span class="string">"gMarioState-&gt;pos"</span>)
                 .map_err(Error::from)<span class="question-mark">?
                 </span>.try_as_f32_3()
                 .map_err(Error::from)<span class="question-mark">?</span>;
@@ -890,7 +891,7 @@
         <span class="kw">let </span>timeline = <span class="self">self</span>.get().pipeline.timeline();
 
         <span class="kw">let </span>config: VizConfig =
-            serde_json::from_str(config_json).expect(<span class="string">&quot;failed to parse viz config json&quot;</span>);
+            serde_json::from_str(config_json).expect(<span class="string">"failed to parse viz config json"</span>);
         <span class="kw">let </span>render_data = timeline.try_render(frame, <span class="kw-2">&amp;</span>config).ok();
 
         <span class="prelude-val">Ok</span>(render_data.map(|inner| PyVizScene { inner }))

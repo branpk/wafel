@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_api/src/m64.rs`."><title>m64.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-cb6f1f67f1bcd037.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_api" data-themes="" data-resource-suffix="" data-rustdoc-version="1.73.0 (cc66ad468 2023-10-03)" data-channel="1.73.0" data-search-js="search-6dfdfced5eff6596.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-1596385f77d47ef2.css" data-theme-dark-css="dark-0a43001d3fc2282c.css" data-theme-ayu-css="ayu-fd19013d6ce078bf.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-1596385f77d47ef2.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-0a43001d3fc2282c.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../wafel_api/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `wafel_api/src/m64.rs`."><title>m64.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="wafel_api" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -407,7 +408,7 @@
 
 <span class="kw">impl </span>SM64Version {
     <span class="doccomment">/// Return all game versions.
-    </span><span class="kw">pub fn </span>all() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[SM64Version] {
+    </span><span class="kw">pub fn </span>all() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[SM64Version] {
         <span class="kw-2">&amp;</span>[<span class="self">Self</span>::JP, <span class="self">Self</span>::US, <span class="self">Self</span>::EU, <span class="self">Self</span>::SH]
     }
 
@@ -422,21 +423,21 @@
 
     <span class="kw">fn </span>country_code(<span class="self">self</span>) -&gt; u8 {
         <span class="kw">match </span><span class="self">self </span>{
-            SM64Version::JP =&gt; <span class="string">b&#39;J&#39;</span>,
-            SM64Version::US =&gt; <span class="string">b&#39;E&#39;</span>,
-            SM64Version::EU =&gt; <span class="string">b&#39;P&#39;</span>,
-            SM64Version::SH =&gt; <span class="string">b&#39;J&#39;</span>,
+            SM64Version::JP =&gt; <span class="string">b'J'</span>,
+            SM64Version::US =&gt; <span class="string">b'E'</span>,
+            SM64Version::EU =&gt; <span class="string">b'P'</span>,
+            SM64Version::SH =&gt; <span class="string">b'J'</span>,
         }
     }
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>SM64Version {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         <span class="kw">match </span><span class="self">self </span>{
-            SM64Version::JP =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;JP&quot;</span>),
-            SM64Version::US =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;US&quot;</span>),
-            SM64Version::EU =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;EU&quot;</span>),
-            SM64Version::SH =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;SH&quot;</span>),
+            SM64Version::JP =&gt; <span class="macro">write!</span>(f, <span class="string">"JP"</span>),
+            SM64Version::US =&gt; <span class="macro">write!</span>(f, <span class="string">"US"</span>),
+            SM64Version::EU =&gt; <span class="macro">write!</span>(f, <span class="string">"EU"</span>),
+            SM64Version::SH =&gt; <span class="macro">write!</span>(f, <span class="string">"SH"</span>),
         }
     }
 }
@@ -524,7 +525,7 @@
     </span><span class="kw">pub fn </span>set_author(<span class="kw-2">&amp;mut </span><span class="self">self</span>, author: <span class="kw-2">&amp;</span>str) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self </span>{
         <span class="kw">match </span><span class="self">self</span>.try_set_author(author) {
             <span class="prelude-val">Ok</span>(this) =&gt; this,
-            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Error:\n  {}\n&quot;</span>, error),
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">"Error:\n  {}\n"</span>, error),
         }
     }
 
@@ -553,7 +554,7 @@
     </span><span class="kw">pub fn </span>set_description(<span class="kw-2">&amp;mut </span><span class="self">self</span>, description: <span class="kw-2">&amp;</span>str) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self </span>{
         <span class="kw">match </span><span class="self">self</span>.try_set_description(description) {
             <span class="prelude-val">Ok</span>(this) =&gt; this,
-            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Error:\n  {}\n&quot;</span>, error),
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">"Error:\n  {}\n"</span>, error),
         }
     }
 
@@ -587,14 +588,14 @@
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>M64Metadata {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;M64Metadata(&quot;</span>)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;  crc_code = {:#010X},&quot;</span>, <span class="self">self</span>.crc_code)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;  country_code = {:?},&quot;</span>, <span class="self">self</span>.country_code <span class="kw">as </span>char)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;  author = {:?},&quot;</span>, <span class="self">self</span>.author)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;  description = {:?},&quot;</span>, <span class="self">self</span>.description)<span class="question-mark">?</span>;
-        <span class="macro">writeln!</span>(f, <span class="string">&quot;  rerecords = {},&quot;</span>, <span class="self">self</span>.rerecords)<span class="question-mark">?</span>;
-        <span class="macro">write!</span>(f, <span class="string">&quot;)&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="macro">writeln!</span>(f, <span class="string">"M64Metadata("</span>)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"  crc_code = {:#010X},"</span>, <span class="self">self</span>.crc_code)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"  country_code = {:?},"</span>, <span class="self">self</span>.country_code <span class="kw">as </span>char)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"  author = {:?},"</span>, <span class="self">self</span>.author)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"  description = {:?},"</span>, <span class="self">self</span>.description)<span class="question-mark">?</span>;
+        <span class="macro">writeln!</span>(f, <span class="string">"  rerecords = {},"</span>, <span class="self">self</span>.rerecords)<span class="question-mark">?</span>;
+        <span class="macro">write!</span>(f, <span class="string">")"</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
@@ -611,10 +612,10 @@
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Input {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         <span class="macro">write!</span>(
             f,
-            <span class="string">&quot;Input(buttons = {:#04X}, stick_x = {}, stick_y = {})&quot;</span>,
+            <span class="string">"Input(buttons = {:#04X}, stick_x = {}, stick_y = {})"</span>,
             <span class="self">self</span>.buttons, <span class="self">self</span>.stick_x, <span class="self">self</span>.stick_y
         )
     }
@@ -625,20 +626,20 @@
 /// # Panics
 ///
 /// Panics if:
-/// - The file doesn&#39;t exist or can&#39;t be read
+/// - The file doesn't exist or can't be read
 /// - The file is an invalid .m64 file
 </span><span class="attr">#[track_caller]
 </span><span class="kw">pub fn </span>load_m64(filename: <span class="kw-2">&amp;</span>str) -&gt; (M64Metadata, Vec&lt;Input&gt;) {
     <span class="kw">match </span>try_load_m64(filename) {
         <span class="prelude-val">Ok</span>(result) =&gt; result,
-        <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Error:\n  {}\n&quot;</span>, error),
+        <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">"Error:\n  {}\n"</span>, error),
     }
 }
 
 <span class="doccomment">/// Load an m64 TAS from a file.
 ///
 /// Returns an error if:
-/// - The file doesn&#39;t exist or can&#39;t be read
+/// - The file doesn't exist or can't be read
 /// - The file is an invalid .m64 file
 </span><span class="kw">pub fn </span>try_load_m64(filename: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(M64Metadata, Vec&lt;Input&gt;), Error&gt; {
     <span class="kw">let </span>f = fs::read(filename).map_err(|error| Error::M64ReadError {
@@ -660,14 +661,14 @@
         .map_err(|<span class="kw">_</span>| Error::InvalidM64Error {
             filename: filename.to_string(),
         })<span class="question-mark">?
-        </span>.trim_end_matches(<span class="string">&#39;\x00&#39;</span>)
+        </span>.trim_end_matches(<span class="string">'\x00'</span>)
         .to_string();
 
     <span class="kw">let </span>description = String::from_utf8(f[<span class="number">0x300</span>..<span class="number">0x300 </span>+ <span class="number">256</span>].to_vec())
         .map_err(|<span class="kw">_</span>| Error::InvalidM64Error {
             filename: filename.to_string(),
         })<span class="question-mark">?
-        </span>.trim_end_matches(<span class="string">&#39;\x00&#39;</span>)
+        </span>.trim_end_matches(<span class="string">'\x00'</span>)
         .to_string();
 
     <span class="kw">let </span>metadata = M64Metadata {
@@ -694,17 +695,17 @@
 ///
 /// # Panics
 ///
-/// Panics if the file can&#39;t be written.
+/// Panics if the file can't be written.
 </span><span class="attr">#[track_caller]
 </span><span class="kw">pub fn </span>save_m64(filename: <span class="kw-2">&amp;</span>str, metadata: <span class="kw-2">&amp;</span>M64Metadata, inputs: <span class="kw-2">&amp;</span>[Input]) {
     <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = try_save_m64(filename, metadata, inputs) {
-        <span class="macro">panic!</span>(<span class="string">&quot;Error:\n  {}\n&quot;</span>, error);
+        <span class="macro">panic!</span>(<span class="string">"Error:\n  {}\n"</span>, error);
     }
 }
 
 <span class="doccomment">/// Save an m64 TAS to a file.
 ///
-/// Returns an error if the file can&#39;t be written.
+/// Returns an error if the file can't be written.
 </span><span class="kw">pub fn </span>try_save_m64(filename: <span class="kw-2">&amp;</span>str, metadata: <span class="kw-2">&amp;</span>M64Metadata, inputs: <span class="kw-2">&amp;</span>[Input]) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
     save_m64_impl(filename, metadata, inputs).map_err(|error| Error::M64WriteError {
         filename: filename.to_string(),
@@ -736,7 +737,7 @@
     </span>f.write_all(<span class="kw-2">&amp;</span>[<span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>])<span class="question-mark">?</span>; <span class="comment">// controller flags = controller 1 present
     </span>f.write_all(<span class="kw-2">&amp;</span>[<span class="number">0x00</span>; <span class="number">160</span>])<span class="question-mark">?</span>; <span class="comment">// reserved
 
-    </span><span class="kw">let </span><span class="kw-2">mut </span>game_name = <span class="string">b&quot;SUPER MARIO 64&quot;</span>.to_vec();
+    </span><span class="kw">let </span><span class="kw-2">mut </span>game_name = <span class="string">b"SUPER MARIO 64"</span>.to_vec();
     game_name.resize(<span class="number">32</span>, <span class="number">0x00</span>);
     f.write_all(<span class="kw-2">&amp;</span>game_name)<span class="question-mark">?</span>; <span class="comment">// internal name of ROM
 
