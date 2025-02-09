@@ -1,0 +1,1 @@
+searchState.loadedDescShard("wafel_viz_wgpu", 0, "Renderer for wafel_viz using wgpu.\nA wgpu renderer for VizScene.\nReturns the argument unchanged.\nCalls <code>U::from(self)</code>.\nConstructs a new VizRenderer.\nThis should be called with a VizScene before Self::render …\nRenders a VizScene that was provided to Self::prepare.")

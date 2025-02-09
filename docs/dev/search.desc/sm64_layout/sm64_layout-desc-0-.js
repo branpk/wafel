@@ -1,0 +1,1 @@
+searchState.loadedDescShard("sm64_layout", 0, "A program for calculating SM64 variable layouts and types.")

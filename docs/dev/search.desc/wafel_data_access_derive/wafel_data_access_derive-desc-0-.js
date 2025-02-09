@@ -1,0 +1,1 @@
+searchState.loadedDescShard("wafel_data_access_derive", 0, "Derive macro for wafel_data_access::DataReadable.")
