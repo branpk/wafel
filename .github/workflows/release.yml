@@ -81,7 +81,7 @@ jobs:
 
       - run: pipenv run python build.py dist
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: win_x64
           path: build/dist/*
