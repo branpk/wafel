@@ -67,6 +67,9 @@ mod emu;
 mod error;
 mod game;
 mod lock;
+#[cfg(test)]
+mod lock_tests;
 mod m64;
+mod pure_crypto;
 mod remote_dll;
 mod timeline;

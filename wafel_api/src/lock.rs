@@ -1,8 +1,6 @@
 use std::{fs, path::Path, sync::Arc};
 
-use pwbox::{sodium::Sodium, ErasedPwBox, Eraser, Suite};
-
-use crate::Error;
+use crate::{pure_crypto::PureBox, Error};
 
 /// Lock a libsm64 DLL so that it requires a ROM to open.
 ///
@@ -27,17 +25,10 @@ pub fn try_lock_libsm64(
     let input = read_file(input_filename)?;
     let rom = rom_to_z64(&read_file(rom_filename)?)?;
 
-    let pwbox = Sodium::build_box(&mut rand::thread_rng())
-        .seal(&rom, &input)
+    let pure_box = PureBox::seal(&rom, &input)
         .map_err(|_| Error::Libsm64EncryptionError)?;
 
-    let mut eraser = Eraser::new();
-    eraser.add_suite::<Sodium>();
-    let erased_pwbox = eraser
-        .erase(&pwbox)
-        .map_err(|_| Error::Libsm64EncryptionError)?;
-
-    let output = serde_json::to_vec(&erased_pwbox).expect("failed to serialize .locked");
+    let output = serde_json::to_vec(&pure_box).expect("failed to serialize .locked");
 
     write_file(output_filename, &output)?;
     Ok(())
@@ -66,19 +57,12 @@ pub fn try_unlock_libsm64(
     let input = read_file(input_filename)?;
     let rom = rom_to_z64(&read_file(rom_filename)?)?;
 
-    let erased_pwbox: ErasedPwBox =
+    let pure_box: PureBox =
         serde_json::from_slice(&input).map_err(|_| Error::Libsm64DecryptionError)?;
 
-    let mut eraser = Eraser::new();
-    eraser.add_suite::<Sodium>();
-    let pwbox = eraser
-        .restore(&erased_pwbox)
-        .map_err(|_| Error::Libsm64DecryptionError)?;
-
-    let output = pwbox
+    let output = pure_box
         .open(&rom)
-        .map_err(|_| Error::Libsm64DecryptionError)?
-        .to_vec();
+        .map_err(|_| Error::Libsm64DecryptionError)?;
 
     write_file(output_filename, &output)?;
     Ok(())
